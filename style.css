@@ -2576,6 +2576,11 @@ h1.modal-title,
     max-width: 400px;
 }
 
+/* Medium Modal Variant */
+.modal-content-medium {
+    max-width: 600px;
+}
+
 /* Button Styles */
 .btn-primary {
     background-color: var(--primary-color);

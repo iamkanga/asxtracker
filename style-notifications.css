@@ -256,14 +256,15 @@
 .filter-chips-container {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    /* 3 items per row guaranteed */
+    /* 3 items per row on desktop */
     gap: 8px;
-    /* Slightly reduced gap */
     padding: 10px 16px;
     width: 100%;
     /* Ensure full width */
     max-width: 100%;
     /* Constrain to parent/modal width */
+    box-sizing: border-box;
+    /* Ensure padding doesn't cause overflow */
     border-bottom: 1px solid var(--border-color);
     margin-bottom: 12px;
 }
@@ -1179,4 +1180,10 @@ input:checked+.slider:before {
 /* 3. Ensure Neutral is Coffee if used */
 .notification-card-grid.card-neutral::before {
     background-color: var(--color-accent) !important;
+}
+/* --- Media Queries --- */
+@media (max-width: 480px) {
+    .filter-chips-container {
+        grid-template-columns: repeat(2, 1fr);
+    }
 }
