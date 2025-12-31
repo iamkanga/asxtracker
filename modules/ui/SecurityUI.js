@@ -79,21 +79,31 @@ export const SecurityUI = {
                 updateDots();
 
                 if (currentPin.length === 4) {
-                    // Slight delay for visual feedback
-                    setTimeout(() => {
-                        if (options.onUnlock(currentPin)) {
-                            modal.classList.add(CSS_CLASSES.FADE_OUT);
-                            setTimeout(() => modal.remove(), 300);
-                        } else {
-                            // Shake animation
-                            modal.querySelector(`.${CSS_CLASSES.SECURITY_PIN_CONTENT}`).classList.add(CSS_CLASSES.SHAKE);
-                            setTimeout(() => {
-                                modal.querySelector(`.${CSS_CLASSES.SECURITY_PIN_CONTENT}`).classList.remove(CSS_CLASSES.SHAKE);
-                                currentPin = "";
-                                updateDots();
-                            }, 500);
-                        }
-                    }, 100);
+                    // Provide immediate feedback
+                    const subtitle = modal.querySelector(`.${CSS_CLASSES.SECURITY_HEADER} p`);
+                    if (subtitle) {
+                        subtitle.innerText = "Verifying...";
+                        subtitle.classList.add(CSS_CLASSES.TEXT_COFFEE);
+                    }
+                    ToastManager.info("Verifying PIN...", "Security");
+
+                    // Execute immediately (Performance fix)
+                    if (options.onUnlock(currentPin)) {
+                        modal.classList.add(CSS_CLASSES.FADE_OUT);
+                        setTimeout(() => modal.remove(), 300);
+                    } else {
+                        // Shake animation
+                        modal.querySelector(`.${CSS_CLASSES.SECURITY_PIN_CONTENT}`).classList.add(CSS_CLASSES.SHAKE);
+                        setTimeout(() => {
+                            modal.querySelector(`.${CSS_CLASSES.SECURITY_PIN_CONTENT}`).classList.remove(CSS_CLASSES.SHAKE);
+                            currentPin = "";
+                            updateDots();
+                            if (subtitle) {
+                                subtitle.innerText = "Enter your 4-digit PIN";
+                                subtitle.classList.remove(CSS_CLASSES.TEXT_COFFEE);
+                            }
+                        }, 500);
+                    }
                 }
             }
         };
@@ -257,21 +267,35 @@ export const SecurityUI = {
         modal.innerHTML = `
             <div class="${CSS_CLASSES.MODAL_OVERLAY}"></div>
             <div class="${CSS_CLASSES.MODAL_CONTENT} ${CSS_CLASSES.MODAL_CONTENT_SMALL} ${CSS_CLASSES.TEXT_CENTER}">
-                <h3 id="setup-title">Set New PIN</h3>
-                <p id="setup-subtitle" class="${CSS_CLASSES.TEXT_SM} ${CSS_CLASSES.TEXT_MUTED} ${CSS_CLASSES.MT_SMALL}">Enter 4 digits</p>
-                <div class="${CSS_CLASSES.PIN_DISPLAY}">
-                    <div class="${CSS_CLASSES.PIN_DOT}"></div><div class="${CSS_CLASSES.PIN_DOT}"></div><div class="${CSS_CLASSES.PIN_DOT}"></div>
-                    <div class="${CSS_CLASSES.PIN_DOT}"></div>
+                <div class="${CSS_CLASSES.MODAL_HEADER}">
+                    <h3 id="setup-title" class="${CSS_CLASSES.MODAL_TITLE}">Set New PIN</h3>
+                    <button class="${CSS_CLASSES.MODAL_CLOSE_BTN} ${CSS_CLASSES.MODAL_ACTION_BTN}"><i class="fas ${UI_ICONS.CLOSE}"></i></button>
                 </div>
-                <div class="${CSS_CLASSES.PIN_PAD_MINI}">
-                    ${[1, 2, 3, 4, 5, 6, 7, 8, 9, 'C', 0, 'Del'].map(val => `
-                        <button class="${CSS_CLASSES.PIN_SETUP_BTN}" data-val="${val}">${val}</button>
-                    `).join('')}
+                <div class="${CSS_CLASSES.MODAL_BODY}">
+                    <p id="setup-subtitle" class="${CSS_CLASSES.TEXT_SM} ${CSS_CLASSES.TEXT_MUTED} ${CSS_CLASSES.MT_SMALL}">Enter 4 digits</p>
+                    <div class="${CSS_CLASSES.PIN_DISPLAY}">
+                        <div class="${CSS_CLASSES.PIN_DOT}"></div><div class="${CSS_CLASSES.PIN_DOT}"></div><div class="${CSS_CLASSES.PIN_DOT}"></div>
+                        <div class="${CSS_CLASSES.PIN_DOT}"></div>
+                    </div>
+                    <div class="${CSS_CLASSES.PIN_PAD_MINI}">
+                        ${[1, 2, 3, 4, 5, 6, 7, 8, 9, 'C', 0, 'Del'].map(val => `
+                            <button class="${CSS_CLASSES.PIN_SETUP_BTN}" data-val="${val}">${val}</button>
+                        `).join('')}
+                    </div>
                 </div>
             </div>
         `;
 
         document.body.appendChild(modal);
+
+        const closeModal = () => {
+            modal.remove();
+            if (onCancel) onCancel();
+        };
+
+        // Standard modal events
+        modal.querySelector(`.${CSS_CLASSES.MODAL_CLOSE_BTN}`).addEventListener('click', closeModal);
+        modal.querySelector(`.${CSS_CLASSES.MODAL_OVERLAY}`).addEventListener('click', closeModal);
 
         let currentInput = "";
         const dots = modal.querySelectorAll(`.${CSS_CLASSES.PIN_DOT}`);
@@ -299,30 +323,41 @@ export const SecurityUI = {
                 updateDots();
 
                 if (currentInput.length === 4) {
-                    setTimeout(() => {
-                        if (step === 1) {
-                            firstPin = currentInput;
-                            currentInput = "";
-                            step = 2;
-                            modal.querySelector('#setup-title').innerText = "Confirm PIN";
-                            modal.querySelector('#setup-subtitle').innerText = "Re-enter to verify";
-                            updateDots();
+                    // Provide immediate feedback
+                    const subtitle = modal.querySelector('#setup-subtitle');
+                    const msg = step === 1 ? "Processing..." : "Verifying PIN...";
+                    if (subtitle) {
+                        subtitle.innerText = msg;
+                        subtitle.classList.add(CSS_CLASSES.TEXT_COFFEE);
+                    }
+                    ToastManager.info(msg, "Security");
+
+                    // Execute immediately (Performance fix)
+                    if (step === 1) {
+                        firstPin = currentInput;
+                        currentInput = "";
+                        step = 2;
+                        modal.querySelector('#setup-title').innerText = "Confirm PIN";
+                        modal.querySelector('#setup-subtitle').innerText = "Re-enter to verify";
+                        updateDots();
+                    } else {
+                        if (currentInput === firstPin) {
+                            controller.setPin(currentInput);
+                            modal.remove();
+                            if (onSuccess) onSuccess();
                         } else {
-                            if (currentInput === firstPin) {
-                                controller.setPin(currentInput);
-                                modal.remove();
-                                if (onSuccess) onSuccess();
-                                if (onSuccess) onSuccess();
-                            } else {
-                                ToastManager.error("PINs do not match. Try again.");
-                                firstPin = "";
-                                currentInput = "";
-                                step = 1;
-                                modal.querySelector('#setup-title').innerText = "Set New PIN";
-                                updateDots();
+                            ToastManager.error("PINs do not match. Try again.");
+                            firstPin = "";
+                            currentInput = "";
+                            step = 1;
+                            modal.querySelector('#setup-title').innerText = "Set New PIN";
+                            if (subtitle) {
+                                subtitle.innerText = "Enter 4 digits";
+                                subtitle.classList.remove(CSS_CLASSES.TEXT_COFFEE);
                             }
+                            updateDots();
                         }
-                    }, 150);
+                    }
                 }
             });
         });
