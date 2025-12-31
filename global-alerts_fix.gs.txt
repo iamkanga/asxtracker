@@ -1,0 +1,25 @@
+
+// ===============================================================
+// ==================== EMERGENCY FIX TOOLS ======================
+// ===============================================================
+
+/**
+ * Run this ONCE to force-reset the high price filters that are blocking your alerts.
+ * This sets Minimum Price to $0.00 and Minimum Market Cap to 0.
+ */
+function FORCE_RESET_FILTERS() {
+  const payload = {
+    hiLoMinimumPrice: 0,
+    hiLoMinimumMarketCap: 0,
+    emailAlertsEnabled: true,
+    updatedAt: new Date()
+  };
+  const mask = ['hiLoMinimumPrice', 'hiLoMinimumMarketCap', 'emailAlertsEnabled', 'updatedAt'];
+  const res = commitCentralDoc_(GLOBAL_SETTINGS_DOC_SEGMENTS, payload, mask);
+  console.log('--------------------------------------------------');
+  console.log('FORCE RESET RESULT: ' + (res.ok ? 'SUCCESS' : 'FAILED'));
+  console.log('New Settings applied: MinPrice=$0, MinMcap=0');
+  console.log('Please run "runGlobal52WeekScan" again now.');
+  console.log('--------------------------------------------------');
+  return res;
+}

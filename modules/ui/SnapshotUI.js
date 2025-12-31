@@ -1,0 +1,355 @@
+/**
+ * SnapshotUI.js
+ * Renders the "Market Pulse" Snapshot view.
+ * Triggered by Long-Hold on the Portfolio View.
+ */
+
+import { AppState } from '../state/AppState.js';
+import { CSS_CLASSES, IDS, UI_ICONS, EVENTS } from '../utils/AppConstants.js';
+import { navManager } from '../utils/NavigationManager.js';
+import { formatCurrency, formatPercent } from '../utils/formatters.js';
+
+export class SnapshotUI {
+
+    static show() {
+        if (document.getElementById('snapshot-modal-container')) return;
+
+        const modal = this._renderModal();
+        document.body.appendChild(modal);
+
+        // Initial Render: Load Preference
+        this._currentSort = AppState.preferences.snapshotSort || 'desc';
+
+        // Update Buttons UI based on preference
+        const sortBtns = modal.querySelectorAll(`.${CSS_CLASSES.SEGMENTED_BUTTON}`);
+        sortBtns.forEach(btn => {
+            if (btn.dataset.sort === this._currentSort) {
+                btn.classList.add(CSS_CLASSES.ACTIVE);
+            } else {
+                btn.classList.remove(CSS_CLASSES.ACTIVE);
+            }
+        });
+
+        this._updateGrid(modal);
+
+        this._bindEvents(modal);
+
+        requestAnimationFrame(() => {
+            modal.classList.remove(CSS_CLASSES.HIDDEN);
+            modal.classList.add(CSS_CLASSES.SHOW);
+        });
+    }
+
+    static _renderModal() {
+        const modal = document.createElement('div');
+        modal.id = 'snapshot-modal-container';
+        modal.className = `${CSS_CLASSES.MODAL} ${CSS_CLASSES.MODAL_FULLSCREEN} ${CSS_CLASSES.HIDDEN}`;
+
+        modal.innerHTML = `
+            <div class="${CSS_CLASSES.MODAL_OVERLAY}"></div>
+            <div class="${CSS_CLASSES.MODAL_CONTENT} snapshot-content" style="max-height: 90vh; display: flex; flex-direction: column;">
+                <div class="${CSS_CLASSES.MODAL_HEADER}">
+                    <h2 class="${CSS_CLASSES.MODAL_TITLE}">
+                        <i class="fas fa-bolt" style="color: var(--color-accent); margin-right: 8px;"></i>
+                        Market Pulse
+                    </h2>
+                    <button class="${CSS_CLASSES.MODAL_CLOSE_BTN}" title="Close">
+                        <i class="fas ${UI_ICONS.CLOSE}"></i>
+                    </button>
+                </div>
+                
+                <div class="snapshot-controls" style="padding: 10px 15px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: center;">
+                    <div class="${CSS_CLASSES.SEGMENTED_CONTROL}" style="width: 100%; max-width: 300px;">
+                        <button class="${CSS_CLASSES.SEGMENTED_BUTTON}" data-sort="desc">
+                            <i class="fas fa-caret-up" style="margin-right: 5px; color: var(--color-positive);"></i> High to Low
+                        </button>
+                        <button class="${CSS_CLASSES.SEGMENTED_BUTTON}" data-sort="asc">
+                            <i class="fas fa-caret-down" style="margin-right: 5px; color: var(--color-negative);"></i> Low to High
+                        </button>
+                    </div>
+                </div>
+
+                <div class="${CSS_CLASSES.MODAL_BODY} ${CSS_CLASSES.SCROLLABLE_BODY}" id="${CSS_CLASSES.SNAPSHOT_GRID}">
+                    <!-- Grid Items Injected Here -->
+                </div>
+                
+                <div class="${CSS_CLASSES.MODAL_FOOTER}" style="text-align: center; color: var(--text-muted); font-size: 0.7rem; padding: 10px;">
+                    Tap card to view details
+                </div>
+            </div>
+        `;
+
+        // Nav Manager Hook
+        modal._navActive = true;
+        navManager.pushState(() => {
+            if (modal.parentElement) {
+                modal._navActive = false;
+                this._close(modal);
+            }
+        });
+
+        return modal;
+    }
+
+    static _bindEvents(modal) {
+        const closeBtn = modal.querySelector(`.${CSS_CLASSES.MODAL_CLOSE_BTN}`);
+        const overlay = modal.querySelector(`.${CSS_CLASSES.MODAL_OVERLAY}`);
+        const sortBtns = modal.querySelectorAll(`.${CSS_CLASSES.SEGMENTED_BUTTON}`);
+
+        const closeHandler = () => this._close(modal);
+        if (closeBtn) closeBtn.addEventListener('click', closeHandler);
+        if (overlay) overlay.addEventListener('click', closeHandler);
+
+        sortBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                // Update UI state
+                sortBtns.forEach(b => b.classList.remove(CSS_CLASSES.ACTIVE));
+                btn.classList.add(CSS_CLASSES.ACTIVE);
+
+                // Update Logic
+                this._currentSort = btn.dataset.sort;
+                AppState.saveSnapshotSort(this._currentSort);
+                this._updateGrid(modal);
+            });
+        });
+
+        // Delegate Card Clicks
+        modal.addEventListener('click', (e) => {
+            const card = e.target.closest(`.${CSS_CLASSES.SNAPSHOT_CARD}`);
+            if (card && card.dataset.code) {
+                // Determine source watchlist if possible, or just default behavior
+                // The main app expects ASX_CODE_CLICK to handle navigation or modals
+                document.dispatchEvent(new CustomEvent(EVENTS.ASX_CODE_CLICK, { detail: { code: card.dataset.code } }));
+                // Optional: Close snapshot on selection? User said "selection tool... display... ASX Code".
+                // Usually a snapshot is for browsing. Let's keep it open unless they drill down deep.
+                // But ASX_CODE_CLICK usually opens a modal on top. That's fine.
+            }
+        });
+    }
+
+    static _close(modal) {
+        modal.classList.remove(CSS_CLASSES.SHOW);
+        modal.classList.add(CSS_CLASSES.HIDDEN);
+
+        setTimeout(() => {
+            if (modal.parentElement) modal.remove();
+        }, 300);
+
+        if (modal._navActive) {
+            modal._navActive = false;
+            navManager.popStateSilently();
+        }
+    }
+
+    static _updateGrid(modal) {
+        const grid = modal.querySelector(`#${CSS_CLASSES.SNAPSHOT_GRID}`);
+        if (!grid) return;
+
+        const data = this._prepareData(); // Get Aggregated Data
+
+        console.log('[SnapshotUI] Grid Update. Items found:', data.length);
+
+        if (data.length === 0) {
+            grid.innerHTML = `
+                <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: var(--text-muted);">
+                    <i class="fas fa-chart-line" style="font-size: 2rem; margin-bottom: 15px; opacity: 0.5;"></i>
+                    <p>No shares found in your portfolio.</p>
+                    <p style="font-size: 0.8rem;">Add stocks to your watchlists to see them here.</p>
+                </div>
+            `;
+            return;
+        }
+
+        // Sort
+        data.sort((a, b) => {
+            const pctA = a.pctChange;
+            const pctB = b.pctChange;
+            return this._currentSort === 'desc' ? pctB - pctA : pctA - pctB;
+        });
+
+        grid.innerHTML = data.map(item => this._renderCard(item)).join('');
+    }
+
+    static _prepareData() {
+        const allItems = new Map();
+
+        // 1. Iterate ALL Watchlists
+        const watchlists = AppState.data.watchlists || [];
+        // Include System Watchlists if they have stored data? 
+        // Actually, AppState.data.shares contains EVERYTHING usually, keyed by ID. 
+        // But we want to ensure we get everything *visible* to the user in lists.
+        // Simplest: Iterate AppState.data.shares. This is the master list of all tracking.
+
+        const masterList = AppState.data.shares || [];
+
+        console.log('[SnapshotUI] Preparing Data. Master List Size:', masterList.length);
+        if (masterList.length > 0) {
+            console.log('[SnapshotUI] Sample Item:', masterList[0]);
+        }
+
+        masterList.forEach(share => {
+            // Support both 'code' and 'shareName' (legacy/firebase mix)
+            const code = share.code || share.shareName || share.symbol;
+
+            if (!code) return;
+
+            // Deduplication: Only take the first instance (or merge logic if needed)
+            if (!allItems.has(code)) {
+                // Enrich with Live Data if available
+                let livePrice = share.currentPrice || share.price || 0;
+                let dayChangePct = share.dayChangePercent || share.changePercent || 0;
+                let dayChangeVal = share.dayChangePerShare || share.dayChange || share.change || 0;
+
+                // Try Live Map Override (Real-time pulse)
+                // AppState.livePrices is a Map<Code, {live, change, pctChange...}>
+                if (AppState.livePrices && AppState.livePrices.has(code)) {
+                    const liveData = AppState.livePrices.get(code);
+                    livePrice = liveData.live || livePrice;
+                    dayChangePct = liveData.pctChange || dayChangePct;
+                    dayChangeVal = liveData.change || dayChangeVal;
+                }
+
+                allItems.set(code, {
+                    code: code,
+                    price: parseFloat(livePrice) || 0,
+                    pctChange: parseFloat(dayChangePct) || 0,
+                    valChange: parseFloat(dayChangeVal) || 0,
+                    name: share.name
+                });
+            }
+        });
+
+        return Array.from(allItems.values());
+    }
+
+    static _renderCard(item) {
+        const isPos = item.pctChange > 0;
+        const isNeg = item.pctChange < 0;
+
+        let colorClass = 'snapshot-neutral';
+        let textClass = '';
+
+        if (isPos) {
+            colorClass = CSS_CLASSES.SNAPSHOT_POSITIVE;
+            textClass = CSS_CLASSES.TEXT_POS;
+        } else if (isNeg) {
+            colorClass = CSS_CLASSES.SNAPSHOT_NEGATIVE;
+            textClass = CSS_CLASSES.TEXT_NEG;
+        }
+
+        const priceStr = formatCurrency(item.price);
+        // formatPercent typically includes the value. We want to control the sign explicitly if needed
+        // But usually formatPercent(x) -> "0.00%". It does NOT usually add +, only -.
+        // User wants ONE plus icon.
+
+        const pctVal = Math.abs(item.pctChange).toFixed(2);
+        const signHtml = isPos ? '+' : (isNeg ? '-' : '');
+        const pctStr = `${signHtml}${pctVal}%`;
+
+        const valStr = formatCurrency(Math.abs(item.valChange));
+        const valSign = isPos ? '+' : (isNeg ? '-' : '');
+        const displayVal = `${valSign}${valStr}`;
+
+        return `
+            <div class="${CSS_CLASSES.SNAPSHOT_CARD} ${colorClass}" data-code="${item.code}">
+                <!-- Left: Code -->
+                <div class="${CSS_CLASSES.SNAP_COL_LEFT}">
+                    <span class="${CSS_CLASSES.SNAP_CODE}">${item.code}</span>
+                </div>
+
+                <!-- Center: Live Price -->
+                <div class="${CSS_CLASSES.SNAP_COL_CENTER}">
+                    <span class="${CSS_CLASSES.SNAP_PRICE}">${priceStr}</span>
+                </div>
+
+                <!-- Right: Changes -->
+                <div class="${CSS_CLASSES.SNAP_COL_RIGHT}">
+                    <span class="${CSS_CLASSES.SNAP_PERCENT} ${textClass}">${pctStr}</span>
+                    <span class="${CSS_CLASSES.SNAP_VALUE_CHANGE} ${textClass}">${displayVal}</span>
+                </div>
+            </div>
+        `;
+    }
+
+    /**
+     * Binds the Long-Hold Trigger to a container.
+     * @param {HTMLElement} element The generic container (e.g., #content-container)
+     */
+    static bindTrigger(element) {
+        if (!element) return;
+
+        let pressTimer;
+        let hasTriggered = false;
+        const LONG_PRESS_DURATION = 600; // Reduced to 600ms for better responsiveness
+
+        // Visual Feedback (Subtle Opacity instead of Scale)
+        const addVisual = () => element.style.opacity = '0.7';
+        const removeVisual = () => element.style.opacity = '1';
+
+        // Block Click if Long Press occurred
+        const clickBlocker = (e) => {
+            if (hasTriggered) {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                hasTriggered = false; // Reset
+                console.log('[SnapshotUI] Click Suppressed (Event was consumed by Long Hold)');
+                return false;
+            }
+        };
+
+        const startHandler = (e) => {
+            hasTriggered = false;
+
+            // We depend on the fact that bindTrigger is only called for the Portfolio Value Card.
+            // If the card exists and this handler is attached, we are good to go.
+
+            // Ignore buttons/links
+            if (e.target.closest('button') || e.target.closest('a')) return;
+
+            pressTimer = setTimeout(() => {
+                hasTriggered = true;
+                if (navigator.vibrate) navigator.vibrate(50);
+                this.show();
+            }, LONG_PRESS_DURATION);
+        };
+
+        const cancelHandler = () => {
+            if (pressTimer) {
+                clearTimeout(pressTimer);
+                pressTimer = null;
+            }
+        };
+
+        // Context Menu Block (Mobile)
+        const contextMenuHandler = (e) => {
+            const currentId = AppState.watchlist.id;
+            if (currentId && currentId.toLowerCase() === 'portfolio') {
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+            }
+        };
+
+        // Add Listeners
+        element.style.transition = 'opacity 0.2s ease';
+
+        // Prevent Text Selection and Callouts (Copy/Paste menu)
+        element.style.userSelect = 'none';
+        element.style.webkitUserSelect = 'none'; // Safari/Chrome
+        element.style.webkitTouchCallout = 'none'; // iOS Safari
+        element.style.touchAction = 'manipulation'; // Improve tap handling
+
+        element.addEventListener('mousedown', startHandler);
+        element.addEventListener('touchstart', startHandler, { passive: true });
+
+        element.addEventListener('mouseup', cancelHandler);
+        element.addEventListener('mouseleave', cancelHandler);
+        element.addEventListener('touchend', cancelHandler);
+        element.addEventListener('touchmove', cancelHandler);
+
+        element.addEventListener('contextmenu', contextMenuHandler);
+
+        // Use Capture Phase to ensure we block the click before the card handler sees it
+        element.addEventListener('click', clickBlocker, true);
+    }
+}

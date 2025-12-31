@@ -1,0 +1,1182 @@
+/* Notification System Styles */
+
+/* --- Modal & Tabs --- */
+.modal-tabs {
+    display: flex;
+    gap: 1rem;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 1rem;
+}
+
+.modal-tab {
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    color: var(--text-muted);
+    font-weight: 500;
+    position: relative;
+    transition: color 0.2s ease;
+}
+
+.modal-tab:hover {
+    color: var(--text-color);
+}
+
+.modal-tab.tab-active {
+    color: var(--accent-color);
+    /* Coffee */
+}
+
+.modal-tab.tab-active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background-color: var(--accent-color);
+}
+
+/* --- Floating Bell (FAB) --- */
+.floating-bell-container {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    /* Reverted to Left as requested */
+    z-index: 100000;
+    /* Boosted to be on top of most elements, just below sidebar */
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    /* animation: slideInLeft 5s ease-out; */
+    animation: hopIn 2.5s linear forwards;
+}
+
+@keyframes hopIn {
+    0% {
+        transform: translateX(-100vw) scaleX(1);
+    }
+
+    10% {
+        transform: translateX(-90vw) translateY(-40px) scaleX(1.05);
+        /* Hop 1 Up */
+    }
+
+    20% {
+        transform: translateX(-80vw) translateY(0) scaleX(0.95);
+        /* Land */
+    }
+
+    30% {
+        transform: translateX(-65vw) translateY(-40px) scaleX(1.05);
+        /* Hop 2 Up */
+    }
+
+    40% {
+        transform: translateX(-50vw) translateY(0) scaleX(0.95);
+        /* Land */
+    }
+
+    50% {
+        transform: translateX(-35vw) translateY(-40px) scaleX(1.05);
+        /* Hop 3 Up */
+    }
+
+    60% {
+        transform: translateX(-20vw) translateY(0) scaleX(0.95);
+        /* Land */
+    }
+
+    70% {
+        transform: translateX(-10vw) translateY(-30px) scaleX(1.05);
+        /* Hop 4 Up (Smaller) */
+    }
+
+    80% {
+        transform: translateX(-5vw) translateY(0) scaleX(0.95);
+        /* Land */
+    }
+
+    90% {
+        transform: translateX(-2vw) translateY(-15px);
+        /* Hop 5 Up (Tiny) */
+    }
+
+    100% {
+        transform: translateX(0) translateY(0);
+        /* Final Land */
+    }
+}
+
+.floating-bell-container.hidden,
+.floating-bell-btn.hidden {
+    display: none !important;
+}
+
+.floating-bell-btn {
+    width: 90px;
+    height: 90px;
+    border-radius: 0;
+    background-color: transparent !important;
+    /* Transparent! */
+    color: var(--accent-color);
+    border: none !important;
+    box-shadow: none !important;
+    cursor: pointer;
+    position: relative;
+    display: flex;
+    /* Flex to center the IMG */
+    justify-content: center;
+    align-items: center;
+    /* font-size removed, using IMG width/height */
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* SVG Wrapper & Fill */
+.bell-icon-wrapper {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.bell-icon-wrapper svg {
+    width: 100%;
+    height: 100%;
+    fill: var(--accent-color) !important;
+    /* Force Coffee Color */
+}
+
+.bell-icon-wrapper svg path {
+    fill: var(--accent-color) !important;
+    /* Specific path override */
+}
+
+.floating-bell-btn:hover {
+    transform: scale(1.1);
+}
+
+.floating-bell-btn:active {
+    transform: scale(0.95);
+}
+
+.floating-bell-dismiss {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background-color: rgba(0, 0, 0, 0.5);
+    color: white;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 0.8rem;
+    opacity: 0;
+    transform: translateX(-10px);
+    transition: all 0.2s ease;
+}
+
+.floating-bell-container:hover .floating-bell-dismiss {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.floating-bell-container.hidden {
+    display: none;
+}
+
+/* Badge on FAB */
+/* Badge on FAB */
+.floating-bell-btn .notification-badge {
+    position: absolute;
+    top: 5px;
+    /* Moved Up (Above) */
+    right: 25px;
+    /* Moved Left (Away from head) */
+    background-color: var(--color-negative);
+    color: white;
+    font-size: 0.7rem;
+    /* Smaller Font */
+    font-weight: bold;
+    min-width: 18px;
+    /* Smaller Size */
+    height: 18px;
+    /* Smaller Size */
+    border-radius: 9px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: 2px solid var(--bg-color);
+    /* Cutout effect */
+    animation: pulse 2s infinite;
+}
+
+.floating-bell-btn .notification-badge.hidden {
+    display: none;
+}
+
+/* Sidebar & General App Badge */
+.app-badge {
+    background-color: var(--color-negative, #ff3d00);
+    color: white;
+    font-size: 0.7rem;
+    font-weight: 700;
+    min-width: 18px;
+    height: 18px;
+    border-radius: 9px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+    margin-left: auto;
+    /* Push to right in sidebar btn */
+    border: 1px solid var(--bg-color);
+    /* Cutout */
+}
+
+#sidebar-badge {
+    background-color: transparent !important;
+    border: none !important;
+    color: var(--color-accent) !important;
+    font-weight: 600;
+    /* Slightly bolder for readability on transparency */
+    min-width: auto;
+    /* Remove fixed min-width */
+    padding: 0;
+    /* Remove padding */
+}
+
+.app-badge.hidden {
+    display: none;
+}
+
+
+/* --- Filter Chips (Header) --- */
+.filter-chips-container {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    /* 3 items per row guaranteed */
+    gap: 8px;
+    /* Slightly reduced gap */
+    padding: 10px 16px;
+    width: 100%;
+    /* Ensure full width */
+    max-width: 100%;
+    /* Constrain to parent/modal width */
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 12px;
+}
+
+.filter-chip {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* Center content */
+    gap: 4px;
+    /* Reduced gap */
+    padding: 6px 4px;
+    /* Reduced padding to fit 3 in row */
+    border-radius: 0;
+    /* SHARP Look (Was 4px) */
+    background-color: transparent;
+    white-space: nowrap;
+    /* Prevent overflow wrap */
+    flex-shrink: 0;
+    /* Prevent squishing */
+    border: 1px solid var(--border-color);
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    /* Reduced font size */
+    font-weight: 500;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+/* Floating Bell Hover - No Background */
+.floating-bell-btn:hover {
+    background-color: transparent !important;
+    /* Remove background */
+    box-shadow: none !important;
+    /* Optional: Remove shadow if desired, user said "background display" */
+    transform: scale(1.1);
+    /* Keep scale effect */
+}
+
+.filter-chip:hover,
+.filter-chip.active {
+    background-color: transparent !important;
+    color: var(--text-color);
+    border: 1px solid transparent;
+    border-left: 2px solid var(--accent-color);
+    box-shadow: none !important;
+    /* Strict Sharp */
+    border-left: 2px solid var(--accent-color);
+    /* Fallback side border */
+    border-radius: 0;
+    /* Strict Sharp */
+}
+
+.filter-chip.chip-green {
+    border-color: var(--color-positive);
+}
+
+.filter-chip.chip-green.active {
+    background: transparent !important;
+    border: 1px solid transparent;
+    /* Restore border structure */
+    border-left: 2px solid var(--color-positive) !important;
+    color: var(--color-positive);
+}
+
+.filter-chip.chip-red {
+    border-color: var(--color-negative);
+}
+
+.filter-chip.chip-red.active {
+    background: transparent !important;
+    border: 1px solid transparent;
+    border-left: 2px solid var(--color-negative) !important;
+    color: var(--color-negative);
+}
+
+.filter-chip[data-target="open-all"] {
+    border-color: var(--accent-color);
+    /* Restore Border Color */
+    background-color: transparent !important;
+    color: var(--text-muted);
+}
+
+.filter-chip[data-target="open-all"].active,
+.filter-chip[data-target="open-all"]:hover {
+    color: var(--text-color);
+    background: transparent !important;
+    border: 1px solid transparent;
+    border-left: 2px solid var(--accent-color) !important;
+}
+
+/* Custom Triggers (Coffee Accent) */
+.filter-chip.chip-custom {
+    border-color: var(--color-accent);
+}
+
+.filter-chip.chip-custom.active {
+    color: var(--color-accent);
+    background: transparent !important;
+    border: 1px solid transparent;
+    border-left: 2px solid var(--color-accent) !important;
+}
+
+
+.chip-badge {
+    background-color: transparent !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding-left: 4px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    opacity: 1;
+    color: inherit;
+    /* Ensure it takes parent text color */
+    border-radius: 0 !important;
+}
+
+
+/* --- Accordion (Notification Groups) --- */
+.accordion-section {
+    background-color: var(--card-bg);
+    border-radius: 8px;
+    margin-bottom: 1px;
+    /* Divider effect */
+    overflow: hidden;
+}
+
+/* Section Headers */
+.briefing-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 8px 12px;
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+    margin-bottom: 8px;
+    margin-top: 12px;
+}
+
+/* Apply H3 style to the Title Span */
+.briefing-section-title {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-color);
+}
+
+/* User Request: 75% size for explainer text (subtitles) ONLY */
+.briefing-section-subtitle {
+    font-size: 75% !important;
+    /* Strict 75% scaling */
+    opacity: 0.8;
+}
+
+.accordion-header {
+    padding: 14px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    cursor: pointer;
+    background-color: var(--card-bg);
+    transition: background-color 0.2s ease;
+}
+
+.accordion-header:hover {
+    background-color: var(--bg-secondary);
+}
+
+.accordion-header-content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.accordion-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.accordion-subtitle {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-weight: 400;
+}
+
+.accordion-icon {
+    color: var(--text-muted);
+    transition: transform 0.3s ease;
+}
+
+.accordion-section.expanded .accordion-icon {
+    transform: rotate(180deg);
+}
+
+.accordion-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out;
+    background-color: var(--bg-tertiary);
+    /* Slightly darker for content */
+}
+
+.accordion-section.expanded .accordion-body {
+    max-height: 50000px;
+    /* Arbitrary large height for animation */
+    /* overflow-y: auto; - Removed to prevent double scrollbar */
+}
+
+
+/* Clean Badge Pill (No Circle) */
+.badge-pill {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    font-weight: 700;
+    color: var(--text-muted);
+    padding: 0 !important;
+    margin-right: 8px;
+    /* Space from chevron */
+    font-size: 0.9rem;
+}
+
+/* --- Updated Notification Card (Dark Style) --- */
+.notification-card {
+    background-color: #252525;
+    /* Darker card */
+    border-radius: 0 4px 4px 0;
+    /* Sharp Left Corners for Side Border */
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: row;
+    /* Horizontal Layout as requested */
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+    border-left: 2px solid var(--text-muted);
+    /* Standardized 2px */
+    /* Default Accent */
+    margin-bottom: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.notification-card:hover {
+    background-color: #2a2a2a;
+    transform: translateY(-1px);
+}
+
+.card-content-left {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.card-content-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+}
+
+/* Accents */
+.card-up {
+    border-left-color: var(--color-positive);
+    background: linear-gradient(145deg, hsl(120, 100%, 8%), hsl(120, 100%, 4%));
+}
+
+.card-up:hover {
+    background: linear-gradient(145deg, hsl(120, 100%, 9%), hsl(120, 100%, 5%));
+    /* Slightly lighter hover */
+}
+
+.card-down {
+    border-left-color: var(--color-negative);
+    background: linear-gradient(145deg, hsl(353, 70%, 10%), hsl(353, 70%, 6%));
+}
+
+.card-down:hover {
+    background: linear-gradient(145deg, hsl(353, 70%, 11%), hsl(353, 70%, 7%));
+    /* Slightly lighter hover */
+}
+
+/* Typography overrides */
+.card-code {
+    font-size: 1rem;
+    color: #fff;
+}
+
+.card-name {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    max-width: 120px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin: 0;
+}
+
+.card-target,
+.card-delta {
+    font-size: 0.7rem;
+    font-weight: 500;
+    margin-top: 2px;
+}
+
+.card-target {
+    color: var(--color-accent);
+}
+
+.card-delta.positive {
+    color: var(--color-positive);
+}
+
+.card-delta.negative {
+    color: var(--color-negative);
+}
+
+.metric-value {
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.metric-change {
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.metric-change.positive {
+    color: var(--color-positive);
+}
+
+.metric-change.negative {
+    color: var(--color-negative);
+}
+
+
+
+.pin-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 1rem;
+    transition: color 0.2s ease;
+    padding: 0;
+}
+
+.pin-btn:hover {
+    color: var(--accent-color);
+}
+
+.pin-btn.active {
+    color: var(--accent-color);
+}
+
+
+
+/* --- Settings UI (Redesign - Matching Share Modal) --- */
+
+/* 
+    DETAIL CARD:
+    Standardized container matching the Share Details Modal.
+    - Radius: 4px (App Ideal)
+    - Padding: 12px
+    - Accent: Left Border
+*/
+.detail-card {
+    background-color: var(--bg-color-secondary, #f8f9fa);
+    /* Slight contrast against white modal */
+    border: 1px solid var(--border-color);
+    border-left: 4px solid var(--accent-color);
+    border-radius: 4px;
+    padding: 12px;
+    margin-bottom: 1rem;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    box-sizing: border-box;
+    gap: 12px;
+}
+
+/* Color Utilities for Settings */
+.color-positive {
+    color: var(--color-positive, #00C853) !important;
+}
+
+.color-negative {
+    color: var(--color-negative, #FF3D00) !important;
+}
+
+.compact-input {
+    padding: 6px 8px 6px 32px !important;
+    /* Reduced padding */
+    font-size: 0.9rem !important;
+    height: 36px;
+    /* Explicit height control */
+}
+
+/* Dark Theme Overrides */
+body.dark-theme .detail-card {
+    background-color: #252525;
+    /* Slightly lighter than #1e1e1e for better definition */
+    border-color: #333;
+}
+
+
+.detail-card-header {
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    /* Very subtle separator */
+    padding-bottom: 8px;
+    margin-bottom: 0px;
+    /* Gap handled by card gap */
+    width: 100%;
+}
+
+.detail-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+}
+
+.detail-label i {
+    color: var(--accent-color);
+    /* Icon Accent */
+    width: 16px;
+    text-align: center;
+}
+
+.detail-row {
+    display: flex;
+    width: 100%;
+    /* Flex behavior defined inline or by context */
+}
+
+/* Input Wrapper matching Calculator/App Standard */
+.input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+.input-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    pointer-events: none;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    /* Removed height: 100% dependency */
+}
+
+.standard-input {
+    width: 100%;
+    padding: 10px 10px 10px 36px !important;
+    /* Space for icon */
+    background-color: var(--card-bg-darker, #e0e0e0) !important;
+    /* Slightly darker input bg */
+    border: 1px solid transparent;
+    border-radius: 4px;
+    font-size: 0.95rem;
+    color: var(--text-color);
+    transition: all 0.2s ease;
+}
+
+.standard-input:focus {
+    background-color: var(--card-bg) !important;
+    border-color: var(--accent-color);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(var(--color-accent-rgb), 0.1);
+}
+
+/* Dark Theme Overrides for Inputs */
+body.dark-theme .detail-card {
+    background-color: #1e1e1e;
+    /* Dark Surface */
+    border-color: #333;
+}
+
+body.dark-theme .standard-input {
+    background-color: #2c2c2c !important;
+    /* Graphite */
+    color: #fff;
+    border-color: #444;
+}
+
+/* User Requested: Color Coded Dollar Values */
+.metric-value.positive {
+    color: var(--color-positive) !important;
+}
+
+.metric-value.negative {
+    color: var(--color-negative) !important;
+}
+
+body.dark-theme .standard-input:focus {
+    background-color: #222 !important;
+    border-color: var(--accent-color);
+}
+
+body.dark-theme .detail-card-header {
+    border-bottom-color: rgba(255, 255, 255, 0.05);
+}
+
+
+
+/* --- Settings UI (Redesign) --- */
+
+/* Summary Card */
+
+
+
+
+
+/* Dark Inputs */
+.settings-input-dark {
+    background-color: #2c2c2c;
+    /* Graphite */
+    border: 1px solid #444;
+    color: #fff;
+    padding: 0.75rem;
+    border-radius: 8px;
+    font-size: 1rem;
+    width: 100%;
+    transition: border-color 0.2s;
+}
+
+.settings-input-dark:focus {
+    border-color: var(--accent-color);
+    outline: none;
+}
+
+/* Custom Ring Radio Buttons */
+.ring-radio-group {
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.ring-radio-label {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    cursor: pointer;
+    font-size: 0.95rem;
+    color: var(--text-color);
+    user-select: none;
+}
+
+/* The actual input is hidden */
+.ring-radio-input {
+    display: none;
+}
+
+/* The custom ring */
+.radio-ring {
+    width: 22px;
+    height: 22px;
+    border: 2px solid var(--text-muted);
+    border-radius: 50%;
+    position: relative;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Inner circle (pseudo-element) - initially scale 0 */
+.radio-ring::after {
+    content: '';
+    width: 12px;
+    height: 12px;
+    background-color: var(--accent-color);
+    border-radius: 50%;
+    transform: scale(0);
+    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* Checked State */
+.ring-radio-input:checked+.radio-ring {
+    border-color: var(--accent-color);
+}
+
+.ring-radio-input:checked+.radio-ring::after {
+    transform: scale(1);
+}
+
+/* Header Save Button */
+.modal-save-btn {
+    background: none;
+    border: none;
+    color: var(--accent-color);
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    transition: transform 0.2s;
+}
+
+.modal-save-btn:hover {
+    transform: scale(1.1);
+}
+
+/* Animations */
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(50px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes slideInLeft {
+    from {
+        opacity: 0;
+        transform: translateX(-50px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
+    }
+
+    70% {
+        transform: scale(1.1);
+        box-shadow: 0 0 0 6px rgba(220, 53, 69, 0);
+    }
+
+    100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
+    }
+}
+
+/* Header Toggle Switch (Compact) */
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 36px;
+    height: 20px;
+    margin: 0;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #444;
+    /* Dark Off State */
+    transition: .4s;
+}
+
+.slider.round {
+    border-radius: 20px;
+}
+
+.slider.round:before {
+    border-radius: 50%;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 16px;
+    width: 16px;
+    left: 2px;
+    bottom: 2px;
+    background-color: white;
+    transition: .4s;
+}
+
+input:checked+.slider {
+    background-color: var(--accent-color);
+}
+
+input:focus+.slider {
+    box-shadow: 0 0 1px var(--accent-color);
+}
+
+input:checked+.slider:before {
+    transform: translateX(16px);
+}
+
+/* Card Explainer */
+.card-explainer {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    opacity: 0.8;
+    margin-left: 4px;
+}
+
+.card-explainer.separator {
+    opacity: 0.4;
+    margin: 0 4px;
+}
+
+/* --- GRID LAYOUT (Added for Right Alignment Support) --- */
+/* --- GRID LAYOUT (Added for Right Alignment Support) --- */
+.notification-card-grid {
+    display: grid;
+    grid-template-columns: auto auto;
+    /* Left / Right */
+    grid-template-rows: auto auto auto;
+    /* R1, R2, R3 */
+    gap: 2px 12px;
+    padding: 12px;
+    padding-left: 16px;
+    /* 12px padding + 4px border width = 16px to match visual indent */
+    background-color: #252525;
+    border-radius: 0 4px 4px 0 !important;
+    /* Strict Square Left, Rounded Right */
+
+    /* CRITICAL: Remove any physical border to prevent mitering */
+    border-left: none !important;
+    border-right: 4px solid transparent;
+    /* Match Snapshot Balance */
+    /* Maintain layout */
+    margin-bottom: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    align-items: center;
+    position: relative;
+    transition: background-color 0.2s;
+    overflow: hidden;
+    /* Clip pseudo-element if needed, though strict positioning works */
+}
+
+/* STRICT SQUARE STRIP (Fixes Mitering Issue) */
+.notification-card-grid::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    /* Exact Snapshot Thickness */
+    background-color: var(--text-muted);
+    /* Default Color */
+    border-radius: 0 !important;
+    /* Force Square */
+    z-index: 1;
+}
+
+.notification-card-grid:hover {
+    background-color: #2a2a2a;
+    transform: translateY(-1px);
+}
+
+/* Accents (Targeting Pseudo-element) */
+.notification-card-grid.card-up::before {
+    background-color: var(--color-positive) !important;
+}
+
+/* Ensure physical border doesn't leak back in from generic .card-up */
+.notification-card-grid.card-up {
+    border-left: none !important;
+    background: linear-gradient(145deg, hsl(120, 100%, 8%), hsl(120, 100%, 4%));
+}
+
+.notification-card-grid.card-down::before {
+    background-color: var(--color-negative) !important;
+}
+
+/* Ensure physical border doesn't leak back in from generic .card-down */
+.notification-card-grid.card-down {
+    border-left: none !important;
+    background: linear-gradient(145deg, hsl(353, 70%, 10%), hsl(353, 70%, 6%));
+}
+
+.notification-card-grid.card-neutral::before {
+    background-color: var(--text-muted) !important;
+}
+
+.notification-card-grid.card-neutral {
+    border-left: none !important;
+}
+
+.notification-card-grid.card-pinned {
+    border-right: 2px solid var(--accent-color);
+    /* Correct right border for pinned */
+}
+
+
+/* R1: CODE | PRICE */
+.notif-cell-code {
+    grid-column: 1;
+    grid-row: 1;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1.2;
+}
+
+.notif-cell-price {
+    grid-column: 2;
+    grid-row: 1;
+    text-align: right;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #fff;
+    line-height: 1.2;
+}
+
+/* R2: NAME | CHANGE */
+.notif-cell-name {
+    grid-column: 1;
+    grid-row: 2;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 160px;
+    margin-top: 1px;
+}
+
+.notif-cell-change {
+    grid-column: 2;
+    grid-row: 2;
+    text-align: right;
+    font-size: 0.75rem;
+    font-weight: 500;
+    margin-top: 1px;
+}
+
+/* R3: EXPLAINER | RANGE */
+.notif-cell-explainer {
+    grid-column: 1;
+    grid-row: 3;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    opacity: 0.8;
+    margin-top: 6px;
+    /* Allow stacking */
+}
+
+.notif-cell-range {
+    grid-column: 2;
+    grid-row: 3;
+    text-align: right;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    opacity: 0.8;
+    margin-top: 6px;
+    white-space: nowrap;
+}
+
+/* Colors */
+.notif-cell-price.positive,
+.notif-cell-change.positive {
+    color: var(--color-positive);
+}
+
+.notif-cell-price.negative,
+.notif-cell-change.negative {
+    color: var(--color-negative);
+}
+
+/* --- FINAL FIX: Strict Border & Color Logic --- */
+
+/* 1. TARGET HITS (Coffee) */
+.notification-card-grid.card-target::before {
+    background-color: var(--color-accent) !important;
+    box-shadow: 0 0 8px rgba(164, 148, 148, 0.4);
+    /* Optional: subtle glow for target */
+}
+
+.notification-card-grid.card-target {
+    border-left: none !important;
+}
+
+/* 2. Force Up/Down Colors regardless of class if explicit */
+.notification-card-grid.card-up::before {
+    background-color: var(--color-positive) !important;
+}
+
+.notification-card-grid.card-down::before {
+    background-color: var(--color-negative) !important;
+}
+
+/* 3. Ensure Neutral is Coffee if used */
+.notification-card-grid.card-neutral::before {
+    background-color: var(--color-accent) !important;
+}
