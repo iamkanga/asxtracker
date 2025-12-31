@@ -343,6 +343,7 @@ export const CSS_CLASSES = {
     TEXT_NEGATIVE: 'text-negative',
     TEXT_NEUTRAL: 'text-neutral',
     TEXT_COFFEE: 'text-coffee',
+    TEXT_SHIMMER: 'text-shimmer',
 
     // View Modes
     VIEW_TABLE: 'view-table',

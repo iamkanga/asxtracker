@@ -2963,9 +2963,27 @@ h1.modal-title,
 /* V65: Shimmer Removed (Reverted to Clean) */
 
 @keyframes btnTextShimmer {
-    to {
+    0% {
         background-position: 200% center;
     }
+
+    100% {
+        background-position: -200% center;
+    }
+}
+
+.text-shimmer {
+    background: linear-gradient(to right,
+            var(--app-coffee) 20%,
+            #ffffff 50%,
+            var(--app-coffee) 80%);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: btnTextShimmer 3.1s linear infinite;
+    display: inline-flex;
+    align-items: center;
 }
 
 .splash-auth-container .auth-btn-lg:hover {
