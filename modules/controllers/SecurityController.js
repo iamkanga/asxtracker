@@ -54,7 +54,9 @@ export class SecurityController {
      * @returns {boolean}
      */
     verifyPin(pin) {
-        if (!AppState.preferences.security.isPinEnabled) return true;
+        // FAIL SECURE: If PIN is not enabled, we cannot verify it, so return false.
+        // This prevents the "accept any PIN" bypass when Biometrics are ON but PIN is OFF.
+        if (!AppState.preferences.security.isPinEnabled) return false;
 
         // Simple hashing for "Privacy Lock" (not intended for banking-grade security without back-end salt)
         const hashedAttempt = this._hashPin(pin);

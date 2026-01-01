@@ -231,6 +231,14 @@ export const SecurityUI = {
             } else {
                 controller.disablePin();
                 modal.querySelector(`#${IDS.PIN_SETUP_AREA}`).style.display = 'none';
+
+                // DEPENDENCY: Disabling PIN also disables Biometrics to prevent lockout
+                if (AppState.preferences.security.isBiometricEnabled) {
+                    AppState.saveSecurityPreferences({ isBiometricEnabled: false });
+                    const bioToggle = modal.querySelector(`#${IDS.BIO_TOGGLE}`);
+                    if (bioToggle) bioToggle.checked = false;
+                    ToastManager.info("Biometrics disabled because PIN was removed.", "Security");
+                }
             }
         });
 
@@ -240,6 +248,26 @@ export const SecurityUI = {
 
         modal.querySelector(`#${IDS.BIO_TOGGLE}`).addEventListener('change', async (e) => {
             if (e.target.checked) {
+                // DEPENDENCY: Must have PIN to enable Biometrics
+                if (!AppState.preferences.security.isPinEnabled) {
+                    ToastManager.info("Please set a PIN first to enable Biometrics.", "Security");
+
+                    // Trigger PIN setup flow
+                    this.renderPinSetup(controller, async () => {
+                        // On PIN success, auto-enable PIN toggle UI
+                        modal.querySelector(`#${IDS.PIN_TOGGLE}`).checked = true;
+                        modal.querySelector(`#${IDS.PIN_SETUP_AREA}`).style.display = 'block';
+
+                        // THEN try enabling biometrics
+                        const success = await controller.enableBiometric();
+                        if (!success) e.target.checked = false;
+                    }, () => {
+                        // On Cancel
+                        e.target.checked = false;
+                    });
+                    return;
+                }
+
                 const success = await controller.enableBiometric();
                 if (!success) e.target.checked = false;
             } else {
