@@ -156,6 +156,7 @@ export class SecurityController {
             const credential = await navigator.credentials.get({
                 publicKey: {
                     challenge: challenge,
+                    rpId: window.location.hostname, // FIX: Explicitly match current domain to prevent Invalid Domain err
                     allowCredentials: [{
                         id: this._base64ToBuffer(storedCredentialId),
                         type: 'public-key',
@@ -180,22 +181,34 @@ export class SecurityController {
                     // Shows strictly what the authenticator returned.
                     // Bit 0 = UP (1), Bit 2 = UV (4). Expected: 5 or 7.
                     import('../ui/ToastManager.js').then(({ ToastManager }) => {
-                        ToastManager.info(`Bio Auth Success. Flags: ${flags} (UV=${(flags & 4) ? 'Yes' : 'No'})`, "Security Debug");
+                        ToastManager.info(`Bio Auth Success. Flags: ${flags} (UV=Yes)`, "Security Debug");
                     });
                     return true;
                 } else {
                     console.warn("SecurityController: Biometric rejected - User Verification (UV) flag missing. (Presence only detected)");
                     import('../ui/ToastManager.js').then(({ ToastManager }) => {
-                        ToastManager.error(`Security Warning: User Verification Missing (Flags: ${flags})`, "Security Alert");
+                        ToastManager.error(`Biometrics Failed: Strict verification required. (Flags: ${flags})`, "Security Alert");
                     });
                     return false;
                 }
             }
         } catch (error) {
             console.error("Biometric Auth Failed:", error);
-            // "NotAllowedError" usually means user cancelled or timed out
+
+            // Helpful Error Handling
+            if (error.name === 'SecurityError' || error.message.includes('invalid domain')) {
+                import('../ui/ToastManager.js').then(({ ToastManager }) => {
+                    ToastManager.error("Domain mismatch. Please toggle Biometrics OFF then ON in Settings to fix.", "Biometric Error");
+                });
+            } else if (error.name === 'NotAllowedError') {
+                // User cancelled or timed out - valid flow, no massive error needed
+            } else {
+                import('../ui/ToastManager.js').then(({ ToastManager }) => {
+                    ToastManager.error(`Biometric Error: ${error.message}`, "Security");
+                });
+            }
+            return false;
         }
-        return false;
     }
 
     /**
@@ -217,7 +230,8 @@ export class SecurityController {
                 publicKey: {
                     challenge: challenge,
                     rp: {
-                        name: "ASX Tracker"
+                        name: "ASX Tracker",
+                        id: window.location.hostname // FIX: Explicitly bind to current hostname
                     },
                     user: {
                         id: userId,
