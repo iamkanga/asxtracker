@@ -500,7 +500,7 @@ export class NotificationStore {
                 // We must block backend hits in this case.
                 if (thresholdPct === 0 && thresholdDol === 0) return false;
 
-                // --- JIT ENRICHMENT FOR ACCURATE FILTERING ---
+                // --- JIT ENRICHMENT FOR ACCURATE FILTERING & DISPLAY ---
                 // Use Live Data if available, otherwise fallback to snapshot
                 let pct = Math.abs(Number(hit.pct || hit.changeInPercent || hit.changeP || 0));
                 let dol = Math.abs(Number(hit.change || hit.c || 0));
@@ -514,6 +514,12 @@ export class NotificationStore {
                             pct = Math.abs(lPct);
                             dol = Math.abs(lDol);
                         }
+                        // ENRICHMENT: Update High/Low 52W from Live Data (Freshness Fix)
+                        if (live.high > 0) hit.high = live.high;
+                        if (live.low > 0) hit.low = live.low;
+                        // Also map to explicit props for UI
+                        hit.high52 = hit.high;
+                        hit.low52 = hit.low;
                     }
                 }
 
@@ -753,9 +759,24 @@ export class NotificationStore {
         // Match Global minPrice for HiLo too
         const hiloRules = { percentThreshold: 0, dollarThreshold: 0, minPrice: rules.hiloMinPrice || 0 };
 
+        const enrichHilo = (list) => {
+            return list.map(hit => {
+                if (hit.code && AppState.livePrices instanceof Map) {
+                    const live = AppState.livePrices.get(hit.code);
+                    if (live) {
+                        if (live.high > 0) hit.high = live.high;
+                        if (live.low > 0) hit.low = live.low;
+                        hit.high52 = hit.high;
+                        hit.low52 = hit.low;
+                    }
+                }
+                return hit;
+            });
+        };
+
         const hilo = {
-            high: hiloEnabled ? this.filterHits(mergedHigh, hiloRules, false) : [],
-            low: hiloEnabled ? this.filterHits(mergedLow, hiloRules, false) : []
+            high: hiloEnabled ? this.filterHits(enrichHilo(mergedHigh), hiloRules, false) : [],
+            low: hiloEnabled ? this.filterHits(enrichHilo(mergedLow), hiloRules, false) : []
         };
 
         // FINAL SAFETY SORT: Enforce strict order on output

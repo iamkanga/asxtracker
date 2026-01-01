@@ -133,7 +133,10 @@ function commitCentralDoc_(docPathSegments, plainData, explicitMask) {
 function runGlobal52WeekScan() {
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    // (Legacy Settings fetch removed - relying purely on Firestore)
+    // Guaranteed latest settings via multi-attempt loop
+    const guaranteed = fetchGlobalSettingsGuaranteedLatest_(3, 200);
+    if (!guaranteed.ok || !guaranteed.data) { console.log('[HiLo] FAILED settings fetch: ' + (guaranteed.error || 'unknown')); return; }
+    const settings = guaranteed.data;
 
     
     // Auto-Repair: Ensure broken prices are fixed before scanning
@@ -267,16 +270,14 @@ function fetchAllAsxData_(spreadsheet) {
   },{});
   const nameKey = ['Company Name','CompanyName','Name'].find(k=> map[k]!=null);
   const prevKey = map['PrevDayClose']!=null ? 'PrevDayClose' : (map['PrevClose']!=null ? 'PrevClose' : null);
-  const apiPrevKey = ['API_PrevClose','APIPrevClose','ApiPrevClose','APIPREVCLOSE','PIPREVCLOSE'].find(k=> map[k]!=null);
+  // LOGIC HARDENING: Fuzzy match helper
+  const findKey = (pattern) => Object.keys(map).find(k => pattern.test(String(k)));
+  const findIdx = (pattern) => headers.findIndex(h => pattern.test(String(h)));
+
+  const apiPrevKey = findKey(/api.*prev/i) || findKey(/prev.*api/i) || findKey(/pi.*prev/i) || ['API_PrevClose','APIPrevClose','ApiPrevClose','APIPREVCLOSE','PIPREVCLOSE'].find(k=> map[k]!=null);
   
-  // Robust search for API_Price (Fuzzy matching: "API Price", "API_Price", "PI Price", "PI_Price")
-  const apiPriceIdx = (function(){
-    const idx = headers.findIndex(h => {
-      const clean = String(h).replace(/[^A-Z0-9]/gi, '').toUpperCase();
-      return clean === 'APIPRICE' || clean === 'PIPRICE';
-    });
-    return idx !== -1 ? idx : null;
-  })();
+  // Robust search for API_Price (Fuzzy regex: handles "API Price", "API_Price", "Price (API)", etc.)
+  const apiPriceIdx = findIdx(/api.*price/i) || findIdx(/price.*api/i) || findIdx(/pi.*price/i);
 
   // Expand live price detection to handle alternative column headers used in some sheets
   const liveKey = (function(){
@@ -285,27 +286,58 @@ function fetchAllAsxData_(spreadsheet) {
     return 'LivePrice';
   })();
 
+  // Helper to parse currency strings (e.g. "$54.10", "1,200.50")
+  const cleanFloat = (v) => {
+    if (v == null) return NaN;
+    if (typeof v === 'number') return v;
+    const s = String(v).replace(/[$,]/g, '').trim();
+    return parseFloat(s);
+  };
+
   return values.map(r => {
-    let live = (map[liveKey] != null) ? parseFloat(r[map[liveKey]]) : parseFloat(r[map['LivePrice']]);
+    let live = (map[liveKey] != null) ? cleanFloat(r[map[liveKey]]) : cleanFloat(r[map['LivePrice']]);
     
     // Recovery Logic: If Google returns 0 or #N/A, check the API_Price column
     if ((live == null || isNaN(live) || live === 0) && apiPriceIdx != null) {
-      const fallback = parseFloat(r[apiPriceIdx]);
+      const fallback = cleanFloat(r[apiPriceIdx]);
       if (fallback != null && !isNaN(fallback) && fallback > 0) {
         live = fallback;
       }
     }
 
     // PrevClose Recovery
-    let prev = prevKey ? parseFloat(r[map[prevKey]]) : null;
+    let prev = prevKey ? cleanFloat(r[map[prevKey]]) : null;
     const apiPrevIdx = apiPrevKey ? map[apiPrevKey] : -1;
     if ((prev == null || isNaN(prev) || prev === 0) && apiPrevIdx != -1) {
-        const val = parseFloat(r[apiPrevIdx]);
+        const val = cleanFloat(r[apiPrevIdx]);
         if (val > 0) prev = val;
     }
 
-    let high52 = parseFloat(r[map['High52']]);
-    let low52 = parseFloat(r[map['Low52']]);
+    // Primary Column Robustness (Fuzzy regex)
+    const highIdx = findIdx(/high.*52|52.*high/i);
+    const lowIdx = findIdx(/low.*52|52.*low/i);
+    const mcapIdx = findIdx(/market.*cap|mcap/i);
+
+    let high52 = highIdx !== -1 ? cleanFloat(r[highIdx]) : cleanFloat(r[map['High52']]);
+    let low52 = lowIdx !== -1 ? cleanFloat(r[lowIdx]) : cleanFloat(r[map['Low52']]);
+
+    // API Recovery for High/Low
+    // LOGIC HARDENING: Reuse fuzzy findKey from above
+    // Look for "API" and "High" (e.g. "API_High52", "API High", "APIHigh")
+    const apiHighKey = findKey(/api.*high/i) || findKey(/high.*api/i) || findKey(/api.*hi/i);
+    
+    // Look for "API" and "Low" (e.g. "API_Low52", "API Low", "APILow")
+    const apiLowKey = findKey(/api.*low/i) || findKey(/low.*api/i) || findKey(/api.*lo/i);
+
+    if ((isNaN(high52) || high52 === 0) && apiHighKey) {
+      const v = cleanFloat(r[map[apiHighKey]]);
+      if (v > 0) high52 = v;
+    }
+
+    if ((isNaN(low52) || low52 === 0) && apiLowKey) {
+      const v = cleanFloat(r[map[apiLowKey]]);
+      if (v > 0) low52 = v;
+    }
 
     // Proxy Fallback: If 52-week data from Google is missing/zero but we have a live price,
     // default to the Current Live Price to prevent UI gaps (zero cost solution).
@@ -318,7 +350,7 @@ function fetchAllAsxData_(spreadsheet) {
       livePrice: live,
       high52: high52,
       low52: low52,
-      marketCap: parseFloat(r[map['MarketCap']]),
+      marketCap: mcapIdx !== -1 ? cleanFloat(r[mcapIdx]) : cleanFloat(r[map['MarketCap']]),
       prevClose: prev
     };
   });
@@ -1875,8 +1907,8 @@ function buildPriceFeedArray_(singleCode, options) {
   };
 
   const apiPriceIdx = findFuzzy(['APIPRICE', 'PIPRICE']);
-  const apiHighIdx = findFuzzy(['APIHIGH', 'PIHIGH', 'API52WHIGH', 'PI52WHIGH']);
-  const apiLowIdx = findFuzzy(['APILOW', 'PILOW', 'API52WLOW', 'PI52WLOW']);
+  const apiHighIdx = findFuzzy(['APIHIGH', 'PIHIGH', 'API52WHIGH', 'PI52WHIGH', 'APIHIGH52', 'PIHIGH52']);
+  const apiLowIdx = findFuzzy(['APILOW', 'PILOW', 'API52WLOW', 'PI52WLOW', 'APILOW52', 'PILOW52']);
 
   const out = [];
   values.forEach(r => {
@@ -1988,7 +2020,9 @@ function fetchBulkYahooPrices_(tickers) {
         if (price != null) {
           out[ticker] = {
             price: price,
-            prevClose: prevClose
+            prevClose: prevClose,
+            high52: result.meta.fiftyTwoWeekHigh,
+            low52: result.meta.fiftyTwoWeekLow
           };
         }
       } catch (e) {}
@@ -2016,8 +2050,13 @@ function repairBrokenPrices() {
   const codeIdx = headers.indexOf('ASXCODE');
   const priceIdx = headers.findIndex(h => ['LIVEPRICE', 'LAST', 'LASTPRICE', 'LASTTRADE'].includes(h));
   
-  const apiPriceIdx = headers.findIndex(h => h === 'APIPRICE' || h === 'PIPRICE');
-  const apiPrevIdx = headers.findIndex(h => h === 'APIPREVCLOSE' || h === 'APIPREVIOUSCLOSE' || h === 'PIPREVCLOSE');
+  // LOGIC HARDENING: Fuzzy match for column headers (Case-insensitive)
+  const findIdx = (pattern) => headers.findIndex(h => pattern.test(String(h)));
+
+  const apiPriceIdx = findIdx(/api.*price/i) || findIdx(/price.*api/i) || findIdx(/pi.*price/i);
+  const apiPrevIdx = findIdx(/api.*prev/i) || findIdx(/prev.*api/i) || findIdx(/pi.*prev/i);
+  const apiHighIdx = findIdx(/api.*high/i) || findIdx(/high.*api/i) || findIdx(/api.*hi/i);
+  const apiLowIdx = findIdx(/api.*low/i) || findIdx(/low.*api/i) || findIdx(/api.*lo/i);
   
   if (codeIdx === -1 || priceIdx === -1) {
     Logger.log('Error: Mandatory columns missing. Found: ' + JSON.stringify(rawHeaders));
@@ -2032,6 +2071,10 @@ function repairBrokenPrices() {
   // Allow API_PrevClose to be optional (but warn)
   if (apiPrevIdx === -1) {
     Logger.log('Warning: "API_PrevClose" column not found. Day Change will not work for repaired stocks.');
+  }
+
+  if (apiHighIdx === -1 || apiLowIdx === -1) {
+    Logger.log('Warning: "API_High52" or "API_Low52" columns not found. 52-Week repair will be skipped.');
   }
   
   const problems = [];
@@ -2069,10 +2112,22 @@ function repairBrokenPrices() {
           if (apiPrevIdx !== -1 && data.prevClose != null) {
             sheet.getRange(p.row, apiPrevIdx + 1).setValue(data.prevClose);
           }
+
+          // Write 52-Week High (if column exists)
+          if (apiHighIdx !== -1 && data.high52 != null) {
+            sheet.getRange(p.row, apiHighIdx + 1).setValue(data.high52);
+          }
+
+          // Write 52-Week Low (if column exists)
+          if (apiLowIdx !== -1 && data.low52 != null) {
+            sheet.getRange(p.row, apiLowIdx + 1).setValue(data.low52);
+          }
         } else {
           // If not on Yahoo, clear content
           sheet.getRange(p.row, apiPriceIdx + 1).clearContent();
           if (apiPrevIdx !== -1) sheet.getRange(p.row, apiPrevIdx + 1).clearContent();
+          if (apiHighIdx !== -1) sheet.getRange(p.row, apiHighIdx + 1).clearContent();
+          if (apiLowIdx !== -1) sheet.getRange(p.row, apiLowIdx + 1).clearContent();
         }
       });
       
