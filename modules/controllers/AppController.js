@@ -1321,6 +1321,7 @@ export class AppController {
             });
         }
 
+        const logoutBtn = document.getElementById(IDS.LOGOUT_BTN);
         if (logoutBtn) {
             logoutBtn.addEventListener('click', async () => {
                 try {
