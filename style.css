@@ -114,6 +114,22 @@
     font-size: 2rem !important;
 }
 
+.font-1-1-rem {
+    font-size: 1.1rem !important;
+}
+
+.font-700 {
+    font-weight: 700 !important;
+}
+
+.text-normal-case {
+    text-transform: none !important;
+}
+
+.whitespace-nowrap {
+    white-space: nowrap !important;
+}
+
 /* Flexbox Utilities */
 .flex-row {
     display: flex !important;
@@ -179,12 +195,24 @@ body.dark-theme .sidebar-title-svg {
     align-items: flex-end !important;
 }
 
+.justify-center {
+    justify-content: center !important;
+}
+
 .align-baseline {
     align-items: baseline !important;
 }
 
 .w-full {
     width: 100% !important;
+}
+
+.display-flex {
+    display: flex !important;
+}
+
+.gap-6px {
+    gap: 6px !important;
 }
 
 .text-right {
@@ -195,6 +223,35 @@ body.dark-theme .sidebar-title-svg {
 .ghosted {
     opacity: 0.5 !important;
     pointer-events: none !important;
+}
+
+.text-white {
+    color: #ffffff !important;
+}
+
+.opacity-100 {
+    opacity: 1 !important;
+}
+
+.cursor-pointer {
+    cursor: pointer !important;
+}
+
+.relative {
+    position: relative !important;
+}
+
+.z-10 {
+    z-index: 10 !important;
+}
+
+.mr-tiny {
+    margin-right: 4px !important;
+}
+
+.mx-tiny {
+    margin-left: 4px !important;
+    margin-right: 4px !important;
 }
 
 .share-card.ghosted .visibility-toggle-btn {
@@ -1899,8 +1956,8 @@ h1#dynamicWatchlistTitle.active {
 .mobile-share-cards {
     display: grid;
     gap: 12px;
-    padding: 10px 5px;
-    /* 50% reduction in side padding */
+    padding: 10px 0;
+    /* Vertical only: side padding from #content-container */
     width: 100%;
     box-sizing: border-box;
     grid-template-columns: 1fr;
@@ -7161,6 +7218,15 @@ body.dark-theme .calc-result-card {
         font-size: 0.8rem !important;
     }
 
+    /* Gutter Standardization: All containers zero side padding to use #content-container gutter */
+    .dashboard-container,
+    .cash-container,
+    .mobile-share-cards,
+    .mobile-cards-fallback {
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+    }
+
     /* Layout & Mode Handling */
     .share-table {
         display: none;
@@ -7170,12 +7236,50 @@ body.dark-theme .calc-result-card {
         display: grid;
         grid-template-columns: 1fr;
         gap: 12px;
-        padding: 12px;
+        padding: 12px 0;
     }
 
     .mobile-cards-fallback .share-card {
         width: 100%;
         box-sizing: border-box;
+    }
+
+    /* Card Density & Layout Restoration (V61) */
+    .share-card {
+        padding: 12px !important;
+        overflow: hidden !important;
+    }
+
+    .card-code {
+        font-size: 1.15rem !important;
+        flex: 0 0 auto !important;
+        min-width: 60px !important;
+    }
+
+    .card-price {
+        font-size: 1.15rem !important;
+        flex: 1 !important;
+        text-align: center !important;
+    }
+
+    .card-change-col {
+        flex: 0 0 auto !important;
+        min-width: 80px !important;
+    }
+
+    .change-value {
+        font-size: 1.0rem !important;
+    }
+
+    .change-percent {
+        font-size: 0.75rem !important;
+    }
+
+    /* Overflow Protection: Ensure flex items can shrink in narrow cards */
+    .card-code,
+    .card-price,
+    .card-change-col {
+        min-width: 0;
     }
 
     .portfolio-summary {

@@ -798,6 +798,18 @@ export const CSS_CLASSES = {
 
     // Action Buttons
     VISIBILITY_TOGGLE_BTN: 'visibility-toggle-btn',
+    CURSOR_POINTER: 'cursor-pointer',
+    RELATIVE: 'relative',
+    Z_10: 'z-10',
+    TEXT_NORMAL_CASE: 'text-normal-case',
+    TEXT_700: 'font-700',
+    MR_TINY: 'mr-tiny',
+    MX_TINY: 'mx-tiny',
+    OPACITY_100: 'opacity-100',
+    TEXT_WHITE: 'text-white',
+    GAP_6PX: 'gap-6px',
+    DISPLAY_FLEX: 'display-flex',
+    FONT_1_1_REM: 'font-1-1-rem',
 
     // Calculator Classes
     CALC_KEYPAD: 'calc-keypad',

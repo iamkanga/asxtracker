@@ -230,8 +230,8 @@ export class ViewRenderer {
                 const colorClass = isSell ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE;
 
                 targetHtml = `
-                    <span style="font-size: 0.9em; white-space: nowrap;">
-                        ${label} <i class="fas ${iconClass} ${colorClass}" style="margin: 0 4px;"></i> ${formatCurrency(item.targetPrice)}
+                    <span class="${CSS_CLASSES.FONT_SIZE_0_7_REM} ${CSS_CLASSES.WHITESPACE_NOWRAP}">
+                        ${label} <i class="fas ${iconClass} ${colorClass} ${CSS_CLASSES.MX_TINY}"></i> ${formatCurrency(item.targetPrice)}
                     </span>
                 `;
             }
@@ -245,12 +245,12 @@ export class ViewRenderer {
                     // User Req: Stars in Coffee color (var(--color-accent))
                     // Only render active stars, NO empty stars
                     if (i <= rating) {
-                        starsHtml += `<i class="fas ${UI_ICONS.STAR}" style="color: var(--color-accent);"></i>`;
+                        starsHtml += `<i class="fas ${UI_ICONS.STAR} ${CSS_CLASSES.TEXT_COFFEE}"></i>`;
                     } else if (i - 0.5 <= rating) {
-                        starsHtml += `<i class="fas ${UI_ICONS.STAR_HALF}" style="color: var(--color-accent);"></i>`;
+                        starsHtml += `<i class="fas ${UI_ICONS.STAR_HALF} ${CSS_CLASSES.TEXT_COFFEE}"></i>`;
                     }
                 }
-                starsHtml = `<div class="${CSS_CLASSES.STAR_RATING}" style="justify-content: center;" title="Rating: ${rating}/5">${starsHtml}</div>`;
+                starsHtml = `<div class="${CSS_CLASSES.STAR_RATING} ${CSS_CLASSES.JUSTIFY_CENTER}" title="Rating: ${rating}/5">${starsHtml}</div>`;
             }
 
             // Notes Logic
@@ -357,15 +357,15 @@ export class ViewRenderer {
                 const colorClass = isSell ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE;
                 return `
                 <div class="${CSS_CLASSES.DETAIL_ROW} ${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.JUSTIFY_BETWEEN} ${CSS_CLASSES.MB_4PX} ${CSS_CLASSES.ALIGN_BASELINE}">
-                    <span class="${CSS_CLASSES.DETAIL_LABEL} ${CSS_CLASSES.LINE_HEIGHT_1} ${CSS_CLASSES.FONT_SIZE_0_7_REM}" style="text-transform: none !important;">Alert target</span>
+                    <span class="${CSS_CLASSES.DETAIL_LABEL} ${CSS_CLASSES.LINE_HEIGHT_1} ${CSS_CLASSES.FONT_SIZE_0_7_REM} ${CSS_CLASSES.TEXT_NORMAL_CASE}">Alert target</span>
                     <span class="${CSS_CLASSES.DETAIL_VALUE} ${CSS_CLASSES.TEXT_MUTED} ${CSS_CLASSES.LINE_HEIGHT_1} ${CSS_CLASSES.FONT_SIZE_0_7_REM}" data-target="${item.targetPrice}">
-                        <span style="color: var(--text-color); font-weight: 700; margin-right: 3px;">${letter}</span><i class="fas ${icon} ${colorClass} ${CSS_CLASSES.FONT_SIZE_0_7_REM} ${CSS_CLASSES.MR_2PX} ${CSS_CLASSES.OPACITY_100}"></i>${formatCurrency(item.targetPrice)}
+                        <span class="${CSS_CLASSES.PRIMARY_TEXT} ${CSS_CLASSES.TEXT_700} ${CSS_CLASSES.MR_TINY}">${letter}</span><i class="fas ${icon} ${colorClass} ${CSS_CLASSES.FONT_SIZE_0_7_REM} ${CSS_CLASSES.MR_2PX} ${CSS_CLASSES.OPACITY_100}"></i>${formatCurrency(item.targetPrice)}
                     </span>
                 </div>`;
             })() : '';
 
             const starsHtml = hasStars ? `
-                <div class="${CSS_CLASSES.DETAIL_ROW} ${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.JUSTIFY_END} ${CSS_CLASSES.MB_4PX} ${CSS_CLASSES.ALIGN_BASELINE} w-full">
+                <div class="${CSS_CLASSES.DETAIL_ROW} ${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.JUSTIFY_END} ${CSS_CLASSES.MB_4PX} ${CSS_CLASSES.ALIGN_BASELINE} ${CSS_CLASSES.W_FULL}">
                     <span class="${CSS_CLASSES.DETAIL_VALUE} ${CSS_CLASSES.TEXT_MUTED} ${CSS_CLASSES.LINE_HEIGHT_1} ${CSS_CLASSES.FONT_SIZE_0_7_REM}">
                         ${Array(item.starRating).fill(`<i class="fas ${UI_ICONS.STAR} ${CSS_CLASSES.FONT_SIZE_0_7_REM} ${CSS_CLASSES.TEXT_COFFEE} ${CSS_CLASSES.OPACITY_70}"></i>`).join('')}
                     </span>
@@ -380,14 +380,14 @@ export class ViewRenderer {
             const metadataSection = hasMetadata ? `
                 <div class="${CSS_CLASSES.CARD_BODY_SECTION} ${CSS_CLASSES.W_FULL} ${CSS_CLASSES.MT_4PX} ${CSS_CLASSES.BORDER_TOP_NONE} ${CSS_CLASSES.PT_0}">
                     <!-- Alerts Deep Link -->
-                    <div data-action="deep-link" data-id="${item.id}" data-section="target" style="cursor: pointer; position: relative; z-index: 10;">
+                    <div data-action="deep-link" data-id="${item.id}" data-section="target" class="${CSS_CLASSES.CURSOR_POINTER} ${CSS_CLASSES.RELATIVE} ${CSS_CLASSES.Z_10}">
                         ${alertHtml}
                     </div>
                     
                     ${starsHtml}
 
                     <!-- Comments Deep Link -->
-                    <div data-action="deep-link" data-id="${item.id}" data-section="notes" style="cursor: pointer; position: relative; z-index: 10;">
+                    <div data-action="deep-link" data-id="${item.id}" data-section="notes" class="${CSS_CLASSES.CURSOR_POINTER} ${CSS_CLASSES.RELATIVE} ${CSS_CLASSES.Z_10}">
                         ${commentsHtml}
                     </div>
                 </div>` : '';
@@ -433,7 +433,7 @@ export class ViewRenderer {
                         <span class="${CSS_CLASSES.CARD_CODE} ${CSS_CLASSES.TEXT_LG} ${CSS_CLASSES.CODE_PILL}" data-code="${item.code}">${item.code}</span>
                         
                         <div class="${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.JUSTIFY_BETWEEN} ${CSS_CLASSES.ALIGN_BASELINE} ${CSS_CLASSES.W_FULL} ${CSS_CLASSES.MT_TINY}">
-                            <span class="${CSS_CLASSES.CARD_PRICE} ${CSS_CLASSES.PRIMARY_TEXT} ${CSS_CLASSES.TEXT_LG} ${CSS_CLASSES.TEXT_LEFT}" style="text-align: left;">${formatCurrency(price)}</span>
+                            <span class="${CSS_CLASSES.CARD_PRICE} ${CSS_CLASSES.PRIMARY_TEXT} ${CSS_CLASSES.TEXT_LG} ${CSS_CLASSES.TEXT_LEFT}">${formatCurrency(price)}</span>
                             ${costPriceHtml}
                         </div>
                     </div>
@@ -644,11 +644,11 @@ export class ViewRenderer {
                                     <div class="${CSS_CLASSES.PREVIEW_ROW_SUB}">
                                         <div class="${CSS_CLASSES.STAT_COL} ${CSS_CLASSES.ALIGN_START}">
                                             <span class="${CSS_CLASSES.STAT_LABEL}">52W Low</span>
-                                            <span class="${CSS_CLASSES.STAT_VAL} ${CSS_CLASSES.TEXT_MD}" style="color: #ffffff !important;">${safeVal(stock.low, formatCurrency)}</span>
+                                            <span class="${CSS_CLASSES.STAT_VAL} ${CSS_CLASSES.TEXT_MD} ${CSS_CLASSES.TEXT_WHITE}">${safeVal(stock.low, formatCurrency)}</span>
                                         </div>
                                         <div class="${CSS_CLASSES.STAT_COL} ${CSS_CLASSES.ALIGN_CENTER}">
                                             <span class="${CSS_CLASSES.STAT_LABEL}">52W High</span>
-                                            <span class="${CSS_CLASSES.STAT_VAL} ${CSS_CLASSES.TEXT_MD}" style="color: #ffffff !important;">${safeVal(stock.high, formatCurrency)}</span>
+                                            <span class="${CSS_CLASSES.STAT_VAL} ${CSS_CLASSES.TEXT_MD} ${CSS_CLASSES.TEXT_WHITE}">${safeVal(stock.high, formatCurrency)}</span>
                                         </div>
                                         <div class="${CSS_CLASSES.STAT_COL} ${CSS_CLASSES.ALIGN_END}">
                                             <span class="${CSS_CLASSES.STAT_LABEL}">P/E Ratio</span>
@@ -750,7 +750,7 @@ export class ViewRenderer {
     
                             <!-- Card 4: Alerts (Dynamic Target Price) -->
                             ${stock.targetPrice > 0 ? `
-                            <div class="${CSS_CLASSES.DETAIL_CARD}" data-action="deep-link" data-id="${stock.id}" data-section="target" style="cursor: pointer;">
+                            <div class="${CSS_CLASSES.DETAIL_CARD} ${CSS_CLASSES.CURSOR_POINTER}" data-action="deep-link" data-id="${stock.id}" data-section="target">
                                 <div class="${CSS_CLASSES.DETAIL_CARD_HEADER}">
                                     <h3 class="${CSS_CLASSES.DETAIL_LABEL}">
                                         <i class="fas ${UI_ICONS.ALERTS}"></i> Alerts
@@ -758,9 +758,9 @@ export class ViewRenderer {
                                 </div>
                                 <div class="${CSS_CLASSES.DETAIL_ROW}">
                                     <span class="${CSS_CLASSES.DETAIL_LABEL}">Target Price</span>
-                                    <span class="${CSS_CLASSES.DETAIL_VALUE}" style="display: flex; align-items: center; gap: 6px;">
-                                        <span style="color: #ffffff; font-weight: 700;">${(stock.buySell === 'sell') ? 'S' : 'B'}</span>
-                                        <i class="fas ${(stock.buySell === 'sell') ? UI_ICONS.CARET_UP : UI_ICONS.CARET_DOWN} ${(stock.buySell === 'sell') ? CSS_CLASSES.POSITIVE : CSS_CLASSES.NEGATIVE}" style="font-size: 1.1rem;"></i>
+                                    <span class="${CSS_CLASSES.DETAIL_VALUE} ${CSS_CLASSES.DISPLAY_FLEX} ${CSS_CLASSES.ALIGN_CENTER} ${CSS_CLASSES.GAP_6PX}">
+                                        <span class="${CSS_CLASSES.TEXT_WHITE} ${CSS_CLASSES.TEXT_700}">${(stock.buySell === 'sell') ? 'S' : 'B'}</span>
+                                        <i class="fas ${(stock.buySell === 'sell') ? UI_ICONS.CARET_UP : UI_ICONS.CARET_DOWN} ${(stock.buySell === 'sell') ? CSS_CLASSES.POSITIVE : CSS_CLASSES.NEGATIVE} ${CSS_CLASSES.FONT_1_1_REM}"></i>
                                         <span>${formatCurrency(stock.targetPrice)}</span>
                                     </span>
                                 </div>
@@ -769,7 +769,7 @@ export class ViewRenderer {
 
                             <!-- Card 5: Comments (Conditional) -->
                             ${stock.comments && stock.comments.length > 0 ? `
-                                <div class="${CSS_CLASSES.DETAIL_CARD}" data-action="deep-link" data-id="${stock.id}" data-section="notes" style="cursor: pointer;">
+                                <div class="${CSS_CLASSES.DETAIL_CARD} ${CSS_CLASSES.CURSOR_POINTER}" data-action="deep-link" data-id="${stock.id}" data-section="notes">
                                     <div class="${CSS_CLASSES.DETAIL_CARD_HEADER}">
                                         <h3 class="${CSS_CLASSES.DETAIL_LABEL}">
                                             <i class="fas ${UI_ICONS.COMMENTS}"></i> Comments
