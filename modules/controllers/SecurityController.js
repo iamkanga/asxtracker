@@ -133,6 +133,23 @@ export class SecurityController {
     }
 
     /**
+     * Determines the valid RP ID.
+     * WebAuthn forbids IP addresses as RP IDs.
+     * @returns {string|undefined}
+     */
+    _getRpId() {
+        const hostname = window.location.hostname;
+        // Check for IPv4 or IPv6
+        const isIp = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/.test(hostname) || hostname.includes(':');
+
+        if (isIp) {
+            console.log("SecurityController: Hostname is IP, omitting rpId.");
+            return undefined; // Let browser default to origin
+        }
+        return hostname;
+    }
+
+    /**
      * Triggers Biometric Authentication (WebAuthn).
      */
     async authenticateBiometric() {
@@ -153,18 +170,20 @@ export class SecurityController {
             const challenge = new Uint8Array(32);
             window.crypto.getRandomValues(challenge);
 
-            const credential = await navigator.credentials.get({
-                publicKey: {
-                    challenge: challenge,
-                    rpId: window.location.hostname, // FIX: Explicitly match current domain to prevent Invalid Domain err
-                    allowCredentials: [{
-                        id: this._base64ToBuffer(storedCredentialId),
-                        type: 'public-key',
-                        // transports: ['internal'] // Optional: hints at platform authenticators
-                    }],
-                    userVerification: 'required' // Forces the auth prompt (TouchID/FaceID/Hello)
-                }
-            });
+            const publicKey = {
+                challenge: challenge,
+                allowCredentials: [{
+                    id: this._base64ToBuffer(storedCredentialId),
+                    type: 'public-key',
+                    // transports: ['internal'] // Optional: hints at platform authenticators
+                }],
+                userVerification: 'required' // Forces the auth prompt (TouchID/FaceID/Hello)
+            };
+
+            const rpId = this._getRpId();
+            if (rpId) publicKey.rpId = rpId;
+
+            const credential = await navigator.credentials.get({ publicKey });
 
             if (credential) {
                 // STRICT SECURITY: Inspect Authenticator Data Flags
@@ -198,7 +217,7 @@ export class SecurityController {
             // Helpful Error Handling
             if (error.name === 'SecurityError' || error.message.includes('invalid domain')) {
                 import('../ui/ToastManager.js').then(({ ToastManager }) => {
-                    ToastManager.error("Domain mismatch. Please toggle Biometrics OFF then ON in Settings to fix.", "Biometric Error");
+                    ToastManager.error("Domain mismatch (IP/Localhost). Please re-enable Biometrics in Settings.", "Biometric Error");
                 });
             } else if (error.name === 'NotAllowedError') {
                 // User cancelled or timed out - valid flow, no massive error needed
@@ -226,13 +245,16 @@ export class SecurityController {
             const userId = new Uint8Array(16);
             window.crypto.getRandomValues(userId);
 
+            const rp = {
+                name: "ASX Tracker"
+            };
+            const rpId = this._getRpId();
+            if (rpId) rp.id = rpId;
+
             const credential = await navigator.credentials.create({
                 publicKey: {
                     challenge: challenge,
-                    rp: {
-                        name: "ASX Tracker",
-                        id: window.location.hostname // FIX: Explicitly bind to current hostname
-                    },
+                    rp: rp,
                     user: {
                         id: userId,
                         name: "user",
@@ -270,6 +292,11 @@ export class SecurityController {
         } catch (error) {
             console.error("SecurityController: Failed to enable biometrics:", error);
             // Errors include user cancelling, or not configured on device
+            if (error.name === 'SecurityError') {
+                import('../ui/ToastManager.js').then(({ ToastManager }) => {
+                    ToastManager.error("Security Error: Try accessing via localhost instead of IP, or check HTTPS.", "Setup Failed");
+                });
+            }
         }
 
         return false;
