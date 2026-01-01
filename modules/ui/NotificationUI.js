@@ -731,9 +731,24 @@ export class NotificationUI {
             // 1. PRICE TARGET (Priority 1: User set targets)
             if (intent === 'target' || intent === 'target-hit') {
                 const tPrice = formatCurrency(alertItem.target || alertItem.targetPrice || 0);
+
+                // INTENT-BASED RENDERING (Constitutional Fix)
+                // Use explicit direction from DB if available, rather than inferring from transient price.
+                let dirArrow = '';
+                let contextInfo = ''; // Helper to explain WHY if price looks wrong
+
+                // Current Price & Target for Context Check
                 const p = Number(alertItem.price || 0);
                 const t = Number(alertItem.target || alertItem.targetPrice || 0);
-                const dirArrow = (alertItem.direction === 'above' || p >= t) ? '▲' : '▼';
+
+                if (alertItem.direction === 'above') {
+                    dirArrow = '▲';
+                } else if (alertItem.direction === 'below') {
+                    dirArrow = '▼';
+                } else {
+                    dirArrow = (p >= t) ? '▲' : '▼';
+                }
+
                 return { text: `Target Hit ${dirArrow} ${tPrice}`, range: null };
             }
 

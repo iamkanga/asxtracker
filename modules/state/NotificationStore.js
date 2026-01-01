@@ -451,10 +451,26 @@ export class NotificationStore {
         // If the Backend isn't sending Targets or Watchlist Hi/Lo, we generate them here on the fly.
         const clientTargets = this._generateClientSideWatchlistAlerts();
 
-        // Merge Hits: Start with Backend Hits, then Append Client Targets
-        // Note: We don't de-dup here because 'intent' is different (mover vs target).
-        const rawHits = [...this.scanData.customHits, ...clientTargets];
+        // MERGE FIX: Deduplicate Server vs Client Hits.
+        // Normalize 'target-hit' vs 'target' to ensure matches work.
+        const normalizeIntent = (i) => (i || '').toUpperCase().replace('-HIT', '');
 
+        const clientSignatures = new Set(clientTargets.map(h => {
+            const sig = `${h.code}|${normalizeIntent(h.intent)}`;
+            return sig;
+        }));
+
+        // Filter Server Hits: Drop if covered by Client
+        const uniqueServerHits = this.scanData.customHits.filter(h => {
+            const sig = `${h.code}|${normalizeIntent(h.intent)}`.toUpperCase();
+            const isDuplicate = clientSignatures.has(sig);
+            return !isDuplicate;
+        });
+
+        // Merge Hits: Append Client Targets to Unique Server Hits
+        const rawHits = [...uniqueServerHits, ...clientTargets];
+
+        // --- MOVER LOGIC CONTINUE ---
         const myHits = rawHits.filter(hit => {
             const match = String(hit.userId) === String(this.userId);
             if (!match) return false;
@@ -1104,8 +1120,14 @@ export class NotificationStore {
         const alerts = [];
         // Removed global 'today' constant. We now resolve per-item.
 
+        const processedCodes = new Set(); // DEDUPLICATION GUARD
+
         AppState.data.shares.forEach(share => {
             const code = share.shareName;
+
+            // DEDUPLICATION: If user has same stock in 2 watchlists, ignore second.
+            if (processedCodes.has(code)) return;
+            processedCodes.add(code);
 
             // Exclude Dashboard Symbols from alerts
             if (DASHBOARD_SYMBOLS.includes(code)) return;
@@ -1141,8 +1163,12 @@ export class NotificationStore {
                     if (targetPrice > 0) {
                         const direction = share.targetDirection || 'below';
                         let hit = false;
-                        const dayHigh = Number(liveData.high || liveData.highDay || price); // Fallback to price if no day high
-                        const dayLow = Number(liveData.low || liveData.lowDay || price);   // Fallback to price if no day low
+
+                        // FIX: Do NOT use liveData.high/low here as they map to 52-week data in DataService.
+                        // Until API provides explicit 'highDay'/'lowDay', we must fallback to PRICE.
+                        // This prevents 52-week lows from triggering "Day Low" alerts.
+                        const dayHigh = Number(liveData.highDay || price);
+                        const dayLow = Number(liveData.lowDay || price);
 
                         // CHECK DAY HIGH/LOW to catch intraday spikes
                         if (direction === 'above' && dayHigh >= targetPrice) hit = true;
@@ -1187,6 +1213,7 @@ export class NotificationStore {
                                 price: price,
                                 prevClose: Number(liveData.prevClose || 0),
                                 high52: high52,
+                                low52: low52, // ADDED: Ensure Range is visible
                                 pct: pctChange,
                                 change: dolChange,
                                 t: this._getStableTimestamp(key)
@@ -1204,6 +1231,7 @@ export class NotificationStore {
                                 price: price,
                                 prevClose: Number(liveData.prevClose || 0),
                                 low52: low52,
+                                high52: high52, // ADDED: Ensure Range is visible
                                 pct: pctChange,
                                 change: dolChange,
                                 t: this._getStableTimestamp(key)

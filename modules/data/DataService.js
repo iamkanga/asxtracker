@@ -193,6 +193,14 @@ export class DataService {
             // STRICT NORMALIZATION: Trim and Uppercase to match main.js lookup
             const code = String(item.ASXCode).trim().toUpperCase();
 
+            // DIAGNOSTIC (One-Time): Check for Day High/Low keys AND VALUES
+            if (code === 'ANZ' || code === 'WOW') {
+                console.log(`[DataService] Raw Data for ${code}:`, {
+                    H52: item.High52,
+                    L52: item.Low52,
+                    Live: item.LivePrice
+                });
+            }
 
             // Skip invalid entries after normalization
             if (!code) return;

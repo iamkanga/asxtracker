@@ -5,7 +5,7 @@
 import { AppState } from '../state/AppState.js';
 // AppService removed for modularity
 // AppService removed for modularity
-import { IDS, CSS_CLASSES, WATCHLIST_ICON_POOL, ALL_SHARES_ID, CASH_WATCHLIST_ID, DASHBOARD_WATCHLIST_ID, PORTFOLIO_ID, UI_ICONS, USER_MESSAGES, STORAGE_KEYS, WATCHLIST_MODES, SORT_OPTIONS } from '../utils/AppConstants.js';
+import { IDS, CSS_CLASSES, EVENTS, WATCHLIST_ICON_POOL, ALL_SHARES_ID, CASH_WATCHLIST_ID, DASHBOARD_WATCHLIST_ID, PORTFOLIO_ID, UI_ICONS, USER_MESSAGES, STORAGE_KEYS, WATCHLIST_MODES, SORT_OPTIONS } from '../utils/AppConstants.js';
 import { WatchlistPickerModal } from './WatchlistPickerModal.js';
 import { ToastManager } from './ToastManager.js';
 import { navManager } from '../utils/NavigationManager.js';
@@ -149,79 +149,70 @@ export class WatchlistUI {
         this._bindTitleListener();
     }
 
+    // STATIC HANDLER REFERENCE (Module Scoped)
+    // This exists outside the class instance to survive re-instantiations.
+    static _toggleHandler = null;
+
     _bindTitleListener() {
-        // Robust Event Delegation: Attach to body to survive header re-renders
-        // We ensure we only attach this ONCE per instance by checking a flag on the instance
-        if (this._isTitleListenerBound) return;
+        // CONSTITUTIONAL FIX: Singleton Event Subscriber
+        // We use a static reference to ensure we can remove the previous listener
+        // even if the class instance is new.
 
-        document.body.addEventListener('click', (e) => {
-            // DIAGNOSTIC CORE: Log every click on body to see what might be blocking us
-            const titleBar = e.target.closest(`#${IDS.DYNAMIC_WATCHLIST_TITLE}`);
-            const titleText = e.target.closest(`#${IDS.CURRENT_WATCHLIST_NAME}`);
-            const titleSelector = e.target.closest(`.${IDS.WATCHLIST_SELECTOR}`);
+        if (WatchlistUI._toggleHandler) {
+            document.removeEventListener(EVENTS.TOGGLE_WATCHLIST_MODAL, WatchlistUI._toggleHandler);
+            WatchlistUI._toggleHandler = null;
+            console.log('[WatchlistUI] Cleaned up orphaned listener.');
+        }
 
-            if (titleBar || titleText || titleSelector) {
-                console.log('[WatchlistUI] Title Click Detected:', {
-                    titleBar: !!titleBar,
-                    titleText: !!titleText,
-                    titleSelector: !!titleSelector,
-                    target: e.target.id || e.target.className,
-                    isSelectorActive: (titleBar || titleText || titleSelector).classList.contains(CSS_CLASSES.ACTIVE)
-                });
+        WatchlistUI._toggleHandler = () => {
+            console.log('[WatchlistUI] Received TOGGLE_WATCHLIST_MODAL event.');
 
-                // 1. STRICT FILTER: Ignore if clicking carousel nav buttons
-                if (e.target.closest(`.${CSS_CLASSES.CAROUSEL_NAV_BTN}`) || e.target.closest('.watchlist-carousel-nav button')) {
-                    console.log('[WatchlistUI] Click blocked by Carousel Nav filter');
-                    return;
-                }
+            // 1. Check if already active (Hiding Logic)
+            const modal = document.getElementById(IDS.WATCHLIST_PICKER_MODAL);
+            const isVisible = modal && modal.classList.contains(CSS_CLASSES.SHOW);
 
-                // 2. TOGGLE LOGIC
-                const selector = titleBar || titleText || titleSelector;
-                if (selector.classList.contains(CSS_CLASSES.ACTIVE)) {
-                    console.log('[WatchlistUI] Selector active, closing modal');
-                    this.closeModal();
-                    return;
-                }
-
-                // Add active state
-                selector.classList.add(CSS_CLASSES.ACTIVE);
-                console.log('[WatchlistUI] Opening Modal via first click');
-
-                // DETERMINATION: Contextual Start Mode
-                if (titleText) {
-                    // Clicked the name specifically -> Clean selection modal (Default)
-                    this.watchlistMode = WATCHLIST_MODES.DEFAULT;
-                } else {
-                    // Clicked the bar area -> Use preferred mode (Rearrange or Carousel)
-                    this.watchlistMode = AppState.preferences.watchlistMode || WATCHLIST_MODES.DEFAULT;
-                }
-
+            if (isVisible) {
+                console.log('[WatchlistUI] Modal active -> Closing.');
+                const ui = this; // Capture 'this' for the *current* instance
+                ui.closeModal();
+            } else {
+                console.log('[WatchlistUI] Modal hidden -> Opening.');
+                this.watchlistMode = AppState.preferences.watchlistMode || WATCHLIST_MODES.DEFAULT;
                 this.renderWatchlistDropdown();
-                const modal = document.getElementById(IDS.WATCHLIST_PICKER_MODAL);
-                if (modal) {
-                    modal.classList.remove(CSS_CLASSES.HIDDEN);
-                    modal.classList.add(CSS_CLASSES.SHOW);
-
-                    // Register with NavigationManager
-                    this._navActive = true;
-                    navManager.pushState(() => {
-                        if (modal.classList.contains(CSS_CLASSES.SHOW)) {
-                            this._navActive = false;
-                            this.closeModal();
-                        }
-                    });
-
-                    // Sync container visibility with mode
-                    const modeContainer = document.getElementById(IDS.WATCHLIST_MODE_CONTAINER);
-                    if (modeContainer) {
-                        modeContainer.classList.toggle(CSS_CLASSES.HIDDEN, this.watchlistMode === WATCHLIST_MODES.DEFAULT);
-                    }
-                }
+                this._openModal();
             }
-        });
+        };
 
+        document.addEventListener(EVENTS.TOGGLE_WATCHLIST_MODAL, WatchlistUI._toggleHandler);
         this._isTitleListenerBound = true;
-        console.log('WatchlistUI: Delegated title listener bound.');
+
+        console.log('WatchlistUI: TOGGLE_WATCHLIST_MODAL subscriber bound (Singleton).');
+    }
+
+    _openModal() {
+        const modal = document.getElementById(IDS.WATCHLIST_PICKER_MODAL);
+        const titleEl = document.getElementById(IDS.DYNAMIC_WATCHLIST_TITLE);
+
+        if (modal) {
+            modal.classList.remove(CSS_CLASSES.HIDDEN);
+            modal.classList.add(CSS_CLASSES.SHOW);
+            if (titleEl) titleEl.classList.add(CSS_CLASSES.ACTIVE);
+
+            // Register with NavigationManager
+            this._navActive = true;
+            navManager.pushState(() => {
+                if (modal.classList.contains(CSS_CLASSES.SHOW)) {
+                    this._navActive = false;
+                    this.closeModal();
+                }
+            });
+
+            // Sync container visibility with mode
+            const modeContainer = document.getElementById(IDS.WATCHLIST_MODE_CONTAINER);
+            if (modeContainer) {
+                modeContainer.classList.toggle(CSS_CLASSES.HIDDEN, this.watchlistMode === WATCHLIST_MODES.DEFAULT);
+            }
+        }
     }
 
     // _bindTitleListener removed in favor of delegation

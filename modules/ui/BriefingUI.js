@@ -40,20 +40,18 @@ export class BriefingUI {
             <div class="${CSS_CLASSES.MODAL_OVERLAY}"></div>
             <div class="${CSS_CLASSES.MODAL_CONTENT} ${CSS_CLASSES.MODAL_CONTENT_MEDIUM} briefing-modal-content" style="max-height: 90vh;">
                 <div class="${CSS_CLASSES.MODAL_HEADER}">
-                    <h2 class="${CSS_CLASSES.MODAL_TITLE}">
+                    <h2 class="${CSS_CLASSES.MODAL_TITLE}" style="display: flex; flex-direction: column; align-items: flex-start; gap: 5px;">
                         <div style="display: flex; align-items: center; gap: 10px;">
                             <i class="fas fa-coffee" style="color: var(--color-accent);"></i>
                             <span>Daily Briefing</span>
                         </div>
-
-
+                        <div style="font-size: 0.55em; font-weight: 400; color: var(--text-muted); margin-left: 0;">Top 10 from each section</div>
                     </h2>
                     <button class="${CSS_CLASSES.MODAL_CLOSE_BTN}" title="Close">
                         <i class="fas ${UI_ICONS.CLOSE}"></i>
                     </button>
                 </div>
                 <div class="${CSS_CLASSES.MODAL_BODY} ${CSS_CLASSES.SCROLLABLE_BODY}" style="padding: 15px;">
-                    <div style="text-align: center; color: var(--text-muted); font-size: 0.8rem; margin-bottom: 4px;">Top 10 from each section</div>
                     <div class="briefing-date">${dateStr}</div>
                     
                     ${this._renderSection('Custom Triggers', data.subtitles.custom, data.custom, 'custom')}

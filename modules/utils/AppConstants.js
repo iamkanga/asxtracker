@@ -66,6 +66,7 @@ export const EVENTS = {
     // Watchlist Events
     REFRESH_WATCHLIST: 'refresh-watchlist',
     WATCHLIST_CHANGED: 'watchlist-changed',
+    TOGGLE_WATCHLIST_MODAL: 'toggle-watchlist-modal', // New Event for explicit toggling
     REQUEST_NEW_WATCHLIST: 'request-new-watchlist',
     REQUEST_UPDATE_WATCHLIST: 'request-update-watchlist',
     REQUEST_DELETE_WATCHLIST: 'request-delete-watchlist',
