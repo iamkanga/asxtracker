@@ -43,7 +43,7 @@ export class ViewRenderer {
 
         // 2. Clear Container
         this.container.innerHTML = '';
-        this.container.className = '';
+        this.container.classList.remove(CSS_CLASSES.VIEW_TABLE, CSS_CLASSES.VIEW_COMPACT, CSS_CLASSES.VIEW_SNAPSHOT);
 
         // 2a. Render Summary (ONLY for Portfolio)
         // User Logic: if (currentWatchlistName === 'Portfolio') { renderSummary(); }

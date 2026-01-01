@@ -1908,11 +1908,7 @@ h1#dynamicWatchlistTitle.active {
 }
 
 /* Portfolio Table View (Desktop Grid) */
-@media (min-width: 768px) {
-    .view-table .mobile-share-cards.portfolio-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
-}
+
 
 /* Desktop override for other grid views if needed */
 /* Removed redundant media query for portfolio-grid */
@@ -2259,12 +2255,7 @@ h1#dynamicWatchlistTitle.active {
 }
 
 /* Tablet/Desktop Override for Grid */
-@media (min-width: 768px) {
-    .snapshot-grid {
-        grid-template-columns: repeat(4, 1fr);
-        gap: 15px;
-    }
-}
+
 
 .snapshot-card {
     background-color: var(--bg-card);
@@ -4217,7 +4208,8 @@ h1.modal-title,
     gap: 12px;
     padding: 10px;
     width: 100%;
-    margin: 0 auto;
+    max-width: 1000px;
+    margin: 0 auto 40px auto;
     border-radius: 0;
 }
 
@@ -4335,8 +4327,8 @@ h1.modal-title,
     background: var(--card-bg);
     padding: 20px;
     border-radius: 0;
-    margin: 20px auto 10px auto !important;
-    max-width: 800px;
+    margin: 40px auto 20px auto !important;
+    max-width: 1000px;
     box-shadow: var(--shadow-medium);
     display: flex;
     justify-content: space-between;
@@ -4449,68 +4441,7 @@ h1.modal-title,
 }
 
 /* Mobile & Multi-Column Density Refinements (V60 Audit) */
-@media (max-width: 768px) {
-    .cash-card {
-        padding: 10px 12px;
-        gap: 8px;
-    }
 
-    .cash-category-label {
-        font-size: 0.6rem !important;
-    }
-
-    .cash-name-label {
-        font-size: 0.85rem !important;
-    }
-
-    .cash-balance {
-        font-size: 0.95rem !important;
-    }
-
-    /* Single View Mobile Sizing */
-    .cash-view-single .cash-category-label {
-        font-size: 0.75rem !important;
-        /* Increased */
-    }
-
-    .cash-view-single .cash-name-label {
-        font-size: 1.0rem !important;
-        /* Increased */
-    }
-
-    /* Extra tight spacing for 2-column on mobile */
-    .cash-view-two-column .cash-card {
-        padding: 8px 10px;
-    }
-
-    .cash-view-two-column .cash-name-label {
-        font-size: 0.9rem !important;
-        /* Increased from 0.75rem */
-    }
-
-    .cash-view-two-column .cash-balance {
-        font-size: 1.0rem !important;
-        /* Increased from 0.8rem */
-    }
-
-    /* Maximum density for 3-column on mobile */
-    .cash-view-three-column .cash-card {
-        padding: 6px 8px;
-        gap: 4px;
-    }
-
-    .cash-view-three-column .cash-name-label {
-        font-size: 0.7rem !important;
-    }
-
-    .cash-view-three-column .cash-balance {
-        font-size: 0.7rem !important;
-    }
-
-    .cash-view-three-column .cash-eye-icon {
-        font-size: 0.8rem !important;
-    }
-}
 
 /* Modal Inputs Theme */
 .cash-category-select,
@@ -5243,35 +5174,14 @@ body.dark-theme .sort-picker-row.active {
 }
 
 /* Mobile Breakpoint (< 768px) */
-@media (max-width: 768px) {
-    .share-table {
-        display: none;
-    }
 
-    .mobile-cards-fallback {
-        display: grid;
-        grid-template-columns: 1fr;
-        gap: 12px;
-        padding: 10px;
-    }
-
-    /* Reuse card styles if needed */
-    .mobile-cards-fallback .share-card {
-        width: 100%;
-        box-sizing: border-box;
-    }
-}
 
 /* Ensure Content Clears Fixed Header - REMOVED (Header is Sticky) */
 /* #main-content handled by base styles */
 
 /* Adjust for smaller screens/headers if needed */
 /* Adjust for smaller screens/headers if needed */
-@media (max-width: 480px) {
-    #main-content {
-        padding-top: 0;
-    }
-}
+
 
 /* -------------------------------------------------------------------------- */
 /*                                5. UTILITIES                                */
@@ -6218,177 +6128,13 @@ body.dark-theme .share-card.trend-down {
 /* -------------------------------------------------------------------------- */
 
 /* Tablet & Mobile */
-@media (max-width: 768px) {
-    .portfolio-summary {
-        flex-direction: column;
-        align-items: stretch;
-        padding: 0 5px;
-        gap: 10px;
-        margin-bottom: 15px;
-    }
 
-    .summary-card {
-        width: 100%;
-        margin: 0;
-    }
-
-    .portfolio-summary>.summary-card:first-child {
-        flex: 1 1 auto;
-        margin-bottom: 0;
-    }
-
-    /* Transform Table to Cards */
-    .share-table {
-        display: block !important;
-        width: 100%;
-    }
-
-    .share-table thead {
-        display: none;
-    }
-
-    .share-table tbody {
-        display: block;
-        width: 100%;
-    }
-
-    .share-table tr {
-        display: block;
-        width: 100%;
-        margin-bottom: 15px;
-        background: var(--card-bg);
-        border-radius: 0;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-        position: relative;
-        padding-bottom: 10px;
-    }
-
-    .share-table tr.trend-up {
-        border-left: 5px solid var(--positive);
-        border-right: 5px solid var(--positive);
-        border-top: 2px solid var(--positive) !important;
-        border-bottom: 2px solid var(--positive) !important;
-    }
-
-    .share-table tr.trend-down {
-        border-left: 5px solid var(--negative);
-        border-right: 5px solid var(--negative);
-        border-top: 2px solid var(--negative) !important;
-        border-bottom: 2px solid var(--negative) !important;
-    }
-
-    .share-table tr.trend-neutral {
-        border-left: 5px solid var(--primary-color);
-        border-right: 5px solid var(--primary-color);
-        border-top: 2px solid var(--primary-color) !important;
-        border-bottom: 2px solid var(--primary-color) !important;
-    }
-
-    .share-table td {
-        display: flex;
-        justify-content: space-between;
-        padding: 8px 15px;
-        text-align: right;
-        border: none;
-    }
-
-    .share-table td:last-child {
-        border-bottom: none;
-    }
-
-    .mobile-cards-fallback {
-        display: none !important;
-    }
-
-    /* Modal Centering Fix */
-    .modal {
-        display: flex !important;
-        flex-direction: column !important;
-        justify-content: center !important;
-        align-items: center !important;
-        min-height: 100vh !important;
-        height: 100vh !important;
-        top: 0 !important;
-        left: 0 !important;
-        right: 0 !important;
-        bottom: 0 !important;
-        width: 100% !important;
-        position: fixed !important;
-        margin: 0 !important;
-        padding: 0 !important;
-    }
-
-    /* Reduce Header Gaps by 50% (Horizontal only) */
-    #appHeader {
-        padding-left: 8px !important;
-        padding-right: 8px !important;
-    }
-
-    .header-inner-container {
-        padding-left: 0 !important;
-        padding-right: 0 !important;
-    }
-
-    #main-content {
-        padding: 15px 8px !important;
-    }
-
-    .dashboard-container.view-mode-snapshot {
-        padding: 8px 0 !important;
-        gap: 6px !important;
-        width: 100% !important;
-    }
-
-    .dashboard-container.view-mode-snapshot .dashboard-row {
-        padding: 10px 8px !important;
-    }
-
-    .modal-content {
-        margin: 0 !important;
-        width: 95% !important;
-        max-height: 85vh;
-        overflow-y: auto;
-    }
-
-    #stock-details-modal .modal-content,
-    #add-share-modal .modal-content {
-        margin-top: 0 !important;
-    }
-
-    #add-share-modal .modal-content {
-        width: 95% !important;
-        margin-top: 20px !important;
-    }
-}
 
 /* Desktop Only */
-@media (min-width: 769px) {
-    .mobile-cards-fallback {
-        display: none !important;
-    }
 
-    /* Narrower Watchlist & Sort Modals */
-    .sort-picker-modal,
-    #watchlistPickerModal .modal-content {
-        max-width: 480px !important;
-    }
-
-    /* Narrower Viewing/Stock Details Modal */
-    .modal-content-large {
-        max-width: 480px !important;
-    }
-}
 
 /* Large Screens */
-@media (min-width: 600px) {
-    .share-detail-sections {
-        grid-template-columns: 1fr;
-    }
 
-    .snapshot-card {
-        grid-column: 1 / -1;
-    }
-}
 
 /* --- Security Layer (Feature) --- */
 
@@ -6491,16 +6237,7 @@ body.dark-theme .share-card.trend-down {
     margin: 0 auto;
 }
 
-@media (max-width: 480px) {
-    .pin-btn {
-        min-height: 72px;
-        font-size: 1.8rem;
-    }
 
-    .pin-pad {
-        gap: 20px;
-    }
-}
 
 .pin-btn:active {
     background: var(--color-accent);
@@ -6671,23 +6408,7 @@ input:checked+.slider:before {
     box-sizing: border-box;
 }
 
-@media (max-width: 767px) {
 
-    /* Hide desktop-only elements */
-    .desktop-only {
-        display: none !important;
-    }
-
-    /* Hide standard table in favor of fallback cards on mobile */
-    .view-table .share-table {
-        display: none !important;
-    }
-
-    /* Show mobile fallback cards */
-    .mobile-cards-fallback {
-        display: flex !important;
-    }
-}
 
 /* --- Zombie Classes: Selection & Radio States --- */
 
@@ -7148,82 +6869,10 @@ body.dark-theme .calc-result-card {
 /* -------------------------------------------------------------------------- */
 /*                         7. MEDIA QUERIES & PRINT                          */
 /* -------------------------------------------------------------------------- */
-@media print {
-    body * {
-        visibility: hidden;
-    }
 
-    #main-content,
-    #main-content * {
-        visibility: visible;
-    }
-
-    #main-content {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
-        margin: 0;
-        padding: 0;
-    }
-
-    .no-print,
-    .sidebar,
-    .app-header,
-    .header-carousel-nav,
-    .watchlist-controls-row,
-    .market-status-icon,
-    .sidebar-overlay {
-        display: none !important;
-    }
-
-    .share-card {
-        break-inside: avoid;
-        border: 1px solid #ddd !important;
-        box-shadow: none !important;
-        background-color: white !important;
-        color: black !important;
-    }
-
-    .card-code,
-    .card-price,
-    .detail-value {
-        color: black !important;
-    }
-
-    .detail-value.positive {
-        color: #2e7d32 !important;
-    }
-
-    .detail-value.negative {
-        color: #c62828 !important;
-    }
-}
 
 /* Splash Mobile Smoothing */
-@media (max-width: 768px) {
-    #content-container {
-        padding-bottom: 100px !important;
-    }
 
-    .splash-logo-container {
-        /* V77: Visual enhancements finalized (Border Removed) */
-        padding-top: 0 !important;
-        padding-left: 0 !important;
-        margin-left: -14.4vw !important;
-        left: -1.2rem !important;
-
-        position: absolute !important;
-        top: -2vh !important;
-        /* V76: Pull above screen edge */
-        width: fit-content !important;
-        margin-top: 0 !important;
-        margin-right: 0 !important;
-        margin-bottom: 0 !important;
-        transform: none !important;
-        z-index: 50;
-    }
-}
 
 
 /* .splash-logo removed to allow main 85vw style to cascade (V41) */
@@ -7372,4 +7021,280 @@ body.dark-theme .calc-result-card {
     opacity: 1 !important;
     transform: none !important;
     visibility: visible !important;
+}
+
+/* -------------------------------------------------------------------------- */
+/*                         7. MEDIA QUERIES & PRINT                          */
+/* -------------------------------------------------------------------------- */
+
+/* LARGE TABLETS / DESKTOP ( >= 768px ) */
+@media (min-width: 768px) {
+    .view-table .mobile-share-cards.portfolio-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .snapshot-grid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 15px;
+    }
+}
+
+/* DESKTOP ONLY ( > 768px ) */
+@media (min-width: 769px) {
+    .mobile-cards-fallback {
+        display: none !important;
+    }
+
+    .sort-picker-modal,
+    #watchlistPickerModal .modal-content {
+        max-width: 480px !important;
+    }
+
+    .modal-content-large {
+        max-width: 480px !important;
+    }
+}
+
+/* WIDE SCREENS ( >= 600px ) */
+@media (min-width: 600px) {
+    .share-detail-sections {
+        grid-template-columns: 1fr;
+    }
+
+    .snapshot-card {
+        grid-column: 1 / -1;
+    }
+}
+
+/* SMALL TABLETS & MOBILE ( < 768px ) */
+@media (max-width: 768px) {
+
+    /* 12px Standard Mobile Gutter Compliance */
+    #appHeader {
+        padding: 12px 12px 10px 12px !important;
+    }
+
+    #content-container {
+        padding: 0 12px !important;
+        padding-bottom: 100px !important;
+    }
+
+    .header-inner-container {
+        padding: 0 !important;
+        /* Managed by #appHeader */
+    }
+
+    .header-top-row {
+        gap: 4px;
+        /* Tighten for small screens */
+        min-width: 0;
+    }
+
+    .header-left-container,
+    .header-action-btn-right {
+        gap: 4px;
+        min-width: 0;
+    }
+
+    .watchlist-selector span {
+        max-width: 140px;
+        /* Protect icons from hit edge */
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        display: inline-block;
+        vertical-align: bottom;
+    }
+
+    /* Cash View Responsive Scaling */
+    .cash-card {
+        padding: 10px 12px;
+        gap: 8px;
+    }
+
+    .cash-category-label {
+        font-size: 0.6rem !important;
+    }
+
+    .cash-name-label {
+        font-size: 0.85rem !important;
+    }
+
+    .cash-balance {
+        font-size: 0.95rem !important;
+    }
+
+    .cash-view-single .cash-category-label {
+        font-size: 0.75rem !important;
+    }
+
+    .cash-view-single .cash-name-label {
+        font-size: 1.0rem !important;
+    }
+
+    .cash-view-two-column .cash-card {
+        padding: 8px 10px;
+    }
+
+    .cash-view-two-column .cash-name-label {
+        font-size: 0.9rem !important;
+    }
+
+    .cash-view-two-column .cash-balance {
+        font-size: 1.0rem !important;
+    }
+
+    .cash-view-three-column .cash-card {
+        padding: 6px 8px;
+        gap: 4px;
+    }
+
+    .cash-view-three-column .cash-name-label {
+        font-size: 0.7rem !important;
+    }
+
+    .cash-view-three-column .cash-balance {
+        font-size: 0.7rem !important;
+    }
+
+    .cash-view-three-column .cash-eye-icon {
+        font-size: 0.8rem !important;
+    }
+
+    /* Layout & Mode Handling */
+    .share-table {
+        display: none;
+    }
+
+    .mobile-cards-fallback {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 12px;
+        padding: 12px;
+    }
+
+    .mobile-cards-fallback .share-card {
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .portfolio-summary {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 0 5px;
+        gap: 10px;
+        margin-bottom: 15px;
+    }
+
+    .summary-card {
+        width: 100%;
+        margin: 0;
+    }
+
+    .portfolio-summary>.summary-card:first-child {
+        flex: 1 1 auto;
+        margin-bottom: 0;
+    }
+
+    .modal {
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: center !important;
+        align-items: center !important;
+        min-height: 100vh !important;
+        height: 100vh !important;
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        padding: 0 !important;
+    }
+
+    .modal-content {
+        width: 95% !important;
+        max-height: 85vh;
+        overflow-y: auto;
+        margin: 0 !important;
+    }
+
+    /* Splash Adjustments */
+    .splash-logo-container {
+        padding: 0 !important;
+        margin-left: -14.4vw !important;
+        left: -1.2rem !important;
+        position: absolute !important;
+        top: -2vh !important;
+        width: fit-content !important;
+        z-index: 50;
+    }
+}
+
+/* SMARTPHONES ( <= 480px ) */
+@media (max-width: 480px) {
+    #main-content {
+        padding-top: 0;
+    }
+
+    .pin-btn {
+        min-height: 72px;
+        font-size: 1.8rem;
+    }
+
+    .pin-pad {
+        gap: 20px;
+    }
+}
+
+/* PRINT STANDARDS */
+@media print {
+    body * {
+        visibility: hidden;
+    }
+
+    #main-content,
+    #main-content * {
+        visibility: visible;
+    }
+
+    #main-content {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+    }
+
+    .no-print,
+    .sidebar,
+    .app-header,
+    .header-carousel-nav,
+    .watchlist-controls-row,
+    .market-status-icon,
+    .sidebar-overlay {
+        display: none !important;
+    }
+
+    .share-card {
+        break-inside: avoid;
+        border: 1px solid #ddd !important;
+        box-shadow: none !important;
+        background-color: white !important;
+        color: black !important;
+    }
+
+    .card-code,
+    .card-price,
+    .detail-value {
+        color: black !important;
+    }
+
+    .detail-value.positive {
+        color: #2e7d32 !important;
+    }
+
+    .detail-value.negative {
+        color: #c62828 !important;
+    }
 }

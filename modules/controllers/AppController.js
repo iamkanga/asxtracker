@@ -1022,9 +1022,14 @@ export class AppController {
         const asxDropdown = document.getElementById(IDS.ASX_CONTAINER);
 
         if (asxToggleBtn && dashboardTimeBtn) {
-            if (watchlistId === DASHBOARD_WATCHLIST_ID) {
+            if (watchlistId === DASHBOARD_WATCHLIST_ID || watchlistId === CASH_WATCHLIST_ID) {
                 asxToggleBtn.classList.add(CSS_CLASSES.HIDDEN);
-                dashboardTimeBtn.classList.remove(CSS_CLASSES.HIDDEN);
+
+                if (watchlistId === DASHBOARD_WATCHLIST_ID) {
+                    dashboardTimeBtn.classList.remove(CSS_CLASSES.HIDDEN);
+                } else {
+                    dashboardTimeBtn.classList.add(CSS_CLASSES.HIDDEN);
+                }
             } else {
                 asxToggleBtn.classList.remove(CSS_CLASSES.HIDDEN);
                 dashboardTimeBtn.classList.add(CSS_CLASSES.HIDDEN);
@@ -1264,11 +1269,34 @@ export class AppController {
         if (signInBtn) {
             signInBtn.addEventListener('click', async () => {
                 try {
+                    // Phase 1: Immediate Click Feedback
+                    signInBtn.disabled = true;
+                    signInBtn.style.pointerEvents = 'none';
+                    signInBtn.classList.add(CSS_CLASSES.DISABLED);
+
+                    const shimmerSpan = signInBtn.querySelector(`.${CSS_CLASSES.TEXT_SHIMMER}`);
+                    if (shimmerSpan) {
+                        shimmerSpan.innerHTML = `<i class="fab fa-google"></i> Opening...`;
+                    }
+
                     await AuthService.signIn();
-                    // State change is handled via Auth observer in main.js
+
+                    // Phase 2: Post-Selection (Selected account)
+                    if (shimmerSpan) {
+                        shimmerSpan.innerHTML = `<i class="fab fa-google"></i> ${USER_MESSAGES.SIGNING_IN}`;
+                    }
                 } catch (error) {
                     console.error('Sign in failed:', error);
                     ToastManager.error(`${USER_MESSAGES.SIGN_IN_FAILED} ${error.message}`);
+
+                    // Reset on error
+                    signInBtn.disabled = false;
+                    signInBtn.style.pointerEvents = 'auto';
+                    signInBtn.classList.remove(CSS_CLASSES.DISABLED);
+                    const shimmerSpan = signInBtn.querySelector(`.${CSS_CLASSES.TEXT_SHIMMER}`);
+                    if (shimmerSpan) {
+                        shimmerSpan.innerHTML = `<i class="fab fa-google"></i> Sign in with Google`;
+                    }
                 }
             });
         }

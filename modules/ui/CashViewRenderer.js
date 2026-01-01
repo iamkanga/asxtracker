@@ -24,7 +24,7 @@ export class CashViewRenderer {
 
 
         this.container.innerHTML = '';
-        this.container.className = ''; // Clear potentially conflicting classes (e.g. view-table)
+        this.container.classList.remove(CSS_CLASSES.VIEW_TABLE, CSS_CLASSES.VIEW_COMPACT, CSS_CLASSES.VIEW_SNAPSHOT); // Clear potentially conflicting classes
         this.container.classList.remove(CSS_CLASSES.HIDDEN); // Redundant if cleared, but safe
 
         // 1. Render Total Header

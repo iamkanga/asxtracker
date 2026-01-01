@@ -234,6 +234,7 @@ export const HTML_TEMPLATES = {
 
 export const USER_MESSAGES = {
     SHARE_SAVED: 'Share saved successfully!',
+    SIGNING_IN: 'signing in...',
     SHARE_DELETED: 'Share deleted.',
     ERROR_SAVE: 'Failed to save share: ',
     ERROR_DELETE: 'Error deleting share: ',
