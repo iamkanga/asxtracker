@@ -964,6 +964,9 @@ export const IDS = {
     SIDEBAR: 'sidebar',
     SIDEBAR_OVERLAY: 'sidebar-overlay',
     CLOSE_SIDEBAR: 'close-sidebar',
+    LOGOUT_BTN: 'logout-btn', // Added
+    AUTH_BTN: 'auth-btn',     // Added
+    // TEST_LOGOUT_BTN: 'logout-btn-test', // Removed
     ASX_TOGGLE: 'asxCodeButtonsToggle',
     ASX_CONTAINER: 'asx-code-buttons-container',
     SUMMARY_DETAIL_MODAL: 'summary-detail-modal',

@@ -55,7 +55,6 @@ export class AppController {
         // Start with loading state until Auth confirms status
         this._setSignInLoadingState(true);
 
-        this.init();
         this.dashboardRenderer = new DashboardViewRenderer();
 
         // Controllers
@@ -83,6 +82,9 @@ export class AppController {
 
         // Binds
         this.init = this.init.bind(this);
+
+        // BOOTSTRAP
+        this.init();
     }
 
     /**
