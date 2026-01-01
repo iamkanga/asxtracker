@@ -7110,6 +7110,17 @@ body.dark-theme .calc-result-card {
     .modal-content-large {
         max-width: 480px !important;
     }
+
+    /* Fix Kangaroo Cut-off on Desktop */
+    .splash-bg-img {
+        object-fit: contain !important;
+        height: 92% !important;
+        /* Maximizes size without risk of head clipping */
+        width: 92% !important;
+        top: 50% !important;
+        left: 50% !important;
+        transform: translate(-50%, -50%) !important;
+    }
 }
 
 /* WIDE SCREENS ( >= 600px ) */
