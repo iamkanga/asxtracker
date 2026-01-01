@@ -30,7 +30,11 @@ export class BriefingUI {
         modal.className = `${CSS_CLASSES.MODAL} ${CSS_CLASSES.HIDDEN}`;
 
         const data = this._prepareData();
-        const dateStr = new Date().toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long' });
+
+        // Use Data Timestamp if available, otherwise fallback to today
+        const sourceTime = notificationStore.getDataTimestamp();
+        const dateObj = sourceTime ? (sourceTime.toDate ? sourceTime.toDate() : new Date(sourceTime)) : new Date();
+        const dateStr = dateObj.toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long' });
 
         modal.innerHTML = `
             <div class="${CSS_CLASSES.MODAL_OVERLAY}"></div>
@@ -41,12 +45,15 @@ export class BriefingUI {
                             <i class="fas fa-coffee" style="color: var(--color-accent);"></i>
                             <span>Daily Briefing</span>
                         </div>
+
+
                     </h2>
                     <button class="${CSS_CLASSES.MODAL_CLOSE_BTN}" title="Close">
                         <i class="fas ${UI_ICONS.CLOSE}"></i>
                     </button>
                 </div>
                 <div class="${CSS_CLASSES.MODAL_BODY} ${CSS_CLASSES.SCROLLABLE_BODY}" style="padding: 15px;">
+                    <div style="text-align: center; color: var(--text-muted); font-size: 0.8rem; margin-bottom: 4px;">Top 10 from each section</div>
                     <div class="briefing-date">${dateStr}</div>
                     
                     ${this._renderSection('Custom Triggers', data.subtitles.custom, data.custom, 'custom')}
@@ -324,10 +331,10 @@ export class BriefingUI {
 
         return {
             custom: customItems.slice(0, 10),
-            gainers: (global.movers?.up || []).slice(0, 8),
-            losers: (global.movers?.down || []).slice(0, 8),
-            highs: (global.hilo?.high || []).slice(0, 8),
-            lows: (global.hilo?.low || []).slice(0, 8),
+            gainers: (global.movers?.up || []).slice(0, 10),
+            losers: (global.movers?.down || []).slice(0, 10),
+            highs: (global.hilo?.high || []).slice(0, 10),
+            lows: (global.hilo?.low || []).slice(0, 10),
             subtitles: {
                 custom: '<span style="color: var(--color-accent);">Personal Alerts</span>',
                 gainers: upStr,

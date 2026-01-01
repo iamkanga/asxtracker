@@ -22,6 +22,7 @@ export class NotificationStore {
             globalMovers: { up: [], down: [] },
             globalHiLo: { high: [], low: [] }
         };
+        this.dataTimestamp = null; // Store last update time from DB
         this.pinnedAlerts = [];
         this.scannerRules = { up: {}, down: {} }; // Capture rules
         this.lastViewed = { total: 0, custom: 0 };
@@ -230,6 +231,7 @@ export class NotificationStore {
             if (customSnap.status === 'fulfilled' && customSnap.value.exists()) {
                 const data = customSnap.value.data();
                 const docTime = data.updatedAt;
+                this.dataTimestamp = docTime; // Capture Source of Truth Date
                 this.scanData.customHits = normalizeHits(data.hits || [], docTime);
             } else {
                 this.scanData.customHits = [];
@@ -1065,6 +1067,10 @@ export class NotificationStore {
         return this.scannerRules;
     }
 
+    getDataTimestamp() {
+        return this.dataTimestamp;
+    }
+
     subscribe(callback) {
         this.listeners.push(callback);
         return () => {
@@ -1135,8 +1141,12 @@ export class NotificationStore {
                     if (targetPrice > 0) {
                         const direction = share.targetDirection || 'below';
                         let hit = false;
-                        if (direction === 'above' && price >= targetPrice) hit = true;
-                        if (direction === 'below' && price <= targetPrice) hit = true;
+                        const dayHigh = Number(liveData.high || liveData.highDay || price); // Fallback to price if no day high
+                        const dayLow = Number(liveData.low || liveData.lowDay || price);   // Fallback to price if no day low
+
+                        // CHECK DAY HIGH/LOW to catch intraday spikes
+                        if (direction === 'above' && dayHigh >= targetPrice) hit = true;
+                        if (direction === 'below' && (dayLow > 0 && dayLow <= targetPrice)) hit = true;
 
                         if (hit) {
                             const key = `${code}-target-${direction}`;
