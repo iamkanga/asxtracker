@@ -176,11 +176,18 @@ export class SecurityController {
 
                 if (isUserVerified) {
                     console.log("SecurityController: Biometric auth successful (UV Checked).");
+                    // DIAGNOSTIC TOAST: Remove after debugging
+                    // Shows strictly what the authenticator returned.
+                    // Bit 0 = UP (1), Bit 2 = UV (4). Expected: 5 or 7.
+                    import('../ui/ToastManager.js').then(({ ToastManager }) => {
+                        ToastManager.info(`Bio Auth Success. Flags: ${flags} (UV=${(flags & 4) ? 'Yes' : 'No'})`, "Security Debug");
+                    });
                     return true;
                 } else {
                     console.warn("SecurityController: Biometric rejected - User Verification (UV) flag missing. (Presence only detected)");
-                    // Optional: Show a specific toast or error to the user via UI controller interaction if needed, 
-                    // but returning false triggers the shake animation which is sufficient.
+                    import('../ui/ToastManager.js').then(({ ToastManager }) => {
+                        ToastManager.error(`Security Warning: User Verification Missing (Flags: ${flags})`, "Security Alert");
+                    });
                     return false;
                 }
             }
