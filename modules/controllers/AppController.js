@@ -316,6 +316,10 @@ export class AppController {
         if (user) {
             this._setSignInLoadingState(true, 'Signing In...');
 
+            // UI State Update for Login
+            if (logoutBtn) logoutBtn.classList.remove(CSS_CLASSES.HIDDEN);
+            if (loginBtn) loginBtn.classList.add(CSS_CLASSES.HIDDEN);
+
             // Provision user document (Ensures it exists for backend LIST API)
             this.appService.provisionUser(user.uid);
 
