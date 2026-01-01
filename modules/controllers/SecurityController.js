@@ -166,8 +166,23 @@ export class SecurityController {
             });
 
             if (credential) {
-                console.log("SecurityController: Biometric auth successful.");
-                return true;
+                // STRICT SECURITY: Inspect Authenticator Data Flags
+                // Byte 32 is the Flags byte.
+                // Bit 0: User Presence (UP)
+                // Bit 2: User Verification (UV) - We REQUIRE this.
+                const authData = new Uint8Array(credential.response.authenticatorData);
+                const flags = authData[32];
+                const isUserVerified = (flags & 4) !== 0; // Check 3rd bit (value 4)
+
+                if (isUserVerified) {
+                    console.log("SecurityController: Biometric auth successful (UV Checked).");
+                    return true;
+                } else {
+                    console.warn("SecurityController: Biometric rejected - User Verification (UV) flag missing. (Presence only detected)");
+                    // Optional: Show a specific toast or error to the user via UI controller interaction if needed, 
+                    // but returning false triggers the shake animation which is sufficient.
+                    return false;
+                }
             }
         } catch (error) {
             console.error("Biometric Auth Failed:", error);
