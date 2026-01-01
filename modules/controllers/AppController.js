@@ -51,6 +51,11 @@ export class AppController {
         this.dataService = new DataService();
         this.appService = new AppService();
         this.viewRenderer = new ViewRenderer();
+
+        // Start with loading state until Auth confirms status
+        this._setSignInLoadingState(true);
+
+        this.init();
         this.dashboardRenderer = new DashboardViewRenderer();
 
         // Controllers
@@ -291,6 +296,9 @@ export class AppController {
     /* ================= Logic Handlers ================= */
 
     async handleAuthStateChange(user) {
+        // Capture previous user state to detect if this is a transition from Logged In to Logged Out
+        const wasLoggedIn = !!AppState.user;
+
         // ARCHITECTURAL FIX: Check if user identity has actually changed.
         // Redundant auth events (e.g. token refresh) should NOT trigger a data wipe (unsubscribe).
         const isSameUser = (user && AppState.user && user.uid === AppState.user.uid);
@@ -304,6 +312,7 @@ export class AppController {
         const loginBtn = document.getElementById(IDS.AUTH_BTN);
 
         if (user) {
+            this._setSignInLoadingState(true, 'Signing In...');
 
             // Provision user document (Ensures it exists for backend LIST API)
             this.appService.provisionUser(user.uid);
@@ -427,7 +436,7 @@ export class AppController {
                 });
 
                 // === CLOUD PREFERENCES SYNC (INBOUND) ===
-                this.appService.subscribeToUserPreferences(user.uid, (prefs, metadata) => {
+                AppState.unsubscribePrefs = this.appService.subscribeToUserPreferences(user.uid, (prefs, metadata) => {
                     // Clear pending timeout since prefs arrived
                     if (this._prefsTimeoutId) {
                         clearTimeout(this._prefsTimeoutId);
@@ -624,28 +633,39 @@ export class AppController {
         } else {
             document.body.classList.remove(CSS_CLASSES.LOGGED_IN);
 
-            // Reset security state for next user
+            // 1. Reset security and application state
             this._isUnlockedThisSession = false;
             this._lockModalActive = false;
 
-            if (AppState.unsubscribeStore) {
-                AppState.unsubscribeStore();
-                AppState.unsubscribeStore = null;
-            }
+            // CRITICAL: Wipe all user data from memory immediately
+            AppState.resetAll();
 
+            // 2. Clear UI
+            this.viewRenderer.render([]);
+
+            // Enable button again since we know they are logged out
+            this._setSignInLoadingState(false);
+
+            // 3. Show Splash Screen with Logout Feedback
             if (splashScreen) {
                 splashScreen.classList.remove(CSS_CLASSES.HIDDEN);
-                splashScreen.classList.remove('is-exiting'); // Reset animation state
+                splashScreen.classList.remove('is-exiting');
                 splashScreen.classList.add('is-active');
             }
-            // Fix ID mismatch and toggle both buttons
+
             const logoutBtn = document.getElementById(IDS.LOGOUT_BTN);
             const loginBtn = document.getElementById(IDS.AUTH_BTN);
-
             if (logoutBtn) logoutBtn.classList.add(CSS_CLASSES.HIDDEN);
             if (loginBtn) loginBtn.classList.remove(CSS_CLASSES.HIDDEN);
 
-            this.viewRenderer.render([]);
+            // 4. HARD RELOAD (Close App Environment)
+            // Fix: Only reload if we were actually logged in (prevents loop on boot-up)
+            if (wasLoggedIn) {
+                console.log('AppController: Logout transition detected. Reloading environment...');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 800); // Short delay for splash visual feedback
+            }
         }
     }
 
@@ -1301,8 +1321,6 @@ export class AppController {
             });
         }
 
-        const logoutBtn = document.getElementById(IDS.LOGOUT_BTN);
-
         if (logoutBtn) {
             logoutBtn.addEventListener('click', async () => {
                 try {
@@ -1312,8 +1330,30 @@ export class AppController {
                 }
             });
         }
+    }
 
+    /**
+     * Set the Sign-In button to a loading state.
+     * @param {boolean} isLoading 
+     * @param {string} [text] Optional text override (e.g. "Signing In...")
+     */
+    _setSignInLoadingState(isLoading, text = 'Initializing...') {
+        const signInBtn = document.getElementById(IDS.SPLASH_SIGN_IN_BTN);
+        if (!signInBtn) return;
 
+        const shimmerSpan = signInBtn.querySelector(`.${CSS_CLASSES.TEXT_SHIMMER}`);
+
+        if (isLoading) {
+            signInBtn.disabled = true;
+            signInBtn.style.pointerEvents = 'none';
+            signInBtn.classList.add(CSS_CLASSES.DISABLED);
+            if (shimmerSpan) shimmerSpan.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${text}`;
+        } else {
+            signInBtn.disabled = false;
+            signInBtn.style.pointerEvents = 'auto';
+            signInBtn.classList.remove(CSS_CLASSES.DISABLED);
+            if (shimmerSpan) shimmerSpan.innerHTML = `<i class="fab fa-google"></i> Sign in with Google`;
+        }
     }
 
     /**

@@ -9,7 +9,9 @@ import {
     signInWithPopup,
     GoogleAuthProvider,
     signOut as firebaseSignOut,
-    onAuthStateChanged
+    onAuthStateChanged,
+    setPersistence,
+    browserLocalPersistence
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
@@ -28,11 +30,22 @@ const firebaseConfig = {
 let app;
 let auth;
 let dbInstance;
+let persistencePromise;
 
 try {
     app = initializeApp(firebaseConfig);
     auth = getAuth(app);
     dbInstance = getFirestore(app);
+
+    // Set persistence to LOCAL (users stay logged in across restarts)
+    persistencePromise = setPersistence(auth, browserLocalPersistence)
+        .then(() => {
+            console.log("AuthService: Persistence set to LOCAL.");
+        })
+        .catch((error) => {
+            console.error("AuthService: Failed to set persistence.", error);
+        });
+
     console.log("AuthService: Firebase initialized successfully.");
 } catch (error) {
     console.error("AuthService: Firebase initialization failed.", error);
@@ -51,6 +64,12 @@ export const AuthService = {
      */
     async signIn() {
         if (!auth) throw new Error("Firebase Auth not initialized");
+
+        // Ensure persistence is set before sign-in
+        if (persistencePromise) {
+            await persistencePromise;
+        }
+
         const provider = new GoogleAuthProvider();
         try {
             const result = await signInWithPopup(auth, provider);

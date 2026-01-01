@@ -381,9 +381,9 @@
             <!-- V48 Debug Removed -> V49 Atomic Control Deployed at Root -->
             <!-- Auth Container (Lower Third) -->
             <div class="splash-auth-container">
-                <button id="splashSignInBtn" class="auth-btn-lg">
+                <button id="splashSignInBtn" class="auth-btn-lg disabled" disabled>
                     <span class="text-shimmer">
-                        <i class="fab fa-google"></i> Sign in with Google
+                        <i class="fas fa-spinner fa-spin"></i> Initializing...
                     </span>
                 </button>
                 <div class="splash-loading-indicator hidden">
@@ -540,7 +540,9 @@
                         30 10 -14 9 -82 14 -91 6z" />
                 </g>
             </svg>
-            <button id="close-sidebar" class="close-btn">&times;</button>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <button id="close-sidebar" class="close-btn">&times;</button>
+            </div>
         </div>
 
         <div class="sidebar-content">

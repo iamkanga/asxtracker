@@ -358,5 +358,37 @@ export const AppState = {
         this.preferences.snapshotSort = sortOrder;
         localStorage.setItem(STORAGE_KEYS.SNAPSHOT_SORT, sortOrder);
         this._triggerSync();
+    },
+
+    /**
+     * Wipes all user-related data from memory.
+     * Used during sign-out to prevent data leaks.
+     */
+    resetAll() {
+        console.log('AppState: Performing full state reset...');
+        this.user = null;
+        this.data = {
+            shares: [],
+            cash: [],
+            watchlists: [],
+            dashboard: []
+        };
+        this.livePrices.clear();
+        this.lastGlobalFetch = 0;
+        this._isFetching = false;
+
+        // Unsubscribe from everything
+        if (this.unsubscribeStore) {
+            this.unsubscribeStore();
+            this.unsubscribeStore = null;
+        }
+        if (this.unsubscribePrefs) {
+            this.unsubscribePrefs();
+            this.unsubscribePrefs = null;
+        }
+
+        // Reset runtime flags
+        this.isLocked = true;
+        this.isPortfolioVisible = false;
     }
 };
