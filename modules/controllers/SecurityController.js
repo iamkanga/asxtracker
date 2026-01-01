@@ -101,35 +101,139 @@ export class SecurityController {
     }
 
     /**
+     * Helper to decode Base64 to ArrayBuffer
+     * @param {string} base64 
+     * @returns {ArrayBuffer}
+     */
+    _base64ToBuffer(base64) {
+        const binaryString = window.atob(base64);
+        const len = binaryString.length;
+        const bytes = new Uint8Array(len);
+        for (let i = 0; i < len; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+        }
+        return bytes.buffer;
+    }
+
+    /**
+     * Helper to encode ArrayBuffer to Base64
+     * @param {ArrayBuffer} buffer 
+     * @returns {string}
+     */
+    _bufferToBase64(buffer) {
+        let binary = '';
+        const bytes = new Uint8Array(buffer);
+        const len = bytes.byteLength;
+        for (let i = 0; i < len; i++) {
+            binary += String.fromCharCode(bytes[i]);
+        }
+        return window.btoa(binary);
+    }
+
+    /**
      * Triggers Biometric Authentication (WebAuthn).
-     * This is a simplified placeholder for the WebAuthn flow.
      */
     async authenticateBiometric() {
         if (!this.isBiometricSupported || !AppState.preferences.security.isBiometricEnabled) {
             return false;
         }
 
-        try {
-            console.log("SecurityController: Triggering local biometric auth...");
-
-            // Add a small delay to simulate the platform authentication prompt
-            await new Promise(resolve => setTimeout(resolve, 800));
-
-            return true;
-        } catch (error) {
-            console.error("Biometric Auth Failed:", error);
+        const storedCredentialId = AppState.preferences.security.biometricCredentialId;
+        if (!storedCredentialId) {
+            console.warn("SecurityController: No biometric credential ID found.");
             return false;
         }
+
+        try {
+            console.log("SecurityController: Triggering WebAuthn Get...");
+
+            // Random challenge (server-side usually handles this, for client-side we just need A challenge)
+            const challenge = new Uint8Array(32);
+            window.crypto.getRandomValues(challenge);
+
+            const credential = await navigator.credentials.get({
+                publicKey: {
+                    challenge: challenge,
+                    allowCredentials: [{
+                        id: this._base64ToBuffer(storedCredentialId),
+                        type: 'public-key',
+                        // transports: ['internal'] // Optional: hints at platform authenticators
+                    }],
+                    userVerification: 'required' // Forces the auth prompt (TouchID/FaceID/Hello)
+                }
+            });
+
+            if (credential) {
+                console.log("SecurityController: Biometric auth successful.");
+                return true;
+            }
+        } catch (error) {
+            console.error("Biometric Auth Failed:", error);
+            // "NotAllowedError" usually means user cancelled or timed out
+        }
+        return false;
     }
 
     /**
-     * Enables biometric access.
+     * Enables biometric access by creating a new WebAuthn credential.
      */
     async enableBiometric() {
         if (!this.isBiometricSupported) return false;
 
-        // Registering usually involves creating a credential via navigator.credentials.create()
-        AppState.saveSecurityPreferences({ isBiometricEnabled: true });
-        return true;
+        try {
+            console.log("SecurityController: Creating WebAuthn Credential...");
+
+            const challenge = new Uint8Array(32);
+            window.crypto.getRandomValues(challenge);
+
+            const userId = new Uint8Array(16);
+            window.crypto.getRandomValues(userId);
+
+            const credential = await navigator.credentials.create({
+                publicKey: {
+                    challenge: challenge,
+                    rp: {
+                        name: "ASX Tracker"
+                    },
+                    user: {
+                        id: userId,
+                        name: "user",
+                        displayName: "User"
+                    },
+                    pubKeyCredParams: [{
+                        type: "public-key",
+                        alg: -7 // ES256
+                    }, {
+                        type: "public-key",
+                        alg: -257 // RS256
+                    }],
+                    authenticatorSelection: {
+                        authenticatorAttachment: "platform", // Forces TouchID/FaceID/Windows Hello
+                        userVerification: "required"
+                    },
+                    timeout: 60000,
+                    attestation: "none"
+                }
+            });
+
+            if (credential) {
+                const rawIdBase64 = this._bufferToBase64(credential.rawId);
+
+                // Save the new state with the credential ID
+                AppState.saveSecurityPreferences({
+                    isBiometricEnabled: true,
+                    biometricCredentialId: rawIdBase64
+                });
+
+                console.log("SecurityController: Biometric enabled & credential saved.");
+                return true;
+            }
+
+        } catch (error) {
+            console.error("SecurityController: Failed to enable biometrics:", error);
+            // Errors include user cancelling, or not configured on device
+        }
+
+        return false;
     }
 }
