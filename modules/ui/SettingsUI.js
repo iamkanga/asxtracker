@@ -237,12 +237,26 @@ export class SettingsUI {
                  </h3>
              </div>
              <div style="padding: 0 16px 16px 16px;">
-                 <div style="margin-bottom: 12px; font-size: 0.75rem; color: var(--text-muted);">
+                 
+                 <!-- "Exclude Portfolio" Option -->
+                 <div class="${CSS_CLASSES.DETAIL_ROW}" style="justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+                     <div style="display: flex; flex-direction: column;">
+                        <span class="${CSS_CLASSES.DETAIL_LABEL}">Portfolio Override</span>
+                        <span style="font-size: 0.7rem; color: var(--text-muted);">Show my stocks even if sector is hidden</span>
+                     </div>
+                     <label class="toggle-switch">
+                        <input type="checkbox" id="toggle-pref-excludePortfolio">
+                        <span class="slider round"></span>
+                     </label>
+                 </div>
+
+                 <div style="margin-bottom: 10px; font-size: 0.75rem; color: var(--text-muted);">
                      Uncheck sectors to hide them from Global Alerts.
                  </div>
+                 
                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                      ${SECTORS_LIST.map(sector => `
-                         <div style="display: flex; align-items: center; justify-content: space-between;">
+                         <div style="display: flex; align-items: center; justify-content: space-between; padding-right: 2px;">
                              <span class="${CSS_CLASSES.DETAIL_LABEL}" style="font-size: 0.8rem;">${sector}</span>
                              <label class="toggle-switch transform-scale-0-8">
                                  <input type="checkbox" class="sector-toggle" data-sector="${sector}">
@@ -366,6 +380,7 @@ export class SettingsUI {
         updateCheck('toggle-moversEnabled', rules.moversEnabled ?? true);
         updateCheck('toggle-pref-showBadges', showBadges);
         updateCheck('toggle-pref-dailyEmail', dailyEmail);
+        updateCheck('toggle-pref-excludePortfolio', prefs.excludePortfolio ?? true); // Default to TRUE (safer)
 
         // Sectors (Inverse logic: Hidden in Prefs -> Unchecked in UI)
         const hiddenSectors = prefs.hiddenSectors || [];
@@ -438,6 +453,7 @@ export class SettingsUI {
             const toggleMovers = document.getElementById('toggle-moversEnabled');
             const toggleBadges = document.getElementById('toggle-pref-showBadges');
             const toggleEmail = document.getElementById('toggle-pref-dailyEmail');
+            const toggleExclude = document.getElementById('toggle-pref-excludePortfolio');
             const emailInput = document.getElementById('pref-emailAddr');
 
             // Harvest Sectors (Unchecked = Hidden)
@@ -457,6 +473,7 @@ export class SettingsUI {
                     down: harvestRules('down')
                 },
                 hiddenSectors: hiddenSectors,
+                excludePortfolio: toggleExclude?.checked ?? true,
                 showBadges: toggleBadges?.checked ?? true,
                 dailyEmail: toggleEmail?.checked ?? false,
                 alertEmailRecipients: emailInput?.value.trim() || ''

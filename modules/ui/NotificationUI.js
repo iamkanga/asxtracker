@@ -419,9 +419,21 @@ export class NotificationUI {
             const hidden = AppState.preferences?.hiddenSectors; // Array of strings
             if (!hidden || !Array.isArray(hidden) || hidden.length === 0) return list;
 
+            const excludePortfolio = AppState.preferences?.excludePortfolio ?? true;
+            const myCodes = excludePortfolio ? new Set((AppState.data?.shares || []).map(s => s.code)) : null;
+
             return list.filter(item => {
+                const code = item.code || item.symbol || item.asxCode || item.ASXCode; // robustness
                 if (!item.Sector) return true;
-                return !hidden.includes(item.Sector);
+
+                if (hidden.includes(item.Sector)) {
+                    // If in portfolio (override hidden)
+                    if (excludePortfolio && code && myCodes.has(code)) {
+                        return true;
+                    }
+                    return false;
+                }
+                return true;
             });
         };
 
