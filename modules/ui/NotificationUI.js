@@ -59,6 +59,13 @@ export class NotificationUI {
             return;
         }
 
+        // SECURITY: Hide on Lock Screen (Prevent premature access)
+        if (AppState.isLocked) {
+            if (container) container.classList.add(CSS_CLASSES.HIDDEN);
+            bell.classList.add(CSS_CLASSES.HIDDEN);
+            return; // Stop processing
+        }
+
         // SMART VISIBILITY LOGIC:
         // 1. If Count Increased from previous -> Unhide (New Alert! Urgent!)
         if (validCount > this._prevCount) {

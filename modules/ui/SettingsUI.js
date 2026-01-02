@@ -254,10 +254,10 @@ export class SettingsUI {
                      Uncheck sectors to hide them from Global Alerts.
                  </div>
                  
-                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                 <div style="display: grid; grid-template-columns: 1fr; gap: 8px;">
                      ${SECTORS_LIST.map(sector => `
-                         <div style="display: flex; align-items: center; justify-content: space-between; padding-right: 2px;">
-                             <span class="${CSS_CLASSES.DETAIL_LABEL}" style="font-size: 0.8rem;">${sector}</span>
+                         <div style="display: flex; align-items: center; justify-content: space-between; padding-right: 2px; padding-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                             <span class="${CSS_CLASSES.DETAIL_LABEL}" style="font-size: 0.85rem;">${sector}</span>
                              <label class="toggle-switch transform-scale-0-8">
                                  <input type="checkbox" class="sector-toggle" data-sector="${sector}">
                                  <span class="slider round"></span>
