@@ -341,7 +341,10 @@ export class NotificationStore {
 
         return hits.filter(hit => {
             // 1. Zombie Check
-            if (hit.pct === 0 && hit.change === 0) return false;
+            // Block items with no meaningful movement. Handles undefined or NaN values.
+            const pctZero = Number(hit.pct) === 0 || isNaN(Number(hit.pct));
+            const changeZero = hit.change === undefined || Number(hit.change) === 0;
+            if (pctZero && changeZero) return false;
 
             // 2. Global Price Filter (Min Price)
             // Handle different property names (live, price, lastPrice)
@@ -492,6 +495,31 @@ export class NotificationStore {
         const myHits = rawHits.filter(hit => {
             const match = String(hit.userId) === String(this.userId);
             if (!match) return false;
+
+            // --- ZOMBIE CHECK (FINAL GATEKEEPER) ---
+            // Re-verify against AppState.livePrices to ensure we don't show static/stale server hits.
+            // This fixes issues where 'client generation' blocks a hit (GAP) but 'server hits' let it through.
+            if (hit.code) {
+                let checkPct = Number(hit.pct || hit.changeInPercent || 0);
+                let checkAmt = Number(hit.change || 0);
+
+                // If live data exists, prefer it for the zombie check
+                if (AppState.livePrices && AppState.livePrices.has(hit.code)) {
+                    const live = AppState.livePrices.get(hit.code);
+                    const lpPct = Number(live.changeInPercent || live.pct || live.pctChange || 0);
+                    const lpAmt = Number(live.change || 0);
+                    // If live data is valid (price > 0), use its movement stats
+                    if (Number(live.live || live.price || live.last || 0) > 0) {
+                        checkPct = isNaN(lpPct) ? 0 : lpPct;
+                        checkAmt = isNaN(lpAmt) ? 0 : lpAmt;
+                    }
+                }
+
+                // If practically zero movement, BLOCK IT.
+                if (Math.abs(checkPct) === 0 && Math.abs(checkAmt) === 0) {
+                    return false;
+                }
+            }
 
             // --- MUTE FILTER (Custom Triggers Early Exit) ---
             const code = hit.code || hit.shareName || hit.symbol;
@@ -1027,16 +1055,6 @@ export class NotificationStore {
         check("🔻 TEST: 52 Week Lows", controlLow, systemLow, 'asc');
 
         console.log("%c TEST COMPLETE ", "background: #222; color: #bada55");
-        console.groupEnd();
-        return "Check Console for Report";
-    }
-
-    /**
-     * DIAGNOSTIC TOOL
-     * Run via Console: notificationStore.runDiagnostic()
-     */
-    runDiagnostic() {
-        console.group("🔍 NotificationStore Diagnostic Report");
         console.log(`User ID: ${this.userId}`);
         console.log(`Last Updated: ${this.lastUpdated}`);
         console.table(this.scannerRules);
@@ -1203,8 +1221,13 @@ export class NotificationStore {
 
                 // STRICT FILTER: Must have Price (Traded at least once ever to have a last price)
                 if (price > 0) {
-                    const pctChange = Number(liveData.changeInPercent || liveData.pct || liveData.pctChange || 0);
-                    const dolChange = Number(liveData.change || 0);
+                    // Fix: Handle NaN explicitly. Number(null) is 0, but Number("NaN") is NaN.
+                    let pctChange = Number(liveData.changeInPercent || liveData.pct || liveData.pctChange || 0);
+                    let dolChange = Number(liveData.change || 0);
+
+                    if (isNaN(pctChange)) pctChange = 0;
+                    if (isNaN(dolChange)) dolChange = 0;
+
                     const absChange = Math.abs(dolChange);
                     const absPct = Math.abs(pctChange);
 
@@ -1213,6 +1236,34 @@ export class NotificationStore {
                     // "Zombie" definition simplifies to "Static Price" (No movement today).
                     // Logic from User: "If zero Price movement... it must have hit its Low or high the previous day... ignore it."
                     const isStatic = (absChange === 0 && absPct === 0);
+
+                    // --- MATH SANITY CHECK (Universal) ---
+                    // Calculate Phantom/Stale Status ONCE for both HiLo and Movers
+                    const calcChange = (liveData.prevClose > 0) ? (price - liveData.prevClose) : 0;
+                    const calcPct = (liveData.prevClose > 0) ? ((calcChange / liveData.prevClose) * 100) : 0;
+
+                    let isPhantom = false;
+                    // If Reported Change is "Big" (>1%) but Calculated Change is "Tiny" (<0.1%), likely Stale Data.
+                    if (Math.abs(pctChange) > 1.0 && Math.abs(calcPct) < 0.1) {
+                        isPhantom = true;
+                    }
+
+                    // --- DEEP TRACE FOR GAP PARADOX ---
+                    if (code === 'GAP') {
+                        console.group('🕵️‍♀️ GAP TRACE');
+                        console.log('Raw:', JSON.stringify(liveData));
+                        console.log(`Vals: Price=${price}, Prev=${Number(liveData.prevClose)}, Change=${Number(liveData.change)}, Pct=${Number(liveData.changeInPercent)}`);
+                        console.log(`Computed: absChange=${absChange}, absPct=${absPct}, isStatic=${isStatic}`);
+                        console.log(`Phantom Check: Reported=${pctChange}%, Calc=${calcPct}%, isPhantom=${isPhantom}`);
+
+                        const h52 = Number(liveData.high || liveData.high52 || 0);
+                        const l52 = Number(liveData.low || liveData.low52 || 0);
+                        const tol = 0.001;
+                        console.log(`HiLo Check: H=${h52}, L=${l52}`);
+                        console.log(`Hit Low? Price(${price}) <= Low(${l52}+${tol})? ${price <= (l52 + tol)}`);
+                        console.log(`Blocked? !isStatic(${!isStatic}) && !isPhantom(${!isPhantom})`);
+                        console.groupEnd();
+                    }
 
                     // --- LOAD RULES EARLY ---
                     const rules = this.getScannerRules() || {};
@@ -1231,8 +1282,11 @@ export class NotificationStore {
                         const dayLow = Number(liveData.lowDay || price);
 
                         // CHECK DAY HIGH/LOW to catch intraday spikes
-                        if (direction === 'above' && dayHigh >= targetPrice) hit = true;
-                        if (direction === 'below' && (dayLow > 0 && dayLow <= targetPrice)) hit = true;
+                        // FIX: Block Static/Phantom stocks from triggering TARGET hits (prevents GAP Phantom Alert)
+                        if (!isStatic && !isPhantom) {
+                            if (direction === 'above' && dayHigh >= targetPrice) hit = true;
+                            if (direction === 'below' && (dayLow > 0 && dayLow <= targetPrice)) hit = true;
+                        }
 
                         if (hit) {
                             const key = `${code}-target-${direction}`;
@@ -1263,7 +1317,8 @@ export class NotificationStore {
                         const tolerance = 0.001; // FP tolerance
 
                         // Check High
-                        if (high52 > 0 && price >= (high52 - tolerance) && !isStatic) {
+                        if (high52 > 0 && price >= (high52 - tolerance) && !isStatic && !isPhantom) {
+                            if (code === 'GAP') console.warn("⚠️ GAP PUSHED HIGH ALERT");
                             const key = `${code}-hilo-high`;
                             alerts.push({
                                 userId: this.userId,
@@ -1281,7 +1336,8 @@ export class NotificationStore {
                         }
 
                         // Check Low
-                        if (low52 > 0 && price <= (low52 + tolerance) && !isStatic) {
+                        if (low52 > 0 && price <= (low52 + tolerance) && !isStatic && !isPhantom) {
+                            if (code === 'GAP') console.warn("⚠️ GAP PUSHED LOW ALERT");
                             const key = `${code}-hilo-low`;
                             alerts.push({
                                 userId: this.userId,
@@ -1299,15 +1355,20 @@ export class NotificationStore {
                         }
                     }
 
+                    if (code === 'GAP') console.groupEnd();
+
                     // 3. MOVERS (Implicit Watchlist Alerts)
-                    // Removed strict Volume check as it may be missing in some data feeds, causing "No Custom Alerts".
-                    // Relying on Price > 0 and Strict Movement Check (absPct > 0) to filter Zombies.
-                    // FIX: GOVERNED BY GLOBAL SETTINGS. 
-                    // If "Movers Enabled" is false (if implemented) OR thresholds are 0.
-                    // We already handle 0 thresholds strictly.
-                    // Adding explicit check if 'moversEnabled' flag exists and is false.
+                    // Removed strict Volume check as it may be missing in some data feeds.
+                    // Replaced with MATH SANITY CHECK to filter Stale Data.
                     if (rules.moversEnabled !== false) {
                         // Variables pctChange, dolChange, absPct, absChange inherited from parent scope.
+
+                        // ZOMBIE CHECK (Math):
+                        // Inherited 'isPhantom' from parent scope.
+                        if (isPhantom) {
+                            // console.warn(`[NotificationStore] Blocked PHANTOM Alert for ${code}`);
+                            return;
+                        }
 
                         const upRules = rules.up || {};
                         const downRules = rules.down || {};

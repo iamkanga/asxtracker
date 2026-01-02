@@ -878,32 +878,7 @@ export class NotificationUI {
             }
 
             // USER FEEDBACK FIX: If "Alert Triggered" generic text, try to show metrics
-            if (explainerText === 'Alert Triggered' || type === 'custom') {
-                // Check if it's actually a movement alert (intent=mover) disguised as custom
-                if (item.intent !== 'target' && item.intent !== 'target-hit') {
-                    // DYNAMIC RULE PARAMETER DISPLAY (User Request: "Price ▼ 7% or $5")
-                    // We need to fetch the Active Rule for this item.
-                    // Assuming 'up' rules if positive change, 'down' if negative.
-                    const pct = Number(item.pct || item.changeInPercent || 0);
-                    const ruleSet = pct >= 0 ? (rules.up || {}) : (rules.down || {});
-
-                    // Use the helper from this class to format it (we need to access fmtRules logic, but it's local scope in showModal... duplicative logic here)
-                    // Let's reimplement small logic here for safety:
-                    const arrow = pct >= 0 ? '▲' : '▼';
-                    const hasPct = ruleSet.percentThreshold && ruleSet.percentThreshold > 0;
-                    const hasDol = ruleSet.dollarThreshold && ruleSet.dollarThreshold > 0;
-
-                    if (hasPct || hasDol) {
-                        const parts = [];
-                        if (hasPct) parts.push(`${ruleSet.percentThreshold}%`);
-                        if (hasDol) parts.push(`$${ruleSet.dollarThreshold}`);
-                        explainerText = `Price ${arrow} ${parts.join(' or ')}`;
-                    } else {
-                        // Fallback if no specific rule found (e.g. default)
-                        explainerText = `Price ${arrow} ${Math.abs(pct).toFixed(2)}%`;
-                    }
-                }
-            }
+            // [Moved Explainer Generation to after JIT Enrichment]
         }
 
         // --- ROBUST KEY MAPPING & ENRICHMENT ---
@@ -918,37 +893,33 @@ export class NotificationUI {
 
         // --- DEEP ANALYSIS FIX: JIT ENRICHMENT ---
         let changeAmt = item.change || item.c || 0;
-        let liveShare = null;
-        let cleanCode = code.replace(/\.AX$/i, '').trim().toUpperCase();
 
+        let cleanCode = code.replace(/\.AX$/i, '').trim().toUpperCase();
+        let liveShare = null;
+
+        // 1. Try to find in AppState.livePrices (Primary - most up-to-date)
         if (AppState.livePrices && AppState.livePrices instanceof Map) {
             liveShare = AppState.livePrices.get(cleanCode) || AppState.livePrices.get(code);
         }
 
-        if (liveShare) {
-            const lpPct = Number(liveShare.dayChangePercent || liveShare.changeInPercent || liveShare.pct || 0);
-            const lpAmt = Number(liveShare.change || liveShare.c || 0);
-            const lpPrice = Number(liveShare.live || liveShare.price || liveShare.last || 0);
-            const lpClose = Number(liveShare.prevClose || liveShare.close || liveShare.previousClose || 0);
-
-            // SPECIAL CASE: For HILO items, we might only care about Price, but we want to show stats if possible.
-            // If practically empty, discard
-            if (Math.abs(lpPct) === 0 && Math.abs(lpAmt) === 0) {
-                // Try derive one last time before discarding
-                if (lpPrice > 0 && lpClose > 0) {
-                    // We can recover! Keep it.
-                } else {
-                    liveShare = null; // FORCE Fallback
-                }
-            }
-        }
-
-        // 3. Fallback to User Shares (Secondary - mainly for name matching or fuller data objects)
-        if (!liveShare) {
-            liveShare = AppState.data.shares.find(s => {
+        // 2. Fallback to User Shares (Secondary - mainly for name matching or fuller data objects)
+        //    Only if livePrices didn't yield a useful result.
+        if (!liveShare || (Number(liveShare.live || liveShare.price || liveShare.last || 0) === 0 && Number(liveShare.dayChangePercent || liveShare.changeInPercent || 0) === 0)) {
+            const foundInShares = AppState.data.shares.find(s => {
                 const sCode = String(s.code || s.shareName || s.symbol || s.shareCode || s.s || '').toUpperCase();
                 return sCode === cleanCode || sCode === code;
             });
+
+            // If found in shares, and it's more complete than what we got from livePrices (if any)
+            // Or if livePrices was empty, use this.
+            if (foundInShares) {
+                const foundPrice = Number(foundInShares.live || foundInShares.price || foundInShares.last || 0);
+                const foundPct = Number(foundInShares.dayChangePercent || foundInShares.changeInPercent || 0);
+
+                if (!liveShare || (foundPrice > 0 || foundPct !== 0)) {
+                    liveShare = foundInShares;
+                }
+            }
         }
 
         // --- ENRICHMENT APPLICATION ---
@@ -996,11 +967,31 @@ export class NotificationUI {
             }
         }
 
+        // --- EXPLAINER TEXT GENERATION (Moved after JIT) ---
+        // Fix: Ensure we use the Enriched 'changePct' for the text, not the stale 'item.pct'.
+        if ((explainerText === 'Alert Triggered' || type === 'custom') && item.intent !== 'target' && item.intent !== 'target-hit') {
+            // Re-evaluate direction based on FINAL changePct
+            const ruleSet = changePct >= 0 ? (rules.up || {}) : (rules.down || {});
+            const arrow = changePct >= 0 ? '▲' : '▼';
+            const hasPct = ruleSet.percentThreshold && ruleSet.percentThreshold > 0;
+            const hasDol = ruleSet.dollarThreshold && ruleSet.dollarThreshold > 0;
+
+            if (hasPct || hasDol) {
+                const parts = [];
+                if (hasPct) parts.push(`${ruleSet.percentThreshold}%`);
+                if (hasDol) parts.push(`$${ruleSet.dollarThreshold}`);
+                explainerText = `Price ${arrow} ${parts.join(' or ')}`;
+            } else {
+                // Fallback: Use the ACTUAL live percent
+                explainerText = `Price ${arrow} ${Math.abs(changePct).toFixed(2)}%`;
+            }
+        }
+
         // Force Direction based on Type (Override for Hi/Lo/Gainer/Loser)
         if (type === 'hilo-up' || type === 'up') changePct = Math.abs(changePct); // Force Positive
         if (type === 'hilo-down' || type === 'down') changePct = -Math.abs(changePct); // Force Negative if not already
 
-        let changeClass = changePct >= 0 ? 'positive' : 'negative';
+        let changeClass = changePct >= 0 ? CSS_CLASSES.POSITIVE : CSS_CLASSES.NEGATIVE;
 
         // Arrows (Generic)
         let arrowIcon = changePct >= 0 ? '<i class="fas fa-caret-up"></i>' : '<i class="fas fa-caret-down"></i>';
