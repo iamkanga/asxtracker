@@ -15,6 +15,7 @@ import { WatchlistUI } from '../ui/WatchlistUI.js';
 import { ShareFormUI } from '../ui/ShareFormUI.js';
 import { SearchDiscoveryUI } from '../ui/SearchDiscoveryUI.js?v=5'; // Added
 import { NotificationUI } from '../ui/NotificationUI.js';
+import { NotificationStore } from '../state/NotificationStore.js';
 import { BriefingUI } from '../ui/BriefingUI.js';
 import { SnapshotUI } from '../ui/SnapshotUI.js'; // Added
 import { SettingsUI } from '../ui/SettingsUI.js';
@@ -116,6 +117,24 @@ export class AppController {
 
         document.addEventListener(EVENTS.OPEN_SETTINGS, () => SettingsUI.showModal(AppState.user?.uid));
         document.addEventListener(EVENTS.SHOW_DAILY_BRIEFING, () => BriefingUI.show());
+
+        // Mute Toggle Listener
+        document.addEventListener(EVENTS.TOGGLE_SHARE_MUTE, async (e) => {
+            if (!AppState.user) return;
+            const { id } = e.detail;
+            const share = AppState.data.shares.find(s => s.id === id);
+            if (share) {
+                const newStatus = !share.muted;
+                await this.appService.updateShareRecord(id, { muted: newStatus });
+
+                // Force Notification Re-evaluation
+                if (this.notificationStore) {
+                    // Re-run filter logic by simulating a data load or using internal method if available
+                    // For now, reloading global alerts is the safest way to re-apply filters
+                    this.notificationStore.recalculateBadges();
+                }
+            }
+        });
 
         // 2. Initialize Watchlist UI
         this.watchlistUI = new WatchlistUI({

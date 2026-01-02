@@ -148,6 +148,13 @@ export class NotificationStore {
 
     // ...
 
+    /**
+     * Public API to force re-calculation of badges (e.g. after Muting)
+     */
+    recalculateBadges() {
+        this._notifyDataChange();
+    }
+
     getBadgeCounts() {
         if (!this.userId) return { total: 0, custom: 0 };
 
@@ -343,6 +350,17 @@ export class NotificationStore {
                 return false;
             }
 
+            // 2b. MUTE FILTER (New Feature)
+            // Check if user has muted this stock in their portfolio
+            if (AppState.data && AppState.data.shares) {
+                const stockCode = (hit.code || hit.shareName || '').toUpperCase();
+                // Find ANY record of this stock that is muted
+                const isMuted = AppState.data.shares.some(s =>
+                    s.shareName === stockCode && s.muted === true
+                );
+                if (isMuted) return false;
+            }
+
             // 3. Threshold Check
             // OR LOGIC:
             // If Pct Threshold is > 0, check if Pct met.
@@ -475,6 +493,16 @@ export class NotificationStore {
             const match = String(hit.userId) === String(this.userId);
             if (!match) return false;
 
+            // --- MUTE FILTER (Custom Triggers Early Exit) ---
+            const code = hit.code || hit.shareName || hit.symbol;
+            if (code && AppState.data && AppState.data.shares) {
+                // Find ANY record of this stock that is muted
+                const isMuted = AppState.data.shares.some(s =>
+                    s.shareName === code && s.muted === true
+                );
+                if (isMuted) return false;
+            }
+
             // --- EXCLUDE DASHBOARD SYMBOLS ---
             if (hit.code && DASHBOARD_SYMBOLS.includes(hit.code)) return false;
 
@@ -537,14 +565,22 @@ export class NotificationStore {
         // We show ALL pinned items at the top.
         // Then remaining daily hits.
 
-        // --- CONSOLIDATION LOGIC START ---
-        // Group by CODE to merge multiple triggers (e.g., Target Hit + 52W High)
+        // Duplicate check set
         const consolidated = new Map();
+        const mutedCodes = new Set();
+        if (AppState.data && AppState.data.shares) {
+            AppState.data.shares.forEach(s => {
+                if (s.muted) mutedCodes.add(s.shareName);
+            });
+        }
 
-        // Helper to merge or add
+        // Helper to merge or add - UPDATED WITH MUTE FILTER
         const addOrMerge = (hit) => {
             const code = hit.code || hit.shareName;
-            if (!code) return; // Should not happen due to filters above
+            if (!code) return;
+
+            // MUTE FILTER (Custom Triggers)
+            if (mutedCodes.has(code)) return;
 
             if (!consolidated.has(code)) {
                 // First entry: Clone it and init matches
@@ -554,23 +590,26 @@ export class NotificationStore {
                 // Existing entry: Merge
                 const master = consolidated.get(code);
                 master.matches.push(hit);
-
-                // OPTIONAL: Update master properties if this new hit is "better" (e.g. newer time)?
-                // For now, first come first serve for the "Card Display" base, but matches holds all details.
-                // Actually, let's ensure 'hilo' takes precedence for "Intent" if we want that sorting? 
-                // User said: "High low message first". We handle display order in UI.
             }
         };
 
-        myHits.forEach(addOrMerge);
+        myHits.forEach(addOrMerge); // myHits comes from logic below, but we need to ensure IT respects mute too?
+        // Actually, myHits is filtered below. Let's look at `myHits` construction. 
+        // `myHits` filters `rawHits`. `rawHits` combines `uniqueServerHits` and `clientTargets`.
+
+        // Let's filter `myHits` implicitly via the mutedCodes check in `addOrMerge` 
+        // OR better, filter `rawHits` before processing.
+
+        // Let's refine the flow above.
+        // `myHits` is `rawHits.filter(...)`.
+        // Let's inject mute check into `myHits` filter block.
+
         const freshConsolidated = Array.from(consolidated.values());
         // --- CONSOLIDATION LOGIC END ---
 
         return {
             pinned: this.pinnedAlerts,
             fresh: freshConsolidated
-            // Note: We don't de-dup between pinned and fresh here. If I pin it, it stays pinned. 
-            // The fresh copy appears too until end of day. That's acceptable behavior.
         };
     }
 

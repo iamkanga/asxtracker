@@ -7425,3 +7425,61 @@ body.dark-theme .calc-result-card {
         color: #c62828 !important;
     }
 }
+
+/* --- Mute Kangaroo Icon --- */
+.kangaroo-wrapper {
+    position: relative;
+    width: 44px;
+    /* Reduced by ~20% from 54px */
+    height: 44px;
+    cursor: pointer;
+    margin-left: 8px;
+    transition: all 0.2s ease;
+}
+
+.kangaroo-icon-img {
+    width: 100%;
+    height: 100%;
+    /* Face Left (Mirror) */
+    transform: scaleX(-1);
+    /* Default: Bright/Active */
+    opacity: 1;
+    filter: none;
+    display: block;
+}
+
+/* Hover Effect */
+.kangaroo-wrapper:hover .kangaroo-icon-img {
+    transform: scaleX(-1) scale(1.1);
+}
+
+/* Muted State (Notifications Off) */
+.kangaroo-wrapper.is-muted .kangaroo-icon-img {
+    opacity: 0.6;
+    /* Dimmed */
+    filter: sepia(0.5) grayscale(0.2);
+    /* Keep some warmth */
+}
+
+/* Strikethrough Logic (Pseudo-element on Wrapper) */
+.kangaroo-wrapper.is-muted::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 80%;
+    /* Shorter line */
+    /* Matches icon width exactly */
+    height: 3px;
+    /* Slightly thicker for larger icon */
+    background-color: var(--color-accent);
+    /* App Coffee */
+    transform: translate(-50%, -50%) rotate(-45deg);
+    /* Bottom-left to Top-right */
+    box-shadow: 0 0 1px rgba(255, 255, 255, 0.5);
+    /* Subtle highlight for contrast */
+    pointer-events: none;
+    border-radius: 2px;
+    opacity: 0.6;
+    /* Ghosted to match icon */
+}

@@ -7,7 +7,7 @@
 
 import { formatCurrency, formatPercent, formatFriendlyDate } from '../utils/formatters.js';
 import { AppState } from '../state/AppState.js';
-import { SORT_OPTIONS, UI_ICONS, USER_MESSAGES, RESEARCH_LINKS_TEMPLATE, CSS_CLASSES, IDS, EVENTS, SUMMARY_TYPES, STORAGE_KEYS, PORTFOLIO_ID } from '../utils/AppConstants.js?v=10';
+import { SORT_OPTIONS, UI_ICONS, USER_MESSAGES, RESEARCH_LINKS_TEMPLATE, CSS_CLASSES, IDS, EVENTS, SUMMARY_TYPES, STORAGE_KEYS, PORTFOLIO_ID, KANGAROO_ICON_SRC } from '../utils/AppConstants.js?v=10';
 import { SnapshotUI } from './SnapshotUI.js'; // Added import
 import { navManager } from '../utils/NavigationManager.js';
 
@@ -613,8 +613,15 @@ export class ViewRenderer {
                             <!-- Card 1: Investment -->
                             <div class="${CSS_CLASSES.DETAIL_CARD} ${CSS_CLASSES.ALIGN_START} ${CSS_CLASSES.TEXT_LEFT} ${CSS_CLASSES.INVESTMENT_CARD}">
                                 <div class="${CSS_CLASSES.DETAIL_CARD_HEADER}">
-                                    <h3 class="${CSS_CLASSES.DETAIL_LABEL} ${CSS_CLASSES.W_FULL} ${CSS_CLASSES.TEXT_LEFT}">
-                                        <i class="fas ${UI_ICONS.CHART}"></i> Investment
+                                    <h3 class="${CSS_CLASSES.DETAIL_LABEL} ${CSS_CLASSES.W_FULL} ${CSS_CLASSES.TEXT_LEFT} ${CSS_CLASSES.START_CENTER_ROW}">
+                                        <div class="${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.ALIGN_CENTER} ${CSS_CLASSES.JUSTIFY_BETWEEN} ${CSS_CLASSES.W_FULL}">
+                                            <span>Investment</span>
+                                            <div class="kangaroo-wrapper ${stock.muted ? 'is-muted' : ''}"
+                                                 title="${stock.muted ? 'Unmute Share' : 'Mute Share'}"
+                                                 onclick="event.stopPropagation(); this.classList.toggle('is-muted'); document.dispatchEvent(new CustomEvent('${EVENTS.TOGGLE_SHARE_MUTE}', { detail: { id: '${stock.id}' } }))">
+                                                <img src="${KANGAROO_ICON_SRC}" class="kangaroo-icon-img" />
+                                            </div>
+                                        </div>
                                     </h3>
                                     ${stock.starRating > 0 ? `
                                         <div class="${CSS_CLASSES.STAR_RATING}">

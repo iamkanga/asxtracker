@@ -4,6 +4,7 @@
  */
 
 export const ALL_SHARES_ID = 'ALL';
+export const KANGAROO_ICON_SRC = 'favicon.svg';
 export const CASH_WATCHLIST_ID = 'CASH';
 export const DASHBOARD_WATCHLIST_ID = 'DASHBOARD';
 export const DASHBOARD_SYMBOLS = [
@@ -75,6 +76,7 @@ export const EVENTS = {
     REQUEST_EDIT_SHARE: 'request-edit-share',
     REQUEST_DELETE_SHARE: 'REQUEST_DELETE_SHARE',
     SHARE_TOGGLE_VISIBILITY: 'share-toggle-visibility',
+    TOGGLE_SHARE_MUTE: 'share:toggle-mute',
     ASX_CODE_CLICK: 'ASX_CODE_CLICK',
     REQUEST_DELETE_CASH_ASSET: 'REQUEST_DELETE_CASH_ASSET',
 
@@ -113,6 +115,7 @@ export const EVENTS = {
     OPEN_NOTIFICATIONS: 'open-notifications',
     NOTIFICATION_UPDATE: 'notification-update', // New Event
     NOTIFICATION_READY: 'notification-ready', // Data loaded event
+    TOGGLE_SHARE_MUTE: 'toggle-share-mute', // Added for Constitution Compliance
     OPEN_SETTINGS: 'open-settings',
     PIN_ALERT: 'pin-alert',
     UNPIN_ALERT: 'unpin-alert',
@@ -126,7 +129,7 @@ export const SORT_OPTIONS = {
     STOCK: [ // Main Watchlists & All Shares
         { label: 'ASX Code', field: 'code', direction: 'asc', icon: 'fa-font' },
         { label: 'Daily Change', field: 'dayChangePercent', direction: 'desc', icon: 'fa-percent' },
-        { label: 'Daily Change ($)', field: 'dayChangePerShare', direction: 'desc', icon: 'fa-dollar-sign' },
+        { label: 'Daily Change', field: 'dayChangePerShare', direction: 'desc', icon: 'fa-dollar-sign' },
         { label: 'Rating', field: 'starRating', direction: 'desc', icon: 'fa-star' },
         { label: 'Dividends', field: 'dividendAmount', direction: 'desc', icon: 'fa-hand-holding-usd' },
         { label: 'Comments', field: 'comments', direction: 'asc', icon: 'fa-comment-alt' },
