@@ -414,15 +414,25 @@ export class NotificationUI {
             });
         };
 
-        const finalMoversUp = filterDashboardCodes(globalData.movers?.up);
-        const finalMoversDown = filterDashboardCodes(globalData.movers?.down);
-        const finalHiloHigh = filterDashboardCodes(globalData.hilo?.high);
-        const finalHiloLow = filterDashboardCodes(globalData.hilo?.low);
+        const filterHiddenSectors = (list) => {
+            if (!list) return [];
+            const hidden = AppState.preferences?.hiddenSectors; // Array of strings
+            if (!hidden || !Array.isArray(hidden) || hidden.length === 0) return list;
+
+            return list.filter(item => {
+                if (!item.Sector) return true;
+                return !hidden.includes(item.Sector);
+            });
+        };
+
+        const finalMoversUp = filterHiddenSectors(filterDashboardCodes(globalData.movers?.up));
+        const finalMoversDown = filterHiddenSectors(filterDashboardCodes(globalData.movers?.down));
+        const finalHiloHigh = filterHiddenSectors(filterDashboardCodes(globalData.hilo?.high));
+        const finalHiloLow = filterHiddenSectors(filterDashboardCodes(globalData.hilo?.low));
 
         const rules = notificationStore.getScannerRules() || { up: {}, down: {} };
         const minPrice = rules.up?.minPrice || rules.down?.minPrice || 0.05; // Base default
-        // Actually, user said explainer displays 0.05 when input is 0. 
-        // So I must check if rules properties exist.
+
         // Wait, 'minPrice' above is LOCAL logic fallback? 
         // No, I'll use proper Coalescing.
         const ruleMin = rules.up?.minPrice ?? 0.05;

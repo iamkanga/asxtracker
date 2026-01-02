@@ -1985,6 +1985,17 @@ function buildPriceFeedArray_(singleCode, options) {
       if (idxMktCap != null) obj.MarketCap = num(idxMktCap);
       if (idxPE != null) obj.PE = num(idxPE);
     }
+
+    // SECTOR PASSING (New)
+    // We check for a "Sector" column. If found, pass it through.
+    const idxSector = col(['Sector', 'Industry', 'Category']);
+    if (idxSector != null) {
+      const s = r[idxSector];
+      if (s && String(s).trim()) {
+        obj.Sector = String(s).trim();
+      }
+    }
+
     out.push(obj);
   });
   return out;

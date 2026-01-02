@@ -4,7 +4,7 @@
  * Handles Firestore Sync logic via UserStore.
  */
 
-import { CSS_CLASSES, IDS, UI_ICONS, EVENTS } from '../utils/AppConstants.js';
+import { CSS_CLASSES, IDS, UI_ICONS, EVENTS, SECTORS_LIST } from '../utils/AppConstants.js';
 import { navManager } from '../utils/NavigationManager.js';
 import { userStore } from '../data/DataService.js';
 
@@ -226,6 +226,34 @@ export class SettingsUI {
             </div>
         `;
         container.appendChild(notifCard);
+
+        // --- 4. SECTOR FILTERS ---
+        const sectorCard = document.createElement('div');
+        sectorCard.className = CSS_CLASSES.DETAIL_CARD;
+        sectorCard.innerHTML = `
+             <div class="${CSS_CLASSES.DETAIL_CARD_HEADER}" style="border-bottom: none;">
+                 <h3 class="${CSS_CLASSES.DETAIL_LABEL}" style="text-decoration: none; border-bottom: none;">
+                     <i class="fas fa-layer-group"></i> Sector Filters
+                 </h3>
+             </div>
+             <div style="padding: 0 16px 16px 16px;">
+                 <div style="margin-bottom: 12px; font-size: 0.75rem; color: var(--text-muted);">
+                     Uncheck sectors to hide them from Global Alerts.
+                 </div>
+                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                     ${SECTORS_LIST.map(sector => `
+                         <div style="display: flex; align-items: center; justify-content: space-between;">
+                             <span class="${CSS_CLASSES.DETAIL_LABEL}" style="font-size: 0.8rem;">${sector}</span>
+                             <label class="toggle-switch transform-scale-0-8">
+                                 <input type="checkbox" class="sector-toggle" data-sector="${sector}">
+                                 <span class="slider round"></span>
+                             </label>
+                         </div>
+                     `).join('')}
+                 </div>
+             </div>
+         `;
+        container.appendChild(sectorCard);
     }
 
     static _updateValues(modal, prefs) {
@@ -338,6 +366,15 @@ export class SettingsUI {
         updateCheck('toggle-moversEnabled', rules.moversEnabled ?? true);
         updateCheck('toggle-pref-showBadges', showBadges);
         updateCheck('toggle-pref-dailyEmail', dailyEmail);
+
+        // Sectors (Inverse logic: Hidden in Prefs -> Unchecked in UI)
+        const hiddenSectors = prefs.hiddenSectors || [];
+        SECTORS_LIST.forEach(sector => {
+            const cb = modal.querySelector(`.sector-toggle[data-sector="${sector}"]`);
+            if (cb) {
+                cb.checked = !hiddenSectors.includes(sector);
+            }
+        });
     }
 
     /**
@@ -403,6 +440,14 @@ export class SettingsUI {
             const toggleEmail = document.getElementById('toggle-pref-dailyEmail');
             const emailInput = document.getElementById('pref-emailAddr');
 
+            // Harvest Sectors (Unchecked = Hidden)
+            const hiddenSectors = [];
+            modal.querySelectorAll('.sector-toggle').forEach(cb => {
+                if (!cb.checked) {
+                    hiddenSectors.push(cb.dataset.sector);
+                }
+            });
+
             const newPrefs = {
                 scannerRules: {
                     minPrice: getVal('global-minPrice'),
@@ -411,6 +456,7 @@ export class SettingsUI {
                     up: harvestRules('up'),
                     down: harvestRules('down')
                 },
+                hiddenSectors: hiddenSectors,
                 showBadges: toggleBadges?.checked ?? true,
                 dailyEmail: toggleEmail?.checked ?? false,
                 alertEmailRecipients: emailInput?.value.trim() || ''

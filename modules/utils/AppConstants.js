@@ -147,6 +147,21 @@ export const SORT_OPTIONS = {
     ]
 };
 
+export const SECTORS_LIST = [
+    'Energy',
+    'Materials',
+    'Industrials',
+    'Consumer Discretionary',
+    'Consumer Staples',
+    'Health Care',
+    'Financials',
+    'Information Technology',
+    'Communication Services',
+    'Utilities',
+    'Real Estate',
+    'Other'
+];
+
 // Add this Pool to AppConstants as well:
 export const WATCHLIST_ICON_POOL = ['fa-list-alt', 'fa-folder-open', 'fa-bookmark', 'fa-star', 'fa-user', 'fa-users', 'fa-layer-group', 'fa-tags', 'fa-gem', 'fa-briefcase'];
 
