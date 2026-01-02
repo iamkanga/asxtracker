@@ -105,6 +105,12 @@ export class NotificationUI {
     static showModal(activeTabId = 'custom', source = 'total') {
         this._currentSource = source || 'total';
 
+        // SECURITY: Prevent notifications from overriding Lock Screen
+        if (AppState.isLocked) {
+            console.warn('[NotificationUI] Blocked showModal: App is Locked.');
+            return;
+        }
+
         // LOGIC HARDENING: Race condition guard - check if store is ready
         if (!notificationStore || !notificationStore.isReady) {
             console.log('[NotificationUI] Store not ready. Showing loading modal...');

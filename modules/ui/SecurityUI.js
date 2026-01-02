@@ -123,8 +123,18 @@ export const SecurityUI = {
 
         const bioBtn = modal.querySelector(`.${CSS_CLASSES.PIN_BTN}[data-action="biometric"]`);
         // Note: Biometrics now require explicit user click for better control and to avoid auto-unlock issues.
-        if (isBiometricEnabled && isBiometricSupported && bioBtn) {
-            bioBtn.addEventListener('click', () => options.onBiometric());
+        // UPDATE (User Request): Auto-trigger biometric prompt if enabled for seamless entry.
+        if (isBiometricEnabled && isBiometricSupported) {
+            if (bioBtn) bioBtn.addEventListener('click', () => options.onBiometric());
+
+            // Auto-trigger with slight delay to ensure UI renders first (Context: "Why is this prompt appearing?")
+            setTimeout(() => {
+                // Ensure modal is still valid/attached
+                if (document.getElementById(IDS.SECURITY_UNLOCK_MODAL)) {
+                    console.log("SecurityUI: Auto-triggering Biometrics...");
+                    options.onBiometric();
+                }
+            }, 500);
         }
     },
 

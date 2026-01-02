@@ -10,6 +10,30 @@ export class SecurityController {
     constructor() {
         this.isBiometricSupported = false;
         this._supportCheckPromise = this._checkBiometricSupport();
+        this._sanitizeSecurityState();
+    }
+
+    /**
+     * CONSTITUTIONAL GUARD: Safe State Enforcement
+     * Prevents "Fail Open" (Biometrics ON, PIN OFF) and "Deadlock" states.
+     */
+    _sanitizeSecurityState() {
+        const prefs = AppState.preferences.security;
+        if (!prefs) return; // Should exist via defaults, but safety first
+
+        // RULE: Biometrics strictly REQUIRES a PIN fallback
+        if (prefs.isBiometricEnabled && !prefs.isPinEnabled) {
+            console.warn("SecurityController: Illegal State Detected (Bio ON, PIN OFF). Sanitizing...");
+
+            // DECISION: Disable Biometrics to force user to re-setup correctly (Fail Safe)
+            // We cannot force PIN=ON because we don't know the PIN, leading to lockout.
+            AppState.saveSecurityPreferences({
+                isBiometricEnabled: false
+            });
+
+            // Notify User (Wait for ToastManager availability usually, but this is sync boot)
+            // We'll rely on the UI rendering the "Biometrics Disabled" toggle state.
+        }
     }
 
     async _checkBiometricSupport() {
@@ -217,8 +241,12 @@ export class SecurityController {
             // Helpful Error Handling
             if (error.name === 'SecurityError' || error.message.includes('invalid domain')) {
                 import('../ui/ToastManager.js').then(({ ToastManager }) => {
-                    ToastManager.error("Domain mismatch (IP/Localhost). Please re-enable Biometrics in Settings.", "Biometric Error");
+                    ToastManager.error("Domain mismatch detected. Biometrics disabled. Please re-enable in Settings.", "Security System");
                 });
+                // FAIL-SAFE: Disable biometrics to prevent infinite error loops and force re-registration
+                if (AppState && AppState.saveSecurityPreferences) {
+                    AppState.saveSecurityPreferences({ isBiometricEnabled: false });
+                }
             } else if (error.name === 'NotAllowedError') {
                 // User cancelled or timed out - valid flow, no massive error needed
             } else {
@@ -249,7 +277,13 @@ export class SecurityController {
                 name: "ASX Tracker"
             };
             const rpId = this._getRpId();
-            if (rpId) rp.id = rpId;
+            // CRITICAL FIX: Only attach ID if it's a valid domain. 
+            // WebAuthn fails on simple IPs if ID is provided (even if matching).
+            if (rpId) {
+                rp.id = rpId;
+            } else {
+                console.log("SecurityController: Registering with default origin (IP detected)");
+            }
 
             const credential = await navigator.credentials.create({
                 publicKey: {
@@ -293,8 +327,18 @@ export class SecurityController {
             console.error("SecurityController: Failed to enable biometrics:", error);
             // Errors include user cancelling, or not configured on device
             if (error.name === 'SecurityError') {
+                const hostname = window.location.hostname;
+                const isLocalIP = hostname === '127.0.0.1';
+                const isIp = this._getRpId() === undefined;
+
                 import('../ui/ToastManager.js').then(({ ToastManager }) => {
-                    ToastManager.error("Security Error: Try accessing via localhost instead of IP, or check HTTPS.", "Setup Failed");
+                    if (isLocalIP) {
+                        ToastManager.error("Browser Blocked: Please change URL from '127.0.0.1' to 'localhost' to enable Biometrics.", "Setup Hint");
+                    } else if (isIp) {
+                        ToastManager.error("Biometrics unavailable on IP Addresses. Use 'localhost' or a domain.", "Browser Security");
+                    } else {
+                        ToastManager.error("Security Error: Check HTTPS or Domain config.", "Setup Failed");
+                    }
                 });
             }
         }

@@ -326,6 +326,7 @@ export class AppController {
             // BOOT LOCK: Reset flags for new session
             this._cloudPrefsLoaded = false;
             AppState.isLocked = true;
+            this._isUnlockedThisSession = false; // FORCE FRESH CHALLENGE on Login/Reload
 
             // Sanitize only if new session or necessary (idempotent usually, but cheap to skip if same)
             if (!isSameUser) {
@@ -681,6 +682,7 @@ export class AppController {
     async handleSecurityLock() {
         // 1. SESSION GUARD: If already unlocked this session, don't re-lock.
         if (this._isUnlockedThisSession) {
+            // Re-apply unlocked state just in case
             AppState.isLocked = false;
             document.dispatchEvent(new CustomEvent(EVENTS.FIREBASE_DATA_LOADED));
             return;
@@ -692,20 +694,26 @@ export class AppController {
             return;
         }
 
-        // SECURITY GATE: Do NOT unlock until we have cloud prefs OR a timeout occurred.
-        if (!this.securityController.shouldLock()) {
-            // ONLY unlock if cloud prefs have definitely arrived or we are at least logged in / initialized
-            if (this._cloudPrefsLoaded || !AppState.user) {
-                AppState.isLocked = false;
-                this._isUnlockedThisSession = true; // Mark as passed
-                this._lockModalActive = false;
-                document.dispatchEvent(new CustomEvent(EVENTS.FIREBASE_DATA_LOADED));
-                return;
-            }
-            // If cloud prefs not loaded, keep isLocked=true and wait.
+        const prefs = AppState.preferences.security;
+        // SECURITY GATE: 
+        // If we haven't loaded Cloud Prefs yet, we MUST wait (Default Secure).
+        if (!this._cloudPrefsLoaded && AppState.user) {
+            console.log('AppController: Security Gate - Waiting for Cloud Prefs...');
+            AppState.isLocked = true; // Force Lock visual until we know for sure
             return;
         }
 
+        // Now we have prefs. Check if we should lock.
+        if (!this.securityController.shouldLock()) {
+            // NOT LOCKED
+            AppState.isLocked = false;
+            this._isUnlockedThisSession = true; // Mark as passed
+            this._lockModalActive = false;
+            document.dispatchEvent(new CustomEvent(EVENTS.FIREBASE_DATA_LOADED));
+            return;
+        }
+
+        // MUST LOCK
         AppState.isLocked = true;
         this._lockModalActive = true;
 

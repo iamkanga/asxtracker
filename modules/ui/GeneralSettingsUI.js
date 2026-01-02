@@ -148,7 +148,7 @@ export class GeneralSettingsUI {
                 const success = await controller.securityController.enableBiometric();
                 if (!success) {
                     e.target.checked = false;
-                    ToastManager.error("Biometric setup failed.");
+                    // Controller handles specific error toasts (IP limit, etc.)
                 } else {
                     ToastManager.success("Biometric enabled.");
                 }
