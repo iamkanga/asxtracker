@@ -22,8 +22,15 @@ export class NotificationUI {
 
         // Listen for updates from the Store (Unified Event Bus)
         document.addEventListener(EVENTS.NOTIFICATION_UPDATE, (e) => {
-            // Kangaroo Bell (Floating) ONLY shows Custom Trigger count
+            // 1. Update Badge (Floating Bell)
             this.updateBadgeCount(e.detail.customCount);
+
+            // 2. Live Update Open Modal (Resolves "stale list" issue)
+            const modal = document.getElementById(IDS.NOTIFICATION_MODAL);
+            if (modal && !modal.classList.contains(CSS_CLASSES.HIDDEN)) {
+                // console.log('[NotificationUI] Data update received while modal open. Refreshing list...');
+                this._updateList(modal);
+            }
         });
 
         // Listen for Open Requests (Sidebar/Bell)

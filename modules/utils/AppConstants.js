@@ -76,7 +76,6 @@ export const EVENTS = {
     REQUEST_EDIT_SHARE: 'request-edit-share',
     REQUEST_DELETE_SHARE: 'REQUEST_DELETE_SHARE',
     SHARE_TOGGLE_VISIBILITY: 'share-toggle-visibility',
-    TOGGLE_SHARE_MUTE: 'share:toggle-mute',
     ASX_CODE_CLICK: 'ASX_CODE_CLICK',
     REQUEST_DELETE_CASH_ASSET: 'REQUEST_DELETE_CASH_ASSET',
 

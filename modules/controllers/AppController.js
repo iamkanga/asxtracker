@@ -123,16 +123,32 @@ export class AppController {
             if (!AppState.user) return;
             const { id } = e.detail;
             const share = AppState.data.shares.find(s => s.id === id);
+
             if (share) {
                 const newStatus = !share.muted;
                 await this.appService.updateShareRecord(id, { muted: newStatus });
 
                 // Force Notification Re-evaluation
                 if (this.notificationStore) {
-                    // Re-run filter logic by simulating a data load or using internal method if available
-                    // For now, reloading global alerts is the safest way to re-apply filters
                     this.notificationStore.recalculateBadges();
                 }
+
+                // Show Toast
+                // Use robust property access for code
+                const shareCode = share.code || share.shareName || share.symbol || 'Share';
+
+                const msg = newStatus
+                    ? `Notifications paused for ${shareCode}`
+                    : `Notifications active for ${shareCode}`;
+
+                // DEBOUNCE GUARD: Prevent double toasts
+                const now = Date.now();
+                if (!share._lastToast || (now - share._lastToast > 500)) {
+                    share._lastToast = now;
+                    ToastManager.show(msg, 'success', newStatus ? 'Muted' : 'Unmuted');
+                }
+            } else {
+                console.warn('AppController: Toggle Mute - Share not found for ID:', id);
             }
         });
 
