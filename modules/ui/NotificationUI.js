@@ -403,7 +403,8 @@ export class NotificationUI {
         });
 
         // Global Scans: Returns { movers: {up, down}, hilo: {high, low} }
-        const globalData = notificationStore.getGlobalAlerts(true) || { movers: { up: [], down: [] }, hilo: { high: [], low: [] } };
+        // FIX: Use strict mode (false) so that if thresholds are "Not Set" (0), no shares are returned.
+        const globalData = notificationStore.getGlobalAlerts(false) || { movers: { up: [], down: [] }, hilo: { high: [], low: [] } };
 
         // FILTER: Remove Dashboard-Specific Codes (Indices, Currencies, etc.)
         // User Request: "Codes strictly designed for the dashboard... XJO, XAO, SPI200... And that 52 week threshold container"

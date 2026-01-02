@@ -802,9 +802,9 @@ export class NotificationStore {
         }
 
         // Filter Hi/Lo
-        // FIX: If hiloMinPrice is NULL (Blank), Disable. If 0, Show All.
+        // FIX: If hiloMinPrice is NULL (Blank) OR 0, Disable. User must set > 0 to enable.
         const hiloLimit = rules.hiloMinPrice;
-        const hiloEnabled = (hiloLimit !== null); // If it's 0, it's enabled. If it's null, it's disabled.
+        const hiloEnabled = (hiloLimit !== null && hiloLimit > 0);
 
         // Merge Local HiLo? (User didn't explicitly ask, but consistent).
         // Local Alerts includes 'hilo'.
@@ -1306,10 +1306,9 @@ export class NotificationStore {
 
                     // 2. 52-WEEK HIGH/LOW (Implicit Watchlist Alerts)
                     // FIX: GOVERNED BY GLOBAL SETTINGS. 
-                    // If 52W Limit is "Blank" (Null), Disable. 
-                    // If "0", Show All (Standard Filter).
+                    // If 52W Limit is "Blank" (Null) OR 0, Disable. 
                     const hiloLimit = rules.hiloMinPrice;
-                    const hiloEnabled = (hiloLimit !== null && hiloLimit !== undefined);
+                    const hiloEnabled = (hiloLimit !== null && hiloLimit !== undefined && hiloLimit > 0);
 
                     if (hiloEnabled) {
                         const high52 = Number(liveData.high || liveData.high52 || liveData.high_52 || 0);
