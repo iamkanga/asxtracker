@@ -80,6 +80,7 @@ export class AppController {
         // State Tracking
         this._isUnlockedThisSession = false;
         this._lockModalActive = false;
+        this._lastBackgroundTime = 0; // PWA Resume Tracking
 
         // Binds
         this.init = this.init.bind(this);
@@ -278,13 +279,13 @@ export class AppController {
      * Seeds the Live Price cache with ALL user shares.
      * Ensures Search and other views have data even if not visiting a specific watchlist.
      */
-    async _refreshAllPrices(shares) {
+    async _refreshAllPrices(shares, force = false) {
         let codesToFetch = [...new Set((shares || []).map(s => s.shareName))].filter(Boolean);
 
         // 1. FRESHNESS GUARD: If a full fetch happened in the last 5 minutes, skip.
         const now = Date.now();
         const FIVE_MINUTES = 5 * 60 * 1000;
-        if (AppState.lastGlobalFetch && (now - AppState.lastGlobalFetch < FIVE_MINUTES)) {
+        if (!force && AppState.lastGlobalFetch && (now - AppState.lastGlobalFetch < FIVE_MINUTES)) {
             console.log('Global Price Seed: Cache is fresh (within 5 mins). Skipping fetch.');
             return;
         }
@@ -780,11 +781,30 @@ export class AppController {
     }
 
     _setupLifecycleHandlers() {
-        // App Visibility Change (Lock on Resume)
+        // App Visibility Change (Lock on Resume + Auto-Refresh)
         document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'visible') {
+            const now = Date.now();
+
+            if (document.visibilityState === 'hidden') {
+                this._lastBackgroundTime = now;
+            } else if (document.visibilityState === 'visible') {
+                // 1. Security Lock Check
                 if (AppState.user && AppState.preferences.security.requireLockOnResume) {
                     this.handleSecurityLock();
+                }
+
+                // 2. PWA Silent Resume (Stale Data Refresh)
+                // Threshold: 15 Minutes (900,000ms)
+                const STALE_THRESHOLD = 15 * 60 * 1000;
+                const timeDiff = this._lastBackgroundTime ? (now - this._lastBackgroundTime) : 0;
+
+                if (this._lastBackgroundTime && (timeDiff > STALE_THRESHOLD)) {
+                    // User Feedback: Confirm data is fresh
+                    ToastManager.show('🔄 Welcome Back - Refreshing Data...', 'info');
+
+                    // Trigger Refresh AND Reset Timer
+                    this._lastBackgroundTime = 0;
+                    this._refreshAllPrices(AppState.data.shares || [], true);
                 }
             }
         });
