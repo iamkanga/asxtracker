@@ -138,6 +138,9 @@ export class HeaderLayout {
 
 
     bindEvents() {
+        if (this._eventsBound) return;
+        this._eventsBound = true;
+
         // Sidebar
         if (this.menuToggle) {
             this.menuToggle.addEventListener('click', () => this._toggleSidebar(true));

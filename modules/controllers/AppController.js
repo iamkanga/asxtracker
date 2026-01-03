@@ -86,13 +86,16 @@ export class AppController {
         this.init = this.init.bind(this);
 
         // BOOTSTRAP
-        this.init();
+        // this.init(); // Removed: Deferred to main.js (DOMContentLoaded) to ensure DOM is ready
     }
 
     /**
      * Initialization Entry Point
      */
     async init() {
+        if (this._initialized) return;
+        this._initialized = true;
+
         // Initialize Navigation Manager (Back Button Support)
         navManager.init();
 
@@ -800,7 +803,7 @@ export class AppController {
 
                 if (this._lastBackgroundTime && (timeDiff > STALE_THRESHOLD)) {
                     // User Feedback: Confirm data is fresh
-                    ToastManager.show('🔄 Welcome Back - Refreshing Data...', 'info');
+                    ToastManager.show('Welcome Back - Refreshing Data...', 'info');
 
                     // Trigger Refresh AND Reset Timer
                     this._lastBackgroundTime = 0;
@@ -1556,19 +1559,22 @@ export class AppController {
         }
 
         // Hard Reload Button - Intentional page reload for cache bust (Settings Feature)
-        const reloadBtn = document.getElementById(IDS.RELOAD_BTN);
-        if (reloadBtn) {
-            reloadBtn.addEventListener('click', () => {
-                if ('serviceWorker' in navigator) {
-                    navigator.serviceWorker.getRegistrations().then(function (registrations) {
-                        for (let registration of registrations) {
-                            registration.unregister();
-                        }
-                    });
+        // Hard Reload Button - Intentional page reload for cache bust (Settings Feature)
+        document.body.addEventListener('click', (e) => {
+            const reloadBtn = e.target.closest(`#${IDS.RELOAD_BTN}`);
+            if (reloadBtn) {
+                if (confirm('Reload the app? This will refresh all data and check for updates.')) {
+                    if ('serviceWorker' in navigator) {
+                        navigator.serviceWorker.getRegistrations().then(function (registrations) {
+                            for (let registration of registrations) {
+                                registration.unregister();
+                            }
+                        });
+                    }
+                    window.location.reload(true);
                 }
-                window.location.reload(true);
-            });
-        }
+            }
+        });
 
         document.getElementById('btn-general-settings')?.addEventListener('click', () => {
             if (this.headerLayout) this.headerLayout.closeSidebar();
