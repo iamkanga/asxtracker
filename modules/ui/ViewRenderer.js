@@ -1734,6 +1734,7 @@ export class ViewRenderer {
             modal.classList.add(CSS_CLASSES.HIDDEN);
             document.getElementById(IDS.SORT_PICKER_BTN)?.classList.remove(CSS_CLASSES.ACTIVE);
             this.sortPickerMode = 'default';
+            this.sortReorderMode = false;
 
             // Remove from history stack if closed manually
             if (modal._navActive) {

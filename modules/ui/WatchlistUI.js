@@ -139,6 +139,9 @@ export class WatchlistUI {
         const dynamicTitle = document.getElementById(IDS.DYNAMIC_WATCHLIST_TITLE);
         if (selector) selector.classList.remove(CSS_CLASSES.ACTIVE);
         if (dynamicTitle) dynamicTitle.classList.remove(CSS_CLASSES.ACTIVE);
+
+        // Reset Logic: Ensure next open is fresh
+        this.watchlistMode = WATCHLIST_MODES.DEFAULT;
     }
 
     /**
@@ -177,7 +180,7 @@ export class WatchlistUI {
                 ui.closeModal();
             } else {
                 console.log('[WatchlistUI] Modal hidden -> Opening.');
-                this.watchlistMode = AppState.preferences.watchlistMode || WATCHLIST_MODES.DEFAULT;
+                this.watchlistMode = WATCHLIST_MODES.DEFAULT;
                 this.renderWatchlistDropdown();
                 this._openModal();
             }

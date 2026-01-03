@@ -94,14 +94,7 @@ export class GeneralSettingsUI {
                              </button>
                         </div>
 
-                        <!-- Reload App (User Request: "Previously there was a Reload... at the bottom") -->
-                        <div class="${CSS_CLASSES.SETTING_ROW}" id="gen-reload-row" style="cursor: pointer; margin-top: 15px; display: flex; align-items: center; justify-content: space-between; padding: 10px 0;">
-                            <div>
-                                <div class="${CSS_CLASSES.FONT_BOLD}" style="font-size: 0.95rem;">Reload App</div>
-                                <div class="${CSS_CLASSES.TEXT_SM} ${CSS_CLASSES.TEXT_MUTED}">Refresh application state</div>
-                            </div>
-                            <i class="fas ${UI_ICONS.SYNC}" style="color: var(--text-muted); font-size: 1.1rem;"></i>
-                        </div>
+
 
                         <!-- Delete Data (No Border, just icon red) -->
                         <div class="${CSS_CLASSES.SETTING_ROW}" id="gen-delete-row" style="cursor: pointer; margin-top: 5px; display: flex; align-items: center; justify-content: space-between; padding: 10px 0;">
@@ -273,10 +266,7 @@ export class GeneralSettingsUI {
             });
         }
 
-        // Reload App
-        modal.querySelector('#gen-reload-row').addEventListener('click', () => {
-            window.location.reload(true);
-        });
+
 
         // Delete Data
         modal.querySelector('#gen-delete-row').addEventListener('click', () => {
