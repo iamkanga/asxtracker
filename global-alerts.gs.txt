@@ -16,6 +16,7 @@
 
 // ======================== CONFIGURATION ========================
 const PRICE_SHEET_NAME = 'Prices';
+const DASHBOARD_SHEET_NAME = 'Dashboard';
 // (Legacy constants removed)
 
 const ASX_TIME_ZONE = 'Australia/Sydney';
@@ -1872,132 +1873,138 @@ function doGet(e) {
 
 function buildPriceFeedArray_(singleCode, options) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(PRICE_SHEET_NAME);
-  if (!sheet) return [];
-  const values = sheet.getDataRange().getValues();
-  if (values.length < 2) return [];
-  const headers = values.shift();
-  const map = headers.reduce((acc,h,i)=>{ acc[h] = i; return acc; }, {});
+  const out = [];
 
-  function col(nameVariants) {
-    for (let i=0;i<nameVariants.length;i++) {
-      const n = nameVariants[i];
-      if (map[n] != null) return map[n];
+  // Helper to process a specific sheet
+  const processSheet = (sheetName) => {
+    const sheet = ss.getSheetByName(sheetName);
+    if (!sheet) return;
+    const values = sheet.getDataRange().getValues();
+    if (values.length < 2) return;
+    const headers = values.shift();
+    const map = headers.reduce((acc,h,i)=>{ acc[h] = i; return acc; }, {});
+
+    function col(nameVariants) {
+      for (let i=0;i<nameVariants.length;i++) {
+        const n = nameVariants[i];
+        if (map[n] != null) return map[n];
+      }
+      return null;
     }
-    return null;
-  }
 
-  const idxCode = col(['ASX Code','ASXCode','Code']);
-  const idxCompany = col(['Company Name','CompanyName','Name']);
-  const idxLive = col(['LivePrice','Last','Last Price','LastPrice','Last Trade','LastTrade']);
-  const idxPrev = col(['PrevDayClose','PrevClose','Previous Close','Last Close']);
-  const idxHigh52 = col(['High52','52WeekHigh','High 52','52 High']);
-  const idxLow52 = col(['Low52','52WeekLow','Low 52','52 Low']);
-  const idxMktCap = col(['MarketCap','Market Cap']);
-  const idxPE = col(['PE','PE Ratio']);
-  
-  // Column Mapping with Fuzzy Logic
-  const findFuzzy = (patterns) => {
-    const idx = headers.findIndex(h => {
-      if (!h) return false;
-      const clean = String(h).replace(/[^A-Z0-9]/gi, '').toUpperCase();
-      return patterns.some(p => clean === p);
+    const idxCode = col(['ASX Code','ASXCode','Code']);
+    const idxCompany = col(['Company Name','CompanyName','Name']);
+    const idxLive = col(['LivePrice','Last','Last Price','LastPrice','Last Trade','LastTrade']);
+    const idxPrev = col(['PrevDayClose','PrevClose','Previous Close','Last Close']);
+    const idxHigh52 = col(['High52','52WeekHigh','High 52','52 High']);
+    const idxLow52 = col(['Low52','52WeekLow','Low 52','52 Low']);
+    const idxMktCap = col(['MarketCap','Market Cap']);
+    const idxPE = col(['PE','PE Ratio']);
+    
+    // Column Mapping with Fuzzy Logic
+    const findFuzzy = (patterns) => {
+      const idx = headers.findIndex(h => {
+        if (!h) return false;
+        const clean = String(h).replace(/[^A-Z0-9]/gi, '').toUpperCase();
+        return patterns.some(p => clean === p);
+      });
+      return idx !== -1 ? idx : null;
+    };
+
+    const apiPriceIdx = findFuzzy(['APIPRICE', 'PIPRICE']);
+    const apiHighIdx = findFuzzy(['APIHIGH', 'PIHIGH', 'API52WHIGH', 'PI52WHIGH', 'APIHIGH52', 'PIHIGH52']);
+    const apiLowIdx = findFuzzy(['APILOW', 'PILOW', 'API52WLOW', 'PI52WLOW', 'APILOW52', 'PILOW52']);
+
+    const idxSector = col(['Sector', 'Industry', 'Category']);
+
+    values.forEach(r => {
+      const rawCode = idxCode != null ? r[idxCode] : '';
+      if (!rawCode) return;
+      const code = String(rawCode).trim().toUpperCase();
+      if (!code) return;
+      if (singleCode && code !== singleCode) return;
+      function num(idx) {
+        if (idx == null) return null;
+        let v = r[idx];
+        if (v === '' || v == null) return null;
+        // Robustly handle strings with currency symbols (e.g. "$0.004")
+        if (typeof v === 'string') {
+          v = v.replace(/[^0-9.-]/g, '');
+        }
+        const n = parseFloat(v);
+        return (isNaN(n) || !isFinite(n)) ? null : n;
+      }
+
+      let live = num(idxLive);
+      
+      // Recovery Logic: If Google returns 0 or null, check the API_Price column
+      if ((live === 0 || live == null) && apiPriceIdx != null) {
+        const fallback = parseFloat(r[apiPriceIdx]);
+        if (fallback != null && !isNaN(fallback) && fallback > 0) {
+          live = fallback;
+        }
+      }
+
+      let prevClose = num(idxPrev);
+      // PrevClose Recovery
+      const apiPrevIdx = findFuzzy(['APIPREVCLOSE', 'APIPREVIOUSCLOSE', 'PIPREVCLOSE']);
+      if ((prevClose === 0 || prevClose == null) && apiPrevIdx != null) {
+          const val = parseFloat(r[apiPrevIdx]);
+          if (val > 0) prevClose = val;
+      }
+
+      // 52-Week Recovery
+      let high52 = num(idxHigh52);
+      if ((high52 === 0 || high52 == null) && apiHighIdx != null) {
+          const val = parseFloat(r[apiHighIdx]);
+          if (val > 0) high52 = val;
+      }
+
+      let low52 = num(idxLow52);
+      if ((low52 === 0 || low52 == null) && apiLowIdx != null) {
+          const val = parseFloat(r[apiLowIdx]);
+          if (val > 0) low52 = val;
+      }
+
+      // FINAL FALLBACK: Proxy from Live Price
+      if (live > 0) {
+        if (high52 === 0 || high52 == null) high52 = live;
+        if (low52 === 0 || low52 == null) low52 = live;
+        
+        // Sanity Check
+        if (live > high52) high52 = live;
+        if (live < low52) low52 = live;
+      }
+
+      const obj = {
+        ASXCode: code,
+        CompanyName: idxCompany!=null ? (r[idxCompany] || null) : null,
+        LivePrice: live,
+        PrevClose: prevClose,
+        High52: high52,
+        Low52: low52
+      };
+      if (!options || !options.compact) {
+        if (idxMktCap != null) obj.MarketCap = num(idxMktCap);
+        if (idxPE != null) obj.PE = num(idxPE);
+      }
+
+      // SECTOR PASSING
+      if (idxSector != null) {
+        const s = r[idxSector];
+        if (s && String(s).trim()) {
+          obj.Sector = String(s).trim();
+        }
+      }
+
+      out.push(obj);
     });
-    return idx !== -1 ? idx : null;
   };
 
-  const apiPriceIdx = findFuzzy(['APIPRICE', 'PIPRICE']);
-  const apiHighIdx = findFuzzy(['APIHIGH', 'PIHIGH', 'API52WHIGH', 'PI52WHIGH', 'APIHIGH52', 'PIHIGH52']);
-  const apiLowIdx = findFuzzy(['APILOW', 'PILOW', 'API52WLOW', 'PI52WLOW', 'APILOW52', 'PILOW52']);
+  // Process both sheets
+  processSheet(PRICE_SHEET_NAME);
+  processSheet(DASHBOARD_SHEET_NAME);
 
-  const out = [];
-  values.forEach(r => {
-    const rawCode = idxCode != null ? r[idxCode] : '';
-    if (!rawCode) return;
-    const code = String(rawCode).trim().toUpperCase();
-    if (!code) return;
-    if (singleCode && code !== singleCode) return;
-    function num(idx) {
-      if (idx == null) return null;
-      let v = r[idx];
-      if (v === '' || v == null) return null;
-      // Robustly handle strings with currency symbols (e.g. "$0.004")
-      if (typeof v === 'string') {
-        v = v.replace(/[^0-9.-]/g, '');
-      }
-      const n = parseFloat(v);
-      return (isNaN(n) || !isFinite(n)) ? null : n;
-    }
-
-    let live = num(idxLive);
-    
-    // Recovery Logic: If Google returns 0 or null, check the API_Price column
-    if ((live === 0 || live == null) && apiPriceIdx != null) {
-      const fallback = parseFloat(r[apiPriceIdx]);
-      if (fallback != null && !isNaN(fallback) && fallback > 0) {
-        live = fallback;
-      }
-    }
-
-    let prevClose = num(idxPrev);
-    // PrevClose Recovery
-    const apiPrevIdx = findFuzzy(['APIPREVCLOSE', 'APIPREVIOUSCLOSE', 'PIPREVCLOSE']);
-    if ((prevClose === 0 || prevClose == null) && apiPrevIdx != null) {
-        const val = parseFloat(r[apiPrevIdx]);
-        if (val > 0) prevClose = val;
-    }
-
-    // 52-Week Recovery
-    let high52 = num(idxHigh52);
-    if ((high52 === 0 || high52 == null) && apiHighIdx != null) {
-        const val = parseFloat(r[apiHighIdx]);
-        if (val > 0) high52 = val;
-    }
-
-    let low52 = num(idxLow52);
-    if ((low52 === 0 || low52 == null) && apiLowIdx != null) {
-        const val = parseFloat(r[apiLowIdx]);
-        if (val > 0) low52 = val;
-    }
-
-    // FINAL FALLBACK: Proxy from Live Price
-    // If we have a valid live price but NO 52-week data (because Google failed and no API column exists),
-    // we set High/Low to the Live Price. This prevents "0" or "null" in the UI.
-    // It simply means: "The only price we know for this year is today's price."
-    if (live > 0) {
-      if (high52 === 0 || high52 == null) high52 = live;
-      if (low52 === 0 || low52 == null) low52 = live;
-      
-      // Sanity Check: Ensure Live is within bounds (if logic gets weird)
-      if (live > high52) high52 = live;
-      if (live < low52) low52 = live;
-    }
-
-    const obj = {
-      ASXCode: code,
-      CompanyName: idxCompany!=null ? (r[idxCompany] || null) : null,
-      LivePrice: live,
-      PrevClose: prevClose,
-      High52: high52,
-      Low52: low52
-    };
-    if (!options || !options.compact) {
-      if (idxMktCap != null) obj.MarketCap = num(idxMktCap);
-      if (idxPE != null) obj.PE = num(idxPE);
-    }
-
-    // SECTOR PASSING (New)
-    // We check for a "Sector" column. If found, pass it through.
-    const idxSector = col(['Sector', 'Industry', 'Category']);
-    if (idxSector != null) {
-      const s = r[idxSector];
-      if (s && String(s).trim()) {
-        obj.Sector = String(s).trim();
-      }
-    }
-
-    out.push(obj);
-  });
   return out;
 }
 

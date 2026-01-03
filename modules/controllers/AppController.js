@@ -1640,7 +1640,7 @@ export class AppController {
             if (btn) {
                 e.preventDefault(); // Good practice for buttons
                 console.log("Live Refresh Clicked");
-                ToastManager.show('Refreshing Live Prices...', 'info-no-icon');
+                ToastManager.show('Refreshing Live Prices...', 'refresh');
                 this.updateDataAndRender(true);
             }
         });
@@ -1810,7 +1810,7 @@ export class AppController {
                 // Refresh UI
                 this.watchlistUI.updateHeaderTitle();
                 this.watchlistUI.renderWatchlistDropdown();
-                ToastManager.success('Watchlist renamed successfully.');
+                ToastManager.success(`Watchlist renamed to "${newName}".`);
             } catch (err) {
                 console.error('Failed to rename watchlist:', err);
                 ToastManager.error('Failed to rename watchlist: ' + err.message);
@@ -1891,11 +1891,16 @@ export class AppController {
 
             try {
                 // Determine if we are deleting from a specific watchlist or the share entirely
+                // 1. Lookup Name BEFORE Deletion (for Toast)
+                let shareName = 'Share';
+                const share = (AppState.data.shares || []).find(s => s.id === shareId);
+                if (share) shareName = share.shareName || share.code || 'Share';
+
                 // AppService.deleteShareRecord handles the logic (checks ID vs watchlist context)
                 await this.appService.deleteShareRecord(watchlistId, shareId);
 
                 // Success Feedback
-                ToastManager.success('Share deleted.');
+                ToastManager.success(`${shareName} deleted.`);
 
                 // Explicitly trigger a re-render to ensure UI reflects change immediately
                 // (Though UserStore snapshot will likely trigger it too, this is safe redundancy)
@@ -1927,9 +1932,16 @@ export class AppController {
 
             try {
                 // 2. Call Service to delete from backend
+
+                // Lookup Name (if possible) - Though data might be stale if service deletes first, 
+                // but service is async. We can lookup first.
+                // Actually AppState.data.cash is the source.
+                const asset = (AppState.data.cash || []).find(a => a.id === id);
+                const assetName = asset ? asset.name : 'Asset';
+
                 await this.appService.deleteCashCategory(id);
                 // UI will update via UserStore subscription -> updateDataAndRender -> refreshView
-                ToastManager.success('Asset deleted.');
+                ToastManager.success(`${assetName} deleted.`);
             } catch (err) {
                 console.error('Delete Cash Error:', err);
                 ToastManager.error('Failed to delete asset.');

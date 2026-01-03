@@ -1,0 +1,66 @@
+# System Files
+.DS_Store
+Thumbs.db
+
+# Dependencies
+node_modules/
+.venv/
+__pycache__/
+
+# Environment & Config
+.env
+.vscode/
+.idea/
+
+# Data Dumps & Workbooks
+*.xlsx
+*.csv
+*.xls
+
+# Logs & Debug Output
+*.log
+*.txt
+sheet_dump.txt
+top_rows_dump.txt
+audit_report.txt
+dashboard_dump.txt
+
+# Temporary Scripts (Python Audit/Merge Scripts)
+*.py
+!server.py
+!app.py
+# Assuming server.py or app.py might be real, but given the list, most seem to be one-off scripts. 
+# Explicitly ignoring the specific debris found:
+inspect_*.py
+merge_*.py
+purge_*.py
+audit_*.py
+debug_*.js
+expand_*.py
+find_*.py
+sample_*.py
+revert_*.py
+split_*.py
+swap_*.py
+tag_*.py
+verify_*.py
+analyze_*.py
+get_xlsx_*.py
+save_dumps.py
+populate_sectors.js
+frontend_deep_probe.js
+frontend_debug_snippet.js
+force_scan.js
+test_quota.js
+verification_suite.js
+offline_fusion.py
+final_cleanup.py
+final_clean_purge.py
+enrich_indices.py
+detail_sample.py
+dump_sheets.py
+diagnostic_raw_dump.js
+
+# Artifacts
+.agent/
+.gemini/

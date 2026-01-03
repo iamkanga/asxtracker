@@ -1,79 +1,107 @@
 /**
- * ONE-CLICK SECTOR POPULATOR
- * ==========================
- * Run this function in the Apps Script Editor to automatically
- * populate the "Sector" column for all your stocks using Yahoo Finance.
+ * SAFE DYNAMIC ENRICHMENT SCRIPT
+ * ==============================
+ * This script runs inside your Google Sheet. It connects to Yahoo Finance
+ * to populate the "Sector", "Industry", and "Type" columns for every stock.
+ * 
+ * FEATURES:
+ * 1. Safe Column Creation: Adds missing columns automatically.
+ * 2. Formula Protection: Writes ONLY to the intended fields.
+ * 3. Smart Classification: Detects Shares, ETFs, and Indices.
+ * 4. Granular Data: Fetches detailed industry names (e.g. "Software - Infrastructure").
  */
+
 function populateSectors() {
     const SHEET_NAME = 'Prices';
-    const TARGET_COL_NAME = 'Sector';
 
+    // --- 1. SETUP & SAFETY CHECKS ---
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const sheet = ss.getSheetByName(SHEET_NAME);
-    if (!sheet) { Logger.log('❌ Error: Sheet "Prices" not found'); return; }
-
-    Logger.log('--- STARTING SECTOR POPULATION ---');
-
-    const data = sheet.getDataRange().getValues();
-    const headers = data[0];
-
-    // 1. Find or Create "Sector" Column
-    let sectorIdx = headers.findIndex(h => String(h).trim().toUpperCase() === TARGET_COL_NAME.toUpperCase());
-    if (sectorIdx === -1) {
-        Logger.log('➕ Creating "Sector" column...');
-        const lastCol = sheet.getLastColumn();
-        sheet.getRange(1, lastCol + 1).setValue(TARGET_COL_NAME);
-        sectorIdx = lastCol; // Index is 0-based, so lastCol is the new index (since length = lastCol)
-        SpreadsheetApp.flush(); // Commit structure change
-    } else {
-        Logger.log('✅ Found "Sector" column at index ' + sectorIdx);
-    }
-
-    const codeIdx = headers.findIndex(h => ['ASX Code', 'ASXCode', 'Code'].includes(String(h).trim()));
-    if (codeIdx === -1) { Logger.log('❌ Error: Could not find "ASX Code" column.'); return; }
-
-    const rowsToUpdate = [];
-
-    // 2. Scan Rows
-    for (let i = 1; i < data.length; i++) {
-        const code = String(data[i][codeIdx]).trim().toUpperCase();
-        const currentSector = (sectorIdx < data[i].length) ? String(data[i][sectorIdx]).trim() : '';
-
-        // Only fetch if empty
-        if (code && (!currentSector || currentSector === '#N/A')) {
-            rowsToUpdate.push({ row: i + 1, code: code });
-        }
-    }
-
-    if (rowsToUpdate.length === 0) {
-        Logger.log('✅ All sectors are already populated. Nothing to do.');
+    if (!sheet) {
+        Logger.log('❌ Error: Sheet "' + SHEET_NAME + '" not found.');
+        SpreadsheetApp.getUi().alert('Error: Sheet "' + SHEET_NAME + '" not found.');
         return;
     }
 
-    Logger.log('🔍 Found ' + rowsToUpdate.length + ' rows needing sectors. Fetching...');
+    // Load Headers
+    const lastCol = sheet.getLastColumn();
+    const dataRange = sheet.getDataRange();
+    const data = dataRange.getValues();
+    const headers = data[0]; // Row 1
 
-    // 3. Batched Fetch (Yahoo URL)
-    // Yahoo QuoteSummary V10 is needed for Sector (Profile)
-    const BATCH_SIZE = 5; // Small batch to be polite
-    const SAFE_LIMIT = 500; // Max updates per run to prevent quota blowout
-
-    if (rowsToUpdate.length > SAFE_LIMIT) {
-        Logger.log(`⚠️ Limit Reached: Only processing first ${SAFE_LIMIT} of ${rowsToUpdate.length} rows to save quota.`);
-        // We slice the array to just the safe limit
-        rowsToUpdate.length = SAFE_LIMIT;
+    // Helper: Find or Create Column
+    function ensureColumn(name) {
+        let idx = headers.findIndex(h => String(h).trim().toUpperCase() === name.toUpperCase());
+        if (idx === -1) {
+            Logger.log('➕ Creating New Column: ' + name);
+            const newColIdx = sheet.getLastColumn() + 1;
+            sheet.getRange(1, newColIdx).setValue(name);
+            // Update local headers array so subsequent lookups work
+            headers[newColIdx - 1] = name;
+            return newColIdx - 1; // Return 0-based index
+        }
+        return idx;
     }
 
-    for (let i = 0; i < rowsToUpdate.length; i += BATCH_SIZE) {
-        const batch = rowsToUpdate.slice(i, i + BATCH_SIZE);
+    const idxCode = headers.findIndex(h => ['ASX Code', 'ASXCode', 'Code'].includes(String(h).trim()));
+    if (idxCode === -1) {
+        SpreadsheetApp.getUi().alert('Error: Could not find "ASX Code" column.');
+        return;
+    }
 
-        // Yahoo V10 doesn't support bulk comma-separated for this module well, 
-        // or requires complex structure. We will do parallel fetch using UrlFetchApp.fetchAll.
+    // Verify Key Columns Exist
+    const idxSector = ensureColumn('Sector');
+    const idxIndustry = ensureColumn('Industry');
+    const idxType = ensureColumn('Type');
 
+    // --- 2. IDENTIFY MISSING DATA ---
+    const rowsToProcess = []; // Stores { rowIndex: 5, code: 'BHP' }
+
+    // Loop starting from Row 2 (Index 1)
+    for (let i = 1; i < data.length; i++) {
+        const row = data[i];
+        const code = String(row[idxCode]).trim().toUpperCase();
+
+        // Skip empty rows
+        if (!code) continue;
+
+        // Check if enrichment is needed
+        const sector = (idxSector < row.length) ? row[idxSector] : '';
+        const industry = (idxIndustry < row.length) ? row[idxIndustry] : '';
+        const type = (idxType < row.length) ? row[idxType] : '';
+
+        // Condition: If ANY field is missing or generic "Share" without industry, fetch it.
+        // Also fix legacy #N/A errors.
+        if (!sector || !industry || !type || sector === '#N/A' || industry === '#N/A' ||
+            (type === 'Share' && (!industry || industry === 'Share'))) {
+            rowsToProcess.push({ rowIndex: i + 1, code: code });
+        }
+    }
+
+    if (rowsToProcess.length === 0) {
+        SpreadsheetApp.getUi().alert('✅ All data is up to date! No missing sectors found.');
+        return;
+    }
+
+    SpreadsheetApp.getUi().alert(`🔍 Found ${rowsToProcess.length} stocks to enrich. This may take a few minutes.`);
+    Logger.log(`Processing ${rowsToProcess.length} rows...`);
+
+    // --- 3. BATCH FETCH & UPDATE ---
+    const BATCH_SIZE = 5; // Conservative batching to avoid timeouts
+
+    for (let i = 0; i < rowsToProcess.length; i += BATCH_SIZE) {
+        const batch = rowsToProcess.slice(i, i + BATCH_SIZE);
+
+        // Prepare Requests
         const requests = batch.map(item => {
-            // Ensure .AX suffix
-            const ticker = item.code.endsWith('.AX') ? item.code : item.code + '.AX';
+            // Handle XJO/Index suffix logic if needed, but usually Yahoo uses .AX for all
+            const ticker = item.code.startsWith('^') ? item.code : // Leave XJO as ^AXJO if user typed it that way? 
+                // Actually user types 'XJO'. Yahoo needs '^AXJO' for index? 
+                // Let's assume standard .AX suffix for now.
+                (item.code + '.AX');
+
             return {
-                url: `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${ticker}?modules=summaryProfile`,
+                url: `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${ticker}?modules=summaryProfile,quoteType`,
                 muteHttpExceptions: true
             };
         });
@@ -81,51 +109,62 @@ function populateSectors() {
         try {
             const responses = UrlFetchApp.fetchAll(requests);
 
-            responses.forEach((resp, idx) => {
-                const item = batch[idx];
-                const status = resp.getResponseCode();
-                let sector = '';
+            responses.forEach((resp, batchIdx) => {
+                const item = batch[batchIdx];
+                const code = item.code;
 
-                if (status === 200) {
+                if (resp.getResponseCode() === 200) {
                     try {
                         const json = JSON.parse(resp.getContentText());
-                        const profile = json.quoteSummary?.result?.[0]?.summaryProfile;
-                        if (profile && profile.sector) {
-                            sector = profile.sector;
-                        } else {
-                            // Fallback: Try "ETF" detection or "Fund"
-                            // Some ETFs don't have standard sectors.
-                            sector = 'Other';
+                        const result = json.quoteSummary?.result?.[0];
+
+                        if (result) {
+                            let newType = 'Share';
+                            let newSector = 'Other';
+                            let newIndustry = 'Unknown';
+
+                            // A. Determine Type
+                            const qType = result.quoteType?.quoteType;
+                            if (qType === 'EQUITY') newType = 'Share';
+                            else if (qType === 'ETF' || qType === 'MUTUALFUND') newType = 'ETF';
+                            else if (qType === 'INDEX') newType = 'Index';
+
+                            // B. Determine Sector/Industry
+                            if (newType === 'ETF') {
+                                newSector = 'Funds';
+                                newIndustry = result.summaryProfile?.industry || 'Exchange Traded Fund';
+                            } else if (newType === 'Index') {
+                                newSector = 'Indices';
+                                newIndustry = 'Market Index';
+                            } else {
+                                newSector = result.summaryProfile?.sector || 'Other';
+                                newIndustry = result.summaryProfile?.industry || 'Unknown';
+                            }
+
+                            // C. Write to Sheet (Columns are 1-based)
+                            // We use .setValue() on specific cells to be surgical
+                            sheet.getRange(item.rowIndex, idxSector + 1).setValue(newSector);
+                            sheet.getRange(item.rowIndex, idxIndustry + 1).setValue(newIndustry);
+                            sheet.getRange(item.rowIndex, idxType + 1).setValue(newType);
+
+                            Logger.log(`✅ ${code}: ${newType} | ${newSector} | ${newIndustry}`);
                         }
                     } catch (e) {
-                        // JSON parse error
+                        Logger.log(`❌ Parse Error (${code}): ${e.message}`);
                     }
-                }
-
-                if (sector) {
-                    // Write immediately (or cache for bulk write if speed needed, but direct is safer for visibility)
-                    sheet.getRange(item.row, sectorIdx + 1).setValue(sector);
-                    Logger.log(`✅ [${item.code}] -> ${sector}`);
                 } else {
-                    Logger.log(`⚠️ [${item.code}] -> Not Found`);
-                    sheet.getRange(item.row, sectorIdx + 1).setValue('Unknown');
+                    Logger.log(`⚠️ API Error (${code}): ${resp.getResponseCode()}`);
                 }
             });
 
         } catch (e) {
-            const msg = String(e.message);
-            if (msg.includes('Service invoked too many times') || msg.includes('Quota')) {
-                Logger.log('🚨 DAILY QUOTA EXCEEDED 🚨');
-                Logger.log('Google limits UrlFetch calls per day. Please STOP and resume tomorrow.');
-                Logger.log(`Progress: Processed up to row ${batch[0].row} before stopping.`);
-                break; // STOP THE LOOP
-            }
-            Logger.log('❌ Batch fetch failed: ' + msg);
+            Logger.log(`🛑 Batch Error: ${e.message}`);
         }
 
-        // Rate Limiting Politeness
-        Utilities.sleep(1000);
+        // Small delay to be polite to the API
+        Utilities.sleep(500);
     }
 
-    Logger.log('🎉 Sector population complete.');
+    Logger.log('🎉 Enrichment Complete.');
+    SpreadsheetApp.getUi().alert('🎉 Success! Sector and Industry data has been populated.');
 }

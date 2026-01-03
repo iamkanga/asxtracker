@@ -231,9 +231,13 @@ export class DataService {
                 high: parseFloat(item.H52 || item.High52 || item.high52 || item.high_52 || item.High || item.high || 0),
                 low: parseFloat(item.L52 || item.Low52 || item.low52 || item.low_52 || item.Low || item.low || 0),
                 pe: parseFloat(item.PE || item.pe || 0),
-                volume: parseInt(item.Volume || 0), // ADDED: Critical for Activity Filtering
+                volume: parseInt(item.Volume || 0),
                 change: change,
-                pctChange: pctChange
+                pctChange: pctChange,
+                // NEW METADATA (Enriched)
+                sector: item.Sector || item.sector || '',
+                industry: item.Industry || item.industry || '',
+                type: item.Type || item.type || 'Share'
             });
         });
 

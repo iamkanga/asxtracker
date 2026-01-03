@@ -48,6 +48,11 @@ export class ToastManager {
                 iconClass = null; // No icon
                 defaultTitle = 'Notification';
                 break;
+            case 'refresh':
+                variantClass = CSS_CLASSES.TOAST_INFO;
+                iconClass = 'KANGAROO_ICON_SVG';
+                defaultTitle = 'Refreshing';
+                break;
             case 'info':
             default:
                 variantClass = CSS_CLASSES.TOAST_INFO;

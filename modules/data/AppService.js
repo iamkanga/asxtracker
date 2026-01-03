@@ -54,11 +54,11 @@ export class AppService {
             if (targetId) {
                 // UPDATE
                 await userStore.updateDocument(user.uid, 'cashCategories', targetId, formData);
-                if (!isSilent) ToastManager.success(USER_MESSAGES.ASSET_UPDATE_SUCCESS);
+                if (!isSilent) ToastManager.success(`${formData.name} updated.`);
             } else {
                 // ADD
                 await userStore.addDocument(user.uid, 'cashCategories', formData);
-                if (!isSilent) ToastManager.success(USER_MESSAGES.ASSET_ADDED_SUCCESS);
+                if (!isSilent) ToastManager.success(`${formData.name} added.`);
             }
         } catch (error) {
             console.error("AppService: Save failed", error);
@@ -125,6 +125,27 @@ export class AppService {
             alert(USER_MESSAGES.AUTH_REQUIRED_FIRST);
             return;
         }
+
+        // Check if System Watchlist (ID is 'ALL', 'CASH', 'DASHBOARD', 'portfolio')
+        // OR any non-backend ID we decide to support.
+        const systemIds = ['ALL', 'CASH', 'DASHBOARD', 'portfolio', 'search'];
+        if (systemIds.includes(id)) {
+            // Persist as Custom Name Preference
+            const currentMap = AppState.preferences.customWatchlistNames || {};
+            const updatedMap = { ...currentMap, [id]: name };
+
+            // Save to Cloud & Local
+            await this.saveUserPreferences({ customWatchlistNames: updatedMap });
+
+            // Update Local State Immediately (for responsiveness)
+            AppState.preferences.customWatchlistNames = updatedMap;
+            localStorage.setItem('ASX_NEXT_customWatchlistNames', JSON.stringify(updatedMap)); // Local echo
+
+            ToastManager.success('View renamed successfully.');
+            return;
+        }
+
+        // Default Path for Database Watchlists
         await userStore.renameWatchlist(user.uid, id, name);
     }
 

@@ -192,6 +192,30 @@ export class SearchDiscoveryUI {
     static _renderDetail(container, stock, modal) {
         const safeVal = (v, fmt) => (v !== undefined && v !== null && v !== 0) ? fmt(v) : '-';
 
+        // Helper for Badges
+        const renderBadges = (s) => {
+            const badges = [];
+            const type = (s.type || 'Share').toUpperCase();
+            const industry = s.industry || s.sector || '';
+
+            // Type Badge
+            if (type === 'ETF') {
+                badges.push(`<span class="badge-pill" style="background: var(--color-accent); color: #fff; font-size: 0.7rem; padding: 2px 8px; border-radius: 4px; font-weight: bold;">ETF</span>`);
+            } else if (type === 'INDEX') {
+                badges.push(`<span class="badge-pill" style="background: var(--text-muted); color: #fff; font-size: 0.7rem; padding: 2px 8px; border-radius: 4px; font-weight: bold;">INDEX</span>`);
+            }
+
+            // Industry Badge
+            if (industry && industry !== 'Unknown') {
+                badges.push(`<span class="badge-pill" style="background: rgba(128,128,128,0.2); color: var(--text-normal); font-size: 0.7rem; padding: 2px 8px; border-radius: 4px; border: 1px solid var(--border-color);">
+                    <i class="fas fa-layer-group" style="margin-right:4px; font-size:0.6rem;"></i>${industry}
+                 </span>`);
+            }
+
+            if (badges.length === 0) return '';
+            return `<div style="display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap;">${badges.join('')}</div>`;
+        };
+
         // Helper for Sparkline Logic
         const renderSparkline = (s) => {
             // ROBUST DATA EXTRACTION: Check all known variations
@@ -241,9 +265,13 @@ export class SearchDiscoveryUI {
 
         container.innerHTML = `
             <div class="${CSS_CLASSES.RICH_PREVIEW_CONTAINER}">
-                <div class="${CSS_CLASSES.DISCOVERY_HEADER_SIMPLE}" style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem;">
-                    <h2 class="${CSS_CLASSES.DISPLAY_TITLE}">${stock.code}</h2>
-                    <span class="${CSS_CLASSES.MODAL_SUBTITLE}">${stock.name}</span>
+                <div class="${CSS_CLASSES.DISCOVERY_HEADER_SIMPLE}" style="display: flex; flex-direction: column; margin-bottom: 0.5rem;">
+                   <div style="display: flex; justify-content: space-between; align-items: flex-end;"> 
+                        <h2 class="${CSS_CLASSES.DISPLAY_TITLE}" style="line-height: 1;">${stock.code}</h2>
+                        <span class="${CSS_CLASSES.PREVIEW_PRICE}" style="font-size: 1.5rem; font-weight: bold;">${formatCurrency(stock.live)}</span>
+                   </div>
+                   <span class="${CSS_CLASSES.MODAL_SUBTITLE}" style="margin-top: 4px;">${stock.name}</span>
+                   ${renderBadges(stock)}
                 </div>
 
                 <!-- 52-Week Sparkline (New) -->

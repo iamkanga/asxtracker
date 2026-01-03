@@ -237,17 +237,28 @@ export class WatchlistUI {
                 const currentUser = AppState.user;
                 if (!currentUser) return ToastManager.error(USER_MESSAGES.AUTH_REQUIRED_FIRST);
 
-                const currentWatchlistType = AppState.watchlist.type;
-                if (currentWatchlistType === 'cash') return ToastManager.error(USER_MESSAGES.RENAME_SYSTEM_VIEW);
+                // NEW LOGIC: Remove artificial restriction on system types
+                // user restriction logic removed. 'cash' type warning removed.
+                const currentWatchlistId = AppState.watchlist.id || PORTFOLIO_ID;
 
-                const currentWatchlistId = AppState.watchlist.id;
-                if (!currentWatchlistId || currentWatchlistId === ALL_SHARES_ID || currentWatchlistId === PORTFOLIO_ID) {
-                    ToastManager.error(USER_MESSAGES.RENAME_RESTRICTED);
-                    return;
+                // Determine Current Name (System vs Custom vs Database)
+                let oldName = '';
+                const customNames = AppState.preferences.customWatchlistNames || {};
+
+                if (customNames[currentWatchlistId]) {
+                    oldName = customNames[currentWatchlistId]; // User's custom alias
+                } else if (currentWatchlistId === ALL_SHARES_ID) {
+                    oldName = 'All Shares';
+                } else if (currentWatchlistId === PORTFOLIO_ID) {
+                    oldName = 'Portfolio';
+                } else if (currentWatchlistId === CASH_WATCHLIST_ID) {
+                    oldName = 'Cash & Assets';
+                } else if (currentWatchlistId === DASHBOARD_WATCHLIST_ID) {
+                    oldName = 'Dashboard';
+                } else {
+                    const currentList = (AppState.data.watchlists || []).find(w => w.id === currentWatchlistId);
+                    oldName = currentList ? currentList.name : 'Watchlist';
                 }
-
-                const currentList = (AppState.data.watchlists || []).find(w => w.id === currentWatchlistId);
-                const oldName = currentList ? currentList.name : '';
 
                 const newName = prompt('Enter new name:', oldName);
                 if (newName && newName !== oldName) {
@@ -255,7 +266,10 @@ export class WatchlistUI {
                         try {
                             await this.onRenameWatchlist(currentWatchlistId, newName);
                             // Force refresh to update title
-                            this._handleSwitch(currentWatchlistId);
+                            // Note: UI refresh usually handled by data/pref subscription callback,
+                            // but manual trigger here ensures prompt response.
+                            this.updateHeaderTitle();
+                            this.renderWatchlistDropdown();
                         } catch (err) {
                             console.error("Rename failed via callback:", err);
                         }
@@ -275,18 +289,27 @@ export class WatchlistUI {
 
         let baseTitle = 'Watchlist';
 
-        if (AppState.watchlist.type === 'cash') {
-            baseTitle = 'Cash & Assets';
-        } else if (AppState.watchlist.id === DASHBOARD_WATCHLIST_ID) {
-            baseTitle = 'Dashboard';
+        // Check for Custom Name Override
+        const currentId = AppState.watchlist.id || PORTFOLIO_ID;
+        const customNames = AppState.preferences.customWatchlistNames || {};
+
+        if (customNames[currentId]) {
+            baseTitle = customNames[currentId];
         } else {
-            if (AppState.watchlist.id === ALL_SHARES_ID) {
-                baseTitle = 'All Shares';
-            } else if (!AppState.watchlist.id || AppState.watchlist.id === PORTFOLIO_ID) {
-                baseTitle = 'Portfolio';
+            // Fallback to Defaults
+            if (AppState.watchlist.type === 'cash') {
+                baseTitle = 'Cash & Assets';
+            } else if (AppState.watchlist.id === DASHBOARD_WATCHLIST_ID) {
+                baseTitle = 'Dashboard';
             } else {
-                const list = (AppState.data.watchlists || []).find(w => w.id === AppState.watchlist.id);
-                baseTitle = list ? list.name : 'Watchlist';
+                if (AppState.watchlist.id === ALL_SHARES_ID) {
+                    baseTitle = 'All Shares';
+                } else if (!AppState.watchlist.id || AppState.watchlist.id === PORTFOLIO_ID) {
+                    baseTitle = 'Portfolio';
+                } else {
+                    const list = (AppState.data.watchlists || []).find(w => w.id === AppState.watchlist.id);
+                    baseTitle = list ? list.name : 'Watchlist';
+                }
             }
         }
 
@@ -301,6 +324,29 @@ export class WatchlistUI {
 
         // Re-enforce binding after update
         this._bindTitleListener();
+
+        // Check if System Watchlist (Enforce Ghosting)
+        const ghostId = AppState.watchlist.id || PORTFOLIO_ID;
+        const isSystem = (ghostId === ALL_SHARES_ID || ghostId === PORTFOLIO_ID || ghostId === CASH_WATCHLIST_ID || ghostId === DASHBOARD_WATCHLIST_ID);
+
+        const renameBtn = document.getElementById(IDS.RENAME_WATCHLIST_BTN);
+        if (renameBtn) {
+            if (isSystem) {
+                renameBtn.classList.add(CSS_CLASSES.GHOSTED);
+                renameBtn.classList.add(CSS_CLASSES.DISABLED);
+                renameBtn.disabled = true;
+                renameBtn.style.opacity = '0.5';
+                renameBtn.style.pointerEvents = 'none';
+                renameBtn.title = 'Cannot rename System views';
+            } else {
+                renameBtn.classList.remove(CSS_CLASSES.GHOSTED);
+                renameBtn.classList.remove(CSS_CLASSES.DISABLED);
+                renameBtn.disabled = false;
+                renameBtn.style.opacity = '';
+                renameBtn.style.pointerEvents = '';
+                renameBtn.title = `Rename ${baseTitle}`;
+            }
+        }
     }
 
     /**
@@ -374,8 +420,16 @@ export class WatchlistUI {
             isSystem: false
         }));
 
-        // Merge and sort by stored order if exists
-        const fullList = [...watchlistItems, ...userItems];
+        // APPLY CUSTOM NAMES from Preferences
+        const customNames = AppState.preferences.customWatchlistNames || {};
+        const fullListRaw = [...watchlistItems, ...userItems];
+
+        const fullList = fullListRaw.map(item => {
+            if (customNames[item.id]) {
+                return { ...item, name: customNames[item.id] };
+            }
+            return item;
+        });
         const savedOrder = AppState.preferences.watchlistOrder;
 
         if (savedOrder && Array.isArray(savedOrder)) {

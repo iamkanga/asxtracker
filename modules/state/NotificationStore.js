@@ -353,7 +353,21 @@ export class NotificationStore {
                 return false;
             }
 
-            // 2b. MUTE FILTER (New Feature)
+            // 2b. ETF/INDEX FILTER (Noise Reduction)
+            // Block generic ETF/Index alerts from Global feeds unless specifically watched.
+            if (hit.code && AppState.livePrices instanceof Map) {
+                const live = AppState.livePrices.get(hit.code);
+                if (live) {
+                    const type = (live.type || '').toUpperCase();
+                    // Block if it's an ETF/Index AND it's not in our local watchlist (meaning just noise)
+                    // Note: _isLocal flag is added during mergeLists in getGlobalAlerts
+                    if ((type === 'ETF' || type === 'INDEX') && !hit._isLocal) {
+                        return false;
+                    }
+                }
+            }
+
+            // 2c. MUTE FILTER (New Feature)
             // Check if user has muted this stock in their portfolio
             if (AppState.data && AppState.data.shares) {
                 const stockCode = (hit.code || hit.shareName || '').toUpperCase();

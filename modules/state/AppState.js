@@ -78,6 +78,14 @@ export const AppState = {
         })(),
         watchlistMode: localStorage.getItem(STORAGE_KEYS.WATCHLIST_PICKER_MODE) || 'default',
         onboarded: localStorage.getItem('ASX_NEXT_onboarded') === 'true',
+        customWatchlistNames: (() => {
+            try {
+                const stored = localStorage.getItem('ASX_NEXT_customWatchlistNames');
+                return stored ? JSON.parse(stored) : {};
+            } catch (e) {
+                return {};
+            }
+        })(),
         userCategories: (() => {
             try {
                 const stored = localStorage.getItem(STORAGE_KEYS.USER_CATEGORIES);

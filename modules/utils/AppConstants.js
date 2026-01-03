@@ -161,6 +161,7 @@ export const SECTORS_LIST = [
     'Communication Services',
     'Utilities',
     'Real Estate',
+    'ETF',
     'Other'
 ];
 
