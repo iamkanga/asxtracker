@@ -1840,4 +1840,32 @@ export class ViewRenderer {
         });
     }
 
+    /**
+     * Shows a full-screen loading overlay with a custom message.
+     * Complies with Constitution (View logic in Renderer).
+     */
+    showLoadingOverlay(title, subtitle) {
+        const overlay = document.createElement('div');
+        overlay.id = 'app-loading-overlay'; // Standard ID for removal
+        overlay.className = CSS_CLASSES.SPLASH_SCREEN;
+        overlay.style.flexDirection = 'column';
+        overlay.style.zIndex = '99999';
+
+        overlay.innerHTML = `
+            <div style="font-size: 3rem; color: var(--color-accent); margin-bottom: 20px;">
+                <i class="fas ${UI_ICONS.SPINNER}"></i>
+            </div>
+            <div class="${CSS_CLASSES.TEXT_XL} ${CSS_CLASSES.FONT_BOLD}">${title}</div>
+            <div class="${CSS_CLASSES.TEXT_MUTED}" style="margin-top: 10px;">${subtitle}</div>
+        `;
+        document.body.appendChild(overlay);
+    }
+
+    /**
+     * Removes the loading overlay.
+     */
+    hideLoadingOverlay() {
+        const overlay = document.getElementById('app-loading-overlay');
+        if (overlay) overlay.remove();
+    }
 }

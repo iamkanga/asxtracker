@@ -270,7 +270,7 @@ export class GeneralSettingsUI {
 
         // Delete Data
         modal.querySelector('#gen-delete-row').addEventListener('click', () => {
-            // GeneralSettingsUI._close(modal); // Close self first
+            GeneralSettingsUI._close(modal); // Close self first
             document.dispatchEvent(new CustomEvent(EVENTS.REQUEST_DELETE_DATA));
         });
 

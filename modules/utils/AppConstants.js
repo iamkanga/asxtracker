@@ -497,6 +497,9 @@ export const CSS_CLASSES = {
     // Modal Show State
     SHOW: 'show',
 
+    // Splash Screen
+    SPLASH_SCREEN: 'splash-screen',
+
     // Sidebar Overlay
     SIDEBAR_OVERLAY: 'sidebar-overlay',
 

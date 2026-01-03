@@ -2272,9 +2272,14 @@ export class AppController {
         if (confirm(USER_MESSAGES.CONFIRM_DELETE_ALL)) {
             // Second confirmation for such a destructive action
             if (confirm("FINAL WARNING: All your data will be permanently wiped. Proceed?")) {
+
+                // 1. Immediate UI Feedback (Delegated to ViewRenderer)
+                this.viewRenderer.showLoadingOverlay("Resetting Application...", "Please wait while we scrub your data.");
+
                 try {
-                    document.body.classList.add('loading'); // Optional UI feedback
+                    // document.body.classList.add('loading'); // Removed (No CSS support)
                     await this.appService.wipeUserData();
+
                     // Clear local storage
                     localStorage.clear();
 
@@ -2295,7 +2300,8 @@ export class AppController {
                     });
                 } catch (err) {
                     console.error("Wipe failed:", err);
-                    document.body.classList.remove('loading');
+                    this.viewRenderer.hideLoadingOverlay(); // Delegate cleanup
+                    ToastManager.error("Failed to wipe data: " + err.message);
                 }
             }
         }
