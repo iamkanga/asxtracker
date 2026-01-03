@@ -12,7 +12,7 @@ import { formatCurrency, formatPercent } from '../utils/formatters.js';
 export class SnapshotUI {
 
     static show() {
-        if (document.getElementById(IDS.SNAPSHOT_MODAL_CONTAINER)) return;
+        if (document.getElementById('snapshot-modal-container')) return;
 
         const modal = this._renderModal();
         document.body.appendChild(modal);
@@ -42,12 +42,12 @@ export class SnapshotUI {
 
     static _renderModal() {
         const modal = document.createElement('div');
-        modal.id = IDS.SNAPSHOT_MODAL_CONTAINER;
+        modal.id = 'snapshot-modal-container';
         modal.className = `${CSS_CLASSES.MODAL} ${CSS_CLASSES.MODAL_FULLSCREEN} ${CSS_CLASSES.HIDDEN}`;
 
         modal.innerHTML = `
             <div class="${CSS_CLASSES.MODAL_OVERLAY}"></div>
-            <div class="${CSS_CLASSES.MODAL_CONTENT} ${CSS_CLASSES.SNAPSHOT_CONTENT}">
+            <div class="${CSS_CLASSES.MODAL_CONTENT} snapshot-content" style="max-height: 90vh; display: flex; flex-direction: column;">
                 <div class="${CSS_CLASSES.MODAL_HEADER}">
                     <h2 class="${CSS_CLASSES.MODAL_TITLE}">
                         <i class="fas fa-bolt" style="color: var(--color-accent); margin-right: 8px;"></i>
@@ -58,8 +58,8 @@ export class SnapshotUI {
                     </button>
                 </div>
                 
-                <div class="${CSS_CLASSES.SNAPSHOT_CONTROLS}">
-                    <div class="${CSS_CLASSES.SEGMENTED_CONTROL}">
+                <div class="snapshot-controls" style="padding: 10px 15px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: center;">
+                    <div class="${CSS_CLASSES.SEGMENTED_CONTROL}" style="width: 100%; max-width: 300px;">
                         <button class="${CSS_CLASSES.SEGMENTED_BUTTON}" data-sort="desc">
                             <i class="fas fa-caret-up" style="margin-right: 5px; color: var(--color-positive);"></i> High to Low
                         </button>
@@ -151,7 +151,7 @@ export class SnapshotUI {
 
         if (data.length === 0) {
             grid.innerHTML = `
-                <div class="${CSS_CLASSES.EMPTY_STATE}">
+                <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: var(--text-muted);">
                     <i class="fas fa-chart-line" style="font-size: 2rem; margin-bottom: 15px; opacity: 0.5;"></i>
                     <p>No shares found in your portfolio.</p>
                     <p style="font-size: 0.8rem;">Add stocks to your watchlists to see them here.</p>
@@ -269,21 +269,21 @@ export class SnapshotUI {
         }
 
         return `
-            <div class="${CSS_CLASSES.SNAPSHOT_CARD} ${colorClass}" data-code="${item.code}">
+            <div class="${CSS_CLASSES.SNAPSHOT_CARD} ${colorClass}" data-code="${item.code}" style="justify-content: space-between;">
                 <!-- Left: Code -->
-                <div class="${CSS_CLASSES.SNAP_COL_LEFT}">
+                <div class="${CSS_CLASSES.SNAP_COL_LEFT}" style="flex: 0 0 auto;">
                     <span class="${CSS_CLASSES.SNAP_CODE}">${item.code}</span>
                 </div>
 
                 <!-- Center: Sparkline -->
-                 <div class="snap-col-center">
+                 <div style="flex: 1; display: flex; align-items: center; justify-content: center;">
                     ${sparklineHtml}
                 </div>
 
                 <!-- Right: Price & Changes -->
-                <div class="${CSS_CLASSES.SNAP_COL_RIGHT}">
-                     <div class="${CSS_CLASSES.SNAP_PRICE}">${priceStr}</div>
-                     <div class="${CSS_CLASSES.SNAP_PERCENT}">
+                <div class="${CSS_CLASSES.SNAP_COL_RIGHT}" style="text-align: right; flex: 0 0 auto;">
+                     <div class="${CSS_CLASSES.SNAP_PRICE}" style="font-weight: 700;">${priceStr}</div>
+                     <div style="display: flex; gap: 6px; justify-content: flex-end; font-size: 0.8rem;">
                         <span class="${textClass}">${displayVal}</span>
                         <span class="${textClass}">${pctStr}</span>
                      </div>

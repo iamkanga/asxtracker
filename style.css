@@ -175,6 +175,22 @@ body.dark-theme .sidebar-title-svg {
     justify-content: space-between !important;
 }
 
+.flex-1 {
+    flex: 1 !important;
+}
+
+.text-left {
+    text-align: left !important;
+}
+
+.modal-title-auto {
+    width: auto !important;
+}
+
+.star-gap-ml {
+    margin-left: 15px !important;
+}
+
 .justify-start {
     justify-content: flex-start !important;
 }
@@ -213,6 +229,30 @@ body.dark-theme .sidebar-title-svg {
 
 .gap-6px {
     gap: 6px !important;
+}
+
+.ml-small {
+    margin-left: 8px !important;
+}
+
+.mb-medium {
+    margin-bottom: 12px !important;
+}
+
+.font-normal {
+    font-weight: 400 !important;
+}
+
+.opacity-30 {
+    opacity: 0.3 !important;
+}
+
+.opacity-60 {
+    opacity: 0.6 !important;
+}
+
+.text-3xl {
+    font-size: 3rem !important;
 }
 
 .text-right {
@@ -863,6 +903,14 @@ body.dark-theme .dashboard-row.clickable:hover {
     /* Default to neutral/accent, specific colors overridden below */
     padding-left: 12px;
     /* Ensure content doesn't overlap shadow */
+}
+
+.dashboard-container.view-mode-snapshot .dashboard-row.positive {
+    box-shadow: inset 4px 0 0 0 var(--color-positive) !important;
+}
+
+.dashboard-container.view-mode-snapshot .dashboard-row.negative {
+    box-shadow: inset 4px 0 0 0 var(--color-negative) !important;
 }
 
 .dashboard-container.view-mode-snapshot .dashboard-item-name,
@@ -5247,125 +5295,6 @@ body.dark-theme .sort-picker-row.active {
     padding: 4rem 1rem;
 }
 
-/* Discovery Sparklines & Layout */
-.discovery-spark-container {
-    padding: 10px 0;
-    margin-top: 5px;
-}
-
-.discovery-spark-container .dashboard-range-data-group {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.75rem;
-    color: var(--text-muted);
-}
-
-.discovery-spark-container .spark-rail {
-    height: 3px;
-    background-color: var(--border-color);
-    position: relative;
-    width: 100%;
-}
-
-.discovery-spark-container .spark-marker {
-    position: absolute;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    width: 6px;
-    height: 6px;
-    background-color: var(--color-accent);
-    border-radius: 50%;
-}
-
-.discovery-price-right {
-    margin-left: auto;
-    text-align: right;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-}
-
-/* Snapshot / Market Pulse Styles */
-.snapshot-content {
-    max-height: 90vh;
-    display: flex;
-    flex-direction: column;
-}
-
-.snapshot-controls {
-    padding: 10px 15px;
-    border-bottom: 1px solid var(--border-color);
-    display: flex;
-    justify-content: center;
-}
-
-.snapshot-controls .segmented-control {
-    width: 100%;
-    max-width: 300px;
-}
-
-.snapshot-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 12px;
-    padding: 15px;
-}
-
-.snapshot-card {
-    display: flex;
-    align-items: center;
-    padding: 15px;
-    border-radius: 12px;
-    background: var(--card-bg);
-    border: 1px solid var(--border-color);
-    transition: transform 0.2s, box-shadow 0.2s;
-    cursor: pointer;
-}
-
-.snapshot-card:active {
-    transform: scale(0.98);
-}
-
-.snap-col-left {
-    flex: 0 0 auto;
-}
-
-.snap-col-center {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.snap-col-right {
-    text-align: right;
-    flex: 0 0 auto;
-}
-
-.snap-code {
-    font-size: 1.1rem;
-    font-weight: 700;
-}
-
-.snap-price {
-    font-weight: 700;
-}
-
-.snap-percent {
-    font-size: 0.9rem;
-    font-weight: 600;
-}
-
-.snapshot-positive {
-    background: rgba(6, 255, 79, 0.05) !important;
-    border-color: rgba(6, 255, 79, 0.2) !important;
-}
-
-.snapshot-negative {
-    background: rgba(255, 49, 49, 0.05) !important;
-    border-color: rgba(255, 49, 49, 0.2) !important;
-}
-
 
 /* --- RESPONSIVE VISIBILITY CORRECTIONS --- */
 
@@ -5421,7 +5350,7 @@ body.dark-theme .sort-picker-row.active {
 }
 
 .justify-start {
-    justify-content: flex-start !important;
+    justify-content: flex-start;
 }
 
 .font-bold {
@@ -5580,14 +5509,6 @@ body.dark-theme .sort-picker-row.active {
 
 .text-left {
     text-align: left !important;
-}
-
-.flex-1 {
-    flex: 1 !important;
-}
-
-.flex-none {
-    flex: none !important;
 }
 
 .text-center {
@@ -7635,4 +7556,60 @@ body.dark-theme .calc-result-card {
     border-radius: 2px;
     opacity: 0.6;
     /* Ghosted to match icon */
+}
+
+/* Discovery Sparkline */
+.discovery-spark-container {
+    width: 100%;
+    margin: 8px 0 12px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.discovery-spark-container .dashboard-range-data-group {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.discovery-spark-container .spark-rail {
+    flex: 1;
+    margin: 0 10px;
+    background-color: var(--border-color);
+    height: 4px;
+    border-radius: 2px;
+    position: relative;
+}
+
+.discovery-spark-container .spark-marker {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 8px;
+    height: 8px;
+    background-color: var(--color-accent);
+    border-radius: 50%;
+    box-shadow: 0 0 0 2px var(--card-bg);
+}
+
+/* Adjust Preview Row for Alignment */
+.discovery-price-right {
+    margin-left: auto;
+    /* Push to right */
+    text-align: right;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+/* Utility Classes for Grid Alignment */
+.text-left {
+    text-align: left !important;
+}
+
+.justify-start {
+    justify-content: flex-start !important;
 }

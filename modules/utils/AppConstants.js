@@ -361,10 +361,12 @@ export const CSS_CLASSES = {
     TEXT_POSITIVE: 'text-positive',
     TEXT_NEGATIVE: 'text-negative',
     TEXT_NEUTRAL: 'text-neutral',
-    TEXT_POS: 'text-positive', // Shorthand
-    TEXT_NEG: 'text-negative', // Shorthand
     TEXT_COFFEE: 'text-coffee',
     TEXT_SHIMMER: 'text-shimmer',
+    TEXT_LEFT: 'text-left',
+    FLEX_1: 'flex-1',
+    MODAL_TITLE_AUTO: 'modal-title-auto',
+    STAR_GAP_ML: 'star-gap-ml',
 
     // View Modes
     VIEW_TABLE: 'view-table',
@@ -499,19 +501,6 @@ export const CSS_CLASSES = {
     // Modal Show State
     SHOW: 'show',
 
-    // Snapshot / Market Pulse
-    SNAPSHOT_CONTENT: 'snapshot-content',
-    SNAPSHOT_CONTROLS: 'snapshot-controls',
-    SNAPSHOT_GRID: 'snapshot-grid',
-    SNAPSHOT_CARD: 'snapshot-card',
-    SNAPSHOT_POSITIVE: 'snapshot-positive',
-    SNAPSHOT_NEGATIVE: 'snapshot-negative',
-    SNAP_COL_LEFT: 'snap-col-left',
-    SNAP_COL_RIGHT: 'snap-col-right',
-    SNAP_CODE: 'snap-code',
-    SNAP_PRICE: 'snap-price',
-    SNAP_PERCENT: 'snap-percent',
-
     // Splash Screen
     SPLASH_SCREEN: 'splash-screen',
 
@@ -611,9 +600,6 @@ export const CSS_CLASSES = {
     DISCOVERY_LIST: 'discovery-list',
     DISCOVERY_DETAIL: 'discovery-detail',
     DISCOVERY_EMPTY_STATE: 'discovery-empty-state',
-    DISCOVERY_PRICE_RIGHT: 'discovery-price-right',
-    DASHBOARD_RANGE_DATA_GROUP: 'dashboard-range-data-group',
-    DISCOVERY_SPARK_CONTAINER: 'discovery-spark-container',
 
     // Layout & Flex (Constitution Compliance)
     FLEX_ROW: 'flex-row',
@@ -654,6 +640,12 @@ export const CSS_CLASSES = {
     CHEVRON_ICON: 'chevron-icon',
     ITALIC: 'italic',
     OPACITY_70: 'opacity-70',
+    OPACITY_60: 'opacity-60',
+    OPACITY_30: 'opacity-30',
+    FONT_NORMAL: 'font-normal',
+    ML_SMALL: 'ml-small',
+    MB_MEDIUM: 'mb-medium',
+    TEXT_3XL: 'text-3xl',
     BORDER_NONE: 'border-none',
     BORDER_TOP: 'border-top',
     BG_TRANSPARENT: 'bg-transparent',
@@ -1134,12 +1126,5 @@ export const IDS = {
 
     // Modal Titles for Reorder
     WATCHLIST_MODAL_TITLE: 'watchlist-modal-title',
-    SORT_MODAL_TITLE: 'sort-modal-title',
-
-    // Snapshot / Market Pulse
-    SNAPSHOT_MODAL_CONTAINER: 'snapshot-modal-container',
-
-    // Discovery
-    DISCOVERY_INTERFACE: 'discovery-interface',
-    DISCOVERY_ADD_BTN: 'discovery-add-btn'
+    SORT_MODAL_TITLE: 'sort-modal-title'
 };

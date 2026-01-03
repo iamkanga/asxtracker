@@ -1076,9 +1076,8 @@ export class AppController {
         // === STEP 3.1: HANDLE EDIT WATCHLIST GHOSTING ===
         const editWatchlistBtn = document.getElementById(IDS.BTN_EDIT_WATCHLIST);
         if (editWatchlistBtn) {
-            const systemIds = [DASHBOARD_WATCHLIST_ID, ALL_SHARES_ID, PORTFOLIO_ID, CASH_WATCHLIST_ID, 'portfolio', null, undefined];
-            const isSystemView = systemIds.includes(AppState.watchlist?.id) || AppState.isPortfolioVisible;
-
+            const systemIds = [DASHBOARD_WATCHLIST_ID, ALL_SHARES_ID, PORTFOLIO_ID, CASH_WATCHLIST_ID, 'portfolio', null];
+            const isSystemView = systemIds.includes(AppState.watchlist.id) || AppState.isPortfolioVisible;
             if (isSystemView) {
                 editWatchlistBtn.classList.add(CSS_CLASSES.GHOSTED);
             } else {

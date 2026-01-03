@@ -30,7 +30,7 @@ export class DashboardViewRenderer {
         if (!displayData || displayData.length === 0) {
             this.container.innerHTML = `
                 <div class="${CSS_CLASSES.EMPTY_STATE}">
-                    <i class="fas fa-chart-line" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.3;"></i>
+                    <i class="fas fa-chart-line ${CSS_CLASSES.TEXT_3XL} ${CSS_CLASSES.MB_MEDIUM} ${CSS_CLASSES.OPACITY_30}"></i>
                     <p>No dashboard items found.</p>
                 </div>
             `;
@@ -45,7 +45,7 @@ export class DashboardViewRenderer {
                 timeZone: 'Australia/Sydney',
                 hour: '2-digit', minute: '2-digit', weekday: 'short'
             }).format(now);
-            headerTime.innerHTML = `Sydney: ${sydneyTime} ${this.reorderMode ? '<span style="margin-left:8px; font-weight:normal; opacity:0.6;">(Adjusting...)</span>' : ''}`;
+            headerTime.innerHTML = `Sydney: ${sydneyTime} ${this.reorderMode ? `<span class="${CSS_CLASSES.ML_SMALL} ${CSS_CLASSES.FONT_NORMAL} ${CSS_CLASSES.OPACITY_60}">(Adjusting...)</span>` : ''}`;
         }
 
         const viewMode = (AppState.viewMode || 'TABLE').toUpperCase();

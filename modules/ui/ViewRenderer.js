@@ -593,20 +593,19 @@ export class ViewRenderer {
                 <div class="${CSS_CLASSES.MODAL_CONTENT} ${CSS_CLASSES.MODAL_CONTENT_LARGE}">
                     <!-- Header -->
                     <div class="${CSS_CLASSES.MODAL_HEADER}">
-                        <div class="${CSS_CLASSES.MODAL_HEADER_LEFT}" style="flex: 1;">
-                            <!-- ISOLATION WRAPPER: Forces Left Alignment -->
-                            <div style="display: block; text-align: left; width: 100%;">
-                                <div class="${CSS_CLASSES.FLEX_ROW}" style="display: flex !important; align-items: center; justify-content: flex-start; gap: 0;">
-                                    <h1 class="${CSS_CLASSES.MODAL_TITLE} ${CSS_CLASSES.DISPLAY_TITLE} ${CSS_CLASSES.MB_0}" style="text-align: left !important; margin: 0; line-height: 1; width: auto !important;">${stock.code}</h1>
+                        <div class="${CSS_CLASSES.MODAL_HEADER_LEFT} ${CSS_CLASSES.FLEX_1}">
+                            <div class="${CSS_CLASSES.TEXT_LEFT} ${CSS_CLASSES.W_FULL}">
+                                <div class="${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.ALIGN_CENTER} ${CSS_CLASSES.JUSTIFY_START} ${CSS_CLASSES.GAP_0}">
+                                    <h1 class="${CSS_CLASSES.MODAL_TITLE} ${CSS_CLASSES.DISPLAY_TITLE} ${CSS_CLASSES.MB_0} ${CSS_CLASSES.TEXT_LEFT} ${CSS_CLASSES.MODAL_TITLE_AUTO}">${stock.code}</h1>
                                     ${stock.starRating > 0 ? `
-                                        <div class="${CSS_CLASSES.STAR_RATING}" style="margin-left: 15px;">
+                                        <div class="${CSS_CLASSES.STAR_RATING} ${CSS_CLASSES.STAR_GAP_ML}">
                                             ${Array.from({ length: stock.starRating }, () => `
-                                                <i class="fas ${UI_ICONS.STAR} ${CSS_CLASSES.TEXT_COFFEE}" style="font-size: 1rem;"></i>
+                                                <i class="fas ${UI_ICONS.STAR} ${CSS_CLASSES.TEXT_COFFEE}"></i>
                                             `).join('')}
                                         </div>
                                     ` : ''}
                                 </div>
-                                <div class="${CSS_CLASSES.MODAL_SUBTITLE}" style="text-align: left !important;">${stock.name || 'ASX Share'}</div>
+                                <div class="${CSS_CLASSES.MODAL_SUBTITLE} ${CSS_CLASSES.TEXT_LEFT}">${stock.name || 'ASX Share'}</div>
                             </div>
                         </div>
                         <div class="${CSS_CLASSES.MODAL_ACTIONS}">
