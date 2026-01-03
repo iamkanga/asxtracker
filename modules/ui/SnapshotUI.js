@@ -12,7 +12,7 @@ import { formatCurrency, formatPercent } from '../utils/formatters.js';
 export class SnapshotUI {
 
     static show() {
-        if (document.getElementById('snapshot-modal-container')) return;
+        if (document.getElementById(IDS.SNAPSHOT_MODAL_CONTAINER)) return;
 
         const modal = this._renderModal();
         document.body.appendChild(modal);
@@ -42,12 +42,12 @@ export class SnapshotUI {
 
     static _renderModal() {
         const modal = document.createElement('div');
-        modal.id = 'snapshot-modal-container';
+        modal.id = IDS.SNAPSHOT_MODAL_CONTAINER;
         modal.className = `${CSS_CLASSES.MODAL} ${CSS_CLASSES.MODAL_FULLSCREEN} ${CSS_CLASSES.HIDDEN}`;
 
         modal.innerHTML = `
             <div class="${CSS_CLASSES.MODAL_OVERLAY}"></div>
-            <div class="${CSS_CLASSES.MODAL_CONTENT} snapshot-content" style="max-height: 90vh; display: flex; flex-direction: column;">
+            <div class="${CSS_CLASSES.MODAL_CONTENT} ${CSS_CLASSES.SNAPSHOT_CONTENT}">
                 <div class="${CSS_CLASSES.MODAL_HEADER}">
                     <h2 class="${CSS_CLASSES.MODAL_TITLE}">
                         <i class="fas fa-bolt" style="color: var(--color-accent); margin-right: 8px;"></i>
@@ -58,8 +58,8 @@ export class SnapshotUI {
                     </button>
                 </div>
                 
-                <div class="snapshot-controls" style="padding: 10px 15px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: center;">
-                    <div class="${CSS_CLASSES.SEGMENTED_CONTROL}" style="width: 100%; max-width: 300px;">
+                <div class="${CSS_CLASSES.SNAPSHOT_CONTROLS}">
+                    <div class="${CSS_CLASSES.SEGMENTED_CONTROL}">
                         <button class="${CSS_CLASSES.SEGMENTED_BUTTON}" data-sort="desc">
                             <i class="fas fa-caret-up" style="margin-right: 5px; color: var(--color-positive);"></i> High to Low
                         </button>
@@ -151,7 +151,7 @@ export class SnapshotUI {
 
         if (data.length === 0) {
             grid.innerHTML = `
-                <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: var(--text-muted);">
+                <div class="${CSS_CLASSES.EMPTY_STATE}">
                     <i class="fas fa-chart-line" style="font-size: 2rem; margin-bottom: 15px; opacity: 0.5;"></i>
                     <p>No shares found in your portfolio.</p>
                     <p style="font-size: 0.8rem;">Add stocks to your watchlists to see them here.</p>
@@ -214,6 +214,8 @@ export class SnapshotUI {
                     price: parseFloat(livePrice) || 0,
                     pctChange: parseFloat(dayChangePct) || 0,
                     valChange: parseFloat(dayChangeVal) || 0,
+                    high: parseFloat(share.high || (AppState.livePrices.get(code)?.high) || 0),
+                    low: parseFloat(share.low || (AppState.livePrices.get(code)?.low) || 0),
                     name: share.name
                 });
             }
@@ -238,10 +240,6 @@ export class SnapshotUI {
         }
 
         const priceStr = formatCurrency(item.price);
-        // formatPercent typically includes the value. We want to control the sign explicitly if needed
-        // But usually formatPercent(x) -> "0.00%". It does NOT usually add +, only -.
-        // User wants ONE plus icon.
-
         const pctVal = Math.abs(item.pctChange).toFixed(2);
         const signHtml = isPos ? '+' : (isNeg ? '-' : '');
         const pctStr = `${signHtml}${pctVal}%`;
@@ -250,6 +248,26 @@ export class SnapshotUI {
         const valSign = isPos ? '+' : (isNeg ? '-' : '');
         const displayVal = `${valSign}${valStr}`;
 
+        const high = item.high || 0;
+        const low = item.low || 0;
+        const current = item.price || 0;
+
+        // Sparkline Calculation
+        let sparklineHtml = '';
+        if (high > 0 && low > 0 && current > 0 && high > low) {
+            const rangePercent = Math.min(Math.max(((current - low) / (high - low)) * 100, 0), 100);
+
+            sparklineHtml = `
+                <div style="font-size: 0.75rem; color: var(--text-muted); margin-right: 6px;">${low.toFixed(2)}</div>
+                <div class="${CSS_CLASSES.DASHBOARD_SPARK_CONTAINER}" style="margin: 0; width: 60px; min-width: 60px;">
+                    <div class="${CSS_CLASSES.SPARK_RAIL}" style="height: 3px; background-color: var(--border-color); position: relative; width: 100%;">
+                        <div class="${CSS_CLASSES.SPARK_MARKER}" style="position: absolute; left: ${rangePercent}%; top: 50%; transform: translate(-50%, -50%); width: 6px; height: 6px; background-color: ${colorClass === CSS_CLASSES.SNAPSHOT_POSITIVE ? 'var(--color-positive)' : (colorClass === CSS_CLASSES.SNAPSHOT_NEGATIVE ? 'var(--color-negative)' : 'var(--color-accent)')}; border-radius: 50%;"></div>
+                    </div>
+                </div>
+                <div style="font-size: 0.75rem; color: var(--text-muted); margin-left: 6px;">${high.toFixed(2)}</div>
+             `;
+        }
+
         return `
             <div class="${CSS_CLASSES.SNAPSHOT_CARD} ${colorClass}" data-code="${item.code}">
                 <!-- Left: Code -->
@@ -257,15 +275,18 @@ export class SnapshotUI {
                     <span class="${CSS_CLASSES.SNAP_CODE}">${item.code}</span>
                 </div>
 
-                <!-- Center: Live Price -->
-                <div class="${CSS_CLASSES.SNAP_COL_CENTER}">
-                    <span class="${CSS_CLASSES.SNAP_PRICE}">${priceStr}</span>
+                <!-- Center: Sparkline -->
+                 <div class="snap-col-center">
+                    ${sparklineHtml}
                 </div>
 
-                <!-- Right: Changes -->
+                <!-- Right: Price & Changes -->
                 <div class="${CSS_CLASSES.SNAP_COL_RIGHT}">
-                    <span class="${CSS_CLASSES.SNAP_PERCENT} ${textClass}">${pctStr}</span>
-                    <span class="${CSS_CLASSES.SNAP_VALUE_CHANGE} ${textClass}">${displayVal}</span>
+                     <div class="${CSS_CLASSES.SNAP_PRICE}">${priceStr}</div>
+                     <div class="${CSS_CLASSES.SNAP_PERCENT}">
+                        <span class="${textClass}">${displayVal}</span>
+                        <span class="${textClass}">${pctStr}</span>
+                     </div>
                 </div>
             </div>
         `;

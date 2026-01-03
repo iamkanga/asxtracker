@@ -991,7 +991,7 @@ export class AppController {
             if (watchlistId === 'portfolio' || watchlistId === null) {
                 AppState.watchlist.id = 'portfolio';
                 AppState.watchlist.name = 'Portfolio';
-                AppState.isPortfolioVisible = false;
+                AppState.isPortfolioVisible = true; // FIX: Was false
             } else if (watchlistId === DASHBOARD_WATCHLIST_ID) {
                 AppState.watchlist.type = 'stock'; // Or 'dashboard' if we want a separate type
                 AppState.watchlist.id = DASHBOARD_WATCHLIST_ID;
@@ -1074,10 +1074,12 @@ export class AppController {
         }
 
         // === STEP 3.1: HANDLE EDIT WATCHLIST GHOSTING ===
-        const editWatchlistBtn = document.getElementById('btn-edit-watchlist');
+        const editWatchlistBtn = document.getElementById(IDS.BTN_EDIT_WATCHLIST);
         if (editWatchlistBtn) {
-            const systemIds = [DASHBOARD_WATCHLIST_ID, ALL_SHARES_ID, PORTFOLIO_ID, CASH_WATCHLIST_ID, 'portfolio'];
-            if (systemIds.includes(AppState.watchlist.id)) {
+            const systemIds = [DASHBOARD_WATCHLIST_ID, ALL_SHARES_ID, PORTFOLIO_ID, CASH_WATCHLIST_ID, 'portfolio', null, undefined];
+            const isSystemView = systemIds.includes(AppState.watchlist?.id) || AppState.isPortfolioVisible;
+
+            if (isSystemView) {
                 editWatchlistBtn.classList.add(CSS_CLASSES.GHOSTED);
             } else {
                 editWatchlistBtn.classList.remove(CSS_CLASSES.GHOSTED);
@@ -1639,7 +1641,7 @@ export class AppController {
             if (btn) {
                 e.preventDefault(); // Good practice for buttons
                 console.log("Live Refresh Clicked");
-                ToastManager.info('Refreshing Live Prices...');
+                ToastManager.show('Refreshing Live Prices...', 'info-no-icon');
                 this.updateDataAndRender(true);
             }
         });
@@ -2013,6 +2015,7 @@ export class AppController {
 
         // 3. Discovery Internal Search
         document.addEventListener(EVENTS.REQUEST_DISCOVERY_SEARCH, (e) => {
+            console.log('[AppController] Event Received: REQUEST_DISCOVERY_SEARCH', e.detail); // TRACE
             const { query } = e.detail;
             const results = this.dataService.searchStocks(query, AppState.livePrices);
             document.dispatchEvent(new CustomEvent(EVENTS.UPDATE_DISCOVERY_RESULTS, { detail: { results } }));

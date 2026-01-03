@@ -5247,6 +5247,125 @@ body.dark-theme .sort-picker-row.active {
     padding: 4rem 1rem;
 }
 
+/* Discovery Sparklines & Layout */
+.discovery-spark-container {
+    padding: 10px 0;
+    margin-top: 5px;
+}
+
+.discovery-spark-container .dashboard-range-data-group {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.discovery-spark-container .spark-rail {
+    height: 3px;
+    background-color: var(--border-color);
+    position: relative;
+    width: 100%;
+}
+
+.discovery-spark-container .spark-marker {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 6px;
+    height: 6px;
+    background-color: var(--color-accent);
+    border-radius: 50%;
+}
+
+.discovery-price-right {
+    margin-left: auto;
+    text-align: right;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+/* Snapshot / Market Pulse Styles */
+.snapshot-content {
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.snapshot-controls {
+    padding: 10px 15px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: center;
+}
+
+.snapshot-controls .segmented-control {
+    width: 100%;
+    max-width: 300px;
+}
+
+.snapshot-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 15px;
+}
+
+.snapshot-card {
+    display: flex;
+    align-items: center;
+    padding: 15px;
+    border-radius: 12px;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    transition: transform 0.2s, box-shadow 0.2s;
+    cursor: pointer;
+}
+
+.snapshot-card:active {
+    transform: scale(0.98);
+}
+
+.snap-col-left {
+    flex: 0 0 auto;
+}
+
+.snap-col-center {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.snap-col-right {
+    text-align: right;
+    flex: 0 0 auto;
+}
+
+.snap-code {
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+.snap-price {
+    font-weight: 700;
+}
+
+.snap-percent {
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.snapshot-positive {
+    background: rgba(6, 255, 79, 0.05) !important;
+    border-color: rgba(6, 255, 79, 0.2) !important;
+}
+
+.snapshot-negative {
+    background: rgba(255, 49, 49, 0.05) !important;
+    border-color: rgba(255, 49, 49, 0.2) !important;
+}
+
 
 /* --- RESPONSIVE VISIBILITY CORRECTIONS --- */
 
@@ -5302,7 +5421,7 @@ body.dark-theme .sort-picker-row.active {
 }
 
 .justify-start {
-    justify-content: flex-start;
+    justify-content: flex-start !important;
 }
 
 .font-bold {
@@ -5461,6 +5580,14 @@ body.dark-theme .sort-picker-row.active {
 
 .text-left {
     text-align: left !important;
+}
+
+.flex-1 {
+    flex: 1 !important;
+}
+
+.flex-none {
+    flex: none !important;
 }
 
 .text-center {

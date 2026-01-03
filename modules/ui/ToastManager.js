@@ -43,6 +43,11 @@ export class ToastManager {
                 iconClass = 'KANGAROO_ICON_SVG';
                 defaultTitle = 'Error';
                 break;
+            case 'info-no-icon':
+                variantClass = CSS_CLASSES.TOAST_INFO;
+                iconClass = null; // No icon
+                defaultTitle = 'Notification';
+                break;
             case 'info':
             default:
                 variantClass = CSS_CLASSES.TOAST_INFO;

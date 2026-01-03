@@ -18,7 +18,7 @@ export class SearchDiscoveryUI {
         modal.className = `${CSS_CLASSES.MODAL} ${CSS_CLASSES.SHOW}`;
         modal.innerHTML = `
             <div class="${CSS_CLASSES.MODAL_OVERLAY}"></div>
-            <div class="${CSS_CLASSES.MODAL_CONTENT} modal-content-medium" style="max-height: 85vh; display: flex; flex-direction: column;">
+            <div class="${CSS_CLASSES.MODAL_CONTENT} ${CSS_CLASSES.MODAL_CONTENT_MEDIUM} ${CSS_CLASSES.SNAPSHOT_CONTENT}">
                 <div class="${CSS_CLASSES.MODAL_HEADER}">
                     <div>
                         <h2 class="${CSS_CLASSES.MODAL_TITLE}"><i class="fas fa-search-dollar"></i> Search & Research</h2>
@@ -29,14 +29,14 @@ export class SearchDiscoveryUI {
                     </button>
                 </div>
 
-                <div class="${CSS_CLASSES.MODAL_BODY}" style="padding: 1rem; overflow: hidden; display: flex; flex-direction: column;">
+                <div class="${CSS_CLASSES.MODAL_BODY} ${CSS_CLASSES.SCROLLABLE_BODY}">
                     <!-- SEARCH INPUT AREA -->
-                    <div class="${CSS_CLASSES.DISCOVERY_SEARCH_AREA}" style="margin-bottom: 1rem;">
-                        <input type="text" id="${IDS.DISCOVERY_SEARCH_INPUT}" class="${CSS_CLASSES.FORM_CONTROL}" placeholder="Search by Code or Name (e.g. CBA, BHP)..." autocomplete="off" style="font-size: 1.1rem; padding: 12px;">
+                    <div class="${CSS_CLASSES.DISCOVERY_SEARCH_AREA}">
+                        <input type="text" id="${IDS.DISCOVERY_SEARCH_INPUT}" class="${CSS_CLASSES.FORM_CONTROL}" placeholder="Search by Code or Name (e.g. CBA, BHP)..." autocomplete="off">
                     </div>
 
                     <!-- TWO PANE LAYOUT -->
-                    <div class="${CSS_CLASSES.DISCOVERY_INTERFACE}" id="discoveryInterface" style="flex: 1; overflow-y: auto; position: relative;">
+                    <div class="${CSS_CLASSES.DISCOVERY_INTERFACE}" id="${IDS.DISCOVERY_INTERFACE}">
                         <!-- RESULT LIST -->
                         <ul id="${IDS.DISCOVERY_RESULT_LIST}" class="${CSS_CLASSES.DISCOVERY_LIST} ${CSS_CLASSES.HIDDEN}"></ul>
 
@@ -179,7 +179,7 @@ export class SearchDiscoveryUI {
         listContainer.innerHTML = '';
         results.forEach(item => {
             const li = document.createElement('li');
-            li.className = CSS_CLASSES.DISCOVERY_ITEM;
+            li.className = CSS_CLASSES.DISCOVERY_RESULT_ITEM;
             li.innerHTML = `
                 <div style="font-weight: bold;">${item.code}</div>
                 <div style="font-size: 0.9rem; color: var(--text-muted);">${item.name}</div>
@@ -191,6 +191,36 @@ export class SearchDiscoveryUI {
 
     static _renderDetail(container, stock, modal) {
         const safeVal = (v, fmt) => (v !== undefined && v !== null && v !== 0) ? fmt(v) : '-';
+
+        // Helper for Sparkline Logic
+        const renderSparkline = (s) => {
+            // ROBUST DATA EXTRACTION: Check all known variations
+            const low = Number(s.low || s.low52 || s.Low52 || s.low_52 || 0);
+            const high = Number(s.high || s.high52 || s.High52 || s.high_52 || 0);
+            const current = Number(s.live || s.livePrice || s.lastPrice || s.price || 0);
+
+            // DEBUG: Trace Sparkline Data
+            console.log('[Sparkline Debug] FULL OBJECT:', s);
+            console.log(`[Sparkline Debug] ${s.code} Raw Values:`, { high, low, current });
+
+            // Only show if we have valid range data
+            if (high <= 0 || low <= 0 || current <= 0 || high <= low) return '';
+
+            // Calculate Percentage (0-100)
+            const rangePercent = Math.min(Math.max(((current - low) / (high - low)) * 100, 0), 100);
+
+            return `
+                <div class="${CSS_CLASSES.DISCOVERY_SPARK_CONTAINER}" data-debug-h="${high}" data-debug-l="${low}" data-debug-c="${current}">
+                    <div class="${CSS_CLASSES.DASHBOARD_RANGE_DATA_GROUP}">
+                        <span class="range-low">${formatCurrency(low)}</span>
+                        <div class="${CSS_CLASSES.SPARK_RAIL}">
+                            <div class="${CSS_CLASSES.SPARK_MARKER}" style="left: ${rangePercent}%;"></div>
+                        </div>
+                        <span class="range-high">${formatCurrency(high)}</span>
+                    </div>
+                </div>
+            `;
+        };
 
         // Research Links
         const linksHtml = RESEARCH_LINKS_TEMPLATE.map(link => {
@@ -205,19 +235,22 @@ export class SearchDiscoveryUI {
 
         container.innerHTML = `
             <div class="${CSS_CLASSES.RICH_PREVIEW_CONTAINER}">
-                 <div class="${CSS_CLASSES.DISCOVERY_HEADER_SIMPLE}" style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 1rem;">
+                <div class="${CSS_CLASSES.DISCOVERY_HEADER_SIMPLE} ${CSS_CLASSES.FLEX_BETWEEN}" style="align-items: baseline; margin-bottom: 0.5rem;">
                     <h2 class="${CSS_CLASSES.DISPLAY_TITLE}">${stock.code}</h2>
                     <span class="${CSS_CLASSES.MODAL_SUBTITLE}">${stock.name}</span>
                 </div>
 
-                <div class="${CSS_CLASSES.PREVIEW_MAIN_ROW}">
-                    <span class="${CSS_CLASSES.PREVIEW_PRICE}">${formatCurrency(stock.live)}</span>
-                    <span class="${CSS_CLASSES.PREVIEW_CHANGE} ${stock.change >= 0 ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}">
+                <!-- 52-Week Sparkline (New) -->
+                ${renderSparkline(stock)}
+
+                <div class="${CSS_CLASSES.PREVIEW_MAIN_ROW} ${CSS_CLASSES.DISCOVERY_PRICE_RIGHT}">
+                    <span class="${CSS_CLASSES.PREVIEW_PRICE} ${CSS_CLASSES.PREVIEW_PRICE_LARGE}" style="font-size: 2rem;">${formatCurrency(stock.live)}</span>
+                    <span class="${CSS_CLASSES.PREVIEW_CHANGE} ${CSS_CLASSES.PREVIEW_CHANGE_LARGE} ${stock.change >= 0 ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}" style="font-size: 1.1rem;">
                         ${stock.change >= 0 ? '+' : ''}${formatCurrency(stock.change)} (${formatPercent(stock.pctChange)})
                     </span>
                 </div>
                 
-                <div class="${CSS_CLASSES.STATS_GRID}">
+                <div class="${CSS_CLASSES.STATS_GRID}" style="margin-top: 1rem;">
                     <div class="${CSS_CLASSES.STAT_ITEM}">
                         <span class="${CSS_CLASSES.STAT_LABEL}">52W Low</span>
                         <span class="${CSS_CLASSES.STAT_VALUE}">${safeVal(stock.low, formatCurrency)}</span>
@@ -235,8 +268,8 @@ export class SearchDiscoveryUI {
 
             <!-- ACTION BUTTON (The Handoff - Subtle Icon) -->
             <!-- ACTION BUTTON (Modern CTA) -->
-            <div style="display: flex; justify-content: center; margin: 1.5rem 0 1rem 0;">
-                <button id="discoveryAddBtn" class="${CSS_CLASSES.PRIMARY_PILL_BTN}">
+            <div class="${CSS_CLASSES.FLEX_CENTER}" style="margin: 1.5rem 0 1rem 0;">
+                <button id="${IDS.DISCOVERY_ADD_BTN}" class="${CSS_CLASSES.PRIMARY_PILL_BTN}">
                     <span>Add to Share Tracker</span>
                     <i class="fas ${UI_ICONS.ADD}" style="font-size: 1.2rem;"></i>
                 </button>
@@ -249,7 +282,7 @@ export class SearchDiscoveryUI {
         `;
 
         // Bind Add Button
-        const addBtn = container.querySelector('#discoveryAddBtn');
+        const addBtn = container.querySelector(`#${IDS.DISCOVERY_ADD_BTN}`);
         if (addBtn) {
             addBtn.addEventListener('click', () => {
                 // REMOVED close() to allow stacking (Discovery -> Add Share)

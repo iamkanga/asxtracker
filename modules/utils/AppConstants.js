@@ -361,6 +361,8 @@ export const CSS_CLASSES = {
     TEXT_POSITIVE: 'text-positive',
     TEXT_NEGATIVE: 'text-negative',
     TEXT_NEUTRAL: 'text-neutral',
+    TEXT_POS: 'text-positive', // Shorthand
+    TEXT_NEG: 'text-negative', // Shorthand
     TEXT_COFFEE: 'text-coffee',
     TEXT_SHIMMER: 'text-shimmer',
 
@@ -497,6 +499,19 @@ export const CSS_CLASSES = {
     // Modal Show State
     SHOW: 'show',
 
+    // Snapshot / Market Pulse
+    SNAPSHOT_CONTENT: 'snapshot-content',
+    SNAPSHOT_CONTROLS: 'snapshot-controls',
+    SNAPSHOT_GRID: 'snapshot-grid',
+    SNAPSHOT_CARD: 'snapshot-card',
+    SNAPSHOT_POSITIVE: 'snapshot-positive',
+    SNAPSHOT_NEGATIVE: 'snapshot-negative',
+    SNAP_COL_LEFT: 'snap-col-left',
+    SNAP_COL_RIGHT: 'snap-col-right',
+    SNAP_CODE: 'snap-code',
+    SNAP_PRICE: 'snap-price',
+    SNAP_PERCENT: 'snap-percent',
+
     // Splash Screen
     SPLASH_SCREEN: 'splash-screen',
 
@@ -596,11 +611,15 @@ export const CSS_CLASSES = {
     DISCOVERY_LIST: 'discovery-list',
     DISCOVERY_DETAIL: 'discovery-detail',
     DISCOVERY_EMPTY_STATE: 'discovery-empty-state',
+    DISCOVERY_PRICE_RIGHT: 'discovery-price-right',
+    DASHBOARD_RANGE_DATA_GROUP: 'dashboard-range-data-group',
+    DISCOVERY_SPARK_CONTAINER: 'discovery-spark-container',
 
     // Layout & Flex (Constitution Compliance)
     FLEX_ROW: 'flex-row',
     FLEX_COLUMN: 'flex-column',
     JUSTIFY_BETWEEN: 'justify-between',
+    JUSTIFY_START: 'justify-start',
     JUSTIFY_END: 'justify-end',
     ALIGN_START: 'align-start',
     ALIGN_CENTER: 'align-center',
@@ -1115,5 +1134,12 @@ export const IDS = {
 
     // Modal Titles for Reorder
     WATCHLIST_MODAL_TITLE: 'watchlist-modal-title',
-    SORT_MODAL_TITLE: 'sort-modal-title'
+    SORT_MODAL_TITLE: 'sort-modal-title',
+
+    // Snapshot / Market Pulse
+    SNAPSHOT_MODAL_CONTAINER: 'snapshot-modal-container',
+
+    // Discovery
+    DISCOVERY_INTERFACE: 'discovery-interface',
+    DISCOVERY_ADD_BTN: 'discovery-add-btn'
 };

@@ -164,22 +164,22 @@ export class WatchlistUI {
         if (WatchlistUI._toggleHandler) {
             document.removeEventListener(EVENTS.TOGGLE_WATCHLIST_MODAL, WatchlistUI._toggleHandler);
             WatchlistUI._toggleHandler = null;
-            console.log('[WatchlistUI] Cleaned up orphaned listener.');
+            // console.log('[WatchlistUI] Cleaned up orphaned listener.');
         }
 
         WatchlistUI._toggleHandler = () => {
-            console.log('[WatchlistUI] Received TOGGLE_WATCHLIST_MODAL event.');
+            // console.log('[WatchlistUI] Received TOGGLE_WATCHLIST_MODAL event.');
 
             // 1. Check if already active (Hiding Logic)
             const modal = document.getElementById(IDS.WATCHLIST_PICKER_MODAL);
             const isVisible = modal && modal.classList.contains(CSS_CLASSES.SHOW);
 
             if (isVisible) {
-                console.log('[WatchlistUI] Modal active -> Closing.');
+                // console.log('[WatchlistUI] Modal active -> Closing.');
                 const ui = this; // Capture 'this' for the *current* instance
                 ui.closeModal();
             } else {
-                console.log('[WatchlistUI] Modal hidden -> Opening.');
+                // console.log('[WatchlistUI] Modal hidden -> Opening.');
                 this.watchlistMode = WATCHLIST_MODES.DEFAULT;
                 this.renderWatchlistDropdown();
                 this._openModal();
@@ -189,7 +189,7 @@ export class WatchlistUI {
         document.addEventListener(EVENTS.TOGGLE_WATCHLIST_MODAL, WatchlistUI._toggleHandler);
         this._isTitleListenerBound = true;
 
-        console.log('WatchlistUI: TOGGLE_WATCHLIST_MODAL subscriber bound (Singleton).');
+        // console.log('WatchlistUI: TOGGLE_WATCHLIST_MODAL subscriber bound (Singleton).');
     }
 
     _openModal() {
@@ -467,13 +467,13 @@ export class WatchlistUI {
 
                 if (this.watchlistMode === WATCHLIST_MODES.CAROUSEL) {
                     const stringId = String(it.id);
-                    console.log('[WatchlistUI] Carousel Toggle:', stringId, 'Current:', [...AppState.carouselSelections]);
+                    // console.log('[WatchlistUI] Carousel Toggle:', stringId, 'Current:', [...AppState.carouselSelections]);
                     if (AppState.carouselSelections.has(stringId)) {
                         AppState.carouselSelections.delete(stringId);
                     } else {
                         AppState.carouselSelections.add(stringId);
                     }
-                    console.log('[WatchlistUI] New State:', [...AppState.carouselSelections]);
+                    // console.log('[WatchlistUI] New State:', [...AppState.carouselSelections]);
                     AppState.saveCarouselSelections();
                     setTimeout(() => this.renderWatchlistDropdown(), 50);
                     return;
@@ -481,14 +481,14 @@ export class WatchlistUI {
 
                 if (this.watchlistMode === WATCHLIST_MODES.HIDE) {
                     const stringId = String(it.id);
-                    console.log('[WatchlistUI] Hide Toggle Clicked:', stringId, 'Target:', e.target.className);
-                    console.log('[WatchlistUI] Current hiddenWatchlists:', [...AppState.hiddenWatchlists]);
+                    // console.log('[WatchlistUI] Hide Toggle Clicked:', stringId, 'Target:', e.target.className);
+                    // console.log('[WatchlistUI] Current hiddenWatchlists:', [...AppState.hiddenWatchlists]);
                     if (AppState.hiddenWatchlists.has(stringId)) {
                         AppState.hiddenWatchlists.delete(stringId);
                     } else {
                         AppState.hiddenWatchlists.add(stringId);
                     }
-                    console.log('[WatchlistUI] New State:', [...AppState.hiddenWatchlists]);
+                    // console.log('[WatchlistUI] New State:', [...AppState.hiddenWatchlists]);
                     AppState.saveHiddenWatchlists();
                     setTimeout(() => this.renderWatchlistDropdown(), 50);
                     return;

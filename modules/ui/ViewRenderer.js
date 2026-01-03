@@ -47,8 +47,9 @@ export class ViewRenderer {
 
         // 2a. Render Summary (ONLY for Portfolio)
         // User Logic: if (currentWatchlistName === 'Portfolio') { renderSummary(); }
-        // Refinement V2: Restrict to Table View (which is Card View on Mobile)
-        if (summaryMetrics && (AppState.watchlist.name === 'Portfolio' || AppState.isPortfolioVisible) && mode === 'TABLE') {
+        // Refinement V3: ALWAYS show summary if in Portfolio Context, regardless of mode.
+        // Portfolio forces its own Grid layout, so strict mode checks (TABLE/COMPACT) are counter-productive here.
+        if (summaryMetrics && (AppState.watchlist.id === PORTFOLIO_ID || AppState.isPortfolioVisible) && mode === 'TABLE') {
             this.renderSummary(summaryMetrics);
         }
 
@@ -106,7 +107,9 @@ export class ViewRenderer {
             return;
         }
 
-        const isPortfolioView = AppState.watchlist.name === 'Portfolio' || AppState.isPortfolioVisible || AppState.watchlist.id === 'PORTFOLIO';
+        const isPortfolioView = AppState.watchlist.name === 'Portfolio' ||
+            AppState.isPortfolioVisible ||
+            AppState.watchlist.id === PORTFOLIO_ID;
 
         if (isPortfolioView) {
             // 1. Portfolio Grid (Now for both Desktop and Mobile)
@@ -202,7 +205,7 @@ export class ViewRenderer {
         const changePercent = item.dayChangePercent || 0;
 
         // Consistent check for Portfolio view content
-        const isPortfolioView = AppState.watchlist.id === 'PORTFOLIO' ||
+        const isPortfolioView = AppState.watchlist.id === PORTFOLIO_ID ||
             AppState.watchlist.type === PORTFOLIO_ID ||
             AppState.watchlist.name === 'Portfolio' ||
             AppState.isPortfolioVisible;
@@ -280,7 +283,7 @@ export class ViewRenderer {
         const price = item.currentPrice || 0;
         const changePercent = item.dayChangePercent || 0;
 
-        const isPortfolioView = AppState.watchlist.id === 'PORTFOLIO' ||
+        const isPortfolioView = AppState.watchlist.id === PORTFOLIO_ID ||
             AppState.watchlist.type === PORTFOLIO_ID ||
             AppState.watchlist.name === 'Portfolio' ||
             AppState.isPortfolioVisible;
@@ -311,7 +314,7 @@ export class ViewRenderer {
 
             return `
                 <div class="${CSS_CLASSES.CARD} ${trendClass} ${ghostClass}" data-id="${item.id}" data-code="${item.code}">
-                    <div class="${CSS_CLASSES.CARD_HEADER_ROW} ${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.JUSTIFY_BETWEEN} ${CSS_CLASSES.ALIGN_START} ${CSS_CLASSES.W_FULL} ${CSS_CLASSES.MB_2PX}">
+                    <div class="${CSS_CLASSES.CARD_HEADER_ROW} ${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.JUSTIFY_BETWEEN} ${CSS_CLASSES.ALIGN_START} ${CSS_CLASSES.W_FULL} ${CSS_CLASSES.MB_2PX} ${CSS_CLASSES.BORDER_NONE}">
                         <div class="${CSS_CLASSES.CARD_HEADER_LEFT} ${CSS_CLASSES.FLEX_COLUMN} ${CSS_CLASSES.ALIGN_START} ${CSS_CLASSES.GAP_SMALL}">
                             <span class="${CSS_CLASSES.CARD_CODE}" data-code="${item.code}">${item.code}</span>
                             <button class="${CSS_CLASSES.ICON_BTN_GHOST} ${CSS_CLASSES.VISIBILITY_TOGGLE_BTN} ${CSS_CLASSES.P_0} ${CSS_CLASSES.TEXT_SM} ${CSS_CLASSES.MT_NEG_2PX}" 
@@ -331,7 +334,7 @@ export class ViewRenderer {
                         </div>
                     </div>
 
-                    <div class="${CSS_CLASSES.CARD_BODY_SECTION} ${CSS_CLASSES.W_FULL} ${CSS_CLASSES.MT_TINY} ${CSS_CLASSES.BORDER_TOP_FAINT} ${CSS_CLASSES.PT_SMALL}">
+                    <div class="${CSS_CLASSES.CARD_BODY_SECTION} ${CSS_CLASSES.W_FULL} ${CSS_CLASSES.MT_TINY} ${CSS_CLASSES.PT_SMALL} ${CSS_CLASSES.BORDER_TOP_NONE}">
                         <div class="${CSS_CLASSES.DETAIL_ROW} ${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.JUSTIFY_BETWEEN} ${CSS_CLASSES.PY_TINY}">
                             <span class="${CSS_CLASSES.DETAIL_LABEL}">Current Value</span>
                             <span class="${CSS_CLASSES.DETAIL_VALUE} ${CSS_CLASSES.FONT_BOLD}">${formatCurrency(value)}</span>
@@ -398,7 +401,7 @@ export class ViewRenderer {
                         <div class="${CSS_CLASSES.CARD_HEADER_LEFT} ${CSS_CLASSES.FLEX_COLUMN} ${CSS_CLASSES.ALIGN_START}">
                             <span class="${CSS_CLASSES.CARD_CODE}" data-code="${item.code}">${item.code}</span>
                         </div>
-                        <span class="${CSS_CLASSES.CARD_PRICE} ${CSS_CLASSES.TEXT_CENTER} ${CSS_CLASSES.FLEX_2}">${formatCurrency(price)}</span>
+                        <span class="${CSS_CLASSES.CARD_PRICE} ${CSS_CLASSES.TEXT_LEFT} ${CSS_CLASSES.FLEX_2}">${formatCurrency(price)}</span>
                         <div class="${CSS_CLASSES.CARD_CHANGE_COL} ${CSS_CLASSES.FLEX_COLUMN} ${CSS_CLASSES.ALIGN_END}">
                             <span class="${CSS_CLASSES.CHANGE_VALUE} ${changeValue >= 0 ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}">
                                 ${changeValue >= 0 ? '+' : ''}${formatCurrency(changeValue)}
@@ -422,7 +425,7 @@ export class ViewRenderer {
                 const costPrice = item.costPrice || 0;
                 // Only show if we have a valid cost price (optional check, but good for UI cleanliness)
                 if (costPrice > 0) {
-                    costPriceHtml = `<span class="${CSS_CLASSES.TEXT_SM} ${CSS_CLASSES.GHOSTED} ${CSS_CLASSES.TEXT_RIGHT}" title="Avg Cost Price">${formatCurrency(costPrice)}</span>`;
+                    costPriceHtml = `<span class="${CSS_CLASSES.TEXT_SM} ${CSS_CLASSES.GHOSTED} ${CSS_CLASSES.TEXT_RIGHT} ${CSS_CLASSES.ML_AUTO}" title="Avg Cost Price">${formatCurrency(costPrice)}</span>`;
                 }
             }
 
@@ -430,9 +433,9 @@ export class ViewRenderer {
                 <div class="${CSS_CLASSES.CARD} ${trendClass}" data-id="${item.id}" data-code="${item.code}" data-view="compact">
                     ${iconHtml}
                     <div class="${CSS_CLASSES.CARD_HEADER} ${CSS_CLASSES.FLEX_COLUMN} ${CSS_CLASSES.ALIGN_START} ${CSS_CLASSES.W_FULL}">
-                        <span class="${CSS_CLASSES.CARD_CODE} ${CSS_CLASSES.TEXT_LG} ${CSS_CLASSES.CODE_PILL}" data-code="${item.code}">${item.code}</span>
+                        <span class="${CSS_CLASSES.CARD_CODE} ${CSS_CLASSES.TEXT_LG} ${CSS_CLASSES.CODE_PILL} ${CSS_CLASSES.JUSTIFY_START}" data-code="${item.code}">${item.code}</span>
                         
-                        <div class="${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.JUSTIFY_BETWEEN} ${CSS_CLASSES.ALIGN_BASELINE} ${CSS_CLASSES.W_FULL} ${CSS_CLASSES.MT_TINY}">
+                        <div class="${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.JUSTIFY_START} ${CSS_CLASSES.ALIGN_BASELINE} ${CSS_CLASSES.W_FULL} ${CSS_CLASSES.MT_TINY}">
                             <span class="${CSS_CLASSES.CARD_PRICE} ${CSS_CLASSES.PRIMARY_TEXT} ${CSS_CLASSES.TEXT_LG} ${CSS_CLASSES.TEXT_LEFT}">${formatCurrency(price)}</span>
                             ${costPriceHtml}
                         </div>
@@ -448,8 +451,8 @@ export class ViewRenderer {
             return `
                 <div class="${CSS_CLASSES.CARD} ${trendClass}" data-id="${item.id}" data-code="${item.code}" data-view="snapshot">
                     <div class="${CSS_CLASSES.CARD_HEADER} ${CSS_CLASSES.FLEX_COLUMN} ${CSS_CLASSES.ALIGN_START} ${CSS_CLASSES.W_FULL}">
-                        <span class="${CSS_CLASSES.CARD_CODE} ${CSS_CLASSES.TEXT_LG} ${CSS_CLASSES.CODE_PILL}" data-code="${item.code}">${item.code}</span>
-                        <span class="${CSS_CLASSES.CARD_PRICE} ${CSS_CLASSES.PRIMARY_TEXT} ${CSS_CLASSES.TEXT_LG} ${CSS_CLASSES.MT_TINY}">${formatCurrency(price)}</span>
+                        <span class="${CSS_CLASSES.CARD_CODE} ${CSS_CLASSES.TEXT_LG} ${CSS_CLASSES.CODE_PILL} ${CSS_CLASSES.JUSTIFY_START}" data-code="${item.code}">${item.code}</span>
+                        <span class="${CSS_CLASSES.CARD_PRICE} ${CSS_CLASSES.PRIMARY_TEXT} ${CSS_CLASSES.TEXT_LG} ${CSS_CLASSES.MT_TINY} ${CSS_CLASSES.TEXT_LEFT}">${formatCurrency(price)}</span>
                     </div>
                     <div class="${CSS_CLASSES.SNAPSHOT_FOOTER}">
                         <span class="${CSS_CLASSES.CHANGE_VALUE} ${CSS_CLASSES.TEXT_SM}">${formatCurrency(changeValue)}</span>
@@ -590,9 +593,21 @@ export class ViewRenderer {
                 <div class="${CSS_CLASSES.MODAL_CONTENT} ${CSS_CLASSES.MODAL_CONTENT_LARGE}">
                     <!-- Header -->
                     <div class="${CSS_CLASSES.MODAL_HEADER}">
-                        <div class="${CSS_CLASSES.MODAL_HEADER_LEFT}">
-                            <h1 class="${CSS_CLASSES.MODAL_TITLE} ${CSS_CLASSES.DISPLAY_TITLE}">${stock.code}</h1>
-                            <div class="${CSS_CLASSES.MODAL_SUBTITLE}">${stock.name || 'ASX Share'}</div>
+                        <div class="${CSS_CLASSES.MODAL_HEADER_LEFT}" style="flex: 1;">
+                            <!-- ISOLATION WRAPPER: Forces Left Alignment -->
+                            <div style="display: block; text-align: left; width: 100%;">
+                                <div class="${CSS_CLASSES.FLEX_ROW}" style="display: flex !important; align-items: center; justify-content: flex-start; gap: 0;">
+                                    <h1 class="${CSS_CLASSES.MODAL_TITLE} ${CSS_CLASSES.DISPLAY_TITLE} ${CSS_CLASSES.MB_0}" style="text-align: left !important; margin: 0; line-height: 1; width: auto !important;">${stock.code}</h1>
+                                    ${stock.starRating > 0 ? `
+                                        <div class="${CSS_CLASSES.STAR_RATING}" style="margin-left: 15px;">
+                                            ${Array.from({ length: stock.starRating }, () => `
+                                                <i class="fas ${UI_ICONS.STAR} ${CSS_CLASSES.TEXT_COFFEE}" style="font-size: 1rem;"></i>
+                                            `).join('')}
+                                        </div>
+                                    ` : ''}
+                                </div>
+                                <div class="${CSS_CLASSES.MODAL_SUBTITLE}" style="text-align: left !important;">${stock.name || 'ASX Share'}</div>
+                            </div>
                         </div>
                         <div class="${CSS_CLASSES.MODAL_ACTIONS}">
                             <button id="${IDS.BTN_EDIT_SHARE}" class="${CSS_CLASSES.MODAL_ACTION_BTN} ${CSS_CLASSES.EDIT_BTN}" title="Edit Share">
@@ -623,13 +638,7 @@ export class ViewRenderer {
                                             </div>
                                         </div>
                                     </h3>
-                                    ${stock.starRating > 0 ? `
-                                        <div class="${CSS_CLASSES.STAR_RATING}">
-                                            ${Array.from({ length: stock.starRating }, () => `
-                                                <i class="fas ${UI_ICONS.STAR} ${CSS_CLASSES.TEXT_COFFEE}"></i>
-                                            `).join('')}
-                                        </div>
-                                    ` : ''}
+
                                 </div>
                                 <div class="${CSS_CLASSES.PRICE_PREVIEW} ${CSS_CLASSES.W_FULL} ${CSS_CLASSES.BORDER_NONE} ${CSS_CLASSES.BG_TRANSPARENT} ${CSS_CLASSES.GAP_SMALL} ${CSS_CLASSES.MB_0} ${CSS_CLASSES.FLEX_COLUMN}">
                                     <div class="${CSS_CLASSES.PREVIEW_ROW_MAIN} ${CSS_CLASSES.MB_TINY}">
@@ -1324,7 +1333,7 @@ export class ViewRenderer {
             if (e.target.id === IDS.SORT_MODAL_TITLE) {
                 // TERMINATION RULE: Switching to Reorder Mode cancels Global Sort
                 if (context.onGlobalCancel) {
-                    console.log('[ViewRenderer] Title Click -> Triggering Global Cancel');
+                    // console.log('[ViewRenderer] Title Click -> Triggering Global Cancel');
                     context.onGlobalCancel();
                 }
 
@@ -1336,7 +1345,7 @@ export class ViewRenderer {
             // Mode Buttons
             const reorderBtn = e.target.closest(`#${IDS.SORT_MODE_REORDER}`);
             if (reorderBtn) {
-                console.log('[ViewRenderer] reorderBtn found, switching mode to reorder');
+                // console.log('[ViewRenderer] reorderBtn found, switching mode to reorder');
                 this.sortPickerMode = 'reorder';
                 this.renderSortPickerModal(context.watchlistId, context.currentSort, context.onSelect);
                 return;
@@ -1344,7 +1353,7 @@ export class ViewRenderer {
 
             const hideBtn = e.target.closest(`#${IDS.SORT_MODE_HIDE}`);
             if (hideBtn) {
-                console.log('[ViewRenderer] hideBtn found, switching mode to hide');
+                // console.log('[ViewRenderer] hideBtn found, switching mode to hide');
                 this.sortPickerMode = 'hide';
                 this.renderSortPickerModal(context.watchlistId, context.currentSort, context.onSelect);
                 return;
@@ -1357,7 +1366,7 @@ export class ViewRenderer {
                 const currentDir = this._sortContext.pendingDir || 'desc';
                 const newDir = (currentDir === 'desc') ? 'asc' : 'desc';
 
-                console.log('[ViewRenderer] Sort Toggle Clicked -> Switching to:', newDir);
+                // console.log('[ViewRenderer] Sort Toggle Clicked -> Switching to:', newDir);
 
                 this._sortContext.pendingDir = newDir;
 
@@ -1365,7 +1374,7 @@ export class ViewRenderer {
                 // Trigger immediate sort if we have a field
                 if (context.currentSort?.field) {
                     const f = context.currentSort.field;
-                    console.log('[ViewRenderer] Triggering Immediate Sort (Keep Open):', { field: f, direction: newDir });
+                    // console.log('[ViewRenderer] Triggering Immediate Sort (Keep Open):', { field: f, direction: newDir });
 
                     // 1. Notify Controller (Updates Background List)
                     context.onSelect({ field: f, direction: newDir }, 'TOGGLE');
@@ -1421,13 +1430,13 @@ export class ViewRenderer {
                 if (!AppState.hiddenSortOptions[type]) AppState.hiddenSortOptions[type] = new Set();
                 const hiddenSet = AppState.hiddenSortOptions[type];
 
-                console.log('[ViewRenderer] Sort Hide Toggle Clicked:', stringKey, 'Type:', type, 'Target:', e.target.className);
-                console.log('[ViewRenderer] Current Set:', [...hiddenSet]);
+                // console.log('[ViewRenderer] Sort Hide Toggle Clicked:', stringKey, 'Type:', type, 'Target:', e.target.className);
+                // console.log('[ViewRenderer] Current Set:', [...hiddenSet]);
 
                 if (hiddenSet.has(stringKey)) hiddenSet.delete(stringKey);
                 else hiddenSet.add(stringKey);
 
-                console.log('[ViewRenderer] New State:', [...hiddenSet]);
+                // console.log('[ViewRenderer] New State:', [...hiddenSet]);
 
                 AppState.saveHiddenSortOptions();
                 if (typeof this._sortContext.onHide === 'function') {
@@ -1455,7 +1464,7 @@ export class ViewRenderer {
             // Unified Selection Logic
             // Always use the pending direction
             const pendingDir = this._sortContext.pendingDir || 'desc';
-            console.log('[ViewRenderer] Sort Selection:', { field, direction: pendingDir, pendingCtx: this._sortContext.pendingDir });
+            // console.log('[ViewRenderer] Sort Selection:', { field, direction: pendingDir, pendingCtx: this._sortContext.pendingDir });
 
             // Note: 'direction' from the key is ignored in favor of the toggle state
             // unless we want to respect the clicked item's underlying direction? 

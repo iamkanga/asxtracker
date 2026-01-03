@@ -1248,22 +1248,8 @@ export class NotificationStore {
                         isPhantom = true;
                     }
 
-                    // --- DEEP TRACE FOR GAP PARADOX ---
-                    if (code === 'GAP') {
-                        console.group('🕵️‍♀️ GAP TRACE');
-                        console.log('Raw:', JSON.stringify(liveData));
-                        console.log(`Vals: Price=${price}, Prev=${Number(liveData.prevClose)}, Change=${Number(liveData.change)}, Pct=${Number(liveData.changeInPercent)}`);
-                        console.log(`Computed: absChange=${absChange}, absPct=${absPct}, isStatic=${isStatic}`);
-                        console.log(`Phantom Check: Reported=${pctChange}%, Calc=${calcPct}%, isPhantom=${isPhantom}`);
+                    // --- DEEP TRACE FOR GAP PARADOX REMOVED ---
 
-                        const h52 = Number(liveData.high || liveData.high52 || 0);
-                        const l52 = Number(liveData.low || liveData.low52 || 0);
-                        const tol = 0.001;
-                        console.log(`HiLo Check: H=${h52}, L=${l52}`);
-                        console.log(`Hit Low? Price(${price}) <= Low(${l52}+${tol})? ${price <= (l52 + tol)}`);
-                        console.log(`Blocked? !isStatic(${!isStatic}) && !isPhantom(${!isPhantom})`);
-                        console.groupEnd();
-                    }
 
                     // --- LOAD RULES EARLY ---
                     const rules = this.getScannerRules() || {};
