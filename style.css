@@ -4936,6 +4936,32 @@ body.dark-theme .sort-picker-row.active {
     opacity: 0.5;
 }
 
+/* Primary Pill Button (Modern CTA) */
+.primary-pill-btn {
+    background-color: var(--color-accent);
+    color: #ffffff;
+    border: none;
+    border-radius: 50px;
+    padding: 12px 30px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 4px 12px rgba(164, 147, 147, 0.3);
+    cursor: pointer;
+    transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+.primary-pill-btn:hover {
+    transform: translateY(-2px);
+    background-color: var(--primary-hover);
+}
+
+.primary-pill-btn:active {
+    transform: scale(0.98);
+}
+
 
 /* --- BRANDING OVERRIDE (HIGH SPECIFICITY) --- */
 /* Force Coffee Color on Spinner and Save Tick */

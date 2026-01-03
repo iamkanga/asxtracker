@@ -402,6 +402,7 @@ export const CSS_CLASSES = {
     MODAL_ACTIONS: 'modal-actions',
     MODAL_CLOSE_BTN: 'modal-close-btn',
     MODAL_ACTION_BTN: 'modal-action-btn',
+    PRIMARY_PILL_BTN: 'primary-pill-btn',
     MODAL_BODY: 'modal-body',
     SCROLLABLE_BODY: 'scrollable-body',
     MODAL_FOOTER: 'modal-footer',

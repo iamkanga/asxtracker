@@ -236,21 +236,7 @@ export class SearchDiscoveryUI {
             <!-- ACTION BUTTON (The Handoff - Subtle Icon) -->
             <!-- ACTION BUTTON (Modern CTA) -->
             <div style="display: flex; justify-content: center; margin: 1.5rem 0 1rem 0;">
-                <button id="discoveryAddBtn" style="
-                    background-color: var(--color-accent); 
-                    color: #ffffff; 
-                    border: none;
-                    border-radius: 50px; 
-                    padding: 12px 30px; 
-                    font-size: 1.1rem; 
-                    font-weight: 600; 
-                    display: flex; 
-                    align-items: center; 
-                    gap: 12px; 
-                    box-shadow: 0 4px 12px rgba(164, 147, 147, 0.3);
-                    cursor: pointer;
-                    transition: transform 0.2s ease;
-                ">
+                <button id="discoveryAddBtn" class="${CSS_CLASSES.PRIMARY_PILL_BTN}">
                     <span>Add to Share Tracker</span>
                     <i class="fas ${UI_ICONS.ADD}" style="font-size: 1.2rem;"></i>
                 </button>
