@@ -234,9 +234,25 @@ export class SearchDiscoveryUI {
             </div>
 
             <!-- ACTION BUTTON (The Handoff - Subtle Icon) -->
-            <div style="display: flex; justify-content: flex-end; margin: 1rem 0;">
-                <button id="discoveryAddBtn" class="${CSS_CLASSES.MODAL_ACTION_BTN}" title="Add to Watchlist" style="font-size: 1.5rem;">
-                    <i class="fas ${UI_ICONS.ADD}"></i>
+            <!-- ACTION BUTTON (Modern CTA) -->
+            <div style="display: flex; justify-content: center; margin: 1.5rem 0 1rem 0;">
+                <button id="discoveryAddBtn" style="
+                    background-color: var(--color-accent); 
+                    color: #ffffff; 
+                    border: none;
+                    border-radius: 50px; 
+                    padding: 12px 30px; 
+                    font-size: 1.1rem; 
+                    font-weight: 600; 
+                    display: flex; 
+                    align-items: center; 
+                    gap: 12px; 
+                    box-shadow: 0 4px 12px rgba(164, 147, 147, 0.3);
+                    cursor: pointer;
+                    transition: transform 0.2s ease;
+                ">
+                    <span>Add to Share Tracker</span>
+                    <i class="fas ${UI_ICONS.ADD}" style="font-size: 1.2rem;"></i>
                 </button>
             </div>
 
