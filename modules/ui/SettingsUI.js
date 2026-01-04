@@ -236,13 +236,8 @@ export class SettingsUI {
         triggerCard.innerHTML = `
             <div class="${CSS_CLASSES.DETAIL_CARD_HEADER}" style="justify-content: space-between; border-bottom: none;">
                 <h3 class="${CSS_CLASSES.DETAIL_LABEL}" style="text-decoration: none; border-bottom: none; color: white;">
-                    <i class="fas fa-sliders-h" style="color: var(--color-accent);"></i> Trigger Configuration
+                    <i class="fas fa-sliders-h" style="color: var(--color-accent);"></i> Threshold Settings
                 </h3>
-                <div class="pill-container large-pill movers-pill-selector" style="width: 100px;">
-                    <span class="pill-segment-movers" data-value="true">On</span>
-                    <span class="pill-segment-movers" data-value="false">Off</span>
-                </div>
-                <input type="checkbox" id="toggle-moversEnabled" class="hidden">
             </div>
 
             <!-- Column Headers for Percentage/Global logic -->
@@ -318,6 +313,15 @@ export class SettingsUI {
             </div>
 
             <div class="${CSS_CLASSES.DETAIL_ROW}" style="justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <span class="${CSS_CLASSES.DETAIL_LABEL}" style="color: white; font-weight: 700;">Threshold Notifications</span>
+                <div class="pill-container large-pill movers-pill-selector" style="width: 100px;">
+                    <span class="pill-segment-movers" data-value="true">On</span>
+                    <span class="pill-segment-movers" data-value="false">Off</span>
+                </div>
+                <input type="checkbox" id="toggle-moversEnabled" class="hidden">
+            </div>
+
+            <div class="${CSS_CLASSES.DETAIL_ROW}" style="justify-content: space-between; align-items: center; margin-bottom: 20px;">
                 <span class="${CSS_CLASSES.DETAIL_LABEL}" style="color: white; font-weight: 700;">App Badges</span>
                 <div class="pill-container large-pill pill-selector-badges" style="width: 100px;">
                     <span class="pill-segment-badge" data-value="true">On</span>
@@ -389,7 +393,7 @@ export class SettingsUI {
                      </div>
                      <div class="pill-container large-pill accordion-pill-selector" style="width: 125px;">
                           <span class="accordion-control-segment" data-action="expand">Open</span>
-                          <span class="accordion-control-segment" data-action="collapse">Close</span>
+                          <span class="accordion-control-segment active" data-action="collapse">Close</span>
                      </div>
                  </div>
                  
@@ -630,9 +634,9 @@ export class SettingsUI {
             else if (isAllSelected) summaryText = '';
             else summaryText = `${activeCount} of ${industries.length}`;
 
-            // Logic: If we have state, use it. If not, default to 'hasActiveChild' (Open if active).
+            // Logic: If we have state, use it. If not, default to CLOSED (User Request).
             const wasOpen = stateMap.get(sectorName);
-            const isOpen = (wasOpen !== undefined) ? wasOpen : hasActiveChild;
+            const isOpen = (wasOpen !== undefined) ? wasOpen : false;
 
             const section = document.createElement('div');
             section.className = 'filter-accordion-item';
