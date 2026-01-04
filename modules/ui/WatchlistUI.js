@@ -8,6 +8,7 @@ import { AppState } from '../state/AppState.js';
 import { IDS, CSS_CLASSES, EVENTS, WATCHLIST_ICON_POOL, ALL_SHARES_ID, CASH_WATCHLIST_ID, DASHBOARD_WATCHLIST_ID, PORTFOLIO_ID, UI_ICONS, USER_MESSAGES, STORAGE_KEYS, WATCHLIST_MODES, SORT_OPTIONS } from '../utils/AppConstants.js';
 import { WatchlistPickerModal } from './WatchlistPickerModal.js';
 import { ToastManager } from './ToastManager.js';
+import { SnapshotUI } from './SnapshotUI.js';
 import { navManager } from '../utils/NavigationManager.js';
 
 export class WatchlistUI {
@@ -34,10 +35,19 @@ export class WatchlistUI {
 
                 // Bind close listener immediately
                 const modal = document.getElementById(IDS.WATCHLIST_PICKER_MODAL);
-                const closeBtn = modal.querySelector(`.${CSS_CLASSES.MODAL_CLOSE_BTN}`);
+                // Fix: Select specific close button, not just class (which is shared with marketPulseBtn)
+                const closeBtn = modal.querySelector(`.${CSS_CLASSES.MODAL_CLOSE_BTN}[data-dismiss="modal"]`);
                 if (closeBtn) {
                     closeBtn.addEventListener('click', () => {
                         this.closeModal();
+                    });
+                }
+
+                // Bind Market Pulse Button
+                const marketPulseBtn = document.getElementById('marketPulseBtn');
+                if (marketPulseBtn) {
+                    marketPulseBtn.addEventListener('click', () => {
+                        SnapshotUI.show();
                     });
                 }
 
