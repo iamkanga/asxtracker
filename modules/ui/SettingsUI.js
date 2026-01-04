@@ -4,9 +4,11 @@
  * Handles Firestore Sync logic via UserStore.
  */
 
-import { CSS_CLASSES, IDS, UI_ICONS, EVENTS, SECTORS_LIST } from '../utils/AppConstants.js';
+import { CSS_CLASSES, IDS, UI_ICONS, EVENTS, SECTORS_LIST, SECTOR_INDUSTRY_MAP } from '../utils/AppConstants.js';
 import { navManager } from '../utils/NavigationManager.js';
 import { userStore } from '../data/DataService.js';
+import { AppState } from '../state/AppState.js';
+import { ToastManager } from './ToastManager.js';
 
 export class SettingsUI {
     static showModal(userId) {
@@ -52,6 +54,106 @@ export class SettingsUI {
                 </div>
 
                 <div class="${CSS_CLASSES.MODAL_BODY} ${CSS_CLASSES.SCROLLABLE_BODY}" style="padding-top: 0.5rem;"></div>
+                
+                <style>
+                    /* Global Pill Architecture (Flush Design) */
+                    .pill-container {
+                        display: flex;
+                        background: var(--bg-secondary);
+                        border: 1px solid var(--border-color);
+                        overflow: hidden;
+                        padding: 0;
+                        justify-content: center;
+                        align-items: center;
+                        box-sizing: border-box;
+                    }
+                    
+                    .pill-segment, .bulk-btn, .master-pill-segment, .pill-segment-movers, .pill-segment-badge, .pill-segment-email, .pill-segment-override {
+                        flex: 1;
+                        height: 100%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-weight: 800;
+                        cursor: pointer;
+                        transition: all 0.2s;
+                        border-radius: 0 !important; /* Force Flush Design */
+                        margin: 0;
+                        border: none;
+                        background: transparent;
+                        color: var(--text-muted);
+                    }
+                    
+                    .pill-container.large-pill { height: 32px; border-radius: 20px; }
+                    .pill-container.upsized { height: 26px; border-radius: 13px; }
+                    
+                    .pill-segment.active, 
+                    .bulk-btn.active, 
+                    .master-pill-segment.active,
+                    .pill-segment-movers.active,
+                    .pill-segment-badge.active,
+                    .pill-segment-email.active,
+                    .pill-segment-override.active {
+                        background: var(--color-accent) !important;
+                        color: white !important;
+                    }
+
+                    /* Custom Square Radio-style Selectors */
+                    .square-radio-wrapper {
+                        position: relative;
+                        width: 18px;
+                        height: 18px;
+                        cursor: pointer;
+                        flex-shrink: 0;
+                    }
+                    .square-radio-wrapper input {
+                        opacity: 0;
+                        position: absolute;
+                        width: 100%;
+                        height: 100%;
+                        cursor: pointer;
+                        z-index: 2;
+                        margin: 0;
+                    }
+                    .square-radio-visual {
+                        position: absolute;
+                        top: 0;
+                        left: 0;
+                        width: 100%;
+                        height: 100%;
+                        border: 2px solid var(--border-color);
+                        background: transparent;
+                        border-radius: 2px;
+                        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                    }
+                    .square-radio-wrapper input:checked + .square-radio-visual {
+                        border-color: var(--color-accent);
+                    }
+                    .square-radio-visual::after {
+                        content: '';
+                        width: 10px;
+                        height: 10px;
+                        background: var(--color-accent);
+                        border-radius: 1px;
+                        transform: scale(0);
+                        transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                    }
+                    .square-radio-wrapper input:checked + .square-radio-visual::after {
+                        transform: scale(1);
+                    }
+                    
+                    /* Clickable Industry Row */
+                    .clickable-industry-row {
+                        cursor: pointer;
+                        transition: background 0.1s ease;
+                    }
+                    .clickable-industry-row:hover {
+                        background: rgba(var(--color-accent-rgb, 164, 147, 147), 0.05) !important;
+                    }
+                </style>
             </div>
         `;
 
@@ -85,13 +187,13 @@ export class SettingsUI {
         const modalTitle = modal.querySelector(`.${CSS_CLASSES.MODAL_TITLE}`);
         if (modalTitle) modalTitle.innerHTML = 'Global Settings';
 
-        // --- 1. ALERTS SETTINGS (was Active Monitor) ---
         const summaryCard = document.createElement('div');
         summaryCard.className = CSS_CLASSES.DETAIL_CARD;
+        summaryCard.style.border = '1px solid var(--border-color)'; // Uniform thin border
         summaryCard.innerHTML = `
             <div class="${CSS_CLASSES.DETAIL_CARD_HEADER}" style="justify-content: flex-start; border-bottom: none !important;">
-                <h3 class="${CSS_CLASSES.DETAIL_LABEL}" style="text-decoration: none !important; border-bottom: none !important;">
-                    <i class="fas fa-cogs"></i> Alert Settings
+                <h3 class="${CSS_CLASSES.DETAIL_LABEL}" style="text-decoration: none !important; border-bottom: none !important; color: white !important;">
+                    <i class="fas fa-cogs" style="color: var(--color-accent);"></i> Alert Settings
                 </h3>
             </div>
             
@@ -120,15 +222,17 @@ export class SettingsUI {
         // --- 2. TRIGGER CONFIGURATION ---
         const triggerCard = document.createElement('div');
         triggerCard.className = CSS_CLASSES.DETAIL_CARD;
+        triggerCard.style.border = '1px solid var(--border-color)'; // Uniform thin border
         triggerCard.innerHTML = `
             <div class="${CSS_CLASSES.DETAIL_CARD_HEADER}" style="justify-content: space-between; border-bottom: none;">
-                <h3 class="${CSS_CLASSES.DETAIL_LABEL}" style="text-decoration: none; border-bottom: none;">
-                    <i class="fas fa-sliders-h"></i> Trigger Configuration
+                <h3 class="${CSS_CLASSES.DETAIL_LABEL}" style="text-decoration: none; border-bottom: none; color: white;">
+                    <i class="fas fa-sliders-h" style="color: var(--color-accent);"></i> Trigger Configuration
                 </h3>
-                <label class="toggle-switch">
-                    <input type="checkbox" id="toggle-moversEnabled" data-target="moversEnabled">
-                    <span class="slider round"></span>
-                </label>
+                <div class="pill-container large-pill movers-pill-selector" style="width: 100px;">
+                    <span class="pill-segment-movers" data-value="true">On</span>
+                    <span class="pill-segment-movers" data-value="false">Off</span>
+                </div>
+                <input type="checkbox" id="toggle-moversEnabled" class="hidden">
             </div>
 
             <!-- Column Headers for Percentage/Global logic -->
@@ -140,7 +244,7 @@ export class SettingsUI {
 
             <!-- Row 1: Threshold Implementation (Aligned) -->
             <div class="${CSS_CLASSES.DETAIL_ROW}" style="align-items: center; gap: 10px; margin-bottom: 15px;">
-                <div class="${CSS_CLASSES.DETAIL_LABEL}" style="width: 80px; color: var(--text-muted); opacity: 0.7;">Threshold</div>
+                <div class="${CSS_CLASSES.DETAIL_LABEL}" style="width: 80px; color: white;">Threshold</div>
                 
                 <div style="flex: 1;">
                     <div class="input-wrapper">
@@ -165,7 +269,7 @@ export class SettingsUI {
 
             <!-- Row 2: Increase (Green) -->
             <div class="${CSS_CLASSES.DETAIL_ROW}" style="align-items: center; gap: 10px; margin-bottom: 10px;">
-                <div class="${CSS_CLASSES.DETAIL_LABEL}" style="width: 80px; color: var(--color-positive);">Increase</div>
+                <div class="${CSS_CLASSES.DETAIL_LABEL}" style="width: 80px; color: white;">Increase</div>
                 <div class="input-wrapper" style="flex: 1;">
                     <div class="input-icon"><i class="fas fa-percent"></i></div>
                     <input type="number" id="up-percentVal" class="settings-input-dark standard-input compact-input" placeholder="0">
@@ -178,7 +282,7 @@ export class SettingsUI {
 
             <!-- Row 3: Decrease (Red) -->
             <div class="${CSS_CLASSES.DETAIL_ROW}" style="align-items: center; gap: 10px;">
-                <div class="${CSS_CLASSES.DETAIL_LABEL}" style="width: 80px; color: var(--color-negative);">Decrease</div>
+                <div class="${CSS_CLASSES.DETAIL_LABEL}" style="width: 80px; color: white;">Decrease</div>
                 <div class="input-wrapper" style="flex: 1;">
                     <div class="input-icon"><i class="fas fa-percent"></i></div>
                     <input type="number" id="down-percentVal" class="settings-input-dark standard-input compact-input" placeholder="0">
@@ -195,27 +299,30 @@ export class SettingsUI {
         // --- 3. ALERTS (User Prefs) ---
         const notifCard = document.createElement('div');
         notifCard.className = CSS_CLASSES.DETAIL_CARD;
+        notifCard.style.border = '1px solid var(--border-color)'; // Uniform thin border
         notifCard.innerHTML = `
             <div class="${CSS_CLASSES.DETAIL_CARD_HEADER}" style="border-bottom: none;">
-                <h3 class="${CSS_CLASSES.DETAIL_LABEL}" style="text-decoration: none; border-bottom: none;">
-                    <i class="fas fa-bell"></i> Alerts
+                <h3 class="${CSS_CLASSES.DETAIL_LABEL}" style="text-decoration: none; border-bottom: none; color: white;">
+                    <i class="fas fa-bell" style="color: var(--color-accent);"></i> Alerts
                 </h3>
             </div>
 
-            <div class="${CSS_CLASSES.DETAIL_ROW}" style="justify-content: space-between; align-items: center;">
-                <span class="${CSS_CLASSES.DETAIL_LABEL}">App Badges</span>
-                <label class="toggle-switch">
-                    <input type="checkbox" id="toggle-pref-showBadges" data-target="pref-showBadges">
-                    <span class="slider round"></span>
-                </label>
+            <div class="${CSS_CLASSES.DETAIL_ROW}" style="justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <span class="${CSS_CLASSES.DETAIL_LABEL}" style="color: white; font-weight: 700;">App Badges</span>
+                <div class="pill-container large-pill pill-selector-badges" style="width: 100px;">
+                    <span class="pill-segment-badge" data-value="true">On</span>
+                    <span class="pill-segment-badge" data-value="false">Off</span>
+                </div>
+                <input type="checkbox" id="toggle-pref-showBadges" class="hidden">
             </div>
 
-            <div class="${CSS_CLASSES.DETAIL_ROW}" style="justify-content: space-between; align-items: center;">
-                 <span class="${CSS_CLASSES.DETAIL_LABEL}">Email</span>
-                 <label class="toggle-switch">
-                    <input type="checkbox" id="toggle-pref-dailyEmail" data-target="pref-dailyEmail">
-                    <span class="slider round"></span>
-                </label>
+            <div class="${CSS_CLASSES.DETAIL_ROW}" style="justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                 <span class="${CSS_CLASSES.DETAIL_LABEL}" style="color: white; font-weight: 700;">Daily Email</span>
+                 <div class="pill-container large-pill pill-selector-email" style="width: 100px;">
+                    <span class="pill-segment-email" data-value="true">On</span>
+                    <span class="pill-segment-email" data-value="false">Off</span>
+                </div>
+                <input type="checkbox" id="toggle-pref-dailyEmail" class="hidden">
             </div>
 
             <div class="${CSS_CLASSES.DETAIL_ROW}" style="padding-top: 10px;">
@@ -227,47 +334,53 @@ export class SettingsUI {
         `;
         container.appendChild(notifCard);
 
-        // --- 4. SECTOR FILTERS ---
+        // --- 4. SECTOR SELECTOR (Redesigned) ---
         const sectorCard = document.createElement('div');
         sectorCard.className = CSS_CLASSES.DETAIL_CARD;
+        sectorCard.style.border = '1px solid var(--border-color)'; // Uniform thin border
         sectorCard.innerHTML = `
-             <div class="${CSS_CLASSES.DETAIL_CARD_HEADER}" style="border-bottom: none;">
-                 <h3 class="${CSS_CLASSES.DETAIL_LABEL}" style="text-decoration: none; border-bottom: none;">
-                     <i class="fas fa-layer-group"></i> Sector Filters
+             <div class="${CSS_CLASSES.DETAIL_CARD_HEADER}" style="border-bottom: none; justify-content: space-between;">
+                 <h3 class="${CSS_CLASSES.DETAIL_LABEL}" style="text-decoration: none; border-bottom: none; font-weight: 700; color: white;">
+                     <i class="fas fa-layer-group" style="color: var(--color-accent);"></i> Sector Selector
                  </h3>
+                 <button id="scanner-clear-filters" class="${CSS_CLASSES.BTN_TEXT_SMALL}" style="font-size: 0.7rem; color: var(--text-muted); background: none; border: none; cursor: pointer; opacity: 0.7;">Clear All</button>
              </div>
              <div style="padding: 0 16px 16px 16px;">
                  
-                 <!-- "Exclude Portfolio" Option -->
-                 <div class="${CSS_CLASSES.DETAIL_ROW}" style="justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
-                     <div style="display: flex; flex-direction: column;">
-                        <span class="${CSS_CLASSES.DETAIL_LABEL}">Portfolio Override</span>
-                        <span style="font-size: 0.7rem; color: var(--text-muted);">Show my stocks even if sector is hidden</span>
-                     </div>
-                     <label class="toggle-switch">
-                        <input type="checkbox" id="toggle-pref-excludePortfolio">
-                        <span class="slider round"></span>
-                     </label>
-                 </div>
+                  <!-- "Watchlist Override" Option (Pill Redesign - Minimalist) -->
+                  <div class="${CSS_CLASSES.DETAIL_ROW}" style="justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                      <div style="display: flex; flex-direction: column; gap: 3px;">
+                         <div style="display: flex; align-items: center; gap: 8px;">
+                            <span class="${CSS_CLASSES.DETAIL_LABEL}" style="font-weight: 700; color: white;">Watchlist Override</span>
+                         </div>
+                      </div>
+                      <div class="pill-container large-pill portfolio-pill-selector" style="width: 100px;">
+                          <span class="pill-segment-override" data-value="true">On</span>
+                          <span class="pill-segment-override" data-value="false">Off</span>
+                      </div>
+                      <input type="checkbox" id="toggle-pref-excludePortfolio" class="hidden">
+                  </div>
 
-                 <div style="margin-bottom: 10px; font-size: 0.75rem; color: var(--text-muted);">
-                     Uncheck sectors to hide them from Global Alerts.
+
+                 <!-- Master Select (Pill Redesign - Large) -->
+                 <div class="${CSS_CLASSES.DETAIL_ROW}" style="justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                     <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <span class="${CSS_CLASSES.DETAIL_LABEL}" style="font-size: 0.85rem; font-weight: 800; color: white; letter-spacing: -0.01em;">Select</span>
+                     </div>
+                     <div class="pill-container large-pill master-pill-selector" style="width: 140px;">
+                          <span class="master-pill-segment" data-action="all">All</span>
+                          <span class="master-pill-segment" data-action="none">None</span>
+                     </div>
                  </div>
                  
-                 <div style="display: grid; grid-template-columns: 1fr; gap: 8px;">
-                     ${SECTORS_LIST.map(sector => `
-                         <div style="display: flex; align-items: center; justify-content: space-between; padding-right: 2px; padding-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.05);">
-                             <span class="${CSS_CLASSES.DETAIL_LABEL}" style="font-size: 0.85rem;">${sector}</span>
-                             <label class="toggle-switch transform-scale-0-8">
-                                 <input type="checkbox" class="sector-toggle" data-sector="${sector}">
-                                 <span class="slider round"></span>
-                             </label>
-                         </div>
-                     `).join('')}
+                 <!-- Dynamic Accordion Container -->
+                 <div id="settings-sector-accordion" style="display: flex; flex-direction: column; gap: 10px;">
+                     <!-- Dynamically Populated by _renderSectorAccordion -->
                  </div>
              </div>
          `;
         container.appendChild(sectorCard);
+
     }
 
     static _updateValues(modal, prefs) {
@@ -377,19 +490,56 @@ export class SettingsUI {
         updateInput('pref-emailAddr', prefs.alertEmailRecipients);
 
         // Toggles
-        updateCheck('toggle-moversEnabled', rules.moversEnabled ?? true);
-        updateCheck('toggle-pref-showBadges', showBadges);
-        updateCheck('toggle-pref-dailyEmail', dailyEmail);
-        updateCheck('toggle-pref-excludePortfolio', prefs.excludePortfolio ?? true); // Default to TRUE (safer)
+        const moversOn = rules.moversEnabled ?? true;
+        updateCheck('toggle-moversEnabled', moversOn);
 
-        // Sectors (Inverse logic: Hidden in Prefs -> Unchecked in UI)
-        const hiddenSectors = prefs.hiddenSectors || [];
-        SECTORS_LIST.forEach(sector => {
-            const cb = modal.querySelector(`.sector-toggle[data-sector="${sector}"]`);
-            if (cb) {
-                cb.checked = !hiddenSectors.includes(sector);
-            }
+        modal.querySelectorAll('.pill-segment-movers').forEach(pill => {
+            pill.classList.toggle('active', pill.dataset.value === String(moversOn));
         });
+
+        updateCheck('toggle-pref-showBadges', showBadges);
+        modal.querySelectorAll('.pill-segment-badge').forEach(pill => {
+            pill.classList.toggle('active', pill.dataset.value === String(showBadges));
+        });
+
+        updateCheck('toggle-pref-dailyEmail', dailyEmail);
+        modal.querySelectorAll('.pill-segment-email').forEach(pill => {
+            pill.classList.toggle('active', pill.dataset.value === String(dailyEmail));
+        });
+
+        const isExclude = prefs.excludePortfolio ?? true;
+        updateCheck('toggle-pref-excludePortfolio', isExclude);
+        modal.querySelectorAll('.pill-segment-override').forEach(pill => {
+            pill.classList.toggle('active', pill.dataset.value === String(isExclude));
+        });
+
+        // Sectors (Renamed to Scanner Filters: Hidden in Prefs -> Unchecked in UI)
+        // CRITICAL UPDATE: Scanner uses 'activeFilters' (Whitelist).
+        // BUT SettingsUI previously used 'hiddenSectors' (Blacklist).
+        // MIGRATION: 
+        // 1. If 'scanner.activeFilters' exists, use it.
+        // 2. If not, and 'hiddenSectors' exists, infer active? (Scary).
+        // 3. User requested "Global Settings". 
+        // Let's rely on 'scanner.activeFilters' from AppState preference structure, 
+        // BUT 'prefs' passed here is likely the UserStore object.
+        // We need to ensure we map correctly.
+
+        let activeFilters = [];
+        if (prefs.scanner?.activeFilters) {
+            activeFilters = prefs.scanner.activeFilters;
+        }
+
+        const totalIndustries = Object.values(SECTOR_INDUSTRY_MAP).flat().length;
+        const currentSelectedCount = activeFilters.length;
+
+        modal.querySelectorAll('.master-pill-segment').forEach(seg => {
+            const action = seg.dataset.action;
+            const isMatch = (action === 'all' && currentSelectedCount === totalIndustries) ||
+                (action === 'none' && currentSelectedCount === 0);
+            seg.classList.toggle('active', isMatch);
+        });
+
+        this._renderSectorAccordion(modal, activeFilters);
     }
 
     /**
@@ -427,16 +577,84 @@ export class SettingsUI {
         `;
     }
 
+    /**
+     * Renders the Sector -> Industry Accordion
+     */
+    static _renderSectorAccordion(modal, activeFilters) {
+        const container = modal.querySelector('#settings-sector-accordion');
+        if (!container) return;
+        container.innerHTML = '';
+
+        // Iterate through defined structure (GICS aligned)
+        SECTORS_LIST.forEach(sectorName => {
+            const industries = SECTOR_INDUSTRY_MAP[sectorName] || [];
+            if (industries.length === 0) return;
+
+            // Generate unique distinct ID safety
+            const sectorId = `sec-${sectorName.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}`;
+
+            // Check if any child is selected
+            const activeCount = industries.filter(ind => activeFilters.includes(ind)).length;
+            const hasActiveChild = activeCount > 0;
+            const isAllSelected = activeCount === industries.length;
+
+            let summaryText = '';
+            if (activeCount === 0) summaryText = '';
+            else if (isAllSelected) summaryText = ''; // Removed 'All' per user request
+            else summaryText = `${activeCount} of ${industries.length}`;
+
+            const section = document.createElement('div');
+            section.className = 'filter-accordion-item';
+            section.style.border = '1px solid var(--border-color)';
+            section.style.borderRadius = '6px';
+            section.style.overflow = 'hidden';
+
+            section.innerHTML = `
+                <div class="filter-header" style="background: var(--bg-secondary); padding: 12px 14px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: all 0.2s; border-left: 3px solid ${hasActiveChild ? 'var(--color-accent)' : 'transparent'};">
+                    <div style="display: flex; align-items: center; gap: 10px; flex: 1;">
+                        <span class="sector-name" style="font-size: 0.95rem; font-weight: 700; color: ${hasActiveChild ? 'var(--color-accent)' : 'white'}; transition: color 0.2s;">${sectorName}</span>
+                         <span class="summary-text" style="font-size: 0.75rem; color: var(--text-muted); font-weight: 500; background: rgba(0,0,0,0.04); padding: 2px 8px; border-radius: 10px; ${activeCount === 0 || isAllSelected ? 'display: none;' : ''}">${summaryText}</span>
+                    </div>
+                    
+                    <div style="display: flex; align-items: center; gap: 14px; justify-content: flex-end;">
+                        <!-- Sector Pill Selector (Flush - Upsized) -->
+                        <div class="pill-container upsized sector-pill-selector" style="width: 104px;">
+                            <span class="bulk-btn ${isAllSelected ? 'active' : ''}" data-action="all" title="Select All" style="font-size: 0.65rem;">All</span>
+                            <span class="bulk-btn ${activeCount === 0 ? 'active' : ''}" data-action="none" title="Deselect All" style="font-size: 0.65rem;">None</span>
+                        </div>
+                        
+                        <div style="width: 16px; display: flex; justify-content: center;">
+                            <i class="fas fa-chevron-down" style="font-size: 0.8rem; opacity: 0.5; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); ${hasActiveChild ? 'transform: rotate(180deg);' : ''}"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="filter-body ${hasActiveChild ? '' : 'hidden'}" style="padding: 10px; background: var(--bg-card); display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; border-top: 1px solid var(--border-color);">
+                    ${industries.map(ind => {
+                const isChecked = activeFilters.includes(ind);
+                return `
+                        <div class="filter-row clickable-industry-row" style="padding: 10px 12px; background: rgba(0,0,0,0.02); border-radius: 8px; border: 1px solid rgba(0,0,0,0.03); display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                            <span class="industry-name" style="font-size: 0.8rem; color: ${isChecked ? 'var(--color-accent)' : 'var(--text-normal)'}; line-height: 1.2; flex: 1; transition: color 0.2s; font-weight: 500;">${ind}</span>
+                             <div class="square-radio-wrapper">
+                                <input type="checkbox" class="sector-toggle" data-industry="${ind}" ${isChecked ? 'checked' : ''} onclick="event.stopPropagation()">
+                                <div class="square-radio-visual"></div>
+                             </div>
+                        </div>
+                    `;
+            }).join('')}
+                </div>
+            `;
+
+            container.appendChild(section);
+        });
+    }
+
     static _bindEvents(modal, userId, unsubscribe) {
         // Auto-Save Logic
         let debounceTimer;
 
         const saveSettings = () => {
-            // console.log('[SettingsUI] Auto-saving preferences...');
-            // Helper to harvest rules
-            // FIX: If empty string, return null. If '0', return 0.
             const getNum = (id) => {
-                const el = document.getElementById(id);
+                const el = modal.querySelector(`#${id}`);
                 if (!el || el.value === '') return null;
                 const f = parseFloat(el.value);
                 return Number.isNaN(f) ? null : f;
@@ -447,39 +665,38 @@ export class SettingsUI {
                 dollarThreshold: getNum(`${type}-dollarVal`)
             });
 
-            // Handle potential empty strings as null
-            const getVal = (id) => getNum(id);
+            // Explicit Boolean Harvesting
+            const getCheck = (id) => {
+                const el = modal.querySelector(`#${id}`);
+                return el ? el.checked : null;
+            };
 
-            const toggleMovers = document.getElementById('toggle-moversEnabled');
-            const toggleBadges = document.getElementById('toggle-pref-showBadges');
-            const toggleEmail = document.getElementById('toggle-pref-dailyEmail');
-            const toggleExclude = document.getElementById('toggle-pref-excludePortfolio');
-            const emailInput = document.getElementById('pref-emailAddr');
-
-            // Harvest Sectors (Unchecked = Hidden)
-            const hiddenSectors = [];
+            // Harvest Sectors (Whitelist)
+            const activeFilters = [];
             modal.querySelectorAll('.sector-toggle').forEach(cb => {
-                if (!cb.checked) {
-                    hiddenSectors.push(cb.dataset.sector);
+                if (cb.checked) {
+                    const ind = cb.dataset.industry;
+                    if (ind) activeFilters.push(ind);
                 }
             });
 
             const newPrefs = {
+                scanner: {
+                    activeFilters: activeFilters
+                },
                 scannerRules: {
-                    minPrice: getVal('global-minPrice'),
-                    hiloMinPrice: getVal('hilo-minPrice'),
-                    moversEnabled: toggleMovers?.checked ?? true,
+                    minPrice: getNum('global-minPrice'),
+                    hiloMinPrice: getNum('hilo-minPrice'),
+                    moversEnabled: getCheck('toggle-moversEnabled') ?? true,
                     up: harvestRules('up'),
                     down: harvestRules('down')
                 },
-                hiddenSectors: hiddenSectors,
-                excludePortfolio: toggleExclude?.checked ?? true,
-                showBadges: toggleBadges?.checked ?? true,
-                dailyEmail: toggleEmail?.checked ?? false,
-                alertEmailRecipients: emailInput?.value.trim() || ''
+                excludePortfolio: getCheck('toggle-pref-excludePortfolio') ?? true,
+                showBadges: getCheck('toggle-pref-showBadges') ?? true,
+                dailyEmail: getCheck('toggle-pref-dailyEmail') ?? false,
+                alertEmailRecipients: modal.querySelector('#pref-emailAddr')?.value.trim() || ''
             };
 
-            // Save via UserStore
             userStore.savePreferences(userId, newPrefs);
         };
 
@@ -499,40 +716,171 @@ export class SettingsUI {
         modal.querySelector(`.${CSS_CLASSES.MODAL_CLOSE_BTN}`).addEventListener('click', close);
         modal.querySelector(`.${CSS_CLASSES.MODAL_OVERLAY}`).addEventListener('click', close);
 
+        // --- CONSOLIDATED EVENT DELEGATION ---
+
+        // 1. Unified Control Pill Handler (Movers, Badges, Email, Override)
+        modal.addEventListener('click', (e) => {
+            const pill = e.target.closest('[class*="pill-segment-"]');
+            if (!pill) return;
+
+            const val = pill.dataset.value === 'true';
+            let targetId = '';
+
+            if (pill.classList.contains('pill-segment-movers')) targetId = 'toggle-moversEnabled';
+            else if (pill.classList.contains('pill-segment-badge')) targetId = 'toggle-pref-showBadges';
+            else if (pill.classList.contains('pill-segment-email')) targetId = 'toggle-pref-dailyEmail';
+            else if (pill.classList.contains('pill-segment-override')) targetId = 'toggle-pref-excludePortfolio';
+
+            if (targetId) {
+                const hiddenCheck = modal.querySelector(`#${targetId}`);
+                if (hiddenCheck) {
+                    hiddenCheck.checked = val;
+                    // Update visuals within the container
+                    const container = pill.parentElement;
+                    container.querySelectorAll('span').forEach(s => s.classList.remove('active'));
+                    pill.classList.add('active');
+                    saveSettings();
+                }
+            }
+        });
+
+        // 2. Master "Select" Pill handler
+        modal.addEventListener('click', (e) => {
+            const seg = e.target.closest('.master-pill-segment');
+            if (!seg) return;
+
+            const action = seg.dataset.action;
+            const container = seg.parentElement;
+
+            // Update visuals
+            container.querySelectorAll('.master-pill-segment').forEach(s => s.classList.remove('active'));
+            seg.classList.add('active');
+
+            // Apply to all industry toggles
+            modal.querySelectorAll('.sector-toggle').forEach(cb => {
+                cb.checked = (action === 'all');
+                // Trigger change to update local sector headers
+                cb.dispatchEvent(new Event('change', { bubbles: true }));
+            });
+
+            saveSettings();
+        });
+
+        // 3. Sector-Level Bulk Action Handler
+        modal.addEventListener('click', (e) => {
+            const bulkBtn = e.target.closest('.bulk-btn');
+            if (!bulkBtn || bulkBtn.classList.contains('master-pill-segment')) return;
+
+            const action = bulkBtn.dataset.action;
+            const item = bulkBtn.closest('.filter-accordion-item');
+            if (item) {
+                item.querySelectorAll('.sector-toggle').forEach(cb => {
+                    cb.checked = (action === 'all');
+                    cb.dispatchEvent(new Event('change', { bubbles: true }));
+                });
+                saveSettings();
+            }
+        });
+
+        // 4. Sector Toggle & Reactive Meta Updates
+        modal.addEventListener('change', (e) => {
+            if (e.target.matches('.sector-toggle')) {
+                const item = e.target.closest('.filter-accordion-item');
+                if (item) {
+                    const checkboxes = item.querySelectorAll('.sector-toggle');
+                    const checkedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
+                    const totalCount = checkboxes.length;
+
+                    const header = item.querySelector('.filter-header');
+                    const summarySpan = header.querySelector('.summary-text');
+                    const sectorSpan = header.querySelector('.sector-name');
+                    const pillAll = header.querySelector('.bulk-btn[data-action="all"]');
+                    const pillNone = header.querySelector('.bulk-btn[data-action="none"]');
+
+                    const hasActive = checkedCount > 0;
+                    const isAll = checkedCount === totalCount;
+
+                    // UI State
+                    summarySpan.textContent = (isAll || checkedCount === 0) ? '' : `${checkedCount} of ${totalCount}`;
+                    summarySpan.style.display = (isAll || checkedCount === 0) ? 'none' : 'inline-block';
+                    sectorSpan.style.color = hasActive ? 'var(--color-accent)' : 'white';
+                    header.style.borderLeft = `3px solid ${hasActive ? 'var(--color-accent)' : 'transparent'}`;
+
+                    // Industry Name Color
+                    const row = e.target.closest('.filter-row');
+                    if (row) {
+                        row.querySelector('.industry-name').style.color =
+                            e.target.checked ? 'var(--color-accent)' : 'var(--text-normal)';
+                    }
+
+                    // Pill Visuals
+                    if (pillAll) pillAll.classList.toggle('active', isAll);
+                    if (pillNone) pillNone.classList.toggle('active', checkedCount === 0);
+                }
+
+                // Global Master Select Sync
+                const allCBs = modal.querySelectorAll('.sector-toggle');
+                const totalSelected = Array.from(allCBs).filter(cb => cb.checked).length;
+                const totalAvailable = allCBs.length;
+
+                modal.querySelectorAll('.master-pill-segment').forEach(seg => {
+                    const action = seg.dataset.action;
+                    const isMatch = (action === 'all' && totalSelected === totalAvailable) ||
+                        (action === 'none' && totalSelected === 0);
+                    seg.classList.toggle('active', isMatch);
+                });
+
+                saveSettings();
+            }
+        });
+
+        // 5. Accordion & Row Logic
+        modal.addEventListener('click', (e) => {
+            const header = e.target.closest('.filter-header');
+            if (header && !e.target.closest('.pill-container')) {
+                const item = header.closest('.filter-accordion-item');
+                const body = item.querySelector('.filter-body');
+                const icon = header.querySelector('i');
+                const isHidden = body.classList.contains('hidden');
+
+                body.classList.toggle('hidden');
+                icon.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+                return;
+            }
+
+            const row = e.target.closest('.clickable-industry-row');
+            if (row && !e.target.matches('input')) {
+                const cb = row.querySelector('.sector-toggle');
+                if (cb) {
+                    cb.checked = !cb.checked;
+                    cb.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+            }
+        });
+
         const triggerDebouncedSave = () => {
             clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(saveSettings, 1000); // 1s debounce for typing
+            debounceTimer = setTimeout(saveSettings, 1000);
         };
 
-        // EVENT DELEGATION: Attach to Modal, handle bubbling
         modal.addEventListener('input', (e) => {
             if (e.target.matches('input, select, textarea')) {
-                // For text/number inputs, debounce
                 if (e.target.type === 'checkbox' || e.target.type === 'radio') {
-                    saveSettings(); // Immediate
+                    saveSettings();
                 } else {
-                    triggerDebouncedSave(); // Debounce
+                    triggerDebouncedSave();
                 }
             }
         });
 
         modal.addEventListener('change', (e) => {
             if (e.target.matches('input, select, textarea')) {
-                // For checkboxes/selects (and text blur), save immediate
-                if (e.target.type === 'checkbox' || e.target.type === 'radio') {
-                    // Handled by input? Switch usually triggers change. 
-                    // Let's ensure we don't double save, but double save is better than no save.
+                if (e.target.type !== 'checkbox' && e.target.type !== 'radio') {
                     saveSettings();
-                } else {
-                    // On blur/change of text, ensure saved (cancels debounce if needed? or just lets it run)
-                    // If user tabs out, 'change' fires.
-                    saveSettings();
-                    clearTimeout(debounceTimer); // Clear pending debounce to avoid double save
+                    clearTimeout(debounceTimer);
                 }
             }
         });
-
-        // Focus/Blur for Placeholder Logic (Clear on Focus)
 
     }
 }

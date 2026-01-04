@@ -116,6 +116,7 @@ export const EVENTS = {
     NOTIFICATION_READY: 'notification-ready', // Data loaded event
     TOGGLE_SHARE_MUTE: 'toggle-share-mute', // Added for Constitution Compliance
     OPEN_SETTINGS: 'open-settings',
+    OPEN_GENERAL_SETTINGS: 'open-general-settings',
     PIN_ALERT: 'pin-alert',
     UNPIN_ALERT: 'unpin-alert',
     SAVE_SCANNER_SETTINGS: 'save-scanner-settings',
@@ -149,21 +150,92 @@ export const SORT_OPTIONS = {
     ]
 };
 
-export const SECTORS_LIST = [
-    'Energy',
-    'Materials',
-    'Industrials',
-    'Consumer Discretionary',
-    'Consumer Staples',
-    'Health Care',
-    'Financials',
-    'Information Technology',
-    'Communication Services',
-    'Utilities',
-    'Real Estate',
-    'ETF',
-    'Other'
-];
+// Comprehensive Sector -> Industry Map (GICS Aligned)
+export const SECTOR_INDUSTRY_MAP = {
+    "Energy": [
+        "Coal", "Energy", "Integrated Oil & Gas",
+        "Oil & Gas Exploration and Production", "Oil & Gas Refining and Marketing",
+        "Oil & Gas Transportation Services", "Oil Related Services and Equipment",
+        "Renewable Energy Equipment & Services", "Renewable Fuels", "Uranium"
+    ],
+    "Materials": [
+        "Agricultural Chemicals", "Aluminum", "Commodities (Gold)", "Commodity Chemicals",
+        "Construction Materials", "Diversified Chemicals", "Forest & Wood Products",
+        "Gold", "Integrated Mining", "Materials", "Materials (Aluminum)",
+        "Materials (Base Metals)", "Materials (Copper Mining)", "Materials (Exploration)",
+        "Materials (Gold Exploration)", "Materials (Gold Mining)", "Materials (Gold/Multi-Metals)",
+        "Materials (Metals Exploration)", "Materials (Mining Investment)", "Materials (Rare Earths/Titanium)",
+        "Materials (Specialty Metals)", "Mining Support Services & Equipment",
+        "Non-Paper Containers & Packaging", "Paper Products", "Precious Metals & Minerals",
+        "Specialty Chemicals", "Specialty Mining & Metals", "Steel"
+    ],
+    "Industrials": [
+        "Aerospace & Defense", "Airlines", "Airport Operators & Services",
+        "Auto Vehicles, Parts & Svc Retailers", "Auto, Truck & Motorcycle Parts",
+        "Business Support Services", "Business Support Supplies", "Construction & Engineering",
+        "Construction Supplies & Fixtures", "Corporate Financial Services",
+        "Courier, Postal, Air Freight&Land Log", "Diversified Industrial Goods Wholesale",
+        "Diversified Investment Services", "Electronic Equipment & Parts", "Employment Services",
+        "Environmental Services & Equipment", "Ground Freight & Logistics",
+        "Healthcare Facilities & Services", "Heavy Electrical Equipment", "Heavy Machinery & Vehicles",
+        "Highways & Rail Tracks", "Homebuilding", "Industrial Machinery & Equipment",
+        "Industrials (Logistics/Courier)", "Industrials (Transportation)",
+        "Integrated Telecommunications Services", "Marine Freight & Logistics",
+        "Marine Port Services", "Office Equipment", "Passenger Transportation, Ground & Sea",
+        "Professional & Business Education", "Professional Information Services",
+        "Shipbuilding", "Tires & Rubber Products"
+    ],
+    "Consumer Discretionary": [
+        "Apparel & Accessories", "Apparel & Accessories Retailers", "Appliances, Tools & Housewares",
+        "Auto & Truck Manufacturers", "Broadcasting", "Casinos & Gaming",
+        "Computers & Electronics Retailers", "Consumer Publishing", "Department Stores",
+        "Distillers & Wineries", "Food Retail & Distribution", "Home Furnishings",
+        "Home Furnishings Retailers", "Home Improvement Prod&Svcs Retailers",
+        "Hotels, Motels & Cruise Lines", "Household Electronics", "Household Products",
+        "Leisure & Recreation", "Misc Educational Service Providers", "Non-Alcoholic Beverages",
+        "Other Specialty Retailers", "Restaurants & Bars", "Textiles & Leather Goods"
+    ],
+    "Consumer Staples": [
+        "Fishing & Farming", "Food Processing", "Personal Products"
+    ],
+    "Health Care": [
+        "Advanced Medical Equipment & Technology", "Biotechnology & Medical Research",
+        "Health Care (Aged Care)", "Health Care (Medical Devices)",
+        "Medical Equipment, Supplies & Dist'n", "Pharmaceuticals"
+    ],
+    "Financials": [
+        "Banks", "Closed End Funds", "Consumer Lending", "Financial Technology (Fintech)",
+        "Financial, Commodity Market Ops & Svc", "Financials (Asset Management)",
+        "Holding Companies", "Insurance Funds", "Investment Banking & Brokerage Services",
+        "Investment Management & Fund Operators", "Investment Trusts",
+        "Life & Health Insurance", "Miscellaneous Fintech Infrastructure",
+        "Multiline Insurance & Brokers", "Mutual Funds", "Property & Casualty Insurance"
+    ],
+    "Information Technology": [
+        "Computer Hardware", "Electrical Components & Equipment",
+        "Information Technology (Cloud/SaaS)", "Information Technology (Software)",
+        "Integrated Hardware & Software", "IT Services & Consulting", "Online Services",
+        "Semiconductors", "Software"
+    ],
+    "Communication Services": [
+        "Advertising & Marketing", "Communications & Networking",
+        "Wireless Telecommunications Services"
+    ],
+    "Utilities": [
+        "Electric Utilities", "Independent Power Producers", "Multiline Utilities",
+        "Natural Gas Utilities", "Water & Related Utilities"
+    ],
+    "Real Estate": [
+        "Commercial REITs", "Diversified REITs", "Real Estate (Property Development)",
+        "Real Estate Rental, Devel & Operations", "Real Estate Services",
+        "Residential REITs", "Specialized REITs"
+    ],
+    "ETF": [
+        "Commodities (Exchange Traded Product)", "ETF"
+    ]
+};
+
+export const SECTORS_LIST = Object.keys(SECTOR_INDUSTRY_MAP);
 
 // Add this Pool to AppConstants as well:
 export const WATCHLIST_ICON_POOL = ['fa-list-alt', 'fa-folder-open', 'fa-bookmark', 'fa-star', 'fa-user', 'fa-users', 'fa-layer-group', 'fa-tags', 'fa-gem', 'fa-briefcase'];

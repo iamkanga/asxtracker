@@ -118,8 +118,16 @@ export class AppController {
             }
             // Note: NotificationUI handles its own (Floating Bell) badge update via internal listener.
         });
+        // General App Settings (Formerly Security/Data) - REINSTATED
+        document.addEventListener(EVENTS.OPEN_GENERAL_SETTINGS, () => {
+            console.log('[AppController] Opening General Settings...');
+            GeneralSettingsUI.showModal(this);
+        });
 
-        document.addEventListener(EVENTS.OPEN_SETTINGS, () => SettingsUI.showModal(AppState.user?.uid));
+        document.addEventListener(EVENTS.OPEN_SETTINGS, () => {
+            console.log('[AppController] Opening Scanner Settings...');
+            SettingsUI.showModal(AppState.user?.uid);
+        });
         document.addEventListener(EVENTS.SHOW_DAILY_BRIEFING, () => BriefingUI.show());
 
         // Mute Toggle Listener
@@ -2028,7 +2036,12 @@ export class AppController {
         document.addEventListener(EVENTS.REQUEST_DISCOVERY_SEARCH, (e) => {
             console.log('[AppController] Event Received: REQUEST_DISCOVERY_SEARCH', e.detail); // TRACE
             const { query } = e.detail;
-            const results = this.dataService.searchStocks(query, AppState.livePrices);
+
+            // Retrieve Global Scanner Filters
+            const activeFilters = AppState.preferences.scanner?.activeFilters || [];
+
+            // Pass filters to DataService (Unified Search)
+            const results = this.dataService.searchStocks(query, AppState.livePrices, activeFilters);
             document.dispatchEvent(new CustomEvent(EVENTS.UPDATE_DISCOVERY_RESULTS, { detail: { results } }));
         });
 

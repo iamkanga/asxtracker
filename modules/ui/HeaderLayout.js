@@ -614,13 +614,24 @@ export class HeaderLayout {
             });
         }
 
-        // Sidebar Settings Entry
+        // Sidebar Settings (Trigger/Sector) Entry
         if (this.btnSettings) {
             this.btnSettings.addEventListener('click', () => {
                 this._toggleSidebar(false);
                 setTimeout(() => {
                     console.log('HeaderLayout: Dispatching OPEN_SETTINGS');
                     document.dispatchEvent(new CustomEvent(EVENTS.OPEN_SETTINGS));
+                }, 150);
+            });
+        }
+
+        // Sidebar General Settings (Security/Data) Entry
+        if (this.btnGeneralSettings) {
+            this.btnGeneralSettings.addEventListener('click', () => {
+                this._toggleSidebar(false);
+                setTimeout(() => {
+                    console.log('HeaderLayout: Dispatching OPEN_GENERAL_SETTINGS');
+                    document.dispatchEvent(new CustomEvent(EVENTS.OPEN_GENERAL_SETTINGS));
                 }, 150);
             });
         }

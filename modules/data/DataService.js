@@ -126,10 +126,18 @@ export class DataService {
      * @param {Map} livePrices - The Map of live price objects.
      * @returns {Array} - Array of matching stock objects (limit 50).
      */
-    searchStocks(query, livePrices) {
-        if (!query || typeof query !== 'string' || !livePrices) return [];
+    searchStocks(query, livePrices, industryFilters = []) {
+        if (!livePrices) return [];
 
-        const q = query.toUpperCase().trim();
+        // Normalize Filters: Ensure array
+        const filters = Array.isArray(industryFilters) ? industryFilters : (industryFilters ? [industryFilters] : []);
+        const hasFilters = filters.length > 0;
+
+        // Allow empty query if filter is present (Scanner Mode)
+        if ((!query || typeof query !== 'string') && !hasFilters) return [];
+
+        const q = (query || '').toUpperCase().trim();
+        const hasQuery = q.length > 0;
 
         // Priority Buckets
         const bucketTickerStart = []; // Bucket 1: Ticker starts with Q
@@ -150,12 +158,32 @@ export class DataService {
                 ...data
             };
 
-            if (isTickerMatch) {
+            // 1. FILTER: Industry (Global Scanner)
+            if (hasFilters) {
+                // Robust Match: Case-insensitive check
+                // filters are from UI (likely correct casing), but let's normalize to be safe
+                const itemIndustry = (data.industry || '').trim().toUpperCase();
+
+                // Check if *any* filter (uppercase) matches this item
+                const match = filters.some(f => f.toUpperCase() === itemIndustry);
+
+                if (!match) {
+                    continue;
+                }
+            }
+
+            // 2. FILTER: Query (if present)
+            if (hasQuery) {
+                if (isTickerMatch) {
+                    bucketTickerStart.push(resultItem);
+                } else if (isNameStartMatch) {
+                    bucketNameStart.push(resultItem);
+                } else if (isNameContainsMatch) {
+                    bucketNameContains.push(resultItem);
+                }
+            } else {
+                // If no query but filter exists, just add to a bucket (Scanner Mode)
                 bucketTickerStart.push(resultItem);
-            } else if (isNameStartMatch) {
-                bucketNameStart.push(resultItem);
-            } else if (isNameContainsMatch) {
-                bucketNameContains.push(resultItem);
             }
         }
 

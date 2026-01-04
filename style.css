@@ -130,6 +130,10 @@
     white-space: nowrap !important;
 }
 
+.hidden {
+    display: none !important;
+}
+
 /* Flexbox Utilities */
 .flex-row {
     display: flex !important;

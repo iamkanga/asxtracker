@@ -85,21 +85,19 @@ export class NotificationStore {
 
         try {
             this.unsubscribePrefs = userStore.subscribeToPreferences(userId, (prefs) => {
-                if (prefs && prefs.scannerRules) {
+                if (prefs) {
                     // Update Local Rules
-                    const data = prefs.scannerRules;
+                    const data = prefs.scannerRules || {};
                     this.scannerRules = {
                         up: data.up || {},
                         down: data.down || {},
                         minPrice: (data.minPrice !== undefined && data.minPrice !== null) ? data.minPrice : null,
                         hiloMinPrice: (data.hiloMinPrice !== undefined && data.hiloMinPrice !== null) ? data.hiloMinPrice : null,
-                        moversEnabled: data.moversEnabled // Capture toggle
+                        moversEnabled: data.moversEnabled, // Capture toggle
+                        activeFilters: (prefs.scanner?.activeFilters || []).map(f => f.toUpperCase()) // Capture Whitelist
                     };
 
-                    // Also capture App Badges Pref
-                    // (Assuming filtering might use it, or just for knowledge)
-
-                    // console.log('[NotificationStore] Live Preferences Updated. Refreshing Alerts...');
+                    // console.log('[NotificationStore] Live Preferences Updated. Rules:', this.scannerRules);
                     this._notifyCountChange();
                 }
             });
@@ -376,6 +374,25 @@ export class NotificationStore {
                     s.shareName === stockCode && s.muted === true
                 );
                 if (isMuted) return false;
+            }
+
+            // 2d. SCANNER INDUSTRY FILTER (User Request)
+            // Block alerts from industries NOT in the activeFilters whitelist.
+            // EXCEPTION: Always show if the stock is in the user's watchlist (_isLocal).
+            const activeFilters = rules.activeFilters || [];
+            if (!hit._isLocal && activeFilters.length > 0) {
+                let ind = (hit.industry || '').toUpperCase();
+
+                // JIT lookup if missing in hit
+                if (!ind && hit.code && AppState.livePrices instanceof Map) {
+                    const priceData = AppState.livePrices.get(hit.code);
+                    if (priceData) ind = (priceData.industry || '').toUpperCase();
+                }
+
+                if (ind && !activeFilters.includes(ind)) {
+                    // console.log(`[NotificationStore] Filtering out ${hit.code} (Industry: ${ind}) – Not in whitelist.`);
+                    return false;
+                }
             }
 
             // 3. Threshold Check

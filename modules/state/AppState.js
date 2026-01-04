@@ -44,6 +44,9 @@ export const AppState = {
                 return { isPinEnabled: false, isBiometricEnabled: false, hashedPin: null, requireLockOnResume: true };
             }
         })(),
+        scanner: {  // NEW: Global Scanner Settings
+            activeFilters: [] // Array of selected Industry strings
+        },
         dashboardOrder: (() => {
             try {
                 const stored = localStorage.getItem(STORAGE_KEYS.DASHBOARD_ORDER);
@@ -231,12 +234,26 @@ export const AppState = {
         }
     },
 
-    saveSecurityPreferences(securityPrefs) {
-        this.preferences.security = { ...this.preferences.security, ...securityPrefs };
+    // Internal helper to persist all preferences under a single key
+    _persistPreferences() {
+        localStorage.setItem('asx_preferences', JSON.stringify(this.preferences));
+        this._triggerSync();
+    },
+
+    saveSecurityPreferences(newPrefs) {
+        this.preferences.security = { ...this.preferences.security, ...newPrefs };
         localStorage.setItem(STORAGE_KEYS.SECURITY_PREFS, JSON.stringify(this.preferences.security));
         this._triggerSync();
     },
 
+    /**
+     * Updates and persists scanner preferences.
+     * @param {Object} newPrefs 
+     */
+    saveScannerPreferences(newPrefs) {
+        this.preferences.scanner = { ...this.preferences.scanner, ...newPrefs };
+        this._persistPreferences();
+    },
 
 
     // Per-Watchlist Sort Persistence
