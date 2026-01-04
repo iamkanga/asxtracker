@@ -77,7 +77,7 @@ export class HeaderLayout {
 
             <div class="${CSS_CLASSES.HEADER_CONTROLS_ROW}">
                  <div class="${CSS_CLASSES.CONTROLS_LEFT}">
-                    <div id="${IDS.ASX_TOGGLE}" class="${CSS_CLASSES.ASX_TOGGLE_TEXT}" role="button" aria-pressed="false">ASX Codes</div>
+                    <div id="${IDS.ASX_TOGGLE}" class="${CSS_CLASSES.ASX_TOGGLE_TEXT}" role="button" aria-pressed="false">ASX Codes&nbsp;<i class="fas ${UI_ICONS.CARET_DOWN} ${CSS_CLASSES.TEXT_COFFEE}"></i></div>
                     <div id="${IDS.DASHBOARD_REORDER_TOGGLE}" class="${CSS_CLASSES.DASHBOARD_TIME_REF} hidden" role="button"></div>
                  </div>
                  <div class="${CSS_CLASSES.CONTROLS_RIGHT}">
@@ -87,7 +87,7 @@ export class HeaderLayout {
                  </div>
                  <div style="grid-column: 3; justify-self: end; display: flex; align-items: flex-end;">
                     <button id="${IDS.LIVE_REFRESH_BTN}" class="live-refresh-btn" aria-label="Refresh Prices" title="Refresh Live Prices">
-                        <span id="${IDS.LIVE_REFRESH_TIME}">--:--:--</span>
+                        <i class="fas ${UI_ICONS.SYNC} ${CSS_CLASSES.MR_2PX}"></i><span id="${IDS.LIVE_REFRESH_TIME}">--:--:--</span>
                     </button>
                  </div>
             </div>

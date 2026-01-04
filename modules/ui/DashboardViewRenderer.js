@@ -4,8 +4,9 @@
  * Displays market indices and commodities in a high-density stacked card view.
  */
 import { formatCurrency, formatPercent } from '../utils/formatters.js';
-import { IDS, CSS_CLASSES, DASHBOARD_SYMBOLS, STORAGE_KEYS, DASHBOARD_LINKS } from '../utils/AppConstants.js?v=5';
+import { IDS, CSS_CLASSES, DASHBOARD_SYMBOLS, STORAGE_KEYS, DASHBOARD_LINKS, UI_ICONS } from '../utils/AppConstants.js?v=5';
 import { AppState } from '../state/AppState.js';
+import { DashboardFilterModal } from './DashboardFilterModal.js';
 
 export class DashboardViewRenderer {
     constructor() {
@@ -45,7 +46,7 @@ export class DashboardViewRenderer {
                 timeZone: 'Australia/Sydney',
                 hour: '2-digit', minute: '2-digit', weekday: 'short'
             }).format(now);
-            headerTime.innerHTML = `Sydney: ${sydneyTime} ${this.reorderMode ? `<span class="${CSS_CLASSES.ML_SMALL} ${CSS_CLASSES.FONT_NORMAL} ${CSS_CLASSES.OPACITY_60}">(Adjusting...)</span>` : ''}`;
+            headerTime.innerHTML = `Sydney: ${sydneyTime}&nbsp;<i class="fas ${UI_ICONS.CARET_DOWN}"></i> ${this.reorderMode ? `<span class="${CSS_CLASSES.ML_SMALL} ${CSS_CLASSES.FONT_NORMAL} ${CSS_CLASSES.OPACITY_60}">(Adjusting...)</span>` : ''}`;
         }
 
         const viewMode = (AppState.viewMode || 'TABLE').toUpperCase();
@@ -65,7 +66,28 @@ export class DashboardViewRenderer {
         if (html.includes('dashboard-row')) {
             this.container.innerHTML = html;
             this._bindEvents();
+            this._initClocks(); // Initialize analog clocks
         }
+    }
+
+    /**
+     * initializes analog clocks for all rows.
+     */
+    _initClocks() {
+        // Cleanup old clocks
+        if (this.rowClocks) {
+            this.rowClocks.forEach(c => c.destroy());
+        }
+        this.rowClocks = [];
+
+        import('./AnalogClock.js').then(({ AnalogClock }) => {
+            this.container.querySelectorAll('.analog-clock-hook').forEach(el => {
+                const isOpen = el.dataset.open === 'true';
+                const clock = new AnalogClock(el, isOpen);
+                clock.init();
+                this.rowClocks.push(clock);
+            });
+        });
     }
 
     /**
@@ -73,13 +95,18 @@ export class DashboardViewRenderer {
      * @private
      */
     _bindEvents() {
-        // Reorder Toggle
+        // Reorder Toggle (Now opens Filter Modal)
         const toggle = document.getElementById(IDS.DASHBOARD_REORDER_TOGGLE);
         if (toggle) {
             toggle.onclick = () => {
-                this.reorderMode = !this.reorderMode;
-                this.render(AppState.data.dashboard);
+                DashboardFilterModal.show();
             };
+        }
+
+        // Listen for external updates (from Modal closing)
+        if (!this._boundRefresh) {
+            this._boundRefresh = () => this.render(AppState.data.dashboard);
+            window.addEventListener('dashboard-prefs-changed', this._boundRefresh);
         }
 
         // Reorder buttons
@@ -195,7 +222,9 @@ export class DashboardViewRenderer {
         if (viewMode === 'COMPACT' || viewMode === 'SNAPSHOT') {
             return `
                 <div class="${CSS_CLASSES.DASHBOARD_ROW} ${sentimentClass} ${clickableClass} ${this.reorderMode ? CSS_CLASSES.REORDER_ACTIVE : ''}" ${dataUrlAttr}>
-                    <i class="far fa-clock ${CSS_CLASSES.MARKET_STATUS_ICON} ${statusClass}" title="${isOpen ? 'Market Open' : 'Market Closed'}"></i>
+                <div class="${CSS_CLASSES.DASHBOARD_ROW} ${sentimentClass} ${clickableClass} ${this.reorderMode ? CSS_CLASSES.REORDER_ACTIVE : ''}" ${dataUrlAttr}>
+                    <!-- ANALOG CLOCK CONTAINER -->
+                    <div class="analog-clock-hook" data-open="${isOpen}" style="width:16px; height:16px; margin-right:8px;"></div>
                     ${this.reorderMode ? `
                         <div class="${CSS_CLASSES.DASHBOARD_REORDER_CONTROLS}">
                             ${index > 0 ? `<button class="${CSS_CLASSES.REORDER_BTN}" data-code="${code}" data-dir="up"><i class="fas fa-chevron-up"></i></button>` : '<div style="height:24px"></div>'}
@@ -231,7 +260,7 @@ export class DashboardViewRenderer {
                             ${name}
                         </div>
                         <div class="${CSS_CLASSES.DASHBOARD_ITEM_SUB}">
-                            <i class="far fa-clock ${CSS_CLASSES.MARKET_STATUS_ICON} ${statusClass}" title="${isOpen ? 'Market Open' : 'Market Closed'}"></i>
+                            <div class="analog-clock-hook" data-open="${isOpen}" style="width:16px; height:16px; display:inline-block; vertical-align:middle; margin-right:4px;"></div>
                             ${code}
                         </div>
                     </div>
@@ -316,29 +345,53 @@ export class DashboardViewRenderer {
      * @private
      */
     _getProcessedData(firestoreArray = []) {
-        // HYGIENE: Use local copy to avoid mutating the master list in AppConstants
-        let activeSymbols = [...DASHBOARD_SYMBOLS];
+        // DYNAMIC SOURCE:
+        // We now accept anything from the backend, merged with our static known symbols.
+        const backendCodes = (firestoreArray || []).map(item => item.ASXCode || item.code).filter(Boolean);
+        const uniqueSet = new Set([...DASHBOARD_SYMBOLS, ...backendCodes]);
+        let activeSymbols = Array.from(uniqueSet);
 
         const savedOrder = AppState.preferences.dashboardOrder;
-        if (savedOrder && Array.isArray(savedOrder) && savedOrder.length === activeSymbols.length) {
-            activeSymbols = [...savedOrder];
+        if (savedOrder && Array.isArray(savedOrder) && savedOrder.length > 0) {
+            // Merge strategy: Saved Order + Any New Items not in Saved Order
+            const orderedSet = new Set(savedOrder);
+            const newItems = activeSymbols.filter(x => !orderedSet.has(x));
+            // Keep saved order items only if they exist in our current universe
+            const validSaved = savedOrder.filter(x => uniqueSet.has(x));
+            activeSymbols = [...validSaved, ...newItems];
         }
+
+        // Apply Hiding
+        const hiddenSet = new Set(AppState.preferences.dashboardHidden || []);
+        activeSymbols = activeSymbols.filter(code => !hiddenSet.has(code));
 
         const processed = [];
         const nameMap = {
-            'XJO': 'ASX 200',
+            'XJO': 'ASX 200 (Legacy)',
             'XKO': 'ASX 300',
             'XAO': 'All Ords',
-            'INX': 'S&P 500',
-            '.DJI': 'Dow Jones',
-            '.IXIC': 'Nasdaq',
+            'INX': 'S&P 500 (Legacy)',
+            '.DJI': 'Dow Jones (Legacy)',
+            '.IXIC': 'Nasdaq (Legacy)',
             'AUDUSD': 'AUD/USD',
             'AUDTHB': 'AUD/THB',
             'USDTHB': 'USD/THB',
             'BTCUSD': 'Bitcoin',
-            'GCW00': 'Gold',
-            'SIW00': 'Silver',
-            'BZW00': 'Brent Oil'
+            'GCW00': 'Gold (Legacy)',
+            'SIW00': 'Silver (Legacy)',
+            'BZW00': 'Brent Oil (Legacy)',
+            // New Yahoo Codes
+            '^GSPC': 'S&P 500', '^DJI': 'Dow Jones', '^IXIC': 'Nasdaq',
+            '^FTSE': 'FTSE 100', '^N225': 'Nikkei 225', '^HSI': 'Hang Seng',
+            '^STOXX50E': 'Euro Stoxx 50', '^AXJO': 'S&P/ASX 200',
+            'GC=F': 'Gold Futures', 'SI=F': 'Silver Futures', 'CL=F': 'Crude Oil',
+            'BZ=F': 'Brent Oil', 'HG=F': 'Copper',
+            'BTC-USD': 'Bitcoin (USD)', 'BTC-AUD': 'Bitcoin (AUD)',
+            'AUDUSD=X': 'AUD/USD', 'AUDGBP=X': 'AUD/GBP',
+            'AUDEUR=X': 'AUD/EUR', 'AUDJPY=X': 'AUD/JPY',
+            // Futures
+            'YAP=F': 'ASX SPI 200', 'TIO=F': 'Iron Ore (62%)', '^VIX': 'Volatility Index',
+            'XAUUSD=X': 'Gold Spot (USD)', 'XAGUSD=X': 'Silver Spot (USD)'
         };
 
         activeSymbols.forEach(code => {

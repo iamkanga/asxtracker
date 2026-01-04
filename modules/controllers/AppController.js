@@ -27,6 +27,7 @@ import { SecurityController } from './SecurityController.js';
 import { SecurityUI } from '../ui/SecurityUI.js';
 import { GeneralSettingsUI } from '../ui/GeneralSettingsUI.js';
 import CalculatorUI from '../ui/CalculatorUI.js';
+import { AnalogClock } from '../ui/AnalogClock.js';
 import {
     ALL_SHARES_ID,
     CASH_WATCHLIST_ID,

@@ -383,19 +383,19 @@ export class WatchlistUI {
             titleEl.classList.remove(CSS_CLASSES.MODAL_REORDER_TITLE);
             switch (this.watchlistMode) {
                 case WATCHLIST_MODES.REARRANGE:
-                    titleEl.textContent = 'Reorder Watchlists';
+                    titleEl.innerHTML = `Reorder Watchlists <i class="fas ${UI_ICONS.CARET_DOWN} ${CSS_CLASSES.TEXT_COFFEE}"></i>`;
                     titleEl.classList.add(CSS_CLASSES.MODAL_REORDER_TITLE);
                     break;
                 case WATCHLIST_MODES.HIDE:
-                    titleEl.textContent = 'Hide Watchlists';
+                    titleEl.innerHTML = `Hide Watchlists <i class="fas ${UI_ICONS.CARET_DOWN} ${CSS_CLASSES.TEXT_COFFEE}"></i>`;
                     titleEl.classList.add(CSS_CLASSES.MODAL_REORDER_TITLE);
                     break;
                 case WATCHLIST_MODES.CAROUSEL:
-                    titleEl.textContent = 'Carousel Selection';
+                    titleEl.innerHTML = `Carousel Selection <i class="fas ${UI_ICONS.CARET_DOWN} ${CSS_CLASSES.TEXT_COFFEE}"></i>`;
                     titleEl.classList.add(CSS_CLASSES.MODAL_REORDER_TITLE);
                     break;
                 default:
-                    titleEl.textContent = 'Select Watchlist';
+                    titleEl.innerHTML = `Select Watchlist <i class="fas ${UI_ICONS.CARET_DOWN} ${CSS_CLASSES.TEXT_COFFEE}"></i>`;
                     break;
             }
         }

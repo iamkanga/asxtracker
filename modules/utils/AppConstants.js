@@ -10,7 +10,16 @@ export const DASHBOARD_WATCHLIST_ID = 'DASHBOARD';
 export const DASHBOARD_SYMBOLS = [
     'XJO', 'XKO', 'XAO', 'INX', '.DJI', '.IXIC',
     'AUDUSD', 'AUDTHB', 'USDTHB', 'BTCUSD',
-    'GCW00', 'SIW00', 'BZW00'
+    'GCW00', 'SIW00', 'BZW00',
+    // New Manual Additions
+    '^GSPC', '^DJI', '^IXIC', '^FTSE', '^N225', '^HSI', '^STOXX50E', '^AXJO',
+    'GC=F', 'SI=F', 'CL=F', 'BZ=F', 'HG=F',
+    'BTC-USD', 'BTC-AUD',
+    'AUDUSD=X', 'AUDGBP=X', 'AUDEUR=X', 'AUDJPY=X',
+    // Futures & VIX
+    'YAP=F', 'TIO=F', '^VIX',
+    // Spot Commodities
+    'XAUUSD=X', 'XAGUSD=X'
 ];
 export const DASHBOARD_LINKS = {
     // Indices
@@ -60,7 +69,8 @@ export const STORAGE_KEYS = {
     GLOBAL_SORT: 'ASX_NEXT_globalSort',
     NOTIFICATIONS_VIEWED: 'ASX_NEXT_notificationsViewed',
     USER_CATEGORIES: 'ASX_NEXT_userCategories',
-    SNAPSHOT_SORT: 'ASX_NEXT_snapshotSort'
+    SNAPSHOT_SORT: 'ASX_NEXT_snapshotSort',
+    DASHBOARD_HIDDEN: 'ASX_NEXT_dashboardHidden'
 };
 
 export const EVENTS = {

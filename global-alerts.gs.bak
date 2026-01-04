@@ -2054,66 +2054,75 @@ function fetchBulkYahooPrices_(tickers) {
 }
 
 /**
- * Sweeps the 'Prices' sheet for $0.00 or #N/A values and attempts to 
+ * Sweeps the 'Prices' and 'Dashboard' sheets for $0.00 or #N/A values and attempts to 
  * "repair" them by fetching the latest price from Yahoo Finance.
- * Results are saved to the 'API_Price' and 'API_PrevClose' columns.
+ * Results are saved to the 'API_Price' and related columns.
  */
 function repairBrokenPrices() {
-  const SHEET_NAME = 'Prices';
+  repairPricesForSheet_('Prices');
+  repairPricesForSheet_('Dashboard');
+}
+
+/**
+ * Generic repair function for any sheet with ASX codes and API columns.
+ * Sweeps for $0.00/empty/#N/A values and fetches from Yahoo.
+ */
+function repairPricesForSheet_(sheetName) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(SHEET_NAME);
-  if (!sheet) { Logger.log('Error: Sheet "Prices" not found'); return; }
+  const sheet = ss.getSheetByName(sheetName);
+  if (!sheet) { Logger.log('Warning: Sheet "' + sheetName + '" not found. Skipping repair.'); return; }
   
   const data = sheet.getDataRange().getValues();
+  if (data.length < 2) return;
+  
   const rawHeaders = data[0];
   const headers = rawHeaders.map(h => String(h).replace(/[^A-Z0-9]/gi, '').toUpperCase());
   
-  const codeIdx = headers.indexOf('ASXCODE');
-  const priceIdx = headers.findIndex(h => ['LIVEPRICE', 'LAST', 'LASTPRICE', 'LASTTRADE'].includes(h));
-  
-  // LOGIC HARDENING: Fuzzy match for column headers (Case-insensitive)
+  // Dynamic Column Detection (Fuzzy matching)
   const findIdx = (pattern) => headers.findIndex(h => pattern.test(String(h)));
-
+  
+  const codeIdx = headers.indexOf('ASXCODE') !== -1 ? headers.indexOf('ASXCODE') : findIdx(/CODE/i);
+  // Support standard "LivePrice" or "Last" etc.
+  const priceIdx = headers.findIndex(h => ['LIVEPRICE', 'LAST', 'LASTPRICE', 'LASTTRADE', 'PRICE'].includes(h));
+  
   const apiPriceIdx = findIdx(/api.*price/i) || findIdx(/price.*api/i) || findIdx(/pi.*price/i);
   const apiPrevIdx = findIdx(/api.*prev/i) || findIdx(/prev.*api/i) || findIdx(/pi.*prev/i);
   const apiHighIdx = findIdx(/api.*high/i) || findIdx(/high.*api/i) || findIdx(/api.*hi/i);
   const apiLowIdx = findIdx(/api.*low/i) || findIdx(/low.*api/i) || findIdx(/api.*lo/i);
   
   if (codeIdx === -1 || priceIdx === -1) {
-    Logger.log('Error: Mandatory columns missing. Found: ' + JSON.stringify(rawHeaders));
+    Logger.log('[' + sheetName + '] Missing mandatory columns (Code/Price). Found: ' + JSON.stringify(rawHeaders));
     return;
   }
   
   if (apiPriceIdx === -1) {
-    Logger.log('Error: "API_Price" column not found.');
+    Logger.log('[' + sheetName + '] "API_Price" column not found. Skipping.');
     return;
   }
 
-  // Allow API_PrevClose to be optional (but warn)
-  if (apiPrevIdx === -1) {
-    Logger.log('Warning: "API_PrevClose" column not found. Day Change will not work for repaired stocks.');
-  }
-
-  if (apiHighIdx === -1 || apiLowIdx === -1) {
-    Logger.log('Warning: "API_High52" or "API_Low52" columns not found. 52-Week repair will be skipped.');
-  }
-  
   const problems = [];
   // Skip header, start at row 2
   for (let i = 1; i < data.length; i++) {
     const code = data[i][codeIdx];
     const price = data[i][priceIdx];
-    if (code && (price === 0 || price === '' || isNaN(price) || typeof price === 'string')) {
+    
+    // Strictness: Catch 0, empty string, NaN, or string errors (like #N/A)
+    const isBroken = (price === 0 || price === '' || price == null || (typeof price === 'number' && isNaN(price)) || (typeof price === 'string' && price.trim() === ''));
+    
+    // Check if it's an error string (e.g. "#N/A")
+    const isError = (typeof price === 'string' && (price.includes('#N/A') || price.includes('ERROR')));
+
+    if (code && (isBroken || isError)) {
       problems.push({ row: i + 1, code: code.toString().trim().toUpperCase() + ".AX" });
     }
   }
   
   if (problems.length === 0) {
-    Logger.log('Success: No broken prices found in sheet.');
+    Logger.log('[' + sheetName + '] No broken prices found.');
     return;
   }
   
-  Logger.log('Mending ' + problems.length + ' broken prices...');
+  Logger.log('[' + sheetName + '] Mending ' + problems.length + ' broken prices...');
   
   // Process in batches of 50
   for (let i = 0; i < problems.length; i += 50) {
@@ -2144,11 +2153,11 @@ function repairBrokenPrices() {
             sheet.getRange(p.row, apiLowIdx + 1).setValue(data.low52);
           }
         } else {
-          // If not on Yahoo, clear content
-          sheet.getRange(p.row, apiPriceIdx + 1).clearContent();
-          if (apiPrevIdx !== -1) sheet.getRange(p.row, apiPrevIdx + 1).clearContent();
-          if (apiHighIdx !== -1) sheet.getRange(p.row, apiHighIdx + 1).clearContent();
-          if (apiLowIdx !== -1) sheet.getRange(p.row, apiLowIdx + 1).clearContent();
+          // If not on Yahoo, clean up to avoid stale data
+           sheet.getRange(p.row, apiPriceIdx + 1).clearContent();
+           if (apiPrevIdx !== -1) sheet.getRange(p.row, apiPrevIdx + 1).clearContent();
+           if (apiHighIdx !== -1) sheet.getRange(p.row, apiHighIdx + 1).clearContent();
+           if (apiLowIdx !== -1) sheet.getRange(p.row, apiLowIdx + 1).clearContent();
         }
       });
       
@@ -2158,7 +2167,7 @@ function repairBrokenPrices() {
     Utilities.sleep(500); // Politeness
   }
   
-  Logger.log('Mending complete.');
+  Logger.log('[' + sheetName + '] Mending complete.');
 }
 
 // ===============================================================

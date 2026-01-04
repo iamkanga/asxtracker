@@ -7,7 +7,9 @@ export class WatchlistPickerModal {
             <div class="${CSS_CLASSES.MODAL_OVERLAY}"></div>
             <div class="${CSS_CLASSES.MODAL_CONTENT}">
                 <div class="${CSS_CLASSES.MODAL_HEADER}">
-                    <h2 id="${IDS.WATCHLIST_MODAL_TITLE}" class="${CSS_CLASSES.MODAL_TITLE} ${CSS_CLASSES.MODAL_REORDER_TITLE} ${CSS_CLASSES.CLICKABLE}">Select Watchlist</h2>
+                    <h2 id="${IDS.WATCHLIST_MODAL_TITLE}" class="${CSS_CLASSES.MODAL_TITLE} ${CSS_CLASSES.MODAL_REORDER_TITLE} ${CSS_CLASSES.CLICKABLE}">
+                        Select Watchlist <i class="fas ${UI_ICONS.CARET_DOWN} ${CSS_CLASSES.TEXT_COFFEE}"></i>
+                    </h2>
                     <button class="${CSS_CLASSES.MODAL_CLOSE_BTN}" data-dismiss="modal">
                         <i class="fas ${UI_ICONS.CLOSE}"></i>
                     </button>

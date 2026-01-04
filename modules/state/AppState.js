@@ -55,6 +55,14 @@ export const AppState = {
                 return null;
             }
         })(),
+        dashboardHidden: (() => {
+            try {
+                const stored = localStorage.getItem(STORAGE_KEYS.DASHBOARD_HIDDEN);
+                return stored ? JSON.parse(stored) : [];
+            } catch (e) {
+                return [];
+            }
+        })(),
         watchlistOrder: (() => {
             try {
                 const stored = localStorage.getItem(STORAGE_KEYS.WATCHLIST_ORDER);
@@ -214,6 +222,7 @@ export const AppState = {
                 hiddenAssets: [...this.hiddenAssets],
                 security: this.preferences.security,
                 dashboardOrder: this.preferences.dashboardOrder || [],
+                dashboardHidden: this.preferences.dashboardHidden || [],
                 watchlistOrder: this.preferences.watchlistOrder || [],
                 watchlistOrder: this.preferences.watchlistOrder || [],
                 sortOptionOrder: this.preferences.sortOptionOrder || {},

@@ -1221,7 +1221,9 @@ export class ViewRenderer {
             <div class="${CSS_CLASSES.MODAL_OVERLAY}"></div>
             <div class="${CSS_CLASSES.MODAL_CONTENT}">
                 <div class="${CSS_CLASSES.MODAL_HEADER}">
-                    <h2 id="${IDS.SORT_MODAL_TITLE}" class="${CSS_CLASSES.MODAL_TITLE} ${CSS_CLASSES.CLICKABLE}">Select Sort Order</h2>
+                    <h2 id="${IDS.SORT_MODAL_TITLE}" class="${CSS_CLASSES.MODAL_TITLE} ${CSS_CLASSES.CLICKABLE}">
+                        Select Sort Order <i class="fas fa-caret-down ${CSS_CLASSES.TEXT_COFFEE}"></i>
+                    </h2>
                     <button class="${CSS_CLASSES.MODAL_CLOSE_BTN}" data-dismiss="modal">
                         <i class="fas ${UI_ICONS.CLOSE}"></i>
                     </button>
@@ -1329,7 +1331,7 @@ export class ViewRenderer {
             });
 
             // Mode Toggle via Title
-            if (e.target.id === IDS.SORT_MODAL_TITLE) {
+            if (e.target.closest(`#${IDS.SORT_MODAL_TITLE}`)) {
                 // TERMINATION RULE: Switching to Reorder Mode cancels Global Sort
                 if (context.onGlobalCancel) {
                     // console.log('[ViewRenderer] Title Click -> Triggering Global Cancel');
@@ -1484,17 +1486,17 @@ export class ViewRenderer {
 
         // RESET Classes first
         title.classList.remove(CSS_CLASSES.MODAL_REORDER_TITLE, CSS_CLASSES.TEXT_COFFEE);
-        title.innerHTML = 'Select Sort Order'; // Default
+        title.innerHTML = `Select Sort Order <i class="fas ${UI_ICONS.CARET_DOWN} ${CSS_CLASSES.TEXT_COFFEE}"></i>`; // Default
 
         if (this.sortPickerMode !== 'default') {
             title.classList.add(CSS_CLASSES.MODAL_REORDER_TITLE);
-            title.textContent = this.sortPickerMode === 'reorder' ? 'Reorder Sort Options' : 'Hide Sort Options';
+            title.innerHTML = (this.sortPickerMode === 'reorder' ? 'Reorder Sort Options' : 'Hide Sort Options') + ` <i class="fas ${UI_ICONS.CARET_DOWN} ${CSS_CLASSES.TEXT_COFFEE}"></i>`;
         } else {
             // Check Global Sort
             if (AppState.preferences.globalSort) {
                 title.classList.add(CSS_CLASSES.TEXT_COFFEE);
                 // Add Globe Icon
-                title.innerHTML = `<i class="fas ${UI_ICONS.GLOBE}"></i> Global Sort Active`;
+                title.innerHTML = `<i class="fas ${UI_ICONS.GLOBE}"></i> Global Sort Active <i class="fas ${UI_ICONS.CARET_DOWN} ${CSS_CLASSES.TEXT_COFFEE}"></i>`;
             }
         }
 
