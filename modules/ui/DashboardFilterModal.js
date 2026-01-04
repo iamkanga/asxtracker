@@ -241,7 +241,7 @@ export class DashboardFilterModal {
                 'BZ=F': 'Brent Oil', 'HG=F': 'Copper',
                 'BTC-USD': 'Bitcoin (USD)', 'BTC-AUD': 'Bitcoin (AUD)',
                 'AUDUSD=X': 'AUD/USD', 'AUDGBP=X': 'AUD/GBP',
-                'AUDEUR=X': 'AUD/EUR', 'AUDJPY=X': 'AUD/JPY',
+                'AUDEUR=X': 'AUD/EUR', 'AUDJPY=X': 'AUD/JPY', 'AUDTHB=X': 'AUD/THB',
                 // Futures
                 'YAP=F': 'ASX SPI 200', 'TIO=F': 'Iron Ore (62%)', '^VIX': 'Volatility Index',
                 'XAUUSD=X': 'Gold Spot (USD)', 'XAGUSD=X': 'Silver Spot (USD)'
@@ -250,6 +250,7 @@ export class DashboardFilterModal {
 
             const row = document.createElement('div');
             row.className = 'dashboard-filter-row';
+            row.draggable = true; // ENABLE DRAG
             row.dataset.code = code;
 
             row.innerHTML = `
@@ -263,9 +264,9 @@ export class DashboardFilterModal {
                     <span class="df-sub-text">${code}</span>
                 </div>
 
-                <div class="df-reorder-group">
-                    <button class="df-reorder-btn" data-dir="up" title="Move Up"><i class="fas fa-chevron-up"></i></button>
-                    <button class="df-reorder-btn" data-dir="down" title="Move Down"><i class="fas fa-chevron-down"></i></button>
+                <!-- DRAG HANDLE -->
+                <div class="df-reorder-handle" title="Drag to reorder" style="cursor: grab; padding: 10px; color: var(--text-muted); opacity: 0.7;">
+                    <i class="fas fa-grip-lines"></i>
                 </div>
             `;
             listContainer.appendChild(row);
@@ -355,24 +356,57 @@ export class DashboardFilterModal {
             updateState();
         };
 
-        // Reorder
-        modal.addEventListener('click', (e) => {
-            const btn = e.target.closest('.df-reorder-btn');
-            if (!btn) return;
-            const row = btn.closest('.dashboard-filter-row');
-            const list = modal.querySelector('#dashboard-filter-list');
+        // --- DRAG AND DROP LOGIC (Finger Sort) ---
+        const listContainer = modal.querySelector('#dashboard-filter-list');
+        let draggedItem = null;
 
-            if (btn.dataset.dir === 'up') {
-                if (row.previousElementSibling) {
-                    list.insertBefore(row, row.previousElementSibling);
-                    updateState();
-                }
-            } else {
-                if (row.nextElementSibling) {
-                    list.insertBefore(row.nextElementSibling, row);
-                    updateState();
+        listContainer.addEventListener('dragstart', (e) => {
+            const row = e.target.closest('.dashboard-filter-row');
+            if (row) {
+                draggedItem = row;
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', row.dataset.code);
+                row.style.opacity = '0.5';
+                row.classList.add('dragging');
+            }
+        });
+
+        listContainer.addEventListener('dragend', (e) => {
+            const row = e.target.closest('.dashboard-filter-row');
+            if (row) {
+                row.style.opacity = '1';
+                row.classList.remove('dragging');
+                draggedItem = null;
+                updateState(); // Save the new order!
+            }
+        });
+
+        listContainer.addEventListener('dragover', (e) => {
+            e.preventDefault(); // Necessary to allow dropping
+            const afterElement = getDragAfterElement(listContainer, e.clientY);
+            const draggable = document.querySelector('.dragging');
+            if (draggable) {
+                if (afterElement == null) {
+                    listContainer.appendChild(draggable);
+                } else {
+                    listContainer.insertBefore(draggable, afterElement);
                 }
             }
         });
+
+        // Helper to find the element we are hovering over
+        function getDragAfterElement(container, y) {
+            const draggableElements = [...container.querySelectorAll('.dashboard-filter-row:not(.dragging)')];
+
+            return draggableElements.reduce((closest, child) => {
+                const box = child.getBoundingClientRect();
+                const offset = y - box.top - box.height / 2;
+                if (offset < 0 && offset > closest.offset) {
+                    return { offset: offset, element: child };
+                } else {
+                    return closest;
+                }
+            }, { offset: Number.NEGATIVE_INFINITY }).element;
+        }
     }
 }

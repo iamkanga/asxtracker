@@ -15,7 +15,7 @@ export const DASHBOARD_SYMBOLS = [
     '^GSPC', '^DJI', '^IXIC', '^FTSE', '^N225', '^HSI', '^STOXX50E', '^AXJO',
     'GC=F', 'SI=F', 'CL=F', 'BZ=F', 'HG=F',
     'BTC-USD', 'BTC-AUD',
-    'AUDUSD=X', 'AUDGBP=X', 'AUDEUR=X', 'AUDJPY=X',
+    'AUDUSD=X', 'AUDGBP=X', 'AUDEUR=X', 'AUDJPY=X', 'AUDTHB=X',
     // Futures & VIX
     'YAP=F', 'TIO=F', '^VIX',
     // Spot Commodities

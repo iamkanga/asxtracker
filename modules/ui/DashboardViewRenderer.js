@@ -137,19 +137,24 @@ export class DashboardViewRenderer {
      * @private
      */
     _handleReorder(code, direction) {
-        const index = DASHBOARD_SYMBOLS.indexOf(code);
+        // Fix: Use the actual rendered list, not the static/incomplete DASHBOARD_SYMBOLS
+        // This ensures dynamic items (like AUDTHB=X) and hidden items are handled safely.
+        const currentData = this._getProcessedData(AppState.data.dashboard);
+        const currentOrder = currentData.map(item => item.code);
+
+        const index = currentOrder.indexOf(code);
         if (index === -1) return;
 
         const newIndex = direction === 'up' ? index - 1 : index + 1;
-        if (newIndex < 0 || newIndex >= DASHBOARD_SYMBOLS.length) return;
+        if (newIndex < 0 || newIndex >= currentOrder.length) return;
 
-        // Swap in DASHBOARD_SYMBOLS
-        const temp = DASHBOARD_SYMBOLS[index];
-        DASHBOARD_SYMBOLS[index] = DASHBOARD_SYMBOLS[newIndex];
-        DASHBOARD_SYMBOLS[newIndex] = temp;
+        // Swap
+        const temp = currentOrder[index];
+        currentOrder[index] = currentOrder[newIndex];
+        currentOrder[newIndex] = temp;
 
         // Persist order to preferences
-        AppState.preferences.dashboardOrder = [...DASHBOARD_SYMBOLS];
+        AppState.preferences.dashboardOrder = currentOrder;
         localStorage.setItem(STORAGE_KEYS.DASHBOARD_ORDER, JSON.stringify(AppState.preferences.dashboardOrder));
         AppState.triggerSync();
 
@@ -311,7 +316,7 @@ export class DashboardViewRenderer {
         }
 
         // 2. FOREX (24/5 - Opens Mon Morning Syd, Closes Sat Morning Syd)
-        if (['AUDUSD', 'AUDTHB', 'USDTHB', 'AUDUSD=X', 'AUDGBP=X', 'AUDEUR=X', 'AUDJPY=X', 'XAUUSD=X', 'XAGUSD=X'].includes(code)) {
+        if (['AUDUSD', 'AUDTHB', 'USDTHB', 'AUDUSD=X', 'AUDGBP=X', 'AUDEUR=X', 'AUDJPY=X', 'AUDTHB=X', 'XAUUSD=X', 'XAGUSD=X'].includes(code)) {
             // Closed from Saturday ~07:00am until Monday ~05:00am (Sydney Time)
             if (day === 'Sun') return false;
             if (day === 'Sat' && totalMin > (7 * 60)) return false; // Close Sat Morning
@@ -421,7 +426,7 @@ export class DashboardViewRenderer {
             'BZ=F': 'Brent Oil', 'HG=F': 'Copper',
             'BTC-USD': 'Bitcoin (USD)', 'BTC-AUD': 'Bitcoin (AUD)',
             'AUDUSD=X': 'AUD/USD', 'AUDGBP=X': 'AUD/GBP',
-            'AUDEUR=X': 'AUD/EUR', 'AUDJPY=X': 'AUD/JPY',
+            'AUDEUR=X': 'AUD/EUR', 'AUDJPY=X': 'AUD/JPY', 'AUDTHB=X': 'AUD/THB',
             // Futures
             'YAP=F': 'ASX SPI 200', 'TIO=F': 'Iron Ore (62%)', '^VIX': 'Volatility Index',
             'XAUUSD=X': 'Gold Spot (USD)', 'XAGUSD=X': 'Silver Spot (USD)'
@@ -435,7 +440,7 @@ export class DashboardViewRenderer {
             );
 
             let priceData = AppState.livePrices.get(upCode);
-            if (!priceData && !upCode.includes('.') && !['AUDUSD', 'AUDTHB', 'USDTHB', 'BTCUSD', 'GCW00', 'SIW00', 'BZW00'].includes(upCode)) {
+            if (!priceData && !upCode.includes('.') && !['AUDUSD', 'AUDTHB', 'USDTHB', 'BTCUSD', 'GCW00', 'SIW00', 'BZW00', 'AUDTHB=X'].includes(upCode)) {
                 priceData = AppState.livePrices.get(upCode + '.AX');
             }
 

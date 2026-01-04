@@ -264,6 +264,8 @@ export class AppController {
                     carouselSelections: [...AppState.carouselSelections],
                     hiddenWatchlists: [...AppState.hiddenWatchlists],
                     watchlistOrder: AppState.preferences.watchlistOrder,
+                    dashboardOrder: AppState.preferences.dashboardOrder, // Fresh Read
+                    dashboardHidden: AppState.preferences.dashboardHidden, // Fresh Read
                     userCategories: AppState.preferences.userCategories || []
                 };
 
@@ -615,6 +617,18 @@ export class AppController {
                         AppState.sortConfigMap = prefs.sortConfigMap;
                         localStorage.setItem(STORAGE_KEYS.SORT, JSON.stringify(prefs.sortConfigMap));
                         // No render needed, but essential for next watchlist switch
+                    }
+
+                    // 7.2 Sync Dashboard Order & Hidden (Missed in previous architecture)
+                    if (prefs.dashboardOrder) {
+                        AppState.preferences.dashboardOrder = prefs.dashboardOrder;
+                        localStorage.setItem(STORAGE_KEYS.DASHBOARD_ORDER, JSON.stringify(prefs.dashboardOrder));
+                        needsRender = true;
+                    }
+                    if (prefs.dashboardHidden) {
+                        AppState.preferences.dashboardHidden = prefs.dashboardHidden;
+                        localStorage.setItem(STORAGE_KEYS.DASHBOARD_HIDDEN, JSON.stringify(prefs.dashboardHidden));
+                        needsRender = true;
                     }
 
                     // 7b. Sync Onboarded Flag
