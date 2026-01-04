@@ -811,7 +811,7 @@ export class AppController {
 
                 if (this._lastBackgroundTime && (timeDiff > STALE_THRESHOLD)) {
                     // User Feedback: Confirm data is fresh
-                    ToastManager.show('Welcome Back - Refreshing Data...', 'info');
+                    ToastManager.show('Welcome Back - Refreshing Data...', 'refresh');
 
                     // Trigger Refresh AND Reset Timer
                     this._lastBackgroundTime = 0;
