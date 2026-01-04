@@ -21,50 +21,6 @@ const APP_ID = "asx-watchlist-app";
 export const userStore = new UserStore();
 export { AuthService };
 
-// Monkey-patch missing Cash/Asset methods onto the instance
-// (Since we cannot modify UserStore.js directly)
-
-/**
- * Adds a new cash asset category.
- * @param {string} userId 
- * @param {Object} data - { name, balance, category }
- */
-userStore.addCashCategory = async (userId, data) => {
-    if (!userId || !data) throw new Error("Missing userId or data");
-    const ref = collection(db, `artifacts/${APP_ID}/users/${userId}/cashCategories`);
-    return await addDoc(ref, {
-        ...data,
-        updatedAt: new Date()
-    });
-};
-
-/**
- * Updates an existing cash asset.
- * @param {string} userId 
- * @param {string} assetId 
- * @param {Object} data - { name, balance, category }
- */
-userStore.updateCashCategory = async (userId, assetId, data) => {
-    if (!userId || !assetId || !data) throw new Error("Missing userId, assetId, or data");
-    const ref = doc(db, `artifacts/${APP_ID}/users/${userId}/cashCategories`, assetId);
-    await updateDoc(ref, {
-        ...data,
-        updatedAt: new Date()
-    });
-};
-
-/**
- * Deletes a cash asset.
- * @param {string} userId 
- * @param {string} assetId 
- */
-userStore.deleteCashCategory = async (userId, assetId) => {
-    if (!userId || !assetId) throw new Error("Missing userId or assetId");
-    const ref = doc(db, `artifacts/${APP_ID}/users/${userId}/cashCategories`, assetId);
-    await deleteDoc(ref);
-};
-
-
 export class DataService {
     /**
      * Fetches live prices for specific codes or all stocks if no codes provided.

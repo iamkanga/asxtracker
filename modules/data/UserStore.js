@@ -204,6 +204,47 @@ export class UserStore {
     }
 
     /**
+     * Adds a new cash asset category.
+     * @param {string} userId 
+     * @param {Object} data - { name, balance, category }
+     */
+    async addCashCategory(userId, data) {
+        if (!userId || !data) throw new Error("Missing userId or data");
+        const ref = collection(db, `artifacts/${APP_ID}/users/${userId}/cashCategories`);
+        const docRef = await addDoc(ref, {
+            ...data,
+            updatedAt: serverTimestamp()
+        });
+        return docRef.id;
+    }
+
+    /**
+     * Updates an existing cash asset.
+     * @param {string} userId 
+     * @param {string} assetId 
+     * @param {Object} data - { name, balance, category }
+     */
+    async updateCashCategory(userId, assetId, data) {
+        if (!userId || !assetId || !data) throw new Error("Missing userId, assetId, or data");
+        const ref = doc(db, `artifacts/${APP_ID}/users/${userId}/cashCategories`, assetId);
+        await updateDoc(ref, {
+            ...data,
+            updatedAt: serverTimestamp()
+        });
+    }
+
+    /**
+     * Deletes a cash asset.
+     * @param {string} userId 
+     * @param {string} assetId 
+     */
+    async deleteCashCategory(userId, assetId) {
+        if (!userId || !assetId) throw new Error("Missing userId or assetId");
+        const ref = doc(db, `artifacts/${APP_ID}/users/${userId}/cashCategories`, assetId);
+        await deleteDoc(ref);
+    }
+
+    /**
      * Deletes a share from the user's collection.
      * @param {string} userId
      * @param {string} shareId
@@ -258,6 +299,16 @@ export class UserStore {
     }
 
     /**
+     * Renames a watchlist. (Alias for updateWatchlist targeting 'name')
+     * @param {string} userId
+     * @param {string} watchlistId
+     * @param {string} newName
+     */
+    async renameWatchlist(userId, watchlistId, newName) {
+        return this.updateWatchlist(userId, watchlistId, { name: newName });
+    }
+
+    /**
      * Provisions a new user document if it doesn't exist.
      * @param {string} userId 
      */
@@ -278,6 +329,28 @@ export class UserStore {
             }
         } catch (e) {
             console.error("UserStore: Provisioning failed", e);
+        }
+    }
+
+    /**
+     * Removes a stock from a specific watchlist.
+     * @param {string} userId 
+     * @param {string} watchlistId 
+     * @param {string} code 
+     */
+    async removeStock(userId, watchlistId, code) {
+        if (!userId || !watchlistId || !code) return;
+        // In local architecture, we find documents in 'shares' matching code and watchlistId
+        const ref = collection(db, `artifacts/${APP_ID}/users/${userId}/shares`);
+        const q = query(ref, where("watchlistId", "==", watchlistId), where("shareName", "==", code.toUpperCase()));
+
+        try {
+            const snap = await getDocs(q);
+            snap.forEach(async (d) => {
+                await deleteDoc(d.ref);
+            });
+        } catch (e) {
+            console.error("UserStore: Error removing stock from watchlist:", e);
         }
     }
 
@@ -357,6 +430,42 @@ export class UserStore {
         const results = [];
         snap.forEach(doc => results.push({ id: doc.id, ...doc.data() }));
         return results;
+    }
+
+    /**
+     * Generic document addition with metadata.
+     */
+    async addDocument(userId, collectionName, data) {
+        if (!userId || !collectionName || !data) return null;
+        const ref = collection(db, `artifacts/${APP_ID}/users/${userId}/${collectionName}`);
+        try {
+            const dataToSave = {
+                ...data,
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp()
+            };
+            // Cleanup undefined
+            Object.keys(dataToSave).forEach(k => dataToSave[k] === undefined && delete dataToSave[k]);
+            const docRef = await addDoc(ref, dataToSave);
+            return docRef.id;
+        } catch (e) {
+            console.error(`UserStore: Error adding document to ${collectionName}:`, e);
+            return null;
+        }
+    }
+
+    async updateDocument(userId, collectionName, docId, data) {
+        if (!userId || !collectionName || !docId || !data) return;
+        const ref = doc(db, `artifacts/${APP_ID}/users/${userId}/${collectionName}`, docId);
+        try {
+            await updateDoc(ref, {
+                ...data,
+                updatedAt: serverTimestamp()
+            });
+        } catch (e) {
+            console.error(`UserStore: Error updating document in ${collectionName}:`, e);
+            throw e;
+        }
     }
 
     async deleteDocument(userId, collectionName, docId) {
