@@ -741,7 +741,7 @@ export class SettingsUI {
             const section = document.createElement('div');
             section.className = 'filter-accordion-item';
             section.style.border = '1px solid var(--border-color)';
-            section.style.borderRadius = '6px';
+            section.style.borderRadius = '0';
             section.style.overflow = 'hidden';
 
             section.innerHTML = `
