@@ -84,8 +84,8 @@ export class SettingsUI {
                         color: var(--text-muted);
                     }
                     
-                    .pill-container.large-pill { height: 32px; border-radius: 20px; }
-                    .pill-container.upsized { height: 26px; border-radius: 13px; }
+                    .pill-container.large-pill { height: 32px; border-radius: 4px; }
+                    .pill-container.upsized { height: 26px; border-radius: 4px; }
                     
                     .pill-segment.active, 
                     .bulk-btn.active, 
