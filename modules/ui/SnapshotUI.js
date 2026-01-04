@@ -49,10 +49,13 @@ export class SnapshotUI {
             <div class="${CSS_CLASSES.MODAL_OVERLAY}"></div>
             <div class="${CSS_CLASSES.MODAL_CONTENT} snapshot-content" style="max-height: 90vh; display: flex; flex-direction: column;">
                 <div class="${CSS_CLASSES.MODAL_HEADER}">
-                    <h2 class="${CSS_CLASSES.MODAL_TITLE}">
-                        <i class="fas fa-bolt" style="color: var(--color-accent); margin-right: 8px;"></i>
-                        Market Pulse
-                    </h2>
+                    <div style="display: flex; flex-direction: column; justify-content: center;">
+                        <h2 class="${CSS_CLASSES.MODAL_TITLE}" style="margin-bottom: 0;">
+                            <i class="fas fa-bolt" style="color: var(--color-accent); margin-right: 8px;"></i>
+                            Market Pulse
+                        </h2>
+                        <span style="font-size: 0.7rem; color: var(--text-muted); margin-left: 26px; font-weight: normal; margin-top: 2px;">All shares all watch lists daily change</span>
+                    </div>
                     <button class="${CSS_CLASSES.MODAL_CLOSE_BTN}" title="Close">
                         <i class="fas ${UI_ICONS.CLOSE}"></i>
                     </button>

@@ -222,9 +222,8 @@ export class DashboardViewRenderer {
         if (viewMode === 'COMPACT' || viewMode === 'SNAPSHOT') {
             return `
                 <div class="${CSS_CLASSES.DASHBOARD_ROW} ${sentimentClass} ${clickableClass} ${this.reorderMode ? CSS_CLASSES.REORDER_ACTIVE : ''}" ${dataUrlAttr}>
-                <div class="${CSS_CLASSES.DASHBOARD_ROW} ${sentimentClass} ${clickableClass} ${this.reorderMode ? CSS_CLASSES.REORDER_ACTIVE : ''}" ${dataUrlAttr}>
-                    <!-- ANALOG CLOCK CONTAINER -->
-                    <div class="analog-clock-hook" data-open="${isOpen}" style="width:16px; height:16px; margin-right:8px;"></div>
+                    <!-- ANALOG CLOCK CONTAINER (Absolute Positioned for Cards) -->
+                    <div class="analog-clock-hook" data-open="${isOpen}" style="width:16px; height:16px; position: absolute; top: 12px; right: 12px; z-index: 5;"></div>
                     ${this.reorderMode ? `
                         <div class="${CSS_CLASSES.DASHBOARD_REORDER_CONTROLS}">
                             ${index > 0 ? `<button class="${CSS_CLASSES.REORDER_BTN}" data-code="${code}" data-dir="up"><i class="fas fa-chevron-up"></i></button>` : '<div style="height:24px"></div>'}
@@ -299,35 +298,69 @@ export class DashboardViewRenderer {
         }).formatToParts(now);
 
         const getPart = (type) => sydneyParts.find(p => p.type === type).value;
-        const day = getPart('weekday');
+        const day = getPart('weekday'); // Mon, Tue, Wed, Thu, Fri, Sat, Sun
         const hour = parseInt(getPart('hour'));
         const minute = parseInt(getPart('minute'));
         const totalMin = (hour * 60) + minute;
 
-        // 1. Weekend Check (Most markets closed except Crypto)
-        if (['Sat', 'Sun'].includes(day) && code !== 'BTCUSD') return false;
+        // --- ASSET CLASSES ---
 
-        // 2. ASX Indices (Sydney Time 10:00 - 16:00)
-        if (['XJO', 'XKO', 'XAO'].includes(code)) {
-            return totalMin >= (10 * 60) && totalMin < (16 * 60);
+        // 1. CRYPTO (Always Open)
+        if (['BTCUSD', 'BTC-USD', 'BTC-AUD'].includes(code)) {
+            return true;
         }
 
-        // 3. US Indices (Approx Sydney Time 00:30 - 08:00)
-        if (['INX', '.DJI', '.IXIC'].includes(code)) {
-            // Very simplified: Open during Sydney early morning
-            return totalMin >= (1 * 60 + 30) && totalMin < (8 * 60);
+        // 2. FOREX (24/5 - Opens Mon Morning Syd, Closes Sat Morning Syd)
+        if (['AUDUSD', 'AUDTHB', 'USDTHB', 'AUDUSD=X', 'AUDGBP=X', 'AUDEUR=X', 'AUDJPY=X', 'XAUUSD=X', 'XAGUSD=X'].includes(code)) {
+            // Closed from Saturday ~07:00am until Monday ~05:00am (Sydney Time)
+            if (day === 'Sun') return false;
+            if (day === 'Sat' && totalMin > (7 * 60)) return false; // Close Sat Morning
+            if (day === 'Mon' && totalMin < (5 * 60)) return false; // Open Mon Morning (early)
+            return true;
         }
 
-        // 4. Futures (Gold, Silver, Oil) - Sydney 08:00 - 07:00 (Next Day)
-        if (['GCW00', 'SIW00', 'BZW00'].includes(code)) {
-            // Closed for 1 hour Sydney Time 07:00 - 08:00
-            return totalMin >= (8 * 60) || totalMin < (7 * 60);
+        // 3. ASX INDICES (Mon-Fri, 10:00 - 16:15 Sydney)
+        if (['XJO', 'XKO', 'XAO', '^AXJO'].includes(code)) {
+            if (['Sat', 'Sun'].includes(day)) return false;
+            return totalMin >= (10 * 60) && totalMin < (16 * 60 + 15);
         }
 
-        // 5. FX & Crypto (24/7 or 24/5)
-        if (['AUDUSD', 'AUDTHB', 'USDTHB', 'BTCUSD'].includes(code)) return true;
+        // 3. US INDICES (Tue-Sat Morning in Sydney)
+        // Converting NY 9:30-16:00 -> Approx Sydney 01:30 - 08:00 (Next Day)
+        if (['INX', '.DJI', '.IXIC', '^GSPC', '^DJI', '^IXIC', '^VIX'].includes(code)) {
+            // Trading days are effectively Tue, Wed, Thu, Fri, Sat (Morning) in Sydney
+            if (['Sun', 'Mon'].includes(day)) return false;
 
-        return true;
+            // Simplified Window: 00:30 to 08:30 Sydney time to catch Pre/Post overlap
+            // Note: On Saturday, it closes around 8am. On T-F it opens around 1am.
+            // Logic: It's "Open" if early morning.
+            return totalMin < (9 * 60) || totalMin > (23 * 60);
+        }
+
+        // 4. FUTURES (Gold, Oil, SPI)
+        // Usually Open 23h/day. Closed roughly 07:00 - 08:00 Sydney daily.
+        // Closed Weekends (Sat Morning -> Mon Morning).
+        if (['GCW00', 'SIW00', 'BZW00', 'GC=F', 'SI=F', 'CL=F', 'BZ=F', 'HG=F', 'YAP=F'].includes(code)) {
+            // Closed part of Saturday (after 9am) and most of Sunday.
+            if (day === 'Sat' && totalMin > (9 * 60)) return false; // Close Sat Morning
+            if (day === 'Sun') return false; // Closed Sunday
+
+            // Mondays: Market opens approx 08:00 AM Sydney (6pm Sunday NY)
+            if (day === 'Mon' && totalMin < (8 * 60)) return false;
+
+            // Daily Break (approx 7am-9am Sydney, depending on DST)
+            // We'll mark "Closed" if between 7am and 9am just to be safe/clear?
+            // Actually, let's just use the 1-hour break logic.
+            // Break is usually NY Close -> Sydney Open mismatch.
+            // Let's say closed 07:00 - 09:00 to be safe.
+            if (totalMin >= (7 * 60) && totalMin < (9 * 60)) return false;
+
+            return true;
+        }
+
+        // Default Fallback: Assume Mon-Fri Business Hours
+        if (['Sat', 'Sun'].includes(day)) return false;
+        return totalMin >= (9 * 60) && totalMin < (17 * 60);
     }
 
     /**

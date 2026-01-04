@@ -73,7 +73,7 @@ export const AuthService = {
         const provider = new GoogleAuthProvider();
         // V65: Hint Dark Mode for Popups
         provider.setCustomParameters({
-            prompt: 'select_account',
+            // prompt: 'select_account', // Removed to restore auto-login
             theme: 'dark' // Note: Support depends on Google's current API behavior
         });
         try {

@@ -2054,111 +2054,154 @@ function fetchBulkYahooPrices_(tickers) {
 }
 
 /**
- * Sweeps the 'Prices' sheet for $0.00 or #N/A values and attempts to 
- * "repair" them by fetching the latest price from Yahoo Finance.
- * Results are saved to the 'API_Price' and 'API_PrevClose' columns.
+ * Sweeps the 'Prices' AND 'Dashboard' sheets for broken prices (0 or #N/A)
+ * and attempts to "repair" them using Yahoo Finance data.
  */
 function repairBrokenPrices() {
-  const SHEET_NAME = 'Prices';
+  repairSheet_('Prices');
+  Utilities.sleep(1000); // Pause between sheets
+  repairSheet_('Dashboard');
+  Logger.log('Global repair cycle complete.');
+}
+
+/**
+ * Internal helper to repair a specific sheet.
+ */
+function repairSheet_(sheetName) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(SHEET_NAME);
-  if (!sheet) { Logger.log('Error: Sheet "Prices" not found'); return; }
+  const sheet = ss.getSheetByName(sheetName);
+  if (!sheet) { Logger.log('Skipping ' + sheetName + ': Sheet not found'); return; }
+  
+  Logger.log('Scanning ' + sheetName + ' for broken prices...');
   
   const data = sheet.getDataRange().getValues();
+  if (data.length < 2) return;
+
   const rawHeaders = data[0];
   const headers = rawHeaders.map(h => String(h).replace(/[^A-Z0-9]/gi, '').toUpperCase());
   
-  const codeIdx = headers.indexOf('ASXCODE');
-  const priceIdx = headers.findIndex(h => ['LIVEPRICE', 'LAST', 'LASTPRICE', 'LASTTRADE'].includes(h));
-  
-  // LOGIC HARDENING: Fuzzy match for column headers (Case-insensitive)
   const findIdx = (pattern) => headers.findIndex(h => pattern.test(String(h)));
-
+  const codeIdx = headers.indexOf('ASXCODE') !== -1 ? headers.indexOf('ASXCODE') : headers.indexOf('CODE');
+  const priceIdx = headers.findIndex(h => ['LIVEPRICE', 'LAST', 'LASTPRICE', 'LASTTRADE', 'PRICE', 'CURRENT'].includes(h));
+  
   const apiPriceIdx = findIdx(/api.*price/i) || findIdx(/price.*api/i) || findIdx(/pi.*price/i);
   const apiPrevIdx = findIdx(/api.*prev/i) || findIdx(/prev.*api/i) || findIdx(/pi.*prev/i);
   const apiHighIdx = findIdx(/api.*high/i) || findIdx(/high.*api/i) || findIdx(/api.*hi/i);
   const apiLowIdx = findIdx(/api.*low/i) || findIdx(/low.*api/i) || findIdx(/api.*lo/i);
   
   if (codeIdx === -1 || priceIdx === -1) {
-    Logger.log('Error: Mandatory columns missing. Found: ' + JSON.stringify(rawHeaders));
+    Logger.log('[' + sheetName + '] Skipped: Mandatory columns (Code/Price) missing.');
     return;
   }
   
-  if (apiPriceIdx === -1) {
-    Logger.log('Error: "API_Price" column not found.');
-    return;
-  }
+  const targetPriceIdx = apiPriceIdx !== -1 ? apiPriceIdx : priceIdx;
+  const targetPrevIdx = apiPrevIdx !== -1 ? apiPrevIdx : (apiPriceIdx === -1 ? headers.findIndex(h => ['PREVCLOSE','PREVDAYCLOSE'].includes(h)) : -1);
+  const targetHighIdx = apiHighIdx !== -1 ? apiHighIdx : (apiPriceIdx === -1 ? headers.findIndex(h => ['HIGH52','52WEEKHIGH'].includes(h)) : -1);
+  const targetLowIdx = apiLowIdx !== -1 ? apiLowIdx : (apiPriceIdx === -1 ? headers.findIndex(h => ['LOW52','52WEEKLOW'].includes(h)) : -1);
 
-  // Allow API_PrevClose to be optional (but warn)
-  if (apiPrevIdx === -1) {
-    Logger.log('Warning: "API_PrevClose" column not found. Day Change will not work for repaired stocks.');
-  }
-
-  if (apiHighIdx === -1 || apiLowIdx === -1) {
-    Logger.log('Warning: "API_High52" or "API_Low52" columns not found. 52-Week repair will be skipped.');
-  }
-  
   const problems = [];
   // Skip header, start at row 2
   for (let i = 1; i < data.length; i++) {
-    const code = data[i][codeIdx];
+    const codeRaw = data[i][codeIdx];
     const price = data[i][priceIdx];
-    if (code && (price === 0 || price === '' || isNaN(price) || typeof price === 'string')) {
-      problems.push({ row: i + 1, code: code.toString().trim().toUpperCase() + ".AX" });
+    
+    // Check if broken
+    // Exclude "INVALID", "DELISTED", "ERROR" from being considered broken
+    const isExplicitError = (typeof price === 'string' && (price.includes('INVALID') || price.includes('DELISTED') || price.includes('ERROR')));
+    const isPriceBroken = !isExplicitError && (price === 0 || price === '' || isNaN(price) || (typeof price === 'string')); 
+    
+    if (codeRaw && isPriceBroken) {
+      let needsRepair = true;
+      if (apiPriceIdx !== -1) {
+         const backup = data[i][apiPriceIdx];
+         if (backup !== '' && backup != null && backup !== 0) needsRepair = false;
+      }
+      
+      if (needsRepair) {
+        let ticker = String(codeRaw).trim().toUpperCase();
+        ticker = ticker.replace(/\u00A0/g, ' ').trim();
+        if (ticker.indexOf(':') !== -1) ticker = ticker.split(':')[1];
+        if (/^[A-Z0-9]+$/.test(ticker)) ticker += '.AX';
+        problems.push({ row: i + 1, code: ticker });
+      }
     }
   }
   
   if (problems.length === 0) {
-    Logger.log('Success: No broken prices found in sheet.');
+    Logger.log('[' + sheetName + '] OK: No broken prices found.');
     return;
   }
   
-  Logger.log('Mending ' + problems.length + ' broken prices...');
+  Logger.log('[' + sheetName + '] Mending ' + problems.length + ' items...');
   
-  // Process in batches of 50
+  // Process in batches
   for (let i = 0; i < problems.length; i += 50) {
     const batch = problems.slice(i, i + 50);
     const tickers = batch.map(p => p.code);
     
     try {
-      const results = fetchBulkYahooPrices_(tickers);
+      const results = {};
+      const requests = tickers.map(t => ({
+        url: 'https://query1.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(t),
+        muteHttpExceptions: true
+      }));
       
-      batch.forEach(p => {
-        const data = results[p.code];
-        if (data && data.price != null) {
-          // Write Price
-          sheet.getRange(p.row, apiPriceIdx + 1).setValue(data.price);
-          
-          // Write PrevClose (if column exists)
-          if (apiPrevIdx !== -1 && data.prevClose != null) {
-            sheet.getRange(p.row, apiPrevIdx + 1).setValue(data.prevClose);
-          }
+      const responses = UrlFetchApp.fetchAll(requests);
+      responses.forEach((resp, idx) => {
+        const ticker = tickers[idx];
+        const code = resp.getResponseCode();
+        
+        if (code === 200) {
+          try {
+            const json = JSON.parse(resp.getContentText());
+            const meta = json.chart.result[0].meta;
+            let safePrice = meta.regularMarketPrice;
+            const safePrev = meta.chartPreviousClose || meta.previousClose;
+            
+            if (safePrice == null && safePrev != null) safePrice = safePrev;
+            
+            let status = 'OK';
+            if (safePrice === 0 || safePrice == null) status = 'DELISTED';
 
-          // Write 52-Week High (if column exists)
-          if (apiHighIdx !== -1 && data.high52 != null) {
-            sheet.getRange(p.row, apiHighIdx + 1).setValue(data.high52);
-          }
-
-          // Write 52-Week Low (if column exists)
-          if (apiLowIdx !== -1 && data.low52 != null) {
-            sheet.getRange(p.row, apiLowIdx + 1).setValue(data.low52);
+            results[ticker] = {
+              status: status,
+              price: safePrice,
+              prevClose: safePrev,
+              high52: meta.fiftyTwoWeekHigh,
+              low52: meta.fiftyTwoWeekLow
+            };
+          } catch(e) {
+             results[ticker] = { status: 'ERROR' };
           }
         } else {
-          // If not on Yahoo, clear content
-          sheet.getRange(p.row, apiPriceIdx + 1).clearContent();
-          if (apiPrevIdx !== -1) sheet.getRange(p.row, apiPrevIdx + 1).clearContent();
-          if (apiHighIdx !== -1) sheet.getRange(p.row, apiHighIdx + 1).clearContent();
-          if (apiLowIdx !== -1) sheet.getRange(p.row, apiLowIdx + 1).clearContent();
+             results[ticker] = { status: 'INVALID' };
         }
       });
       
+      batch.forEach(p => {
+        const data = results[p.code];
+        if (data && data.status === 'OK' && data.price != null) {
+          sheet.getRange(p.row, targetPriceIdx + 1).setValue(data.price).setBackground(null); // Clear Highlight if any
+          
+          if (targetPrevIdx !== -1 && data.prevClose != null) sheet.getRange(p.row, targetPrevIdx + 1).setValue(data.prevClose);
+          if (targetHighIdx !== -1 && data.high52 != null) sheet.getRange(p.row, targetHighIdx + 1).setValue(data.high52);
+          if (targetLowIdx !== -1 && data.low52 != null) sheet.getRange(p.row, targetLowIdx + 1).setValue(data.low52);
+        } 
+        else if (data && data.status !== 'OK') {
+           sheet.getRange(p.row, targetPriceIdx + 1).setValue(data.status).setBackground(null);
+        }
+        else {
+          if (apiPriceIdx !== -1) {
+            sheet.getRange(p.row, targetPriceIdx + 1).clearContent();
+          }
+        }
+      });
+      Logger.log('[' + sheetName + '] Batch ' + (i/50 + 1) + ' processed.');
     } catch (e) {
-      Logger.log('Batch update failed: ' + e.message);
+      Logger.log('[' + sheetName + '] Batch failed: ' + e.message);
     }
-    Utilities.sleep(500); // Politeness
+    Utilities.sleep(500); 
   }
-  
-  Logger.log('Mending complete.');
 }
 
 // ===============================================================
@@ -2184,4 +2227,77 @@ function FORCE_RESET_FILTERS() {
   console.log('Please run "runGlobal52WeekScan" again now.');
   console.log('--------------------------------------------------');
   return res;
+}
+
+/**
+ * REPAIR PE RATIOS (V5 - GOOGLE FINANCE FALLBACK)
+ * Yahoo is blocking us (401). We will use Google Finance formulas instead.
+ * Strategy: Write formula -> Flush -> Read Value -> Flatten to static number.
+ */
+function repairPERatios() {
+    const SHEET_NAME = 'Prices';
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(SHEET_NAME);
+    if (!sheet) { Logger.log('❌ Error: Sheet ' + SHEET_NAME + ' not found'); return; }
+    Logger.log('🔍 Scanning ' + SHEET_NAME + ' for missing PE Ratios...');
+    const data = sheet.getDataRange().getValues(); // Read all data
+    if (data.length < 2) return;
+    const rawHeaders = data[0];
+    const headers = rawHeaders.map(h => String(h).replace(/[^A-Z0-9]/gi, '').toUpperCase());
+    const codeIdx = headers.indexOf('ASXCODE') !== -1 ? headers.indexOf('ASXCODE') : headers.indexOf('CODE');
+    // Find Target PE Column (Prioritize API_PE)
+    const apiPeIdx = headers.findIndex(h => ['APIPE', 'APIPERATIO', 'API_PE'].includes(h));
+    const mainPeIdx = headers.findIndex(h => ['PE', 'PERATIO', 'P/E'].includes(h));
+    const peIdx = (apiPeIdx !== -1) ? apiPeIdx : mainPeIdx;
+    if (codeIdx === -1) { Logger.log('❌ Error: ASX Code column not found.'); return; }
+    if (peIdx === -1) { Logger.log('❌ Error: PE Ratio column (API_PE) not found.'); return; }
+    const colName = (apiPeIdx !== -1) ? 'API_PE (Col ' + (peIdx + 1) + ')' : 'PE (Col ' + (peIdx + 1) + ')';
+    Logger.log('✅ Target: ' + colName);
+    const updates = []; // Store updates to make
+    // Scan for missing values
+    for (let i = 1; i < data.length; i++) {
+        const codeRaw = data[i][codeIdx];
+        const pe = data[i][peIdx];
+        const isPopulated = (pe !== '' && pe != null && pe !== 'N/A' && pe !== '#N/A');
+        if (codeRaw && !isPopulated) {
+            let ticker = String(codeRaw).trim().toUpperCase();
+            // Google Finance needs "ASX:CBA", not "CBA.AX"
+            // Strip .AX if present, prepent ASX:
+            ticker = ticker.replace(/\.AX$/i, '');
+            if (ticker.indexOf(':') === -1) ticker = 'ASX:' + ticker;
+            updates.push({ row: i + 1, formula: '=IFERROR(GOOGLEFINANCE("' + ticker + '", "pe"), "N/A")' });
+        }
+    }
+    if (updates.length === 0) {
+        Logger.log('✅ No missing PE Ratios found.');
+        return;
+    }
+    Logger.log('🛠️ Mending ' + updates.length + ' PE Ratios using Google Finance...');
+    // Process in batches of 100 to avoid timeouts
+    const BATCH_SIZE = 100;
+    for (let i = 0; i < updates.length; i += BATCH_SIZE) {
+        const batch = updates.slice(i, i + BATCH_SIZE);
+        // 1. Write Formulas
+        batch.forEach(u => {
+            sheet.getRange(u.row, peIdx + 1).setFormula(u.formula);
+        });
+        // 2. Flush to force calculation
+        SpreadsheetApp.flush();
+        // Wait for Google to calculate (essential!)
+        Utilities.sleep(2000);
+        // 3. Read back values and flatten them (remove formula)
+        batch.forEach((u, index) => {
+            const range = sheet.getRange(u.row, peIdx + 1);
+            const val = range.getValue();
+            if (index < 3) Logger.log('   Row ' + u.row + ': ' + u.formula + ' -> ' + val);
+            // If still loading ("Loading..."), we might need to leave the formula?
+            // But usually flush handles it. If it's valid, flatten it.
+            if (val !== 'Loading...' && val !== '#N/A') {
+                range.setValue(val); // Overwrite formula with static value
+            }
+        });
+        Logger.log('✅ Batch ' + (Math.floor(i / BATCH_SIZE) + 1) + ' processed.');
+        SpreadsheetApp.flush();
+    }
+    Logger.log('🎉 PE Repair complete.');
 }
