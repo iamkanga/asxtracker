@@ -94,6 +94,7 @@ export class NotificationStore {
                         minPrice: (data.minPrice !== undefined && data.minPrice !== null) ? data.minPrice : null,
                         hiloMinPrice: (data.hiloMinPrice !== undefined && data.hiloMinPrice !== null) ? data.hiloMinPrice : null,
                         moversEnabled: data.moversEnabled, // Capture toggle
+                        hiloEnabled: data.hiloEnabled,     // Capture 52W Toggle
                         activeFilters: (prefs.scanner?.activeFilters || []).map(f => f.toUpperCase()) // Capture Whitelist
                     };
 
@@ -293,10 +294,13 @@ export class NotificationStore {
     async refreshScannerRules() {
         if (!this.userId) return;
         try {
-            const rulesRef = doc(db, `artifacts/${APP_ID}/users/${this.userId}/preferences/scanner`);
+            const rulesRef = doc(db, `artifacts/${APP_ID}/users/${this.userId}/preferences/config`);
             const snap = await getDocFromServer(rulesRef);
             if (snap.exists()) {
-                const data = snap.data();
+                const config = snap.data();
+                // FIX: SettingsUI saves scanner settings under 'scannerRules' field in 'config' doc.
+                const data = config.scannerRules || {};
+
                 // Map to internal structure
                 this.scannerRules = {
                     up: data.up || {},
@@ -304,7 +308,8 @@ export class NotificationStore {
                     // FIX: Allow 0 vs Null for Global Limit too.
                     minPrice: (data.minPrice !== undefined && data.minPrice !== null) ? data.minPrice : null,
                     // FIX: Allow 0 (None). Use Nullish Coalescing.
-                    hiloMinPrice: (data.hiloMinPrice !== undefined && data.hiloMinPrice !== null) ? data.hiloMinPrice : null
+                    hiloMinPrice: (data.hiloMinPrice !== undefined && data.hiloMinPrice !== null) ? data.hiloMinPrice : null,
+                    hiloEnabled: data.hiloEnabled // Capture 52-Week Toggle
                 };
                 // console.log('[NotificationStore] Scanner Rules Refreshed:', this.scannerRules);
             }
@@ -834,8 +839,9 @@ export class NotificationStore {
 
         // Filter Hi/Lo
         // FIX: If hiloMinPrice is NULL (Blank) OR 0, Disable. User must set > 0 to enable.
+        // NEW: Respect Explicit "52W Notifications" Switch.
         const hiloLimit = rules.hiloMinPrice;
-        const hiloEnabled = (hiloLimit !== null && hiloLimit > 0);
+        const hiloEnabled = (rules.hiloEnabled !== false) && (hiloLimit !== null && hiloLimit > 0);
 
         // Merge Local HiLo? (User didn't explicitly ask, but consistent).
         // Local Alerts includes 'hilo'.

@@ -28,29 +28,37 @@ export class ToastManager {
         const container = this.getContainer();
 
         // Determine classes and icons
+        // Determine classes and icons
         let variantClass = CSS_CLASSES.TOAST_INFO;
-        let iconClass = UI_ICONS.ALERTS; // Default bell
+        let iconClass = UI_ICONS.ALERTS;
+        let isSvg = false; // New explicit flag
         let defaultTitle = 'Info';
 
-        switch (type) {
+        // Normalize type to lowercase to prevent mismatched casing
+        const normalizedType = (type || 'info').toLowerCase();
+
+        switch (normalizedType) {
             case 'success':
                 variantClass = CSS_CLASSES.TOAST_SUCCESS;
-                iconClass = 'KANGAROO_ICON_SVG';
+                iconClass = KANGAROO_ICON_SVG;
+                isSvg = true;
                 defaultTitle = 'Success';
                 break;
             case 'error':
                 variantClass = CSS_CLASSES.TOAST_ERROR;
-                iconClass = 'KANGAROO_ICON_SVG';
+                iconClass = KANGAROO_ICON_SVG;
+                isSvg = true;
                 defaultTitle = 'Error';
                 break;
             case 'info-no-icon':
                 variantClass = CSS_CLASSES.TOAST_INFO;
-                iconClass = null; // No icon
+                iconClass = null;
                 defaultTitle = 'Notification';
                 break;
             case 'refresh':
                 variantClass = CSS_CLASSES.TOAST_INFO;
-                iconClass = 'KANGAROO_ICON_SVG';
+                iconClass = KANGAROO_ICON_SVG;
+                isSvg = true;
                 defaultTitle = 'Refreshing';
                 break;
             case 'info':
@@ -67,12 +75,9 @@ export class ToastManager {
         const toast = document.createElement('div');
         toast.className = `${CSS_CLASSES.TOAST} ${variantClass}`;
 
-        // Progress Bar Color Mapping (rough approximation via CSS currentColor)
-        // Note: CSS handles text color inheritance for progress bar
-
-        const iconHtml = iconClass === 'KANGAROO_ICON_SVG'
-            ? `<div class="${CSS_CLASSES.TOAST_ICON}">${KANGAROO_ICON_SVG}</div>`
-            : `<i class="fas ${iconClass} ${CSS_CLASSES.TOAST_ICON}"></i>`;
+        const iconHtml = isSvg
+            ? `<div class="${CSS_CLASSES.TOAST_ICON}">${iconClass}</div>`
+            : (iconClass ? `<i class="fas ${iconClass} ${CSS_CLASSES.TOAST_ICON}"></i>` : '');
 
         toast.innerHTML = `
              ${iconHtml}

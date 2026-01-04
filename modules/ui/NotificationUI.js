@@ -73,46 +73,31 @@ export class NotificationUI {
             return; // Stop processing
         }
 
-        // SMART VISIBILITY LOGIC:
-        // 1. If Count Increased from previous -> Unhide (New Alert! Urgent!)
-        if (validCount > this._prevCount) {
-            this._bellManuallyHidden = false;
-        }
-
-        // 2. Determine Visibility
-        let shouldShow = (validCount > 0 && showBadges);
-        if (this._bellManuallyHidden) shouldShow = false;
-
-        // Force visible if count > 0 (Self-healing)
-        if (shouldShow) {
-            // console.log(`[NotificationUI] Forcing bell and container visibility for count ${validCount}.`);
-            if (container) container.classList.remove(CSS_CLASSES.HIDDEN);
-            bell.classList.remove(CSS_CLASSES.HIDDEN);
-        } else {
-            // HIDE BELL if count is 0 as per user request
-            if (container) container.classList.add(CSS_CLASSES.HIDDEN);
-            bell.classList.add(CSS_CLASSES.HIDDEN);
-        }
+        // KANGAROO VISIBILITY FIX: Always show the button/container (unless locked)
+        // Only toggle the BADGE (Red Dot) visibility.
+        if (container) container.classList.remove(CSS_CLASSES.HIDDEN);
+        bell.classList.remove(CSS_CLASSES.HIDDEN);
 
         this._prevCount = validCount;
 
         // Robust badge selection (might be delay in rendering)
         const badge = bell.querySelector('.notification-badge');
         if (!badge) {
-            console.warn('[NotificationUI] updateBadgeCount: Badge element NOT found in bell. Trying again in 100ms...');
-            setTimeout(() => this.updateBadgeCount(validCount), 100);
+            // console.warn('[NotificationUI] updateBadgeCount: Badge element NOT found in bell. Trying again in 100ms...');
+            // setTimeout(() => this.updateBadgeCount(validCount), 100);
             return;
         }
 
-        if (validCount > 0) {
+        // BADGE LOGIC: Show only if count > 0 AND showBadges is TRUE
+        const shouldShowBadge = (validCount > 0 && showBadges);
+
+        if (shouldShowBadge) {
             badge.textContent = validCount > 99 ? '99+' : validCount;
             badge.classList.remove(CSS_CLASSES.HIDDEN);
             badge.style.display = 'flex'; // Force display flex for badge
-            // console.log(`[NotificationUI] Badge updated to ${validCount} and shown.`);
         } else {
             badge.classList.add(CSS_CLASSES.HIDDEN);
             badge.style.display = 'none';
-            // console.log(`[NotificationUI] Badge hidden (count is 0).`);
         }
     }
 

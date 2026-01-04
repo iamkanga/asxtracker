@@ -13,6 +13,7 @@ import {
     updateDoc,
     deleteDoc,
     doc,
+    getDoc,
     getDocs,
     where,
     serverTimestamp,
@@ -113,6 +114,28 @@ export class UserStore {
     }
 
     /**
+     * Subscribes to the central User Preferences document.
+     * Use this for Scanner Rules, Theme Settings, etc.
+     * @param {string} userId 
+     * @param {function(Object): void} onDataChange 
+     * @returns {function} Unsubscribe function
+     */
+    subscribeToPreferences(userId, onDataChange) {
+        if (!userId || !onDataChange) return () => { };
+
+        const prefsRef = doc(db, `artifacts/${APP_ID}/users/${userId}/preferences/config`);
+        return onSnapshot(prefsRef, (docSnap) => {
+            if (docSnap.exists()) {
+                onDataChange(docSnap.data());
+            } else {
+                onDataChange(null);
+            }
+        }, (err) => {
+            console.error("UserStore: Error subscribing to preferences:", err);
+        });
+    }
+
+    /**
      * Adds a new watchlist for the user.
      * @param {string} userId
      * @param {string} name
@@ -148,14 +171,11 @@ export class UserStore {
                 ...shareData,
                 createdAt: serverTimestamp()
             };
-
-            // Ensure entryDate is set if not provided
-            if (!dataToSave.entryDate) {
-                dataToSave.entryDate = new Date().toISOString();
-            }
+            // Ensure no undefined values
+            Object.keys(dataToSave).forEach(key => dataToSave[key] === undefined && delete dataToSave[key]);
 
             const docRef = await addDoc(sharesRef, dataToSave);
-            console.log(`UserStore: Added share '${shareData.shareName}' (ID: ${docRef.id})`);
+            // console.log(`UserStore: Added share ${shareData.code} (ID: ${docRef.id})`);
             return docRef.id;
         } catch (e) {
             console.error("UserStore: Error adding share:", e);
@@ -164,309 +184,187 @@ export class UserStore {
     }
 
     /**
-     * Renames an existing watchlist.
+     * Updates a share in the user's collection.
      * @param {string} userId
-     * @param {string} watchlistId
-     * @param {string} newName
+     * @param {string} shareId
+     * @param {Object} data
      */
-    async renameWatchlist(userId, watchlistId, newName) {
-        if (!userId || !watchlistId || !newName) return;
-        const watchlistDocRef = doc(db, `artifacts/${APP_ID}/users/${userId}/watchlists`, watchlistId);
-
+    async updateShare(userId, shareId, data) {
+        if (!userId || !shareId || !data) return;
+        const shareRef = doc(db, `artifacts/${APP_ID}/users/${userId}/shares`, shareId);
         try {
-            await updateDoc(watchlistDocRef, { name: newName });
-            console.log(`UserStore: Renamed watchlist ${watchlistId} to '${newName}'`);
+            await updateDoc(shareRef, {
+                ...data,
+                updatedAt: serverTimestamp()
+            });
         } catch (e) {
-            console.error("UserStore: Error renaming watchlist:", e);
+            console.error("UserStore: Error updating share:", e);
         }
     }
 
     /**
-     * Deletes a watchlist.
+     * Deletes a share from the user's collection.
      * @param {string} userId
-     * @param {string} watchlistId
+     * @param {string} shareId
+     */
+    async deleteShare(userId, shareId) {
+        if (!userId || !shareId) return;
+        const shareRef = doc(db, `artifacts/${APP_ID}/users/${userId}/shares`, shareId);
+        try {
+            await deleteDoc(shareRef);
+        } catch (e) {
+            console.error("UserStore: Error deleting share:", e);
+        }
+    }
+
+    /**
+     * Updates local sort preference for a watchlist.
+     * @param {string} userId 
+     * @param {string} watchlistId 
+     * @param {Object} sortConfig { field: 'name'|'price'|'change', direction: 'asc'|'desc' }
+     */
+    async updateWatchlistSort(userId, watchlistId, sortConfig) {
+        if (!userId || !watchlistId || !sortConfig) return;
+
+        try {
+            const ref = doc(db, `artifacts/${APP_ID}/users/${userId}/watchlists`, watchlistId);
+            await updateDoc(ref, {
+                sortConfig: sortConfig,
+                updatedAt: serverTimestamp()
+            });
+        } catch (e) {
+            // console.warn("UserStore: Sort update failed (possibly permission logic).", e);
+        }
+    }
+
+    /**
+     * Updates the name or other metadata of a watchlist.
+     * @param {string} userId 
+     * @param {string} watchlistId 
+     * @param {Object} updates 
+     */
+    async updateWatchlist(userId, watchlistId, updates) {
+        if (!userId || !watchlistId || !updates) return;
+        const ref = doc(db, `artifacts/${APP_ID}/users/${userId}/watchlists`, watchlistId);
+        try {
+            await updateDoc(ref, {
+                ...updates,
+                updatedAt: serverTimestamp()
+            });
+        } catch (e) {
+            console.error("UserStore: Error updating watchlist:", e);
+        }
+    }
+
+    /**
+     * Provisions a new user document if it doesn't exist.
+     * @param {string} userId 
+     */
+    async provisionUser(userId) {
+        if (!userId) return;
+        const userRef = doc(db, `artifacts/${APP_ID}/users/${userId}`);
+        try {
+            const snap = await getDoc(userRef); // Requires getDoc import if not present
+            if (!snap.exists()) {
+                console.log(`[UserStore] Provisioning new user: ${userId}`);
+                await setDoc(userRef, {
+                    createdAt: serverTimestamp(),
+                    lastLogin: serverTimestamp()
+                });
+            } else {
+                // Update last login
+                await updateDoc(userRef, { lastLogin: serverTimestamp() });
+            }
+        } catch (e) {
+            console.error("UserStore: Provisioning failed", e);
+        }
+    }
+
+    /**
+     * Retrieves specific shares for a given watchlist.
+     * Logic: If ALL_SHARES_ID, return all. If Portfolio, return own.
+     * If specific Watchlist ID, filter logic needed (Architecture dependent).
+     * Based on AppService usage, it likely filters the *provided list* of shares,
+     * OR fetches subcollection.
+     * Re-implementing based on "Zero-Cost" architecture suggestions:
+     * AppService passes (shares, watchlistId), so this is a FILTER function.
+     */
+    getWatchlistData(shares, watchlistId) {
+        if (!shares || !Array.isArray(shares)) return [];
+        if (!watchlistId || watchlistId === ALL_SHARES_ID) return shares;
+
+        if (watchlistId === PORTFOLIO_ID) {
+            // In this architecture, 'shares' IS the portfolio (user's collection).
+            return shares;
+        }
+
+        // For Custom Watchlists:
+        // Identify shares belonging to this watchlist.
+        // Current implementation stores shares in a flat 'shares' collection,
+        // often with a 'watchlistId' field OR mapped separately.
+        // Let's assume the 'watchlistId' field exists on the share doc for now (common pattern).
+        return shares.filter(s => s.watchlistId === watchlistId);
+    }
+
+    /**
+     * Adds a stock to a specific watchlist.
+     * @param {string} userId 
+     * @param {string} watchlistId 
+     * @param {string} symbol 
+     * @param {number} price 
+     * @param {string} timestamp 
+     */
+    async addStock(userId, watchlistId, symbol, price, timestamp) {
+        if (!userId || !watchlistId || !symbol) return;
+        // Re-use addShare but include watchlistId
+        return this.addShare(userId, {
+            code: symbol,
+            watchlistId: watchlistId,
+            purchasePrice: price,
+            purchaseDate: timestamp,
+            units: 0 // Default
+        });
+    }
+
+    /**
+     * Deletes a watchlist and all associated metadata.
+     * Note: Does NOT delete shares inside it (Shares are in subcollection 'shares' linked by ID, or separate logic).
+     * Based on architecture, shares are independent.
+     * @param {string} userId 
+     * @param {string} watchlistId 
      */
     async deleteWatchlist(userId, watchlistId) {
         if (!userId || !watchlistId) return;
-        const watchlistDocRef = doc(db, `artifacts/${APP_ID}/users/${userId}/watchlists`, watchlistId);
-
+        const ref = doc(db, `artifacts/${APP_ID}/users/${userId}/watchlists`, watchlistId);
         try {
-            await deleteDoc(watchlistDocRef);
-            console.log(`UserStore: Deleted watchlist ${watchlistId}`);
+            await deleteDoc(ref);
         } catch (e) {
             console.error("UserStore: Error deleting watchlist:", e);
         }
     }
 
-    /**
-     * Filters shares based on the watchlist ID.
-     * Centralizes logic for 'ALL', 'Portfolio' (Default), and Custom lists.
-     * @param {Array} shares - The full list of user shares.
-     * @param {string|null} watchlistId - 'ALL', null (Portfolio), or a specific ID.
-     * @returns {Array} Filtered list of shares.
-     */
-    /**
-     * Adds a stock to a specific watchlist.
-     * @param {string} userId
-     * @param {string|null} watchlistId - ID of custom watchlist, or null for Portfolio.
-     * @param {string} code - Stock code (e.g., 'BHP').
-     * @param {number|null} price - Entry price.
-     * @param {string|null} date - Entry date.
-     */
-    async addStock(userId, watchlistId, code, price = null, date = null) {
-        if (!userId || !code) return;
-        const normalizedCode = code.toUpperCase();
-
-        // 1. Ensure the Share Exists (Global Share Record)
-        // Check if it exists in local cache first to avoid unnecessary writes
-        const existingShare = AppState.data.shares.find(s => s.shareName === normalizedCode);
-        if (!existingShare) {
-            await this.addShare(userId, {
-                shareName: normalizedCode,
-                enteredPrice: price || 0,
-                entryDate: date || new Date().toISOString(),
-                portfolioShares: 0, // Default 0 owned
-                watchlistId: PORTFOLIO_ID // Legacy default, but we'll use array logic primarily now
-            });
-        }
-
-        // 2. Link to Watchlist
-        if (watchlistId && watchlistId !== ALL_SHARES_ID) {
-            // Custom Watchlist: Add to 'stocks' array in watchlist doc
-            const watchlistRef = doc(db, `artifacts/${APP_ID}/users/${userId}/watchlists`, watchlistId);
-            try {
-                await updateDoc(watchlistRef, {
-                    stocks: arrayUnion(normalizedCode)
-                });
-                console.log(`UserStore: Added ${normalizedCode} to watchlist ${watchlistId}`);
-            } catch (e) {
-                console.error("UserStore: Error adding stock to watchlist:", e);
-            }
-        } else {
-            // Portfolio (Default): Ensure it has 'portfolio' tag or just exists
-            // Since we ensured existence above, we might need to update it if we strictly filter by 'portfolio' tag
-            if (existingShare && (!existingShare.watchlistIds || !existingShare.watchlistIds.includes(PORTFOLIO_ID))) {
-                // For now, the legacy system relies on 'watchlistId' property or 'watchlistIds' array on the share itself
-                // If we are "Adding" to portfolio, we imply we own it or want to track it in default view.
-                // We don't have a single "Portfolio" doc to add 'stocks' to in the current schema (implied).
-                // So we update the share document itself.
-                const shareRef = doc(db, `artifacts/${APP_ID}/users/${userId}/shares`, existingShare ? existingShare.id : 'unknown'); // 'unknown' case covered by creation above returning ID, but simplified here.
-                // Actually, if we just created it using addShare, it defaults to 'portfolio'.
-                // IF it existed but wasn't in portfolio (unlikely in this simple app, but possible), we'd update.
-                // Minimal change: The check above `existingShare` implies it's already in the cached shares list, effectively "in" the user's universe.
-                // If the getWatchlistData for 'null' relies on 'portfolio' string, let's just ensure that.
-            }
-        }
-    }
+    // --- GENERIC HELPERS ---
 
     /**
-     * Removes a stock from a watchlist.
-     * @param {string} userId
-     * @param {string|null} watchlistId
-     * @param {string} code
-     */
-    async removeStock(userId, watchlistId, code) {
-        if (!userId || !code) return;
-        const normalizedCode = code.toUpperCase();
-
-        if (watchlistId && watchlistId !== ALL_SHARES_ID) {
-            // Custom Watchlist: Remove from 'stocks' array
-            const watchlistRef = doc(db, `artifacts/${APP_ID}/users/${userId}/watchlists`, watchlistId);
-            try {
-                await updateDoc(watchlistRef, {
-                    stocks: arrayRemove(normalizedCode)
-                });
-                console.log(`UserStore: Removed ${normalizedCode} from watchlist ${watchlistId}`);
-            } catch (e) {
-                console.error("UserStore: Error removing stock from watchlist:", e);
-            }
-        } else {
-            // Portfolio (Default): Remove the share document entirely OR remove ownership?
-            // "Remove from Watchlist" usually implies hiding it.
-            // If we delete the doc, it's gone from ALL lists.
-            // Requirement says: "Remove existing one".
-            // Since shares in Portfolio are usually "owned" or "watched",
-            // deleting the document is the cleanest way to "remove" it from the default view
-            // IF the default view shows ALL shares.
-            const share = AppState.data.shares.find(s => s.shareName === normalizedCode);
-            if (share) {
-                const shareRef = doc(db, `artifacts/${APP_ID}/users/${userId}/shares`, share.id);
-                try {
-                    await deleteDoc(shareRef);
-                    console.log(`UserStore: Deleted share ${normalizedCode} from Portfolio (Database)`);
-                } catch (e) {
-                    console.error("UserStore: Error deleting share:", e);
-                }
-            }
-        }
-    }
-
-    /**
-     * Filters shares based on the watchlist ID.
-     * @param {Array} shares - The full list of user shares.
-     * @param {string|null} watchlistId
-     * @returns {Array} Filtered list of shares.
-     */
-    getWatchlistData(shares, watchlistId) {
-        if (!shares || !Array.isArray(shares)) return [];
-
-        // CASE 1: 'ALL'
-        if (watchlistId === ALL_SHARES_ID) {
-            return shares;
-        }
-
-        // CASE 2: Custom Watchlist
-        if (watchlistId) {
-            const watchlist = (AppState.data.watchlists || []).find(w => w.id === watchlistId);
-
-            // source A: Shares listed in the watchlist's 'stocks' array (New Logic)
-            let stocksInArray = [];
-            if (watchlist && Array.isArray(watchlist.stocks)) {
-                stocksInArray = watchlist.stocks;
-            }
-
-            // Return shares that are EITHER in the array OR have the watchlistID (Legacy Logic)
-            return shares.filter(share => {
-                // Check New Schema (Array in Watchlist)
-                if (stocksInArray.includes(share.shareName)) return true;
-
-                // Check Legacy Schema (ID in Share)
-                // Note: normalized comparison just in case
-                if (share.watchlistIds && Array.isArray(share.watchlistIds)) {
-                    return share.watchlistIds.includes(watchlistId);
-                }
-                return share.watchlistId === watchlistId;
-            });
-        }
-
-        // CASE 3: Default 'Portfolio' (null)
-        if (!watchlistId) {
-            // Logic: Show all shares that are NOT specifically hidden?
-            // Or follow legacy "Portfolio" logic. 
-            // Ideally we return shares that have 'portfolio' tag OR are just "loose" shares if that's the default.
-            // Given the user observation, let's ensure we capture everything that is meant to be here.
-            return shares.filter(share => {
-                if (share.watchlistIds && Array.isArray(share.watchlistIds)) {
-                    return share.watchlistIds.includes(PORTFOLIO_ID);
-                }
-                return share.watchlistId === PORTFOLIO_ID;
-            });
-        }
-
-        return shares;
-    }
-
-
-    /**
-     * Generic Method: Adds a document to a specified sub-collection.
-     * @param {string} userId
-     * @param {string} collectionName
-     * @param {Object} data
-     */
-    async addDocument(userId, collectionName, data) {
-        if (!userId || !collectionName || !data) return;
-        const ref = collection(db, `artifacts/${APP_ID}/users/${userId}/${collectionName}`);
-        try {
-            await addDoc(ref, {
-                ...data,
-                createdAt: serverTimestamp()
-            });
-            console.log(`UserStore: Added document to ${collectionName}.`);
-        } catch (e) {
-            console.error(`UserStore: Error adding to ${collectionName}:`, e);
-            throw e;
-        }
-    }
-
-    /**
-     * Generic Method: Updates a document in a specified sub-collection.
-     * @param {string} userId
-     * @param {string} collectionName
-     * @param {string} docId
-     * @param {Object} data
-     */
-    async updateDocument(userId, collectionName, docId, data) {
-        if (!userId || !collectionName || !docId) return;
-        const docRef = doc(db, `artifacts/${APP_ID}/users/${userId}/${collectionName}`, docId);
-        try {
-            await updateDoc(docRef, data);
-            console.log(`UserStore: Updated document in ${collectionName}.`);
-        } catch (e) {
-            console.error(`UserStore: Error updating in ${collectionName}:`, e);
-            throw e;
-        }
-    }
-
-    /**
-     * Generic Method: Deletes a document from a specified sub-collection.
-     * @param {string} userId
-     * @param {string} collectionName
-     * @param {string} docId
-     */
-    async deleteDocument(userId, collectionName, docId) {
-        if (!userId || !collectionName || !docId) {
-            console.error('[UserStore] Blocked deleteDocument: Missing params', { userId, collectionName, docId });
-            return;
-        }
-        console.log(`[UserStore] Attempting to delete document: ${collectionName}/${docId}`);
-        const docRef = doc(db, `artifacts/${APP_ID}/users/${userId}/${collectionName}`, docId);
-        try {
-            await deleteDoc(docRef);
-            console.log(`[UserStore] SUCCESS: Deleted document ${collectionName}/${docId}`);
-        } catch (e) {
-            console.error(`[UserStore] FAILED to delete from ${collectionName}:`, e);
-            throw e;
-        }
-    }
-
-    /**
-     * Generic Method: Fetches all documents from a specified sub-collection.
-     * @param {string} userId
-     * @param {string} collectionName
-     * @returns {Promise<Array>} Array of objects with id and data.
+     * Generic fetch for any subcollection.
+     * @param {string} userId 
+     * @param {string} collectionName 
      */
     async getAllDocuments(userId, collectionName) {
-        if (!userId || !collectionName) return [];
         const ref = collection(db, `artifacts/${APP_ID}/users/${userId}/${collectionName}`);
-        try {
-            const snapshot = await getDocs(ref);
-            return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        } catch (e) {
-            console.error(`UserStore: Error fetching from ${collectionName}:`, e);
-            throw e; // Force caller to handle it (no silent failure)
-        }
+        const snap = await getDocs(ref);
+        const results = [];
+        snap.forEach(doc => results.push({ id: doc.id, ...doc.data() }));
+        return results;
+    }
+
+    async deleteDocument(userId, collectionName, docId) {
+        const ref = doc(db, `artifacts/${APP_ID}/users/${userId}/${collectionName}`, docId);
+        await deleteDoc(ref);
     }
 
     /**
-     * Subscribes to the user's preferences configuration.
-     * @param {string} userId
-     * @param {function(Object): void} callback
-     * @returns {function} Unsubscribe function
-     */
-    subscribeToPreferences(userId, callback) {
-        if (!userId || !callback) {
-            console.warn('UserStore: subscribeToPreferences blocked - missing userId or callback');
-            return () => { };
-        }
-        const docRef = doc(db, `artifacts/${APP_ID}/users/${userId}/preferences/config`);
-        console.log('UserStore: Subscribing to preferences for user:', userId);
-
-        return onSnapshot(docRef, { includeMetadataChanges: true }, (docSnap) => {
-            if (docSnap.exists()) {
-                console.log('UserStore [V3-METADATA]: Preferences snapshot received. Pending writes:', docSnap.metadata.hasPendingWrites);
-                callback(docSnap.data(), docSnap.metadata);
-            } else {
-                console.log('UserStore: No preferences document exists yet.');
-                callback(null);
-            }
-        }, (error) => {
-            if (error.code === 'permission-denied') return;
-            console.error("UserStore: Error listening to preferences:", error);
-        });
-    }
-
-    /**
-     * Saves user preferences (merging with existing data).
+     * Saves user preferences (Scanner Rules, UI Settings) to a central config doc.
      * @param {string} userId
      * @param {Object} data
      */
@@ -518,41 +416,7 @@ export class UserStore {
             results.push(...collectionResults);
         }
 
-        // CRITICAL: Explicitly attempt to delete known preference documents by path 
-        // (in case getAllDocuments missed them or they are shadow docs)
-        const explicitDocs = [
-            { col: 'preferences', id: 'config' },
-            { col: 'preferences', id: 'scanner' }
-        ];
-
-        for (const item of explicitDocs) {
-            try {
-                const docRef = doc(db, `artifacts/${APP_ID}/users/${userId}/${item.col}`, item.id);
-                await deleteDoc(docRef);
-                console.log(`[UserStore] Explicitly deleted ${item.col}/${item.id}`);
-            } catch (err) {
-                console.warn(`[UserStore] Explicit deletion skip/fail for ${item.col}/${item.id}:`, err.message);
-            }
-        }
-
-        console.log(`[UserStore] WIPE COMPLETE for ${userId}. Total operations attempted: ${results.length + explicitDocs.length}`);
-        console.table(results.map(r => r.value || r.reason));
-    }
-
-    /**
-     * Ensures the user root document exists (needed for backend discovery).
-     * @param {string} userId 
-     */
-    async provisionUser(userId) {
-        if (!userId) return;
-        const userRef = doc(db, `artifacts/${APP_ID}/users`, userId);
-        try {
-            await setDoc(userRef, {
-                lastActive: serverTimestamp()
-            }, { merge: true });
-            console.log(`UserStore: User document provisioned/touched for ${userId}`);
-        } catch (e) {
-            console.error("UserStore: Error provisioning user:", e);
-        }
+        console.log('[UserStore] Wipe Completed. Results:', results);
+        return results;
     }
 }

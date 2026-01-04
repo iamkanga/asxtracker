@@ -193,9 +193,9 @@ export class SettingsUI {
     }
 
     static _buildStructure(container, modal) {
-        // Change Modal Title to "Global Settings"
+        // Change Modal Title to "Notification Settings"
         const modalTitle = modal.querySelector(`.${CSS_CLASSES.MODAL_TITLE}`);
-        if (modalTitle) modalTitle.innerHTML = 'Global Settings';
+        if (modalTitle) modalTitle.innerHTML = 'Notification Settings';
 
         const summaryCard = document.createElement('div');
         summaryCard.className = CSS_CLASSES.DETAIL_CARD;
@@ -217,7 +217,7 @@ export class SettingsUI {
                     <span class="${CSS_CLASSES.DETAIL_VALUE} ${CSS_CLASSES.NEGATIVE}" id="summary-down" style="font-size:0.85rem;">None</span>
                 </div>
                 <div class="${CSS_CLASSES.DETAIL_ROW}" style="flex-direction: column; align-items: flex-start; gap: 0;">
-                    <span class="${CSS_CLASSES.DETAIL_LABEL} ${CSS_CLASSES.TEXT_XXS}" style="font-size:0.65rem;">Global Limit</span>
+                    <span class="${CSS_CLASSES.DETAIL_LABEL} ${CSS_CLASSES.TEXT_XXS}" style="font-size:0.65rem;">Volatility Limit</span>
                     <span class="${CSS_CLASSES.DETAIL_VALUE}" id="summary-global" style="font-size:0.85rem;">None</span>
                 </div>
                 <div class="${CSS_CLASSES.DETAIL_ROW}" style="flex-direction: column; align-items: flex-start; gap: 0;">
@@ -243,8 +243,8 @@ export class SettingsUI {
             <!-- Column Headers for Percentage/Global logic -->
              <div class="${CSS_CLASSES.DETAIL_ROW}" style="margin-top: 12px; margin-bottom: 2px;">
                  <div style="width: 80px; margin-right: 10px;"></div> <!-- Spacer for Label -->
-                 <div class="${CSS_CLASSES.DETAIL_LABEL} ${CSS_CLASSES.TEXT_XXS}" style="flex: 1; text-align: center;">Global</div>
-                 <div class="${CSS_CLASSES.DETAIL_LABEL} ${CSS_CLASSES.TEXT_XXS}" style="flex: 1; text-align: center; padding-left: 10px;">52 Week</div>
+                 <div class="${CSS_CLASSES.DETAIL_LABEL} ${CSS_CLASSES.TEXT_XXS}" style="flex: 1; text-align: center;">Volatility</div>
+                 <div class="${CSS_CLASSES.DETAIL_LABEL} ${CSS_CLASSES.TEXT_XXS}" style="flex: 1; text-align: center; padding-left: 10px;">52 Wk H/L</div>
              </div>
 
             <!-- Row 1: Threshold Implementation (Aligned) -->
@@ -313,12 +313,21 @@ export class SettingsUI {
             </div>
 
             <div class="${CSS_CLASSES.DETAIL_ROW}" style="justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <span class="${CSS_CLASSES.DETAIL_LABEL}" style="color: white; font-weight: 700;">Threshold Notifications</span>
+                <span class="${CSS_CLASSES.DETAIL_LABEL}" style="color: white; font-weight: 700;">Volatility Notifications</span>
                 <div class="pill-container large-pill movers-pill-selector" style="width: 100px;">
                     <span class="pill-segment-movers" data-value="true">On</span>
                     <span class="pill-segment-movers" data-value="false">Off</span>
                 </div>
                 <input type="checkbox" id="toggle-moversEnabled" class="hidden">
+            </div>
+
+            <div class="${CSS_CLASSES.DETAIL_ROW}" style="justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <span class="${CSS_CLASSES.DETAIL_LABEL}" style="color: white; font-weight: 700;">52-Week Notifications</span>
+                <div class="pill-container large-pill hilo-pill-selector" style="width: 100px;">
+                    <span class="pill-segment-movers" data-value="true">On</span>
+                    <span class="pill-segment-movers" data-value="false">Off</span>
+                </div>
+                <input type="checkbox" id="toggle-hiloEnabled" class="hidden">
             </div>
 
             <div class="${CSS_CLASSES.DETAIL_ROW}" style="justify-content: space-between; align-items: center; margin-bottom: 20px;">
@@ -417,6 +426,7 @@ export class SettingsUI {
         const hiloPrice = rules.hiloMinPrice ?? null;
 
         const moversEnabled = rules.moversEnabled !== false;
+        const hiloEnabled = rules.hiloEnabled !== false; // New 52W Master Switch
         const showBadges = prefs.showBadges !== false;
         const dailyEmail = prefs.dailyEmail === true;
 
@@ -498,11 +508,75 @@ export class SettingsUI {
         const cleanDownPct = cleanVal(downPct, []);
         const cleanDownDol = cleanVal(downDol, []);
 
-        // Update Summaries with Cleaned Values
-        updateText('summary-up', fmtVal(cleanUpPct, cleanUpDol));
-        updateText('summary-down', fmtVal(cleanDownPct, cleanDownDol));
-        updateText('summary-global', (cleanMinPrice !== null && cleanMinPrice !== undefined) ? `$${cleanMinPrice}` : 'None');
-        updateText('summary-hilo', (cleanHilo !== null && cleanHilo !== undefined) ? `$${cleanHilo}` : 'None');
+        // Toggles State (Defined early for Ghosting Logic)
+        const moversOn = rules.moversEnabled ?? true;
+        const hiloOn = rules.hiloEnabled ?? true;
+
+        // Update Summaries with Cleaned Values & Ghosting
+
+        // Helper for Ghosting & Coloring
+        const updateGhosted = (id, txt, isOn, isNeg = false) => {
+            const el = modal.querySelector(`#${id}`);
+            if (el) {
+                el.textContent = txt;
+                // Reset to base class
+                el.className = CSS_CLASSES.DETAIL_VALUE;
+
+                if (isOn) {
+                    // Active: Add Color Class (Positive/Negative) & Full Opacity
+                    // Note: 'isNeg' passed as true for Down (Red). False for Up (Green).
+                    el.classList.add(isNeg ? CSS_CLASSES.NEGATIVE : CSS_CLASSES.POSITIVE);
+                    el.style.opacity = '1';
+                    el.style.removeProperty('color');
+                } else {
+                    // Inactive: Remove Color Classes, Dim, and set to Muted (Ghosted White)
+                    el.classList.remove(CSS_CLASSES.POSITIVE, CSS_CLASSES.NEGATIVE);
+                    el.style.opacity = '0.5';
+                    el.style.color = 'var(--text-muted)';
+                }
+            }
+        };
+
+        updateGhosted('summary-up', fmtVal(cleanUpPct, cleanUpDol), moversOn, false); // False = Positive (Green)
+        updateGhosted('summary-down', fmtVal(cleanDownPct, cleanDownDol), moversOn, true); // True = Negative (Red)
+
+        // Volatility Limit (Global) with Ghosting
+        const globalEl = modal.querySelector('#summary-global');
+        if (globalEl) {
+            globalEl.textContent = (cleanMinPrice !== null && cleanMinPrice !== undefined) ? `$${cleanMinPrice}` : 'None';
+            if (moversOn) {
+                globalEl.style.opacity = '1';
+                globalEl.style.removeProperty('color');
+            } else {
+                globalEl.style.opacity = '0.5';
+                globalEl.style.color = 'var(--text-muted)';
+            }
+        }
+
+        // 52-Week Limit with Ghosting
+        // Note: Using multiple text outputs if distinct lines exist (High/Low) or single summary-hilo
+        // Based on previous reads, 'summary-hilo' seems legacy or specific. 
+        // If 'summary-hilo-high' exists (from previous steps), handle it.
+        // Let's try both to be safe (robustness).
+        const hiloTxt = (cleanHilo !== null && cleanHilo !== undefined) ? `$${cleanHilo}` : 'None';
+
+        const updateHiloGhost = (id) => {
+            const el = modal.querySelector(`#${id}`);
+            if (el) {
+                el.textContent = hiloTxt;
+                if (hiloOn) {
+                    el.style.opacity = '1';
+                    el.style.removeProperty('color');
+                } else {
+                    el.style.opacity = '0.5';
+                    el.style.color = 'var(--text-muted)';
+                }
+            }
+        };
+
+        updateHiloGhost('summary-hilo');      // Old/Single
+        updateHiloGhost('summary-hilo-high'); // New/Split?? Check html if uncertain.
+        updateHiloGhost('summary-hilo-low');  // New/Split??
 
         // Inputs (Use Cleaned Values)
         updateInput('global-minPrice', cleanMinPrice);
@@ -513,13 +587,20 @@ export class SettingsUI {
         updateInput('down-dollarVal', cleanDownDol);
         updateInput('pref-emailAddr', prefs.alertEmailRecipients);
 
-        // Toggles
-        const moversOn = rules.moversEnabled ?? true;
+        // Toggles UI Updates
         updateCheck('toggle-moversEnabled', moversOn);
-
         modal.querySelectorAll('.pill-segment-movers').forEach(pill => {
             pill.classList.toggle('active', pill.dataset.value === String(moversOn));
         });
+
+        updateCheck('toggle-hiloEnabled', hiloOn);
+        // Selector tweak: Find pills strictly within the hilo container
+        const hiloContainer = modal.querySelector('.hilo-pill-selector');
+        if (hiloContainer) {
+            hiloContainer.querySelectorAll('.pill-segment-movers').forEach(pill => {
+                pill.classList.toggle('active', pill.dataset.value === String(hiloOn));
+            });
+        }
 
         updateCheck('toggle-pref-showBadges', showBadges);
         modal.querySelectorAll('.pill-segment-badge').forEach(pill => {
@@ -723,6 +804,7 @@ export class SettingsUI {
                     minPrice: getNum('global-minPrice'),
                     hiloMinPrice: getNum('hilo-minPrice'),
                     moversEnabled: getCheck('toggle-moversEnabled') ?? true,
+                    hiloEnabled: getCheck('toggle-hiloEnabled') ?? true, // Harvest New Flag
                     up: harvestRules('up'),
                     down: harvestRules('down')
                 },
@@ -761,8 +843,23 @@ export class SettingsUI {
             const val = pill.dataset.value === 'true';
             let targetId = '';
 
-            if (pill.classList.contains('pill-segment-movers')) targetId = 'toggle-moversEnabled';
-            else if (pill.classList.contains('pill-segment-badge')) targetId = 'toggle-pref-showBadges';
+            // Check Parent Container to distinguish specific logic
+            const container = pill.parentElement;
+
+            if (container.classList.contains('hilo-pill-selector')) targetId = 'toggle-hiloEnabled';
+            else if (pill.classList.contains('pill-segment-movers')) targetId = 'toggle-moversEnabled';
+            else if (pill.classList.contains('pill-segment-badge')) {
+                targetId = 'toggle-pref-showBadges';
+                // OPTIMISTIC UPDATE: Immediate Badge Reactivity
+                const newVal = pill.dataset.value === 'true';
+                if (window.AppState && window.AppState.preferences) {
+                    window.AppState.preferences.showBadges = newVal;
+                    // Dispatch event to force NotificationUI redrawing
+                    document.dispatchEvent(new CustomEvent('ASX_NOTIFICATION_UPDATE', {
+                        detail: { forceBadgeUpdate: true }
+                    }));
+                }
+            }
             else if (pill.classList.contains('pill-segment-email')) targetId = 'toggle-pref-dailyEmail';
             else if (pill.classList.contains('pill-segment-override')) targetId = 'toggle-pref-excludePortfolio';
 
