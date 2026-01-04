@@ -409,10 +409,10 @@ export class SettingsUI {
                      </div>
                  </div>
 
-                 <!-- NEW: Accordion View Control -->
+                 <!-- NEW: View All Control -->
                  <div class="${CSS_CLASSES.DETAIL_ROW}" style="justify-content: space-between; align-items: center; margin-bottom: 24px;">
                      <div style="display: flex; flex-direction: column; gap: 4px;">
-                        <span class="${CSS_CLASSES.DETAIL_LABEL}" style="font-size: 0.85rem; font-weight: 800; color: white; letter-spacing: -0.01em;">Accordion View</span>
+                        <span class="${CSS_CLASSES.DETAIL_LABEL}" style="font-size: 0.85rem; font-weight: 800; color: white; letter-spacing: -0.01em;">View All</span>
                      </div>
                      <div class="pill-container large-pill accordion-pill-selector" style="width: 125px;">
                           <span class="accordion-control-segment" data-action="expand">Open</span>
@@ -444,7 +444,9 @@ export class SettingsUI {
         const hiloEnabled = rules.hiloEnabled !== false;
         const personalEnabled = rules.personalEnabled !== false; // Capture Personal Flag
         const showBadges = prefs.showBadges !== false;
-        const dailyEmail = prefs.dailyEmail === true;
+
+        // FORCE ON: If email address is present, Daily Email is ALWAYS ON.
+        const dailyEmail = !!prefs.alertEmailRecipients || (prefs.dailyEmail === true);
 
         // Format helper: None if null/undefined, otherwise text
         const fmtVal = (pct, dol) => {
@@ -786,8 +788,19 @@ export class SettingsUI {
     static _bindEvents(modal, userId, unsubscribe) {
         // Auto-Save Logic
         let debounceTimer;
+        let settingsDebounce = null; // High-level debounce for preference saving
 
         const saveSettings = () => {
+            if (!userId) return;
+
+            // INTERNAL DEBOUNCE: Prevent rapid fire from bulk UI events (e.g. Select All)
+            if (settingsDebounce) clearTimeout(settingsDebounce);
+            settingsDebounce = setTimeout(() => {
+                this._executeSave(modal, userId);
+            }, 350);
+        };
+
+        this._executeSave = (modal, userId) => {
             const getNum = (id) => {
                 const el = modal.querySelector(`#${id}`);
                 if (!el || el.value === '') return null;
@@ -989,7 +1002,7 @@ export class SettingsUI {
             }
         });
 
-        // 5. Accordion View Control (Expand/Collapse All)
+        // 5. View All Control (Expand/Collapse All)
         modal.addEventListener('click', (e) => {
             const seg = e.target.closest('.accordion-control-segment');
             if (!seg) return;
@@ -1048,6 +1061,19 @@ export class SettingsUI {
 
         modal.addEventListener('input', (e) => {
             if (e.target.matches('input, select, textarea')) {
+                // AUTO-FLIP: If user types an email, auto-enable the daily email toggle.
+                if (e.target.id === 'pref-emailAddr' && e.target.value.trim().length > 0) {
+                    const dailyCheck = modal.querySelector('#toggle-pref-dailyEmail');
+                    if (dailyCheck && !dailyCheck.checked) {
+                        dailyCheck.checked = true;
+                        // Update Pill UI
+                        const container = modal.querySelector('.pill-selector-email');
+                        if (container) {
+                            container.querySelectorAll('span').forEach(s => s.classList.toggle('active', s.dataset.value === 'true'));
+                        }
+                    }
+                }
+
                 if (e.target.type === 'checkbox' || e.target.type === 'radio') {
                     saveSettings();
                 } else {

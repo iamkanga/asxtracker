@@ -101,6 +101,17 @@ export class DataService {
             const count = Array.isArray(json) ? json.length : (json.data ? json.data.length : 'Unknown');
             console.log(`DataService: Received ${count} raw items from API.`);
 
+            // VERIFICATION (Dashboard Sheet): Check structure
+            console.log('[DataService] API Response Type:', typeof json, 'IsArray:', Array.isArray(json));
+            if (json && typeof json === 'object') {
+                console.log('[DataService] API Payload Keys:', Object.keys(json));
+                if (json.Dashboard) {
+                    console.log(`[DataService] Dashboard Data Found: ${json.Dashboard.length} items.`);
+                } else if (Array.isArray(json)) {
+                    console.log('[DataService] Payload is a flat array (No Dashboard sheet detected).');
+                }
+            }
+
             // The API response is expected to be an array of objects.
             // If the API returns a wrapper (e.g. { data: [...] }), we might need to adjust,
             // but based on legacy analysis 'json' usually is the array or contains it.
@@ -208,6 +219,12 @@ export class DataService {
 
         // Handle case where response might be wrapped or just an array
         const items = Array.isArray(apiResponse) ? apiResponse : (apiResponse.data || []);
+
+        // ROBUSTNESS: If Dashboard exists but data doesn't, fall back to Dashboard for prices??
+        // (Usually Dashboard is for a specific view, but let's log it for the user)
+        if (apiResponse.Dashboard && (!items || items.length === 0)) {
+            console.log('[DataService] Primary data empty, checking Dashboard fallback...');
+        }
 
         if (!Array.isArray(items)) {
             console.warn("DataService: Unexpected API response format", apiResponse);

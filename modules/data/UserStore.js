@@ -31,6 +31,7 @@ export class UserStore {
         this.unsubscribeCash = null;
         this.unsubscribeWatchlists = null;
         this.unsubscribeDashboard = null;
+        this._lastPrefsJson = null; // Cache for deep equality checks
     }
 
     /**
@@ -375,11 +376,20 @@ export class UserStore {
         }
         const docRef = doc(db, `artifacts/${APP_ID}/users/${userId}/preferences/config`);
         try {
+            // DEEP EQUALITY CHECK: Skip update if data hasn't changed
+            const currentJson = JSON.stringify(data);
+            if (this._lastPrefsJson === currentJson) {
+                // console.log('UserStore: Preferences unchanged - skipping save.');
+                return;
+            }
+
             console.log('UserStore: Saving preferences to Firestore...', data);
             await setDoc(docRef, {
                 ...data,
                 updatedAt: serverTimestamp()
             }, { merge: true });
+
+            this._lastPrefsJson = currentJson; // Update cache
             console.log('UserStore: Preferences saved successfully.');
         } catch (e) {
             console.error("UserStore: Error saving preferences:", e);

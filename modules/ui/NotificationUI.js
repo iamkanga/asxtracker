@@ -238,7 +238,7 @@ export class NotificationUI {
                         <button id="btn-daily-briefing" title="Daily Briefing" style="background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem;">
                             <i class="fas fa-coffee"></i>
                         </button>
-                        <button id="notif-settings-btn" title="Global Settings" style="background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem;">
+                        <button id="notif-settings-btn" title="Volatility Settings" style="background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem;">
                             <i class="fas ${UI_ICONS.PEN}"></i>
                         </button>
                         <button id="notif-mark-read-btn" title="Dismiss Badge" style="background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem;">
@@ -520,11 +520,11 @@ export class NotificationUI {
 
         // Structure Definitions - REORDERED
         const sections = [
-            { id: 'custom', title: 'Custom Triggers', subtitle: '<span style="color: var(--color-accent);">Personal Alerts</span>', items: sortedLocal, type: 'custom', color: 'neutral' },
+            { id: 'custom', title: 'Watchlist', subtitle: '<span style="color: var(--color-accent);">Personal / Targets</span>', items: sortedLocal, type: 'custom', color: 'neutral' },
             { id: 'hilo-high', title: '52-Week Highs', subtitle: hiloStrHigh, items: finalHiloHigh, type: 'hilo-up', color: 'green' },
             { id: 'hilo-low', title: '52-Week Lows', subtitle: hiloStrLow, items: finalHiloLow, type: 'hilo-down', color: 'red' },
-            { id: 'gainers', title: 'Global Gainers', subtitle: upStr, items: finalMoversUp, type: 'up', color: 'green' },
-            { id: 'losers', title: 'Global Losers', subtitle: downStr, items: finalMoversDown, type: 'down', color: 'red' }
+            { id: 'gainers', title: 'Volatility Gainers', subtitle: upStr, items: finalMoversUp, type: 'up', color: 'green' },
+            { id: 'losers', title: 'Volatility Losers', subtitle: downStr, items: finalMoversDown, type: 'down', color: 'red' }
         ];
 
         // --- DEBUG LOGGING: RENDER COUNT ---
@@ -735,8 +735,8 @@ export class NotificationUI {
 
         if (section.items.length === 0) {
             let hint = 'No alerts currently match your criteria.';
-            if (section.id === 'custom') hint = 'No custom price targets have been hit today. Add targets in the "Add Share" modal.';
-            if (section.id === 'gainers' || section.id === 'losers') hint = 'Global movers are filtered by your Dollar and Percentage thresholds in Settings.';
+            if (section.id === 'custom') hint = 'No personal or target alerts have been hit today. Add targets in the "Add Share" modal.';
+            if (section.id === 'gainers' || section.id === 'losers') hint = 'Volatility movers are filtered by your Dollar and Percentage thresholds in Settings.';
 
             body.innerHTML = `
                 <div style="text-align:center; color:var(--text-muted); padding:1.5rem 1rem; font-size:0.8rem;">

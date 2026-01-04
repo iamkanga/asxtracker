@@ -656,8 +656,11 @@ export class AppController {
                         }
 
                         // WRITE-BACK: If merged list differs from what Cloud sent, push back to Cloud immediately.
-                        // This fixes the case where Local had new items that Cloud didn't know about yet.
-                        if (JSON.stringify(mergedList) !== JSON.stringify(remoteCats)) {
+                        // Logic: Only trigger if the length or IDs differ to avoid loops on minor field updates.
+                        const remoteIds = remoteCats.map(c => c.id).sort().join(',');
+                        const mergedIds = mergedList.map(c => c.id).sort().join(',');
+
+                        if (remoteIds !== mergedIds) {
                             console.log('[AppController] User Category Write-Back: Merged list differs from Cloud. Triggering strict save.');
                             this._syncPreferencesWithDebounce({
                                 ...prefs,
