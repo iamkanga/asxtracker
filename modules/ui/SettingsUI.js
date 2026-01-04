@@ -68,7 +68,7 @@ export class SettingsUI {
                         box-sizing: border-box;
                     }
                     
-                    .pill-segment, .bulk-btn, .master-pill-segment, .pill-segment-movers, .pill-segment-badge, .pill-segment-email, .pill-segment-override {
+                    .pill-segment, .bulk-btn, .master-pill-segment, .pill-segment-movers, .pill-segment-badge, .pill-segment-email, .pill-segment-override, .accordion-control-segment {
                         flex: 1;
                         height: 100%;
                         display: flex;
@@ -93,9 +93,19 @@ export class SettingsUI {
                     .pill-segment-movers.active,
                     .pill-segment-badge.active,
                     .pill-segment-email.active,
-                    .pill-segment-override.active {
+                    .pill-segment-override.active,
+                    .accordion-control-segment.active {
                         background: var(--color-accent) !important;
                         color: white !important;
+                    }
+
+                    .pill-segment-movers:first-child,
+                    .pill-segment-badge:first-child,
+                    .pill-segment-email:first-child,
+                    .pill-segment-override:first-child,
+                    .master-pill-segment:first-child,
+                    .accordion-control-segment:first-child {
+                        border-right: 1px solid var(--border-color);
                     }
 
                     /* Custom Square Radio-style Selectors */
@@ -343,7 +353,6 @@ export class SettingsUI {
                  <h3 class="${CSS_CLASSES.DETAIL_LABEL}" style="text-decoration: none; border-bottom: none; font-weight: 700; color: white;">
                      <i class="fas fa-layer-group" style="color: var(--color-accent);"></i> Sector Selector
                  </h3>
-                 <button id="scanner-clear-filters" class="${CSS_CLASSES.BTN_TEXT_SMALL}" style="font-size: 0.7rem; color: var(--text-muted); background: none; border: none; cursor: pointer; opacity: 0.7;">Clear All</button>
              </div>
              <div style="padding: 0 16px 16px 16px;">
                  
@@ -354,7 +363,7 @@ export class SettingsUI {
                             <span class="${CSS_CLASSES.DETAIL_LABEL}" style="font-weight: 700; color: white;">Watchlist Override</span>
                          </div>
                       </div>
-                      <div class="pill-container large-pill portfolio-pill-selector" style="width: 100px;">
+                      <div class="pill-container large-pill portfolio-pill-selector" style="width: 125px;">
                           <span class="pill-segment-override" data-value="true">On</span>
                           <span class="pill-segment-override" data-value="false">Off</span>
                       </div>
@@ -367,9 +376,20 @@ export class SettingsUI {
                      <div style="display: flex; flex-direction: column; gap: 4px;">
                         <span class="${CSS_CLASSES.DETAIL_LABEL}" style="font-size: 0.85rem; font-weight: 800; color: white; letter-spacing: -0.01em;">Select</span>
                      </div>
-                     <div class="pill-container large-pill master-pill-selector" style="width: 140px;">
+                     <div class="pill-container large-pill master-pill-selector" style="width: 125px;">
                           <span class="master-pill-segment" data-action="all">All</span>
                           <span class="master-pill-segment" data-action="none">None</span>
+                     </div>
+                 </div>
+
+                 <!-- NEW: Accordion View Control -->
+                 <div class="${CSS_CLASSES.DETAIL_ROW}" style="justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                     <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <span class="${CSS_CLASSES.DETAIL_LABEL}" style="font-size: 0.85rem; font-weight: 800; color: white; letter-spacing: -0.01em;">Accordion View</span>
+                     </div>
+                     <div class="pill-container large-pill accordion-pill-selector" style="width: 125px;">
+                          <span class="accordion-control-segment" data-action="expand">Open</span>
+                          <span class="accordion-control-segment" data-action="collapse">Close</span>
                      </div>
                  </div>
                  
@@ -583,25 +603,36 @@ export class SettingsUI {
     static _renderSectorAccordion(modal, activeFilters) {
         const container = modal.querySelector('#settings-sector-accordion');
         if (!container) return;
+
+        // 1. Capture Existing State (Open/Closed) by Sector Name
+        const stateMap = new Map();
+        container.querySelectorAll('.filter-accordion-item').forEach(item => {
+            const name = item.querySelector('.sector-name').textContent.trim();
+            const body = item.querySelector('.filter-body');
+            const isHidden = body.classList.contains('hidden');
+            stateMap.set(name, !isHidden); // Store 'isOpen'
+        });
+
+        // 2. Clear Container
         container.innerHTML = '';
 
-        // Iterate through defined structure (GICS aligned)
+        // 3. Render
         SECTORS_LIST.forEach(sectorName => {
             const industries = SECTOR_INDUSTRY_MAP[sectorName] || [];
             if (industries.length === 0) return;
 
-            // Generate unique distinct ID safety
-            const sectorId = `sec-${sectorName.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}`;
-
-            // Check if any child is selected
             const activeCount = industries.filter(ind => activeFilters.includes(ind)).length;
             const hasActiveChild = activeCount > 0;
             const isAllSelected = activeCount === industries.length;
 
             let summaryText = '';
             if (activeCount === 0) summaryText = '';
-            else if (isAllSelected) summaryText = ''; // Removed 'All' per user request
+            else if (isAllSelected) summaryText = '';
             else summaryText = `${activeCount} of ${industries.length}`;
+
+            // Logic: If we have state, use it. If not, default to 'hasActiveChild' (Open if active).
+            const wasOpen = stateMap.get(sectorName);
+            const isOpen = (wasOpen !== undefined) ? wasOpen : hasActiveChild;
 
             const section = document.createElement('div');
             section.className = 'filter-accordion-item';
@@ -624,11 +655,11 @@ export class SettingsUI {
                         </div>
                         
                         <div style="width: 16px; display: flex; justify-content: center;">
-                            <i class="fas fa-chevron-down" style="font-size: 0.8rem; opacity: 0.5; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); ${hasActiveChild ? 'transform: rotate(180deg);' : ''}"></i>
+                            <i class="fas fa-chevron-down" style="font-size: 0.8rem; opacity: 0.5; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); ${isOpen ? 'transform: rotate(180deg);' : ''}"></i>
                         </div>
                     </div>
                 </div>
-                <div class="filter-body ${hasActiveChild ? '' : 'hidden'}" style="padding: 10px; background: var(--bg-card); display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; border-top: 1px solid var(--border-color);">
+                <div class="filter-body ${isOpen ? '' : 'hidden'}" style="padding: 10px; background: var(--bg-card); display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; border-top: 1px solid var(--border-color);">
                     ${industries.map(ind => {
                 const isChecked = activeFilters.includes(ind);
                 return `
@@ -783,6 +814,7 @@ export class SettingsUI {
         });
 
         // 4. Sector Toggle & Reactive Meta Updates
+        // 4. Sector Toggle & Reactive Meta Updates
         modal.addEventListener('change', (e) => {
             if (e.target.matches('.sector-toggle')) {
                 const item = e.target.closest('.filter-accordion-item');
@@ -834,7 +866,35 @@ export class SettingsUI {
             }
         });
 
-        // 5. Accordion & Row Logic
+        // 5. Accordion View Control (Expand/Collapse All)
+        modal.addEventListener('click', (e) => {
+            const seg = e.target.closest('.accordion-control-segment');
+            if (!seg) return;
+
+            const action = seg.dataset.action;
+            const container = seg.parentElement;
+
+            // Visual Feedback (Persistent Active State)
+            container.querySelectorAll('.accordion-control-segment').forEach(s => s.classList.remove('active'));
+            seg.classList.add('active');
+
+            // Execute Logic
+            const isExpand = (action === 'expand');
+            modal.querySelectorAll('.filter-accordion-item').forEach(item => {
+                const body = item.querySelector('.filter-body');
+                const icon = item.querySelector('.filter-header i');
+
+                if (isExpand) {
+                    body.classList.remove('hidden');
+                    icon.style.transform = 'rotate(180deg)';
+                } else {
+                    body.classList.add('hidden');
+                    icon.style.transform = 'rotate(0deg)';
+                }
+            });
+        });
+
+        // 6. Accordion & Row Logic (Toggle Single)
         modal.addEventListener('click', (e) => {
             const header = e.target.closest('.filter-header');
             if (header && !e.target.closest('.pill-container')) {
