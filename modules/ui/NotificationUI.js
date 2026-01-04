@@ -73,7 +73,23 @@ export class NotificationUI {
             return; // Stop processing
         }
 
-        // KANGAROO VISIBILITY FIX: Always show the button/container (unless locked)
+        // --- DISMISSAL LOGIC: "If volatility 52 week and personal alert are turned off The kangaroo icon should dismiss itself" ---
+        let allDisabled = false;
+        if (notificationStore) {
+            const rules = notificationStore.getScannerRules() || {};
+            const moversDisabled = (rules.moversEnabled === false);
+            const hiloDisabled = (rules.hiloEnabled === false);
+            const personalDisabled = (rules.personalEnabled === false);
+            allDisabled = (moversDisabled && hiloDisabled && personalDisabled);
+        }
+
+        if (allDisabled) {
+            if (container) container.classList.add(CSS_CLASSES.HIDDEN);
+            bell.classList.add(CSS_CLASSES.HIDDEN);
+            return;
+        }
+
+        // KANGAROO VISIBILITY FIX: Always show the button/container (unless locked or all disabled)
         // Only toggle the BADGE (Red Dot) visibility.
         if (container) container.classList.remove(CSS_CLASSES.HIDDEN);
         bell.classList.remove(CSS_CLASSES.HIDDEN);

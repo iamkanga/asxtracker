@@ -95,6 +95,7 @@ export class NotificationStore {
                         hiloMinPrice: (data.hiloMinPrice !== undefined && data.hiloMinPrice !== null) ? data.hiloMinPrice : null,
                         moversEnabled: data.moversEnabled, // Capture toggle
                         hiloEnabled: data.hiloEnabled,     // Capture 52W Toggle
+                        personalEnabled: data.personalEnabled, // Capture Personal Toggle
                         activeFilters: (prefs.scanner?.activeFilters || []).map(f => f.toUpperCase()) // Capture Whitelist
                     };
 
@@ -506,7 +507,19 @@ export class NotificationStore {
 
         // --- CLIENT-SIDE WATCHLIST ALERTS (TARGETS & HI/LO) ---
         // If the Backend isn't sending Targets or Watchlist Hi/Lo, we generate them here on the fly.
-        const clientTargets = this._generateClientSideWatchlistAlerts();
+        let clientTargets = this._generateClientSideWatchlistAlerts();
+
+        // PERSONAL ALERTS FILTER:
+        // If Personal Alerts is OFF, suppress:
+        // 1. Explicit Targets (intent: 'target' -> Set in Add Share Modal)
+        // 2. Pinned Alerts (Handled at return)
+        // NOTE: We KEEP 'mover' and 'hilo' (52W) as they represent Market Events for the watchlist,
+        // and are governed by Global 'Movers'/'52-Week' toggles.
+        const rules = this.getScannerRules();
+        if (rules.personalEnabled === false) {
+            clientTargets = clientTargets.filter(t => t.intent !== 'target');
+            // console.log('[NotificationStore] Personal Alerts OFF: Suppressed Targets. Keeping Movers/HiLo.');
+        }
 
         // MERGE FIX: Deduplicate Server vs Client Hits.
         // Normalize 'target-hit' vs 'target' to ensure matches work.
@@ -519,6 +532,12 @@ export class NotificationStore {
 
         // Filter Server Hits: Drop if covered by Client
         const uniqueServerHits = this.scanData.customHits.filter(h => {
+            // Also suppress Server-Side Targets if Personal is OFF
+            if (rules.personalEnabled === false) {
+                const intent = normalizeIntent(h.intent);
+                if (intent === 'TARGET') return false;
+            }
+
             const sig = `${h.code}|${normalizeIntent(h.intent)}`.toUpperCase();
             const isDuplicate = clientSignatures.has(sig);
             return !isDuplicate;
@@ -672,7 +691,7 @@ export class NotificationStore {
         // --- CONSOLIDATION LOGIC END ---
 
         return {
-            pinned: this.pinnedAlerts,
+            pinned: (rules.personalEnabled !== false) ? this.pinnedAlerts : [],
             fresh: freshConsolidated
         };
     }
@@ -796,17 +815,23 @@ export class NotificationStore {
         const localDown = localMovers.filter(i => i.type === 'down' || i.pct < 0);
 
         // 3. Merge Strategies (Dedup by Code)
+        const personalEnabled = rules.personalEnabled !== false; // Check Personal Alerts Preference
+
         const mergeLists = (globalList, localList) => {
             const map = new Map();
             // Add Global First
             (globalList || []).forEach(item => {
                 if (item.code) map.set(item.code, item);
             });
-            // Add Local (Override or Append?)
-            // Local is usually "live" so might be fresher. Let's overwrite global with local if collision.
-            (localList || []).forEach(item => {
-                if (item.code) map.set(item.code, { ...item, _isLocal: true }); // Mark as local for debug
-            });
+
+            // Add Local ONLY if Personal Alerts are Enabled
+            if (personalEnabled) {
+                // Add Local (Override or Append?)
+                // Local is usually "live" so might be fresher. Let's overwrite global with local if collision.
+                (localList || []).forEach(item => {
+                    if (item.code) map.set(item.code, { ...item, _isLocal: true }); // Mark as local for debug
+                });
+            }
             return Array.from(map.values());
         };
 

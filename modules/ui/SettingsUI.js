@@ -68,7 +68,7 @@ export class SettingsUI {
                         box-sizing: border-box;
                     }
                     
-                    .pill-segment, .bulk-btn, .master-pill-segment, .pill-segment-movers, .pill-segment-badge, .pill-segment-email, .pill-segment-override, .accordion-control-segment {
+                    .pill-segment, .bulk-btn, .master-pill-segment, .pill-segment-movers, .pill-segment-hilo, .pill-segment-badge, .pill-segment-email, .pill-segment-override, .accordion-control-segment, .pill-segment-personal {
                         flex: 1;
                         height: 100%;
                         display: flex;
@@ -91,20 +91,24 @@ export class SettingsUI {
                     .bulk-btn.active, 
                     .master-pill-segment.active,
                     .pill-segment-movers.active,
+                    .pill-segment-hilo.active,
                     .pill-segment-badge.active,
                     .pill-segment-email.active,
                     .pill-segment-override.active,
-                    .accordion-control-segment.active {
+                    .accordion-control-segment.active,
+                    .pill-segment-personal.active {
                         background: var(--color-accent) !important;
                         color: white !important;
                     }
 
                     .pill-segment-movers:first-child,
+                    .pill-segment-hilo:first-child,
                     .pill-segment-badge:first-child,
                     .pill-segment-email:first-child,
                     .pill-segment-override:first-child,
                     .master-pill-segment:first-child,
-                    .accordion-control-segment:first-child {
+                    .accordion-control-segment:first-child,
+                    .pill-segment-personal:first-child {
                         border-right: 1px solid var(--border-color);
                     }
 
@@ -313,7 +317,7 @@ export class SettingsUI {
             </div>
 
             <div class="${CSS_CLASSES.DETAIL_ROW}" style="justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <span class="${CSS_CLASSES.DETAIL_LABEL}" style="color: white; font-weight: 700;">Volatility Notifications</span>
+                <span class="${CSS_CLASSES.DETAIL_LABEL}" style="color: white; font-weight: 700;">Volatility</span>
                 <div class="pill-container large-pill movers-pill-selector" style="width: 100px;">
                     <span class="pill-segment-movers" data-value="true">On</span>
                     <span class="pill-segment-movers" data-value="false">Off</span>
@@ -322,12 +326,22 @@ export class SettingsUI {
             </div>
 
             <div class="${CSS_CLASSES.DETAIL_ROW}" style="justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <span class="${CSS_CLASSES.DETAIL_LABEL}" style="color: white; font-weight: 700;">52-Week Notifications</span>
+                <span class="${CSS_CLASSES.DETAIL_LABEL}" style="color: white; font-weight: 700;">52 Week</span>
                 <div class="pill-container large-pill hilo-pill-selector" style="width: 100px;">
-                    <span class="pill-segment-movers" data-value="true">On</span>
-                    <span class="pill-segment-movers" data-value="false">Off</span>
+                    <span class="pill-segment-hilo" data-value="true">On</span>
+                    <span class="pill-segment-hilo" data-value="false">Off</span>
                 </div>
                 <input type="checkbox" id="toggle-hiloEnabled" class="hidden">
+            </div>
+
+            <!-- Personal Alerts (New) -->
+            <div class="${CSS_CLASSES.DETAIL_ROW}" style="justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <span class="${CSS_CLASSES.DETAIL_LABEL}" style="color: white; font-weight: 700;">Personal</span>
+                 <div class="pill-container large-pill personal-pill-selector" style="width: 100px;">
+                      <span class="pill-segment-personal" data-value="true">On</span>
+                      <span class="pill-segment-personal" data-value="false">Off</span>
+                  </div>
+                  <input type="checkbox" id="toggle-personalEnabled" class="hidden">
             </div>
 
             <div class="${CSS_CLASSES.DETAIL_ROW}" style="justify-content: space-between; align-items: center; margin-bottom: 20px;">
@@ -425,8 +439,10 @@ export class SettingsUI {
         const minPrice = rules.minPrice ?? null;
         const hiloPrice = rules.hiloMinPrice ?? null;
 
+
         const moversEnabled = rules.moversEnabled !== false;
-        const hiloEnabled = rules.hiloEnabled !== false; // New 52W Master Switch
+        const hiloEnabled = rules.hiloEnabled !== false;
+        const personalEnabled = rules.personalEnabled !== false; // Capture Personal Flag
         const showBadges = prefs.showBadges !== false;
         const dailyEmail = prefs.dailyEmail === true;
 
@@ -448,6 +464,17 @@ export class SettingsUI {
             const el = modal.querySelector(`#${id}`);
             if (el) el.textContent = text;
         };
+
+        // Helper for checkboxes
+        const updateCheck = (id, val) => {
+            const el = modal.querySelector(`#${id}`);
+            if (el) el.checked = val;
+        };
+        updateCheck('toggle-moversEnabled', moversEnabled);
+        updateCheck('toggle-hiloEnabled', hiloEnabled);
+        updateCheck('toggle-personalEnabled', personalEnabled); // Sync Checkbox
+        updateCheck('toggle-pref-showBadges', showBadges);
+
 
         // Debug Log
         // console.warn('[SettingsUI DEBUG] Update Values:', { upPct, upDol, minPrice, hiloPrice });
@@ -476,14 +503,6 @@ export class SettingsUI {
                 }
             } else {
                 // console.log(`[SettingsUI] Skipped Input ${id} (Active/Missing)`);
-            }
-        };
-
-        // Helper for checkboxes
-        const updateCheck = (id, checked) => {
-            const el = modal.querySelector(`#${id}`);
-            if (el && el !== document.activeElement) {
-                el.checked = checked;
             }
         };
 
@@ -588,26 +607,22 @@ export class SettingsUI {
         updateInput('pref-emailAddr', prefs.alertEmailRecipients);
 
         // Toggles UI Updates
-        updateCheck('toggle-moversEnabled', moversOn);
         modal.querySelectorAll('.pill-segment-movers').forEach(pill => {
             pill.classList.toggle('active', pill.dataset.value === String(moversOn));
         });
 
-        updateCheck('toggle-hiloEnabled', hiloOn);
         // Selector tweak: Find pills strictly within the hilo container
         const hiloContainer = modal.querySelector('.hilo-pill-selector');
         if (hiloContainer) {
-            hiloContainer.querySelectorAll('.pill-segment-movers').forEach(pill => {
+            hiloContainer.querySelectorAll('.pill-segment-hilo').forEach(pill => {
                 pill.classList.toggle('active', pill.dataset.value === String(hiloOn));
             });
         }
 
-        updateCheck('toggle-pref-showBadges', showBadges);
         modal.querySelectorAll('.pill-segment-badge').forEach(pill => {
             pill.classList.toggle('active', pill.dataset.value === String(showBadges));
         });
 
-        updateCheck('toggle-pref-dailyEmail', dailyEmail);
         modal.querySelectorAll('.pill-segment-email').forEach(pill => {
             pill.classList.toggle('active', pill.dataset.value === String(dailyEmail));
         });
@@ -616,6 +631,10 @@ export class SettingsUI {
         updateCheck('toggle-pref-excludePortfolio', isExclude);
         modal.querySelectorAll('.pill-segment-override').forEach(pill => {
             pill.classList.toggle('active', pill.dataset.value === String(isExclude));
+        });
+
+        modal.querySelectorAll('.pill-segment-personal').forEach(pill => {
+            pill.classList.toggle('active', pill.dataset.value === String(personalEnabled));
         });
 
         // Sectors (Renamed to Scanner Filters: Hidden in Prefs -> Unchecked in UI)
@@ -804,7 +823,8 @@ export class SettingsUI {
                     minPrice: getNum('global-minPrice'),
                     hiloMinPrice: getNum('hilo-minPrice'),
                     moversEnabled: getCheck('toggle-moversEnabled') ?? true,
-                    hiloEnabled: getCheck('toggle-hiloEnabled') ?? true, // Harvest New Flag
+                    hiloEnabled: getCheck('toggle-hiloEnabled') ?? true,
+                    personalEnabled: getCheck('toggle-personalEnabled') ?? true, // Harvest Personal Flag
                     up: harvestRules('up'),
                     down: harvestRules('down')
                 },
@@ -835,7 +855,7 @@ export class SettingsUI {
 
         // --- CONSOLIDATED EVENT DELEGATION ---
 
-        // 1. Unified Control Pill Handler (Movers, Badges, Email, Override)
+        // 1. Unified Control Pill Handler (Movers, Badges, Email, Override, Personal)
         modal.addEventListener('click', (e) => {
             const pill = e.target.closest('[class*="pill-segment-"]');
             if (!pill) return;
@@ -846,7 +866,9 @@ export class SettingsUI {
             // Check Parent Container to distinguish specific logic
             const container = pill.parentElement;
 
+            // Logic: Identify Target ID based on Pill Class or Container
             if (container.classList.contains('hilo-pill-selector')) targetId = 'toggle-hiloEnabled';
+            else if (container.classList.contains('personal-pill-selector')) targetId = 'toggle-personalEnabled'; // Explicit Container Check
             else if (pill.classList.contains('pill-segment-movers')) targetId = 'toggle-moversEnabled';
             else if (pill.classList.contains('pill-segment-badge')) {
                 targetId = 'toggle-pref-showBadges';
@@ -868,7 +890,7 @@ export class SettingsUI {
                 if (hiddenCheck) {
                     hiddenCheck.checked = val;
                     // Update visuals within the container
-                    const container = pill.parentElement;
+                    // Note: 'container' is already defined above
                     container.querySelectorAll('span').forEach(s => s.classList.remove('active'));
                     pill.classList.add('active');
                     saveSettings();
