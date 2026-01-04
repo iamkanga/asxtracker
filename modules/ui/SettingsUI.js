@@ -4,7 +4,7 @@
  * Handles Firestore Sync logic via UserStore.
  */
 
-import { CSS_CLASSES, IDS, UI_ICONS, EVENTS, SECTORS_LIST, SECTOR_INDUSTRY_MAP } from '../utils/AppConstants.js';
+import { CSS_CLASSES, IDS, UI_ICONS, EVENTS, SECTORS_LIST, SECTOR_INDUSTRY_MAP, STORAGE_KEYS } from '../utils/AppConstants.js';
 import { navManager } from '../utils/NavigationManager.js';
 import { userStore } from '../data/DataService.js';
 import { AppState } from '../state/AppState.js';
@@ -1004,27 +1004,27 @@ export class SettingsUI {
 
         // 5. View All Control (Expand/Collapse All)
         modal.addEventListener('click', (e) => {
-            const seg = e.target.closest('.accordion-control-segment');
+            const seg = e.target.closest(`.${CSS_CLASSES.ACCORDION_CONTROL_SEGMENT}`);
             if (!seg) return;
 
             const action = seg.dataset.action;
             const container = seg.parentElement;
 
             // Visual Feedback (Persistent Active State)
-            container.querySelectorAll('.accordion-control-segment').forEach(s => s.classList.remove('active'));
-            seg.classList.add('active');
+            container.querySelectorAll(`.${CSS_CLASSES.ACCORDION_CONTROL_SEGMENT}`).forEach(s => s.classList.remove(CSS_CLASSES.ACTIVE));
+            seg.classList.add(CSS_CLASSES.ACTIVE);
 
             // Execute Logic
             const isExpand = (action === 'expand');
-            modal.querySelectorAll('.filter-accordion-item').forEach(item => {
-                const body = item.querySelector('.filter-body');
-                const icon = item.querySelector('.filter-header i');
+            modal.querySelectorAll(`.${CSS_CLASSES.FILTER_ACCORDION_ITEM}`).forEach(item => {
+                const body = item.querySelector(`.${CSS_CLASSES.FILTER_BODY}`);
+                const icon = item.querySelector(`.${CSS_CLASSES.FILTER_HEADER} i`);
 
                 if (isExpand) {
-                    body.classList.remove('hidden');
+                    body.classList.remove(CSS_CLASSES.HIDDEN);
                     icon.style.transform = 'rotate(180deg)';
                 } else {
-                    body.classList.add('hidden');
+                    body.classList.add(CSS_CLASSES.HIDDEN);
                     icon.style.transform = 'rotate(0deg)';
                 }
             });
@@ -1032,21 +1032,21 @@ export class SettingsUI {
 
         // 6. Accordion & Row Logic (Toggle Single)
         modal.addEventListener('click', (e) => {
-            const header = e.target.closest('.filter-header');
+            const header = e.target.closest(`.${CSS_CLASSES.FILTER_HEADER}`);
             if (header && !e.target.closest('.pill-container')) {
-                const item = header.closest('.filter-accordion-item');
-                const body = item.querySelector('.filter-body');
+                const item = header.closest(`.${CSS_CLASSES.FILTER_ACCORDION_ITEM}`);
+                const body = item.querySelector(`.${CSS_CLASSES.FILTER_BODY}`);
                 const icon = header.querySelector('i');
-                const isHidden = body.classList.contains('hidden');
+                const isHidden = body.classList.contains(CSS_CLASSES.HIDDEN);
 
-                body.classList.toggle('hidden');
+                body.classList.toggle(CSS_CLASSES.HIDDEN);
                 icon.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
                 return;
             }
 
-            const row = e.target.closest('.clickable-industry-row');
+            const row = e.target.closest(`.${CSS_CLASSES.CLICKABLE_INDUSTRY_ROW}`);
             if (row && !e.target.matches('input')) {
-                const cb = row.querySelector('.sector-toggle');
+                const cb = row.querySelector(`.${CSS_CLASSES.SECTOR_TOGGLE}`);
                 if (cb) {
                     cb.checked = !cb.checked;
                     cb.dispatchEvent(new Event('change', { bubbles: true }));
@@ -1062,14 +1062,14 @@ export class SettingsUI {
         modal.addEventListener('input', (e) => {
             if (e.target.matches('input, select, textarea')) {
                 // AUTO-FLIP: If user types an email, auto-enable the daily email toggle.
-                if (e.target.id === 'pref-emailAddr' && e.target.value.trim().length > 0) {
-                    const dailyCheck = modal.querySelector('#toggle-pref-dailyEmail');
+                if (e.target.id === IDS.PREF_EMAIL_ADDR && e.target.value.trim().length > 0) {
+                    const dailyCheck = modal.querySelector(`#${IDS.TOGGLE_DAILY_EMAIL}`);
                     if (dailyCheck && !dailyCheck.checked) {
                         dailyCheck.checked = true;
                         // Update Pill UI
-                        const container = modal.querySelector('.pill-selector-email');
+                        const container = modal.querySelector(`.${CSS_CLASSES.PILL_SELECTOR_EMAIL}`);
                         if (container) {
-                            container.querySelectorAll('span').forEach(s => s.classList.toggle('active', s.dataset.value === 'true'));
+                            container.querySelectorAll('span').forEach(s => s.classList.toggle(CSS_CLASSES.ACTIVE, s.dataset.value === 'true'));
                         }
                     }
                 }

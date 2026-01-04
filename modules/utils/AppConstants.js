@@ -1051,7 +1051,16 @@ export const CSS_CLASSES = {
     CARD_DOWN: 'card-down',
     CARD_NEUTRAL: 'card-neutral',
     CARD_TARGET: 'card-target',
-    CARD_PINNED: 'card-pinned'
+    CARD_PINNED: 'card-pinned',
+
+    // Settings & Filtering UI
+    ACCORDION_CONTROL_SEGMENT: 'accordion-control-segment',
+    FILTER_ACCORDION_ITEM: 'filter-accordion-item',
+    FILTER_BODY: 'filter-body',
+    FILTER_HEADER: 'filter-header',
+    CLICKABLE_INDUSTRY_ROW: 'clickable-industry-row',
+    SECTOR_TOGGLE: 'sector-toggle',
+    PILL_SELECTOR_EMAIL: 'pill-selector-email'
 };
 
 export const ANIMATIONS = {
@@ -1249,5 +1258,9 @@ export const IDS = {
 
     // Modal Titles for Reorder
     WATCHLIST_MODAL_TITLE: 'watchlist-modal-title',
-    SORT_MODAL_TITLE: 'sort-modal-title'
+    SORT_MODAL_TITLE: 'sort-modal-title',
+
+    // Settings Specific IDs
+    PREF_EMAIL_ADDR: 'pref-emailAddr',
+    TOGGLE_DAILY_EMAIL: 'toggle-pref-dailyEmail'
 };
