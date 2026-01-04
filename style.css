@@ -5,13 +5,19 @@
 /* -------------------------------------------------------------------------- */
 :root {
     /* Global Palette */
-    --bg-color: #f4f4f4;
-    /* Light Grey */
-    --card-bg: #ffffff;
-    /* White */
-    --text-color: #333333;
-    /* Dark Grey */
-    --border-color: #eeeeee;
+    --bg-color: #212529;
+    /* Dark Default (Matches Splash) */
+    /* --bg-color: #f4f4f4; Legacy Light */
+
+    --card-bg: #2c2c2c;
+    /* Dark Default */
+    /* --card-bg: #ffffff; Legacy White */
+
+    --text-color: #e0e0e0;
+    /* Light Text Default */
+    /* --text-color: #333333; Legacy Dark */
+
+    --border-color: #444444;
     /* Very Light Grey */
 
     /* Headers / Nav */
