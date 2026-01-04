@@ -16,6 +16,7 @@ export class NotificationUI {
     static _currentSource = 'total';
     static _bellManuallyHidden = false; // Track manual dismissal
     static _prevCount = 0; // Track previous count for change detection
+    static _openLock = false; // Debounce lock for modal opening
 
     static init() {
         this.renderFloatingBell();
@@ -34,7 +35,13 @@ export class NotificationUI {
         });
 
         // Listen for Open Requests (Sidebar/Bell)
+        // Listen for Open Requests (Sidebar/Bell)
         document.addEventListener(EVENTS.OPEN_NOTIFICATIONS, (e) => {
+            // DUPLICATE PROTECTION: Debounce rapid triggers (e.g. from rapid clicks or potential loops)
+            if (this._openLock) return;
+            this._openLock = true;
+            setTimeout(() => this._openLock = false, 500);
+
             const source = (e.detail && e.detail.source) ? e.detail.source : 'total';
             // Default tab depends on source? No, let showModal decide valid tab (default 'custom').
             this.showModal('custom', source);
@@ -307,7 +314,7 @@ export class NotificationUI {
             settingsBtn.addEventListener('click', () => {
                 console.log('[NotificationUI] Edit/Settings button clicked.');
                 document.dispatchEvent(new CustomEvent(EVENTS.OPEN_SETTINGS));
-                this._close(modal);
+                // this._close(modal); // Removed to persist in stack
             });
         }
 
@@ -369,7 +376,7 @@ export class NotificationUI {
             if (e.target.closest('.settings-link')) {
                 console.log('[NotificationUI] Settings link clicked.');
                 document.dispatchEvent(new CustomEvent(EVENTS.OPEN_SETTINGS));
-                this._close(modal); // Close notifications when opening settings
+                // this._close(modal); // Removed to persist in stack
             }
         });
     }

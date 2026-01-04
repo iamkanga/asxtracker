@@ -107,7 +107,8 @@ class NavigationManager {
             const state = event.state;
             const stateId = (state && state.stateId) ? state.stateId : 1;
 
-            console.log(`NavigationManager v7: Pop detected. State: ${stateId}, Current Stack Depth: ${this.popStack.length}`);
+            // INTENTIONAL DIAGNOSTIC: Tracks history navigation. Not an error.
+            console.log(`NavigationManager: History Pop Event. State: ${stateId}, Stack Depth: ${this.popStack.length}`);
 
             // 1. SILENT POP SYNC: Check if this was a manual pop we should ignore
             if (this.ignoreCount > 0) {

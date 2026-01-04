@@ -365,19 +365,29 @@ export class UserStore {
      */
     getWatchlistData(shares, watchlistId) {
         if (!shares || !Array.isArray(shares)) return [];
-        if (!watchlistId || watchlistId === ALL_SHARES_ID) return shares;
 
-        if (watchlistId === PORTFOLIO_ID) {
-            // In this architecture, 'shares' IS the portfolio (user's collection).
+        // 1. ALL SHARES: Return everything (Admin/Debug view)
+        if (!watchlistId || watchlistId === ALL_SHARES_ID) {
             return shares;
         }
 
-        // For Custom Watchlists:
-        // Identify shares belonging to this watchlist.
-        // Current implementation stores shares in a flat 'shares' collection,
-        // often with a 'watchlistId' field OR mapped separately.
-        // Let's assume the 'watchlistId' field exists on the share doc for now (common pattern).
-        return shares.filter(s => s.watchlistId === watchlistId);
+        // 2. FILTER LOGIC (Portfolio + Custom)
+        // The 'shares' array contains ALL tracked items (owned + watched).
+        // We must filter for items that contain the requested watchlistId in their 'watchlistIds' array.
+        // This fixes:
+        // - Portfolio showing unowned items (was bypassing filter)
+        // - Custom watchlists showing nothing (was checking non-existent single 'watchlistId' prop)
+
+        return shares.filter(s => {
+            // Robustness: Handle array (standard), single string (legacy), or missing
+            if (Array.isArray(s.watchlistIds)) {
+                return s.watchlistIds.includes(watchlistId);
+            }
+            if (s.watchlistId === watchlistId) {
+                return true; // Legacy fallback
+            }
+            return false;
+        });
     }
 
     /**

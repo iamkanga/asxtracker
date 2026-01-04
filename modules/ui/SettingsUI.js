@@ -205,28 +205,43 @@ export class SettingsUI {
         summaryCard.className = CSS_CLASSES.DETAIL_CARD;
         summaryCard.style.border = '1px solid var(--border-color)'; // Uniform thin border
         summaryCard.innerHTML = `
-            <div class="${CSS_CLASSES.DETAIL_CARD_HEADER}" style="justify-content: flex-start; border-bottom: none !important;">
+            <div class="${CSS_CLASSES.DETAIL_CARD_HEADER}" style="justify-content: flex-start; border-bottom: none !important; padding-left: 20px; padding-right: 20px;">
                 <h3 class="${CSS_CLASSES.DETAIL_LABEL}" style="text-decoration: none !important; border-bottom: none !important; color: white !important;">
                     <i class="fas fa-cogs" style="color: var(--color-accent);"></i> Alert Settings
                 </h3>
             </div>
             
-            <div class="settings-summary-grid" style="display: flex; justify-content: space-between; gap: 4px; padding-top: 5px;">
-                <div class="${CSS_CLASSES.DETAIL_ROW}" style="flex-direction: column; align-items: flex-start; gap: 0;">
+            <div class="settings-summary-grid" style="display: flex; justify-content: center; gap: 15px; padding-top: 5px;">
+                <div class="${CSS_CLASSES.DETAIL_ROW}" style="flex-direction: column; align-items: center; gap: 0;">
+                    <span class="${CSS_CLASSES.DETAIL_LABEL} ${CSS_CLASSES.TEXT_XXS}" style="font-size:0.65rem;">Volatility</span>
+                    <span class="${CSS_CLASSES.DETAIL_VALUE}" id="summary-global" style="font-size:0.85rem;">None</span>
+                </div>
+                <div class="${CSS_CLASSES.DETAIL_ROW}" style="flex-direction: column; align-items: center; gap: 0;">
+                    <span class="${CSS_CLASSES.DETAIL_LABEL} ${CSS_CLASSES.TEXT_XXS}" style="font-size:0.65rem;">52W Limit</span>
+                    <span class="${CSS_CLASSES.DETAIL_VALUE}" id="summary-hilo" style="font-size:0.85rem;">None</span>
+                </div>
+                <div class="${CSS_CLASSES.DETAIL_ROW}" style="flex-direction: column; align-items: center; gap: 0;">
                     <span class="${CSS_CLASSES.DETAIL_LABEL} ${CSS_CLASSES.TEXT_XXS}" style="font-size:0.65rem;">Increase</span>
                     <span class="${CSS_CLASSES.DETAIL_VALUE} ${CSS_CLASSES.POSITIVE}" id="summary-up" style="font-size:0.85rem;">None</span>
                 </div>
-                <div class="${CSS_CLASSES.DETAIL_ROW}" style="flex-direction: column; align-items: flex-start; gap: 0;">
+                <div class="${CSS_CLASSES.DETAIL_ROW}" style="flex-direction: column; align-items: center; gap: 0;">
                     <span class="${CSS_CLASSES.DETAIL_LABEL} ${CSS_CLASSES.TEXT_XXS}" style="font-size:0.65rem;">Decrease</span>
                     <span class="${CSS_CLASSES.DETAIL_VALUE} ${CSS_CLASSES.NEGATIVE}" id="summary-down" style="font-size:0.85rem;">None</span>
                 </div>
-                <div class="${CSS_CLASSES.DETAIL_ROW}" style="flex-direction: column; align-items: flex-start; gap: 0;">
-                    <span class="${CSS_CLASSES.DETAIL_LABEL} ${CSS_CLASSES.TEXT_XXS}" style="font-size:0.65rem;">Volatility Limit</span>
-                    <span class="${CSS_CLASSES.DETAIL_VALUE}" id="summary-global" style="font-size:0.85rem;">None</span>
+            </div>
+
+            <div class="settings-summary-grid" style="display: flex; justify-content: center; gap: 20px; padding-top: 8px; margin-top: 0;">
+                <div class="${CSS_CLASSES.DETAIL_ROW}" style="flex-direction: column; align-items: center; gap: 0;">
+                    <span class="${CSS_CLASSES.DETAIL_LABEL} ${CSS_CLASSES.TEXT_XXS}" style="font-size:0.65rem;">Sectors Active</span>
+                    <span class="${CSS_CLASSES.DETAIL_VALUE}" id="summary-sectors-active" style="font-size:0.85rem;">0</span>
                 </div>
-                <div class="${CSS_CLASSES.DETAIL_ROW}" style="flex-direction: column; align-items: flex-start; gap: 0;">
-                    <span class="${CSS_CLASSES.DETAIL_LABEL} ${CSS_CLASSES.TEXT_XXS}" style="font-size:0.65rem;">52W Limit</span>
-                    <span class="${CSS_CLASSES.DETAIL_VALUE}" id="summary-hilo" style="font-size:0.85rem;">None</span>
+                <div class="${CSS_CLASSES.DETAIL_ROW}" style="flex-direction: column; align-items: center; gap: 0;">
+                    <span class="${CSS_CLASSES.DETAIL_LABEL} ${CSS_CLASSES.TEXT_XXS}" style="font-size:0.65rem;">Sectors Hidden</span>
+                    <span class="${CSS_CLASSES.DETAIL_VALUE}" id="summary-sectors-hidden" style="font-size:0.85rem;">0</span>
+                </div>
+                <div class="${CSS_CLASSES.DETAIL_ROW}" style="flex-direction: column; align-items: center; gap: 0;">
+                    <span class="${CSS_CLASSES.DETAIL_LABEL} ${CSS_CLASSES.TEXT_XXS}" style="font-size:0.65rem;">Sectors Total</span>
+                    <span class="${CSS_CLASSES.DETAIL_VALUE}" id="summary-sectors-total" style="font-size:0.85rem;">0</span>
                 </div>
             </div>
         `;
@@ -336,7 +351,7 @@ export class SettingsUI {
 
             <!-- Personal Alerts (New) -->
             <div class="${CSS_CLASSES.DETAIL_ROW}" style="justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <span class="${CSS_CLASSES.DETAIL_LABEL}" style="color: white; font-weight: 700;">Personal</span>
+                <span class="${CSS_CLASSES.DETAIL_LABEL}" style="color: white; font-weight: 700;">Target</span>
                  <div class="pill-container large-pill personal-pill-selector" style="width: 100px;">
                       <span class="pill-segment-personal" data-value="true">On</span>
                       <span class="pill-segment-personal" data-value="false">Off</span>
@@ -666,6 +681,34 @@ export class SettingsUI {
         });
 
         this._renderSectorAccordion(modal, activeFilters);
+        this._updateSectorTallies(modal, activeFilters);
+    }
+
+    /**
+     * Updates the summary tallies for active/hidden industries (detailed sectors)
+     */
+    static _updateSectorTallies(modal, activeFilters) {
+        const activeEl = modal.querySelector('#summary-sectors-active');
+        const hiddenEl = modal.querySelector('#summary-sectors-hidden');
+        const totalEl = modal.querySelector('#summary-sectors-total');
+        if (!activeEl || !hiddenEl || !totalEl) return;
+
+        // Total Industries Count (GICS Level)
+        const allIndustries = Object.values(SECTOR_INDUSTRY_MAP).flat();
+        const totalIndustries = allIndustries.length;
+
+        // Active filters are the WHITELIST of industry names
+        const activeCount = activeFilters.length;
+        const hiddenCount = totalIndustries - activeCount;
+
+        activeEl.textContent = activeCount;
+        hiddenEl.textContent = hiddenCount;
+        totalEl.textContent = totalIndustries;
+
+        // Visual coloring for emphasis
+        hiddenEl.style.color = hiddenCount > 0 ? 'var(--color-negative)' : 'var(--text-muted)';
+        activeEl.style.color = activeCount > 0 ? 'var(--color-positive)' : 'var(--text-muted)';
+        totalEl.style.color = 'var(--text-muted)';
     }
 
     /**
@@ -988,7 +1031,8 @@ export class SettingsUI {
 
                 // Global Master Select Sync
                 const allCBs = modal.querySelectorAll('.sector-toggle');
-                const totalSelected = Array.from(allCBs).filter(cb => cb.checked).length;
+                const activeFilters = Array.from(allCBs).filter(cb => cb.checked).map(cb => cb.dataset.industry);
+                const totalSelected = activeFilters.length;
                 const totalAvailable = allCBs.length;
 
                 modal.querySelectorAll('.master-pill-segment').forEach(seg => {
@@ -998,8 +1042,11 @@ export class SettingsUI {
                     seg.classList.toggle('active', isMatch);
                 });
 
-                saveSettings();
+                // Update Sector Tallies Reactively
+                this._updateSectorTallies(modal, activeFilters);
             }
+
+            saveSettings();
         });
 
         // 5. View All Control (Expand/Collapse All)
