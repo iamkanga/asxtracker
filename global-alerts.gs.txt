@@ -1915,7 +1915,8 @@ function buildPriceFeedArray_(singleCode, options) {
     const apiHighIdx = findFuzzy(['APIHIGH', 'PIHIGH', 'API52WHIGH', 'PI52WHIGH', 'APIHIGH52', 'PIHIGH52']);
     const apiLowIdx = findFuzzy(['APILOW', 'PILOW', 'API52WLOW', 'PI52WLOW', 'APILOW52', 'PILOW52']);
 
-    const idxSector = col(['Sector', 'Industry', 'Category']);
+    const idxSector = col(['Sector', 'Category']);
+    const idxIndustry = col(['Industry']);
 
     values.forEach(r => {
       const rawCode = idxCode != null ? r[idxCode] : '';
@@ -1989,12 +1990,14 @@ function buildPriceFeedArray_(singleCode, options) {
         if (idxPE != null) obj.PE = num(idxPE);
       }
 
-      // SECTOR PASSING
+      // SECTOR & INDUSTRY
       if (idxSector != null) {
         const s = r[idxSector];
-        if (s && String(s).trim()) {
-          obj.Sector = String(s).trim();
-        }
+        if (s && String(s).trim()) obj.Sector = String(s).trim();
+      }
+      if (idxIndustry != null) {
+        const i = r[idxIndustry];
+        if (i && String(i).trim()) obj.Industry = String(i).trim();
       }
 
       out.push(obj);

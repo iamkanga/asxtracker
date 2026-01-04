@@ -1037,6 +1037,41 @@ export class NotificationUI {
 
         if (item._isPinned) cardClass += ` ${CSS_CLASSES.CARD_PINNED}`;
 
+        // --- SECTOR / INDUSTRY ENRICHMENT ---
+        // Priority: 
+        // 1. Explicit Item Sector/Industry (from backend)
+        let sector = item.Sector || item.Industry || item.industry || item.sector; // try all variants
+
+        if (!sector && liveShare) {
+            sector = liveShare.industry || liveShare.Industry || liveShare.Sector || liveShare.sector;
+        }
+
+        // Final fallback if we found it in shares but it wasn't the liveShare object
+        if (!sector) {
+            const fallbackShare = AppState.data.shares.find(s => {
+                const sCode = String(s.code || s.shareName || s.symbol || '').toUpperCase();
+                return sCode === cleanCode;
+            });
+            if (fallbackShare) {
+                sector = fallbackShare.industry || fallbackShare.Sector || fallbackShare.sector;
+            }
+        }
+
+        // --- VERIFICATION LOG ---
+        console.log(`[NotificationUI] Sector Resolution for ${code}: ${sector ? sector : 'MISSING'}`);
+        // ------------------------
+
+        let sectorHtml = '';
+        if (sector) {
+            // Apply truncation and ghosted styling as requested
+            // Grid Column 1 / -1 ensures it spans the full width (like a footer)
+            sectorHtml = `
+            <div class="notif-cell-sector ${CSS_CLASSES.GHOSTED}" style="grid-column: 1 / -1; font-size: 0.85rem; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-muted);">
+                ${sector}
+            </div>`;
+        }
+
+
         //GRID LAYOUT IMPLEMENTATION
         return `
             <div class="${CSS_CLASSES.NOTIFICATION_CARD_GRID} ${cardClass}" data-code="${code}">
@@ -1051,6 +1086,9 @@ export class NotificationUI {
                 <!-- R3: EXPLAINER | RANGE (Optional) -->
                 <div class="notif-cell-explainer">${explainerText}</div>
                 <div class="notif-cell-range">${explainerRange}</div>
+                
+                <!-- R4: SECTOR (Full Width) -->
+                ${sectorHtml}
             </div>
         `;
     }

@@ -96,6 +96,7 @@ export class NotificationStore {
                         moversEnabled: data.moversEnabled, // Capture toggle
                         hiloEnabled: data.hiloEnabled,     // Capture 52W Toggle
                         personalEnabled: data.personalEnabled, // Capture Personal Toggle
+                        excludePortfolio: prefs.excludePortfolio !== false, // Capture Override Toggle
                         activeFilters: (prefs.scanner?.activeFilters || []).map(f => f.toUpperCase()) // Capture Whitelist
                     };
 
@@ -310,6 +311,8 @@ export class NotificationStore {
                     minPrice: (data.minPrice !== undefined && data.minPrice !== null) ? data.minPrice : null,
                     // FIX: Allow 0 (None). Use Nullish Coalescing.
                     hiloMinPrice: (data.hiloMinPrice !== undefined && data.hiloMinPrice !== null) ? data.hiloMinPrice : null,
+                    activeFilters: (data.activeFilters || config.scanner?.activeFilters || []).map(f => f.toUpperCase()),
+                    excludePortfolio: config.excludePortfolio !== false, // Capture Override Toggle
                     hiloEnabled: data.hiloEnabled // Capture 52-Week Toggle
                 };
                 // console.log('[NotificationStore] Scanner Rules Refreshed:', this.scannerRules);
@@ -384,21 +387,33 @@ export class NotificationStore {
 
             // 2d. SCANNER INDUSTRY FILTER (User Request)
             // Block alerts from industries NOT in the activeFilters whitelist.
-            // EXCEPTION: Always show if the stock is in the user's watchlist (_isLocal).
+            // EXCEPTION 1: Always show if the stock is in the user's watchlist AND override is enabled.
+            // EXCEPTION 2: Always show Price Targets (User Intent) regardless of sector.
             const activeFilters = rules.activeFilters || [];
-            if (!hit._isLocal && activeFilters.length > 0) {
-                let ind = (hit.industry || '').toUpperCase();
+            const isLocal = hit._isLocal === true;
+            const overrideOn = rules.excludePortfolio !== false;
+            const isTarget = (hit.intent === 'target' || hit.intent === 'TARGET');
+            const shouldBypass = isTarget || (isLocal && overrideOn);
+
+            if (!shouldBypass) {
+                // If Whitelist is empty, block everything that isn't bypassed
+                if (activeFilters.length === 0) return false;
+
+                let ind = (hit.Industry || hit.Sector || hit.industry || hit.sector || '').toUpperCase();
 
                 // JIT lookup if missing in hit
                 if (!ind && hit.code && AppState.livePrices instanceof Map) {
                     const priceData = AppState.livePrices.get(hit.code);
-                    if (priceData) ind = (priceData.industry || '').toUpperCase();
+                    if (priceData) ind = (priceData.Industry || priceData.Sector || priceData.industry || priceData.sector || '').toUpperCase();
                 }
 
                 if (ind && !activeFilters.includes(ind)) {
                     // console.log(`[NotificationStore] Filtering out ${hit.code} (Industry: ${ind}) – Not in whitelist.`);
                     return false;
                 }
+                // If it HAS industry data but it's not in the whitelist, it's already blocked above.
+                // If it LACKS industry data entirely (not found in hit or JIT), we allow it through 
+                // to avoid hiding alerts for stocks with missing metadata.
             }
 
             // 3. Threshold Check
@@ -588,6 +603,28 @@ export class NotificationStore {
 
             // --- EXCLUDE DASHBOARD SYMBOLS ---
             if (hit.code && DASHBOARD_SYMBOLS.includes(hit.code)) return false;
+
+            // --- SECTOR FILTER (Enforce if Override is OFF) ---
+            const rules = this.getScannerRules() || {};
+            const overrideOn = rules.excludePortfolio !== false;
+            const activeFilters = rules.activeFilters || [];
+            const isTarget = (hit.intent === 'target' || hit.intent === 'TARGET');
+
+            // EXCEPTION: Targets are exempt from sector filtering
+            if (!overrideOn && !isTarget) {
+                // If Whitelist is empty, block everything
+                if (activeFilters.length === 0) return false;
+
+                let ind = (hit.Industry || hit.Sector || hit.industry || hit.sector || '').toUpperCase();
+
+                // JIT lookup if missing in hit
+                if (!ind && hit.code && AppState.livePrices instanceof Map) {
+                    const priceData = AppState.livePrices.get(hit.code);
+                    if (priceData) ind = (priceData.Industry || priceData.Sector || priceData.industry || priceData.sector || '').toUpperCase();
+                }
+
+                if (ind && !activeFilters.includes(ind)) return false;
+            }
 
             // --- STRICT FILTER FOR PERSONAL MOVERS (RMD FIX) ---
             if (hit.intent === 'mover') {
@@ -854,9 +891,9 @@ export class NotificationStore {
             mergedUp.sort((a, b) => (b.pctChange || b.pct || 0) - (a.pctChange || a.pct || 0));
             mergedDown.sort((a, b) => (a.pctChange || a.pct || 0) - (b.pctChange || b.pct || 0));
 
-            // Pass Global minPrice into filterHits rules
-            const upRules = { ...(rules.up || {}), minPrice: rules.minPrice || 0 };
-            const downRules = { ...(rules.down || {}), minPrice: rules.minPrice || 0 };
+            // Pass Global minPrice, activeFilters, and excludePortfolio into filterHits rules
+            const upRules = { ...(rules.up || {}), minPrice: rules.minPrice || 0, activeFilters: rules.activeFilters || [], excludePortfolio: rules.excludePortfolio !== false };
+            const downRules = { ...(rules.down || {}), minPrice: rules.minPrice || 0, activeFilters: rules.activeFilters || [], excludePortfolio: rules.excludePortfolio !== false };
 
             movers.up = this.filterHits(mergedUp, upRules, strictMode);
             movers.down = this.filterHits(mergedDown, downRules, strictMode);
@@ -886,7 +923,7 @@ export class NotificationStore {
         }
 
         // Match Global minPrice for HiLo too
-        const hiloRules = { percentThreshold: 0, dollarThreshold: 0, minPrice: rules.hiloMinPrice || 0 };
+        const hiloRules = { percentThreshold: 0, dollarThreshold: 0, minPrice: rules.hiloMinPrice || 0, activeFilters: rules.activeFilters || [], excludePortfolio: rules.excludePortfolio !== false };
 
         const enrichHilo = (list) => {
             return list.map(hit => {

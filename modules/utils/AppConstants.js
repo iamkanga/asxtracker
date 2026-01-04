@@ -237,6 +237,56 @@ export const SECTOR_INDUSTRY_MAP = {
 
 export const SECTORS_LIST = Object.keys(SECTOR_INDUSTRY_MAP);
 
+// Fallback Map when API/Backend lacks sector data
+export const FALLBACK_SECTOR_MAP = {
+    // Materials
+    'BHP': 'Materials', 'RIO': 'Materials', 'FMG': 'Materials', 'MIN': 'Materials', 'PLS': 'Materials',
+    'NCM': 'Materials', 'NST': 'Materials', 'EVN': 'Materials', 'LYC': 'Materials', 'IGO': 'Materials',
+    'AKE': 'Materials', 'S32': 'Materials', 'NIC': 'Materials', 'SFR': 'Materials', 'BSL': 'Materials',
+
+    // Financials
+    'CBA': 'Financials', 'WBC': 'Financials', 'NAB': 'Financials', 'ANZ': 'Financials', 'MQG': 'Financials',
+    'QBE': 'Financials', 'SUN': 'Financials', 'IAG': 'Financials', 'ASX': 'Financials', 'MPL': 'Financials',
+    'BEN': 'Financials', 'BOQ': 'Financials',
+
+    // Health Care
+    'CSL': 'Health Care', 'COH': 'Health Care', 'RMD': 'Health Care', 'FPH': 'Health Care', 'SHL': 'Health Care',
+    'PME': 'Health Care', 'RHC': 'Health Care', 'ANN': 'Health Care',
+
+    // Consumer Discretionary
+    'WES': 'Consumer Discretionary', 'ALL': 'Consumer Discretionary', 'TCL': 'Consumer Discretionary',
+    'JBH': 'Consumer Discretionary', 'HVN': 'Consumer Discretionary', 'DMP': 'Consumer Discretionary',
+
+    // Consumer Staples
+    'WOW': 'Consumer Staples', 'COL': 'Consumer Staples', 'EDV': 'Consumer Staples', 'MTS': 'Consumer Staples',
+    'TWE': 'Consumer Staples',
+
+    // Energy
+    'WDS': 'Energy', 'STO': 'Energy', 'ALD': 'Energy', 'WHC': 'Energy', 'YAL': 'Energy',
+
+    // Industrials
+    'TCL': 'Industrials', 'BXB': 'Industrials', 'SVW': 'Industrials', 'QAN': 'Industrials', 'AIA': 'Industrials',
+    'WOR': 'Industrials', 'CWY': 'Industrials',
+
+    // Real Estate
+    'GMG': 'Real Estate', 'SCG': 'Real Estate', 'SGP': 'Real Estate', 'MGR': 'Real Estate', 'DXS': 'Real Estate',
+    'VCX': 'Real Estate', 'GPT': 'Real Estate', 'CHC': 'Real Estate',
+
+    // Communication Services
+    'TLS': 'Communication Services', 'REA': 'Communication Services', 'SEK': 'Communication Services',
+    'CAR': 'Communication Services', 'SPK': 'Communication Services',
+
+    // Info Tech
+    'WTC': 'Information Technology', 'XRO': 'Information Technology', 'CPU': 'Information Technology',
+    'ALU': 'Information Technology', 'TNE': 'Information Technology', 'NXT': 'Information Technology',
+
+    // Utilities
+    'ORG': 'Utilities', 'APA': 'Utilities', 'AST': 'Utilities',
+
+    // ETFs (Generic)
+    'VAS': 'ETF', 'VGS': 'ETF', 'IVV': 'ETF', 'NDQ': 'ETF', 'A200': 'ETF', 'IOZ': 'ETF', 'STW': 'ETF'
+};
+
 // Add this Pool to AppConstants as well:
 export const WATCHLIST_ICON_POOL = ['fa-list-alt', 'fa-folder-open', 'fa-bookmark', 'fa-star', 'fa-user', 'fa-users', 'fa-layer-group', 'fa-tags', 'fa-gem', 'fa-briefcase'];
 
