@@ -102,8 +102,9 @@ export class CashViewRenderer {
         if (asset.category) {
             const userCat = AppState.preferences.userCategories?.find(c => c.id === asset.category);
             if (userCat && userCat.color) {
-                // Dynamic Color for User Categories - Combine with base shadow
-                card.style.boxShadow = `inset 6px 0 0 0 ${userCat.color}, 0 2px 4px rgba(0, 0, 0, 0.05)`;
+                // Dynamic Color for User Categories - Use physical border for alignment
+                card.style.borderLeft = `6px solid ${userCat.color}`;
+                card.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.05)'; // Maintain base shadow
             } else {
                 // Standard CSS-based classes
                 card.classList.add(`${CSS_CLASSES.CASH_BORDER_PREFIX}${asset.category}`);
