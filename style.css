@@ -1399,6 +1399,8 @@ body.dark-theme .toast-title {
     display: flex;
     align-items: center;
     justify-content: center;
+    gap: 5px;
+    /* Half a character closer */
     height: auto;
     width: auto;
     padding: 6px 12px;
@@ -3917,63 +3919,7 @@ h1.modal-title,
     border-bottom: none;
 }
 
-.sort-picker-row:hover {
-    background-color: var(--text-color);
-}
-
-.sort-picker-row:hover .sort-picker-icon,
-.sort-picker-row:hover .sort-picker-label,
-.sort-picker-row:hover .sort-picker-direction {
-    color: var(--primary-color) !important;
-}
-
-.sort-picker-row.active {
-    background-color: transparent !important;
-    font-weight: 700;
-}
-
-.sort-picker-row.active .sort-picker-element,
-.sort-picker-row.active .sort-picker-label,
-.sort-picker-row.active .sort-picker-icon,
-.sort-picker-row.active .sort-picker-direction {
-    color: var(--accent-color) !important;
-}
-
-.sort-picker-row-content {
-    display: flex;
-    align-items: center;
-    width: 100%;
-    gap: 12px;
-}
-
-.sort-picker-icon {
-    width: 24px;
-    text-align: center;
-    color: var(--text-muted);
-}
-
-.sort-picker-label {
-    flex: 1;
-    font-size: 1rem;
-    font-weight: 500;
-    color: #fff;
-}
-
-.sort-picker-direction {
-    font-size: 1rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 24px;
-}
-
-.sort-picker-direction.up {
-    color: var(--positive);
-}
-
-.sort-picker-direction.down {
-    color: var(--negative);
-}
+/* Legacy Sort Picker Styles Removed for Consolidation */
 
 /* --- Watchlist Picker Modal (Standardized Match) --- */
 #watchlistPickerModal .modal-content {
@@ -4009,7 +3955,7 @@ h1.modal-title,
 .watchlist-item {
     display: flex;
     align-items: center;
-    padding: 12px 16px;
+    padding: 12px 20px;
     border-bottom: 1px solid #333;
     cursor: pointer;
     background-color: transparent;
@@ -4033,10 +3979,18 @@ h1.modal-title,
 .watchlist-item.selected {
     font-weight: 700;
     color: var(--text-color);
-    /* Fallback or specific */
+    /* Selected/Active Styling (Coffee Color) */
     color: var(--primary-color) !important;
     background-color: transparent;
 }
+
+.watchlist-item i {
+    width: 24px;
+    text-align: center;
+    margin-right: 12px;
+    color: var(--text-muted);
+}
+
 
 .watchlist-item i {
     width: 24px;
@@ -4671,11 +4625,11 @@ input[type="number"] {
 /* Target the rows specifically to remove block background triggers */
 .sort-picker-row {
     background-color: transparent !important;
-    /* Force transparent base */
     transition: color 0.2s ease;
+    border: none !important;
     border-bottom: none !important;
-    padding: 12px 16px;
-    /* Ensure hit area */
+    padding: 6px 20px;
+    /* Reduced from 12px for compact feel */
 }
 
 /* Hover & Active: NO BACKGROUND, TEXT COLOR ONLY */
@@ -4689,37 +4643,53 @@ input[type="number"] {
 /* Text Element Coloring on Hover/Active */
 .sort-picker-row:hover .sort-picker-label,
 .sort-picker-row:hover .sort-picker-icon,
-.sort-picker-row:hover .sort-picker-direction,
 .sort-picker-row:hover .sort-asx-icon,
-/* SVG support */
+.sort-picker-row:hover .sort-selection-tick,
 .sort-picker-row.active .sort-picker-label,
 .sort-picker-row.active .sort-picker-icon,
 .sort-picker-row.active .sort-asx-icon,
-.sort-picker-row.active .sort-picker-direction {
-    color: var(--accent-color) !important;
-    stroke: var(--accent-color);
-    /* For SVG strokes */
+.sort-picker-row.active .sort-selection-tick {
+    color: var(--color-accent) !important;
+    stroke: var(--color-accent) !important;
 }
+
 
 /* SVG Specifics */
 .sort-asx-icon {
     stroke: currentColor;
     /* Inherit from parent */
-    width: 20px;
-    height: 20px;
-    display: block;
+    width: 24px;
+    height: 24px;
+}
+
+.sort-icon-slot {
+    width: 24px;
+    display: flex;
+    justify-content: flex-start;
+    align-items: baseline;
+    flex-shrink: 0;
 }
 
 /* Ensure Icon alignment */
 .sort-picker-row-content {
     display: flex;
-    align-items: center;
+    align-items: baseline;
+    /* Use baseline for perfect text parity */
     gap: 12px;
+    /* Standardize icon-to-label spacing */
 }
 
-.sort-picker-label {
+.sort-picker-label,
+.watchlist-picker-label {
     flex-grow: 1;
-    font-weight: 500;
+    font-weight: 500 !important;
+    font-family: inherit !important;
+    -webkit-font-smoothing: antialiased;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+    /* Ensure consistent weight and single-line display across all modal items */
 }
 
 body.dark-theme .sort-picker-row:hover,
@@ -7943,4 +7913,529 @@ body.dark-theme .calc-result-card {
     .favorite-links-grid {
         grid-template-columns: 1fr;
     }
+}
+
+/* --- Sort Picker Refactor (Combined Hide/Reorder) --- */
+.sort-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    margin-bottom: 8px;
+}
+
+.sort-header-title {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.wire-chevron {
+    opacity: 0.3 !important;
+}
+
+.sort-picker-row {
+    cursor: default;
+    /* distinguish areas */
+}
+
+/* Name is Togglable (Hide) */
+.sort-picker-label {
+    cursor: pointer;
+    flex-grow: 1;
+    padding: 5px 0;
+}
+
+/* Icon is Selectable */
+.sort-picker-icon {
+    cursor: pointer;
+    padding: 5px;
+}
+
+/* Hidden State */
+.sort-picker-row.hidden-selected .sort-picker-label,
+.sort-picker-row.hidden-selected .hidden-tick-icon {
+    color: var(--color-accent) !important;
+    text-decoration: none !important;
+    opacity: 1 !important;
+}
+
+.hidden-tick-icon {
+    color: var(--color-accent);
+    margin-left: 10px;
+}
+
+
+/* --- Sort Picker Refactor (Combined Hide/Reorder) --- */
+.sort-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    /* Subtle separator */
+    margin-bottom: 8px;
+}
+
+.sort-header-title {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    /* Standard muted header text */
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.wire-chevron {
+    opacity: 0.3 !important;
+}
+
+.sort-picker-row {
+    cursor: default;
+    /* distinguish areas */
+}
+
+/* Name is Togglable (Hide) */
+.sort-picker-label {
+    cursor: pointer;
+    flex-grow: 1;
+    /* Hit target */
+    padding: 5px 0;
+}
+
+/* Icon is Selectable */
+.sort-picker-icon {
+    cursor: pointer;
+}
+
+/* Hidden State Overrides (Coffee + Tick) */
+.sort-picker-row.hidden-selected .sort-picker-label,
+.sort-picker-row.hidden-selected .sort-picker-icon,
+.sort-picker-row.hidden-selected .hidden-tick-icon {
+    color: var(--color-accent) !important;
+    text-decoration: none !important;
+    /* User didnt ask for strikethrough, just Color + Tick */
+    opacity: 1 !important;
+    /* Ensure color is visible */
+}
+
+.hidden-tick-icon {
+    color: var(--color-accent);
+    margin-left: 10px;
+}
+
+.sort-reorder-controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+
+/* --- SORT PICKER (Combined Mode) --- */
+.sort-picker-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.sort-picker-row {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto auto auto;
+    align-items: center;
+    padding: 8px 16px;
+    /* Reduced vertical padding */
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 0px;
+    /* Modern square look */
+    gap: 12px;
+}
+
+.sort-picker-label-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    min-width: 0;
+    /* Text truncation support */
+}
+
+.sort-picker-label-group.hidden-item .sort-picker-label {
+    color: var(--color-accent) !important;
+    font-style: italic;
+}
+
+.hidden-tick-icon {
+    color: var(--color-accent);
+    margin-left: 6px;
+    font-size: 0.9em;
+}
+
+/* Carousel Checkbox (Square Radio) */
+.carousel-checkbox-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 8px;
+    /* Generic hit area */
+}
+
+.carousel-checkbox {
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--text-muted);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    background: transparent;
+}
+
+.carousel-checkbox.checked {
+    background-color: var(--color-accent);
+    border-color: var(--color-accent);
+}
+
+.carousel-checkbox.checked::after {
+    content: '\f00c';
+    /* FontAwesome Check */
+    font-family: 'Font Awesome 5 Free';
+    font-weight: 900;
+    font-size: 11px;
+    /* Fit inside 20px */
+    color: #fff;
+}
+
+/* Reorder Controls */
+.sort-reorder-controls {
+    display: flex;
+    flex-direction: row;
+    /* Horizontal */
+    gap: 4px;
+}
+
+.sort-reorder-btn {
+    background: none;
+    border: 1px solid var(--border-color);
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 6px 10px;
+    font-size: 0.9rem;
+    border-radius: 4px;
+}
+
+.sort-reorder-btn:hover {
+    border-color: var(--text-color);
+    color: var(--text-color);
+    background: var(--bg-body);
+}
+
+.sort-reorder-btn:disabled,
+.sort-reorder-btn.disabled {
+    opacity: 0.2;
+    cursor: default;
+    border-color: transparent;
+}
+
+/* --- Updated Sort Picker Layout (Grid) --- */
+
+#sortEditHeaders,
+.sort-picker-row {
+    display: grid;
+    /* Match Watchlist Picker exactly: 1fr 150px 1fr */
+    grid-template-columns: 1fr 150px 1fr !important;
+    align-items: center !important;
+    padding: 2px 20px !important;
+    /* Extremely high density */
+    box-sizing: border-box;
+    gap: 0 !important;
+    border: none !important;
+    border-bottom: none !important;
+}
+
+/* Sync Header Columns */
+#sortEditHeaders .col-hide,
+.sort-picker-row .sort-picker-row-content {
+    grid-column: 1;
+    display: flex;
+    align-items: baseline;
+    /* Perfect text/icon parity */
+    justify-self: start;
+    min-width: 0;
+    /* Allow truncation in grid */
+}
+
+#sortEditHeaders .col-spacer,
+.sort-picker-row .sort-spacer {
+    grid-column: 2;
+}
+
+#sortEditHeaders .col-reorder,
+.sort-picker-row .sort-selection-tick,
+.sort-picker-row .sort-reorder-controls {
+    grid-column: 3 !important;
+    justify-self: end !important;
+    display: flex !important;
+    justify-content: flex-end !important;
+    align-items: center !important;
+    text-align: right !important;
+}
+
+/* Row Height & Separator */
+.sort-picker-row {
+    height: 40px;
+    /* Force consistent height */
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+}
+
+
+/* Header Specifics */
+#watchlistEditHeaders {
+    color: var(--color-accent) !important;
+    display: grid;
+    grid-template-columns: 1fr 150px 1fr;
+    padding: 2px 20px;
+}
+
+.sort-header-row {
+    color: var(--color-accent) !important;
+    /* Unified Coffee Header */
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border: none !important;
+    border-bottom: none !important;
+    margin-bottom: 4px;
+    padding-bottom: 0 !important;
+    display: flex;
+    align-items: baseline;
+}
+
+
+/* Selected/Active Styling (Coffee Color ONLY) */
+.sort-picker-row.active .sort-picker-label {
+    color: var(--color-accent) !important;
+    text-decoration: none !important;
+}
+
+/* Hidden State Overrides (Coffee + Strikethrough) */
+.sort-item-hidden .sort-picker-label {
+    color: var(--color-accent) !important;
+    text-decoration: line-through !important;
+    opacity: 0.7;
+}
+
+.sort-item-hidden .sort-picker-icon,
+.sort-item-hidden .hidden-tick-icon {
+    color: var(--color-accent) !important;
+}
+
+.sort-picker-row.active .sort-picker-icon,
+.sort-picker-row.active .sort-asx-icon,
+.sort-picker-row.active .sort-selection-tick,
+.sort-picker-row.active .sort-selection-tick i {
+    color: var(--color-accent) !important;
+    stroke: var(--color-accent) !important;
+}
+
+.sort-picker-row.active {
+    background-color: transparent !important;
+    font-weight: 700;
+}
+
+/* Remove Border/Background from Sort Toggle */
+#sortToggleBtn,
+.sort-direction-toggle .segmented-control {
+    background: none !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+#sortToggleBtn {
+    padding: 10px 0 !important;
+}
+
+.sort-direction-toggle {
+    border: none !important;
+    border-bottom: none !important;
+    padding-bottom: 0 !important;
+}
+
+
+
+/* Wire Chevron */
+.wire-chevron {
+    opacity: 0.3 !important;
+    font-weight: 300 !important;
+}
+
+
+/* --- Watchlist Picker Refactor (Unified Edit Mode) --- */
+
+.watchlist-edit-headers {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 20px 5px 20px;
+    font-size: 0.85em;
+    color: var(--color-accent);
+    font-weight: 500;
+}
+
+.watchlist-item-hidden .watchlist-name-span {
+    color: var(--color-accent) !important;
+    text-decoration: line-through;
+    opacity: 0.8;
+}
+
+.square-radio {
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--color-accent);
+    background-color: transparent;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+.square-radio.checked {
+    background-color: var(--color-accent);
+    box-shadow: inset 0 0 0 4px var(--card-bg);
+    /* Mask to create a square ring effect or solid */
+}
+
+/* User requested SQUARE RADIO BUTTONS. Usually that means solid fill or inner square.
+   Let's do solid fill but with a checkmark? Or just solid. 
+   'Radio buttons that are square'. 
+   I'll make it solid coffee when checked. Use box-shadow inset to create a border if needed, 
+   or just solid. 
+   Let's try solid fill.
+*/
+.square-radio.checked {
+    background-color: var(--color-accent);
+    box-shadow: none;
+    /* Solid fill */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Optional: Inner white square for 'Radio' look? 
+   No, let's keep it simple: Empty Square -> Solid Coffee Square. 
+*/
+
+.reorder-btn {
+    cursor: pointer;
+    padding: 4px;
+    /* Increased padding */
+    color: var(--text-muted);
+    transition: color 0.2s;
+    font-size: 1.1em;
+}
+
+.reorder-btn:hover {
+    color: var(--text-color);
+}
+
+.reorder-btn.disabled {
+    opacity: 0.2;
+    cursor: default;
+    pointer-events: none;
+}
+
+.modal-title-chevron {
+    transform-origin: center;
+    /* Transition handled inline */
+}
+
+
+/* --- Updated Watchlist Picker Layout (Grid) --- */
+
+.watchlist-edit-headers,
+.watchlist-item {
+    display: grid;
+    /* 1fr 150px 1fr ensures the 150px column is EXACTLY in the center of the modal */
+    grid-template-columns: 1fr 150px 1fr;
+    align-items: center;
+    padding-left: 20px;
+    padding-right: 20px;
+    box-sizing: border-box;
+    gap: 0;
+}
+
+/* Row Layout Overrides */
+.watchlist-item {
+    padding-top: 12px;
+    padding-bottom: 12px;
+}
+
+/* Column 1: Hide */
+.watchlist-edit-headers .col-hide,
+.watchlist-item .watchlist-col-hide {
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    grid-column: 1;
+    width: 100%;
+    justify-self: start;
+}
+
+/* Column 2: Carousel */
+.watchlist-edit-headers .col-carousel,
+.watchlist-item .watchlist-col-carousel {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    grid-column: 2;
+    text-align: center;
+    width: 100%;
+    margin: 0;
+    justify-self: center;
+}
+
+/* Column 3: Reorder */
+.watchlist-edit-headers .col-reorder,
+.watchlist-item .watchlist-col-reorder {
+    display: flex;
+    justify-content: flex-end;
+    /* Align buttons to the right edge */
+    align-items: center;
+    gap: 15px;
+    /* Increased gap between up/down arrows */
+    grid-column: 3;
+    width: 100%;
+    justify-self: end;
+}
+
+/* --- Improved Square Radio Button --- */
+/* User Req: Outline, Space, Fill. */
+.square-radio {
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--color-accent);
+    background-color: transparent;
+    cursor: pointer;
+
+    /* The Magic: Use padding + background-clip: content-box */
+    padding: 3px;
+    background-clip: content-box;
+
+    border-radius: 2px;
+    /* Slight soft edge or 0 for sharp square */
+    box-sizing: border-box;
+    /* Important for padding calc */
+    transition: background-color 0.2s ease;
+}
+
+.square-radio.checked {
+    background-color: var(--color-accent);
+    /* Fills the inner content box */
+    /* Box shadow removed as we use background-clip */
+    box-shadow: none;
 }

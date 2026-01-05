@@ -960,8 +960,8 @@ export class ViewRenderer {
         let iconHtml;
         if (activeOption.label === 'ASX Code') {
             iconHtml = `
-            <svg class="${CSS_CLASSES.SORT_ASX_ICON}" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="Arial, sans-serif" font-weight="400" font-size="10" fill="currentColor">ASX</text>
+            <svg class="sort-asx-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <text x="50%" y="54%" dominant-baseline="central" text-anchor="middle" font-family="Arial, sans-serif" font-weight="700" font-size="9" fill="currentColor">ASX</text>
             </svg>`;
         } else {
             iconHtml = `<i class="fas ${activeOption.icon}"></i>`;
@@ -994,7 +994,8 @@ export class ViewRenderer {
             }
 
             // Update innerHTML
-            sortBtn.innerHTML = `${iconHtml} <span>${activeOption.label}</span> <i class="fas ${arrowIcon} ${arrowClass}"></i>`;
+            // REMOVED: Extra space between iconHtml and span for tighter Title Bar spacing
+            sortBtn.innerHTML = `${iconHtml}<span>${activeOption.label}</span> <i class="fas ${arrowIcon} ${arrowClass}"></i>`;
         }
     }
 
@@ -1142,7 +1143,9 @@ export class ViewRenderer {
             pendingDir
         };
 
-        if (!this.sortPickerMode) this.sortPickerMode = 'default';
+        if (this.isSortEditMode === undefined) this.isSortEditMode = false;
+        const mode = this.isSortEditMode ? 'reorder' : 'default';
+        this.sortPickerMode = mode;
 
         // 2. Ensure Modal Exists (Singleton Pattern)
         const modal = this._getOrCreateSortModal();
@@ -1172,11 +1175,9 @@ export class ViewRenderer {
         if (!AppState.hiddenSortOptions[type]) AppState.hiddenSortOptions[type] = new Set();
         const hiddenSet = AppState.hiddenSortOptions[type];
 
-        // Filter Options for Display (Hide Mode shows all)
+        // Filter Options for Display - SHOW EVERYTHING IN COMBINED MODE
         let displayOptions = options;
-        if (this.sortPickerMode !== 'hide') {
-            displayOptions = options.filter(opt => !hiddenSet.has(`${opt.field}-${opt.direction}`));
-        }
+        // if (this.sortPickerMode !== 'hide') { ... } // Removed Logic
 
         // 3a. Unified Sort Logic (Deduplicate Fields & Toggle)
         // Deduplicate Fields (Show one row per field)
@@ -1222,18 +1223,14 @@ export class ViewRenderer {
             <div class="${CSS_CLASSES.MODAL_CONTENT}">
                 <div class="${CSS_CLASSES.MODAL_HEADER}">
                     <h2 id="${IDS.SORT_MODAL_TITLE}" class="${CSS_CLASSES.MODAL_TITLE} ${CSS_CLASSES.CLICKABLE}">
-                        Select Sort Order <i class="fas fa-caret-down ${CSS_CLASSES.TEXT_COFFEE}"></i>
+                        Select Sort Order 
+                        <svg class="modal-title-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.3; margin-left: 8px; transition: transform 0.3s ease;">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
                     </h2>
                     <button class="${CSS_CLASSES.MODAL_CLOSE_BTN}" data-dismiss="modal">
                         <i class="fas ${UI_ICONS.CLOSE}"></i>
                     </button>
-                </div>
-                <!-- Mode Selector -->
-                <div id="${IDS.SORT_MODE_CONTAINER}" class="${CSS_CLASSES.HIDDEN} ${CSS_CLASSES.MODE_SELECTOR}" style="padding: 10px 20px 0 20px;">
-                    <div class="${CSS_CLASSES.SEGMENTED_CONTROL}">
-                        <button id="${IDS.SORT_MODE_REORDER}" class="${CSS_CLASSES.SEGMENTED_BUTTON}">Reorder</button>
-                        <button id="${IDS.SORT_MODE_HIDE}" class="${CSS_CLASSES.SEGMENTED_BUTTON}">Hide</button>
-                    </div>
                 </div>
 
                 <!-- Sort Direction Toggle (Unified) -->
@@ -1243,6 +1240,13 @@ export class ViewRenderer {
                             <!-- Content populated dynamically -->
                         </button>
                     </div>
+                </div>
+
+                <!-- Combined Reorder/Hide Header -->
+                <div id="sortEditHeaders" class="sort-header-row ${CSS_CLASSES.HIDDEN}">
+                    <span class="col-hide">Hide</span>
+                    <span class="col-spacer"></span>
+                    <span class="col-reorder">Reorder</span>
                 </div>
 
                 <div class="${CSS_CLASSES.SORT_PICKER_LIST}" id="${IDS.SORT_PICKER_LIST}"></div>
@@ -1330,36 +1334,34 @@ export class ViewRenderer {
                 currentPickerMode: this.sortPickerMode
             });
 
-            // Mode Toggle via Title
+
+            // Mode Toggle via Title (RESTORED)
             if (e.target.closest(`#${IDS.SORT_MODAL_TITLE}`)) {
                 // TERMINATION RULE: Switching to Reorder Mode cancels Global Sort
                 if (context.onGlobalCancel) {
-                    // console.log('[ViewRenderer] Title Click -> Triggering Global Cancel');
                     context.onGlobalCancel();
                 }
 
-                this.sortPickerMode = (this.sortPickerMode === 'default') ? 'reorder' : 'default';
-                this.renderSortPickerModal(context.watchlistId, context.currentSort, context.onSelect);
+                this.isSortEditMode = !this.isSortEditMode;
+                this.sortPickerMode = this.isSortEditMode ? 'reorder' : 'default';
+
+                // Update Title Text & Style
+                const title = modal.querySelector(`#${IDS.SORT_MODAL_TITLE}`);
+                if (title) {
+                    if (this.isSortEditMode) {
+                        title.firstChild.textContent = 'Hide / Reorder ';
+                        title.classList.add(CSS_CLASSES.TEXT_COFFEE);
+                    } else {
+                        title.firstChild.textContent = 'Select Sort Order ';
+                        title.classList.remove(CSS_CLASSES.TEXT_COFFEE);
+                    }
+                }
+
+                this.renderSortPickerModal(context.watchlistId, context.currentSort, context.onSelect, context.onHide);
                 return;
             }
 
-            // Mode Buttons
-            const reorderBtn = e.target.closest(`#${IDS.SORT_MODE_REORDER}`);
-            if (reorderBtn) {
-                // console.log('[ViewRenderer] reorderBtn found, switching mode to reorder');
-                this.sortPickerMode = 'reorder';
-                this.renderSortPickerModal(context.watchlistId, context.currentSort, context.onSelect);
-                return;
-            }
-
-            const hideBtn = e.target.closest(`#${IDS.SORT_MODE_HIDE}`);
-            if (hideBtn) {
-                // console.log('[ViewRenderer] hideBtn found, switching mode to hide');
-                this.sortPickerMode = 'hide';
-                this.renderSortPickerModal(context.watchlistId, context.currentSort, context.onSelect);
-                return;
-            }
-
+            // Mode Buttons (REMOVED)
 
             // Direction Toggles (Unified)
             const toggleBtn = e.target.closest(`#${IDS.SORT_TOGGLE_BTN}`);
@@ -1367,21 +1369,15 @@ export class ViewRenderer {
                 const currentDir = this._sortContext.pendingDir || 'desc';
                 const newDir = (currentDir === 'desc') ? 'asc' : 'desc';
 
-                // console.log('[ViewRenderer] Sort Toggle Clicked -> Switching to:', newDir);
-
                 this._sortContext.pendingDir = newDir;
 
                 // Trigger immediate sort if we have a field
-                // Trigger immediate sort if we have a field
                 if (context.currentSort?.field) {
                     const f = context.currentSort.field;
-                    // console.log('[ViewRenderer] Triggering Immediate Sort (Keep Open):', { field: f, direction: newDir });
-
-                    // 1. Notify Controller (Updates Background List)
+                    // Notify Controller (Updates Background List)
                     context.onSelect({ field: f, direction: newDir }, 'TOGGLE');
 
-                    // 2. Update Modal State (Keep Open)
-                    // We must update the context reference so the re-render knows the new direction
+                    // Update Modal State (Keep Open)
                     context.currentSort.direction = newDir;
                     this.renderSortPickerModal(context.watchlistId, context.currentSort, context.onSelect);
                 } else {
@@ -1418,62 +1414,61 @@ export class ViewRenderer {
                     });
                 }
                 const hiddenSet = AppState.hiddenSortOptions[type] || new Set();
-                const displayOptions = options.filter(opt => !hiddenSet.has(`${opt.field}-${opt.direction}`));
+
+                // CRITICAL FIX: Display Options must include HIDDEN items now, so we can unhide/reorder them? 
+                // User said: "Normally if a sort order is ticked. That sort will be hidden from the list"
+                // This implies the list IN THE MODAL shows everything? 
+                // "Sort order reorder AND hide function... combine them".
+                // Yes, the modal must show ALL options.
+                // The previous logic filtered them out. We must pass full list to reorder.
+
+                // Use the same filtered/unfiltered list as rendered. 
+                // In Render, we will now SHOW hidden items.
+                const displayOptions = options; // Show ALL in this modal
 
                 this._handleSortReorder(type, displayOptions, index, dir, context.watchlistId, context.currentSort, context.onSelect);
                 return;
             }
 
             // Row Interaction (Hide / Select)
-            if (this.sortPickerMode === 'hide') {
-                const type = row.dataset.type;
-                const stringKey = String(key);
-                if (!AppState.hiddenSortOptions[type]) AppState.hiddenSortOptions[type] = new Set();
-                const hiddenSet = AppState.hiddenSortOptions[type];
+            if (this.sortPickerMode === 'reorder') {
+                // Label Interaction (Hide / Unhide) - User Requirement: "Hide Shares by Tapping Name"
+                if (e.target.closest(`.${CSS_CLASSES.SORT_PICKER_LABEL}`)) {
+                    const type = row.dataset.type;
+                    const stringKey = String(key);
+                    if (!AppState.hiddenSortOptions[type]) AppState.hiddenSortOptions[type] = new Set();
+                    const hiddenSet = AppState.hiddenSortOptions[type];
 
-                // console.log('[ViewRenderer] Sort Hide Toggle Clicked:', stringKey, 'Type:', type, 'Target:', e.target.className);
-                // console.log('[ViewRenderer] Current Set:', [...hiddenSet]);
+                    if (hiddenSet.has(stringKey)) hiddenSet.delete(stringKey);
+                    else hiddenSet.add(stringKey);
 
-                if (hiddenSet.has(stringKey)) hiddenSet.delete(stringKey);
-                else hiddenSet.add(stringKey);
+                    AppState.saveHiddenSortOptions();
+                    if (typeof this._sortContext.onHide === 'function') {
+                        this._sortContext.onHide();
+                    }
 
-                // console.log('[ViewRenderer] New State:', [...hiddenSet]);
-
-                AppState.saveHiddenSortOptions();
-                if (typeof this._sortContext.onHide === 'function') {
-                    this._sortContext.onHide();
-                }
-                setTimeout(() => {
+                    // Optimistic UI Update (Re-render)
                     this.renderSortPickerModal(context.watchlistId, context.currentSort, context.onSelect, context.onHide);
-                }, 50);
+                    return;
+                }
+                // Do not allow "Select" in reorder mode (unless we want to?)
+                // Usually edit mode disables selection.
                 return;
             }
 
-            if (this.sortPickerMode === 'reorder') return;
-
-            // Default Mode: Selection
-            // Long Press Guard: If this click was result of a long press, ignore it (handled by timer)
+            // Default Mode: Selection (Clicking Icon or Row Background)
+            // Long Press Guard
             if (isLongPress) {
-                isLongPress = false; // Reset
+                isLongPress = false;
                 e.preventDefault();
                 e.stopPropagation();
                 return;
             }
 
             const [field, direction] = key.split('-');
-
-            // Unified Selection Logic
-            // Always use the pending direction
             const pendingDir = this._sortContext.pendingDir || 'desc';
-            // console.log('[ViewRenderer] Sort Selection:', { field, direction: pendingDir, pendingCtx: this._sortContext.pendingDir });
-
-            // Note: 'direction' from the key is ignored in favor of the toggle state
-            // unless we want to respect the clicked item's underlying direction? 
-            // No, the list items are deduplicated by field now, so the key's direction is arbitrary (usually the first one found).
-            // So we MUST use pendingDir.
 
             context.onSelect({ field, direction: pendingDir }, 'LIST');
-
             this._closeSortPickerInstance();
         });
 
@@ -1484,175 +1479,155 @@ export class ViewRenderer {
         // Update Title Style
         const title = modal.querySelector(`#${IDS.SORT_MODAL_TITLE}`);
 
-        // RESET Classes first
-        title.classList.remove(CSS_CLASSES.MODAL_REORDER_TITLE, CSS_CLASSES.TEXT_COFFEE);
-        title.innerHTML = `Select Sort Order <i class="fas ${UI_ICONS.CARET_DOWN} ${CSS_CLASSES.TEXT_COFFEE}"></i>`; // Default
+        const chevronHtml = `
+            <svg class="modal-title-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.3; margin-left: 8px; transition: transform 0.3s ease;">
+                <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>`;
 
-        if (this.sortPickerMode !== 'default') {
-            title.classList.add(CSS_CLASSES.MODAL_REORDER_TITLE);
-            title.innerHTML = (this.sortPickerMode === 'reorder' ? 'Reorder Sort Options' : 'Hide Sort Options') + ` <i class="fas ${UI_ICONS.CARET_DOWN} ${CSS_CLASSES.TEXT_COFFEE}"></i>`;
+        // Dynamic Title
+        if (this.isSortEditMode) {
+            title.innerHTML = `Hide / Reorder ${chevronHtml}`;
+            title.classList.add(CSS_CLASSES.TEXT_COFFEE);
         } else {
             // Check Global Sort
             if (AppState.preferences.globalSort) {
                 title.classList.add(CSS_CLASSES.TEXT_COFFEE);
-                // Add Globe Icon
-                title.innerHTML = `<i class="fas ${UI_ICONS.GLOBE}"></i> Global Sort Active <i class="fas ${UI_ICONS.CARET_DOWN} ${CSS_CLASSES.TEXT_COFFEE}"></i>`;
-            }
-        }
-
-        // Update Mode Container Visibility
-        const modeContainer = modal.querySelector(`#${IDS.SORT_MODE_CONTAINER}`);
-        const toggleContainer = modal.querySelector(`#${IDS.SORT_DIRECTION_TOGGLE}`);
-
-        // Unified View: Always Show Toggle, Hide Mode Selector (unless strict mode needed?)
-        // User requested removing "Ascending/Descending" selection rows. 
-        // We will prioritize the Toggle.
-
-        // Conditional Visibility: Toggle vs Mode Buttons
-        if (this.sortPickerMode === 'default') {
-            modeContainer.classList.add(CSS_CLASSES.HIDDEN);
-            toggleContainer.classList.remove(CSS_CLASSES.HIDDEN);
-        } else {
-            // In "Edit Mode" (Reorder/Hide), show the Mode Buttons, hide the Toggle
-            modeContainer.classList.remove(CSS_CLASSES.HIDDEN);
-            toggleContainer.classList.add(CSS_CLASSES.HIDDEN);
-        }
-
-        // Update Toggle Button
-        const activeDir = this._sortContext.pendingDir || 'desc';
-        const toggleBtn = modal.querySelector(`#${IDS.SORT_TOGGLE_BTN}`);
-
-        if (toggleBtn) {
-            // REVISED LOGIC (User Request):
-            // "High to Low" (Green Up) -> Numbers: Desc, Text: Asc
-            // "Low to High" (Red Down) -> Numbers: Asc, Text: Desc
-
-            // Helper to determine field type
-            const currentField = currentSort.field || 'code';
-            const isTextField = ['code', 'name', 'category', 'comments', 'targetPrice'].includes(currentField);
-
-            // Determine "High to Low" direction for this field
-            const highToLowDir = isTextField ? 'asc' : 'desc';
-
-            let btnContent = '';
-            let iconClass = '';
-            let colorClass = '';
-            let labelText = '';
-
-            // If current is 'High to Low', offer 'Low to High' (Red Down)
-            if (activeDir === highToLowDir) {
-                // Target: Low to High
-                iconClass = `${UI_ICONS.CARET_DOWN || 'fa-caret-down'}`;
-                colorClass = CSS_CLASSES.TEXT_NEGATIVE;
-                labelText = 'Low to High';
+                title.innerHTML = `<i class="fas ${UI_ICONS.GLOBE}"></i> Global Sort Active ${chevronHtml}`;
             } else {
-                // Target: High to Low (Green Up)
-                iconClass = `${UI_ICONS.CARET_UP || 'fa-caret-up'}`;
-                colorClass = CSS_CLASSES.TEXT_POSITIVE;
-                labelText = 'High to Low';
+                title.classList.remove(CSS_CLASSES.TEXT_COFFEE);
+                title.innerHTML = `Select Sort Order ${chevronHtml}`;
             }
-
-            // Dual Chevron Layout (Justify Center with Specific Gap)
-            // User requested: "Too far away... need to sit much closer, just not as close as before."
-            // justify-between was too far. justify-center without gap is too close.
-            // Solution: justify-center + explicit margin on icons.
-
-            btnContent = `
-                <div class="${CSS_CLASSES.W_FULL} ${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.ALIGN_CENTER}" style="justify-content: center;">
-                    <i class="fas ${iconClass} ${colorClass}" style="margin-right: 15px;"></i>
-                    <span class="${CSS_CLASSES.FONT_BOLD}">${labelText}</span>
-                    <i class="fas ${iconClass} ${colorClass}" style="margin-left: 15px;"></i>
-                </div>
-            `;
-
-            toggleBtn.innerHTML = btnContent;
-            toggleBtn.classList.remove(CSS_CLASSES.GHOSTED);
         }
 
-        // --- ENFORCE BUTTON CLASSES (Fixes Stale DOM Issue) ---
-        // Explicitly set className to ensure correct base class + active state
-        // even if the modal was created before constants were loaded.
-
-        const reorderBtn = modal.querySelector(`#${IDS.SORT_MODE_REORDER}`);
-        if (reorderBtn) {
-            const isActive = (this.sortPickerMode === 'reorder');
-            reorderBtn.className = `${CSS_CLASSES.SEGMENTED_BUTTON} ${isActive ? CSS_CLASSES.ACTIVE : ''}`;
+        // Show/Hide Header Row (Title Helper)
+        const headerRow = modal.querySelector('#sortEditHeaders');
+        if (headerRow) {
+            if (this.isSortEditMode) {
+                headerRow.classList.remove(CSS_CLASSES.HIDDEN);
+            } else {
+                headerRow.classList.add(CSS_CLASSES.HIDDEN);
+            }
         }
 
-        const hideBtn = modal.querySelector(`#${IDS.SORT_MODE_HIDE}`);
-        if (hideBtn) {
-            const isActive = (this.sortPickerMode === 'hide');
-            hideBtn.className = `${CSS_CLASSES.SEGMENTED_BUTTON} ${isActive ? CSS_CLASSES.ACTIVE : ''}`;
+        // Animate Chevron
+        const chevron = modal.querySelector('.modal-title-chevron');
+        if (chevron) {
+            chevron.style.transform = this.isSortEditMode ? 'rotate(180deg)' : 'rotate(0deg)';
+            chevron.style.opacity = this.isSortEditMode ? '1' : '0.3';
+        }
+
+        // --- Toggle Button Visibility (Hide in Reorder Mode) ---
+        const toggleContainer = modal.querySelector(`#${IDS.SORT_DIRECTION_TOGGLE}`);
+        if (toggleContainer) {
+            // Hide toggle in Reorder mode (to focus on reordering)
+            toggleContainer.classList.toggle(CSS_CLASSES.HIDDEN, this.isSortEditMode);
+        }
+
+        // Update Toggle Button Content (if visible)
+        if (!this.isSortEditMode) {
+            const activeDir = this._sortContext.pendingDir || 'desc';
+            const toggleBtn = modal.querySelector(`#${IDS.SORT_TOGGLE_BTN}`);
+
+            if (toggleBtn) {
+                const currentField = currentSort.field || 'code';
+                const isTextField = ['code', 'name', 'category', 'comments', 'targetPrice'].includes(currentField);
+                const highToLowDir = isTextField ? 'asc' : 'desc';
+                let iconClass = '';
+                let colorClass = '';
+                let labelText = '';
+
+                if (activeDir === highToLowDir) {
+                    iconClass = `${UI_ICONS.CARET_DOWN || 'fa-caret-down'}`;
+                    colorClass = CSS_CLASSES.TEXT_NEGATIVE;
+                    labelText = 'Low to High';
+                } else {
+                    iconClass = `${UI_ICONS.CARET_UP || 'fa-caret-up'}`;
+                    colorClass = CSS_CLASSES.TEXT_POSITIVE;
+                    labelText = 'High to Low';
+                }
+
+                toggleBtn.innerHTML = `
+                    <div class="${CSS_CLASSES.W_FULL} ${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.ALIGN_CENTER}" style="justify-content: center;">
+                        <i class="fas ${iconClass} ${colorClass}" style="margin-right: 15px;"></i>
+                        <span class="${CSS_CLASSES.FONT_BOLD}">${labelText}</span>
+                        <i class="fas ${iconClass} ${colorClass}" style="margin-left: 15px;"></i>
+                    </div>
+                `;
+                toggleBtn.classList.remove(CSS_CLASSES.GHOSTED);
+            }
+        }
+
+        // Filter Options for Default Mode (Hide Hidden Items)
+        let filteredOptions = displayOptions;
+        if (!this.isSortEditMode) {
+            filteredOptions = displayOptions.filter(opt => !hiddenSet.has(`${opt.field}-${opt.direction}`));
         }
 
         // Generate and Update List Content
-        const rowsHtml = displayOptions.map((opt, index) => {
+        const rowsHtml = filteredOptions.map((opt, index) => {
             const uniqueKey = `${opt.field}-${opt.direction}`;
-
-            // Unified List Item Validation
-            // Active check: Just match Field
             let isActive = (currentSort.field === opt.field);
+            const isHidden = hiddenSet.has(String(uniqueKey));
 
-            let activeClass = (isActive && this.sortPickerMode === 'default') ? CSS_CLASSES.ACTIVE : '';
-            if (this.sortPickerMode === 'hide' && hiddenSet.has(String(uniqueKey))) activeClass += ` ${CSS_CLASSES.HIDDEN_SELECTED}`;
-
-            // Global Sort Active Row Check
-            if (AppState.preferences.globalSort) {
-                const g = AppState.preferences.globalSort;
-                if (g.field === opt.field) { // Relaxed to just field since direction is toggled
-                    activeClass += ' global-sort-active';
-                }
+            // Class Logic
+            let rowClasses = CSS_CLASSES.SORT_PICKER_ROW;
+            // In Reorder mode, highlight hidden items
+            if (this.isSortEditMode && isHidden) {
+                rowClasses += ' sort-item-hidden';
+            }
+            // In Default mode, highlight active item
+            if (!this.isSortEditMode && isActive) {
+                rowClasses += ' active'; // Standard active class
             }
 
             // Ensure icons are mapped correctly or default
-            let iconClass = opt.icon; // Default
-            if (opt.label === 'ASX Code') iconClass = ''; // Handled by SVG
+            let iconClass = opt.icon;
+            if (opt.label === 'ASX Code') iconClass = '';
 
-            // ... Icon HTML generation ...
             let iconHtml;
             if (opt.label === 'ASX Code') {
                 iconHtml = `
-            <svg class="${CSS_CLASSES.SORT_ASX_ICON}" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="Arial, sans-serif" font-weight="400" font-size="10" fill="currentColor">ASX</text>
-            </svg>`;
+            <div class="sort-icon-slot">
+                <svg class="sort-asx-icon modal-asx-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <text x="0" y="24" dominant-baseline="alphabetic" text-anchor="start" font-family="Arial, sans-serif" font-weight="700" font-size="9" fill="currentColor">ASX</text>
+                </svg>
+            </div>`;
             } else {
-                iconHtml = `<i class="fas ${iconClass}"></i>`;
+                iconHtml = `<div class="sort-icon-slot"><i class="fas ${iconClass}"></i></div>`;
             }
 
+            // Right Control: Reorder Arrows (Edit Mode) vs Checkmark (Default)
             let rightControl = '';
-            if (this.sortPickerMode === 'reorder') {
+
+            if (this.isSortEditMode) {
                 rightControl = `
-                    <div class="flex-row">
-                        <button class="${CSS_CLASSES.MODAL_ACTION_BTN} ${CSS_CLASSES.MODAL_REORDER_BTN}" data-dir="up" ${index === 0 ? 'disabled' : ''}>
-                            <i class="fas ${UI_ICONS.CARET_UP}"></i>
-                        </button>
-                        <button class="${CSS_CLASSES.MODAL_ACTION_BTN} ${CSS_CLASSES.MODAL_REORDER_BTN}" data-dir="down" ${index === displayOptions.length - 1 ? 'disabled' : ''}>
-                            <i class="fas ${UI_ICONS.CARET_DOWN}"></i>
-                        </button>
-                    </div>`;
-            } else if (this.sortPickerMode === 'hide') {
-                const isHidden = hiddenSet.has(uniqueKey);
-                rightControl = `
-                    <div class="${CSS_CLASSES.HIDE_CHECKBOX} ${isHidden ? CSS_CLASSES.ACTIVE : ''} ${CSS_CLASSES.ML_AUTO}">
-                        <div class="${CSS_CLASSES.RADIO_DOT}"></div>
+                    <div class="sort-reorder-controls">
+                        ${isHidden ? `<i class="fas ${UI_ICONS.CHECK} hidden-tick-icon" style="color: var(--color-accent); margin-right: 15px;"></i>` : ''}
+                        <div class="flex-row" style="gap: 15px;">
+                            <button class="${CSS_CLASSES.MODAL_ACTION_BTN} ${CSS_CLASSES.MODAL_REORDER_BTN}" data-dir="up" ${index === 0 ? 'disabled' : ''}>
+                                <i class="fas ${UI_ICONS.CARET_UP}"></i>
+                            </button>
+                            <button class="${CSS_CLASSES.MODAL_ACTION_BTN} ${CSS_CLASSES.MODAL_REORDER_BTN}" data-dir="down" ${index === filteredOptions.length - 1 ? 'disabled' : ''}>
+                                <i class="fas ${UI_ICONS.CARET_DOWN}"></i>
+                            </button>
+                        </div>
                     </div>`;
             } else {
                 if (isActive) {
-                    rightControl = `<div class="${CSS_CLASSES.SORT_PICKER_DIRECTION} ${CSS_CLASSES.ACTIVE}"><i class="fas ${UI_ICONS.CHECK}"></i></div>`;
+                    rightControl = `<div class="sort-selection-tick active"><i class="fas ${UI_ICONS.CHECK}"></i></div>`;
                 } else {
-                    // No arrows for inactive items in unified view
-                    rightControl = '';
+                    rightControl = `<div></div>`; // Empty placeholder for grid
                 }
             }
 
-            // Note: Added data-index and data-type for delegation
             return `
-                <div class="${CSS_CLASSES.SORT_PICKER_ROW} ${activeClass}" data-key="${uniqueKey}" data-index="${index}" data-type="${type}">
+                <div class="${rowClasses}" data-key="${uniqueKey}" data-index="${index}" data-type="${type}">
                     <div class="${CSS_CLASSES.SORT_PICKER_ROW_CONTENT}">
                         <div class="${CSS_CLASSES.SORT_PICKER_ICON}">${iconHtml}</div>
                         <div class="${CSS_CLASSES.SORT_PICKER_LABEL}">${opt.label}</div>
-                        ${rightControl}
                     </div>
+                    <div class="sort-spacer"></div>
+                    ${rightControl}
                 </div>
             `;
         }).join('');
@@ -1660,8 +1635,8 @@ export class ViewRenderer {
         const listContainer = modal.querySelector(`#${IDS.SORT_PICKER_LIST}`);
         listContainer.innerHTML = rowsHtml;
 
-        // Toggle Reorder Active Class on List
-        if (this.sortPickerMode === 'reorder') {
+        // Toggle Reorder Active Class on List (For CSS specifics if needed)
+        if (this.isSortEditMode) {
             listContainer.classList.add(CSS_CLASSES.REORDER_ACTIVE);
         } else {
             listContainer.classList.remove(CSS_CLASSES.REORDER_ACTIVE);
@@ -1743,8 +1718,21 @@ export class ViewRenderer {
         if (modal) {
             modal.classList.add(CSS_CLASSES.HIDDEN);
             document.getElementById(IDS.SORT_PICKER_BTN)?.classList.remove(CSS_CLASSES.ACTIVE);
+            this.isSortEditMode = false;
             this.sortPickerMode = 'default';
             this.sortReorderMode = false;
+
+            // Reset Title Text & Style
+            const title = modal.querySelector(`#${IDS.SORT_MODAL_TITLE}`);
+            if (title) {
+                title.firstChild.textContent = 'Select Sort Order ';
+                title.classList.remove(CSS_CLASSES.TEXT_COFFEE);
+                const chevron = title.querySelector('.modal-title-chevron');
+                if (chevron) {
+                    chevron.style.transform = 'rotate(0deg)';
+                    chevron.style.opacity = '0.3';
+                }
+            }
 
             // Remove from history stack if closed manually
             if (modal._navActive) {
