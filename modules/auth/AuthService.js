@@ -40,13 +40,13 @@ try {
     // Set persistence to LOCAL (users stay logged in across restarts)
     persistencePromise = setPersistence(auth, browserLocalPersistence)
         .then(() => {
-            console.log("AuthService: Persistence set to LOCAL.");
+            // console.log("AuthService: Persistence set to LOCAL.");
         })
         .catch((error) => {
             console.error("AuthService: Failed to set persistence.", error);
         });
 
-    console.log("AuthService: Firebase initialized successfully.");
+    // console.log("AuthService: Firebase initialized successfully.");
 } catch (error) {
     console.error("AuthService: Firebase initialization failed.", error);
 }
@@ -93,7 +93,7 @@ export const AuthService = {
         if (!auth) return;
         try {
             await firebaseSignOut(auth);
-            console.log("AuthService: Signed out.");
+            // console.log("AuthService: Signed out.");
         } catch (error) {
             console.error("AuthService Sign-Out Error:", error);
             throw error;

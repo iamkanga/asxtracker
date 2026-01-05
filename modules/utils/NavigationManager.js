@@ -37,7 +37,7 @@ class NavigationManager {
             this._handlePopState(event);
         });
 
-        console.log('NavigationManager v7: Initialized with High-Stability Control.');
+        // console.log('NavigationManager v7: Initialized with High-Stability Control.');
     }
 
     /**
@@ -51,7 +51,7 @@ class NavigationManager {
         // This prevents 'Double Push' or 'Push-during-Back' race conditions.
         let attempts = 0;
         while ((this._isLocked || this._isHandlingPop || this.ignoreCount > 0) && attempts < 10) {
-            console.log(`NavigationManager: Waiting for settle... (depth: ${this.popStack.length})`);
+            // console.log(`NavigationManager: Waiting for settle... (depth: ${this.popStack.length})`);
             await new Promise(r => setTimeout(r, 50));
             attempts++;
         }
@@ -63,7 +63,7 @@ class NavigationManager {
         const newStateId = this.currentStateId;
         window.history.pushState({ stateId: newStateId, type: 'ui-state' }, '');
 
-        console.log(`NavigationManager: Pushed ID ${newStateId}. Stack depth: ${this.popStack.length}`);
+        // console.log(`NavigationManager: Pushed ID ${newStateId}. Stack depth: ${this.popStack.length}`);
     }
 
     /**
@@ -79,7 +79,7 @@ class NavigationManager {
         this.ignoreCount++;
         this._isLocked = true;
 
-        console.log(`NavigationManager: Eagerly popping (ignore: ${this.ignoreCount}). New Target: ${this.currentStateId - 1}`);
+        // console.log(`NavigationManager: Eagerly popping (ignore: ${this.ignoreCount}). New Target: ${this.currentStateId - 1}`);
         window.history.back();
 
         // Safety: Auto-unlock if popstate is swallowed by the browser (rare but happens)
@@ -108,13 +108,13 @@ class NavigationManager {
             const stateId = (state && state.stateId) ? state.stateId : 1;
 
             // INTENTIONAL DIAGNOSTIC: Tracks history navigation. Not an error.
-            console.log(`NavigationManager: History Pop Event. State: ${stateId}, Stack Depth: ${this.popStack.length}`);
+            // console.log(`NavigationManager: History Pop Event. State: ${stateId}, Stack Depth: ${this.popStack.length}`);
 
             // 1. SILENT POP SYNC: Check if this was a manual pop we should ignore
             if (this.ignoreCount > 0) {
                 this.ignoreCount--;
                 this.currentStateId = stateId;
-                console.log(`NavigationManager: Manual ignore resolved. Current state: ${stateId}`);
+                // console.log(`NavigationManager: Manual ignore resolved. Current state: ${stateId}`);
                 return;
             }
 
@@ -126,7 +126,7 @@ class NavigationManager {
                 const popsRequired = Math.min(diff, this.popStack.length);
 
                 if (popsRequired > 0) {
-                    console.log(`NavigationManager: Automatically closing ${popsRequired} element(s).`);
+                    // console.log(`NavigationManager: Automatically closing ${popsRequired} element(s).`);
                     for (let i = 0; i < popsRequired; i++) {
                         const callback = this.popStack.pop();
                         if (callback) {

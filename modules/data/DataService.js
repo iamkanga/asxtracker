@@ -54,12 +54,12 @@ export class DataService {
             const json = await response.json();
 
             const count = Array.isArray(json) ? (json.prices?.length || json.length) : (json.data ? json.data.length : 'Unknown');
-            console.log(`DataService: Received ${count} primary items from API.`);
+            // console.log(`DataService: Received ${count} primary items from API.`);
 
             // INJECTED DEBUG LOG
             const rawItems = Array.isArray(json) ? json : (json.prices || json.data || []);
-            const debugSample = rawItems.filter(i => i.ASXCode && (i.ASXCode.startsWith('^') || i.ASXCode === 'XJO' || i.ASXCode === 'XKO' || i.ASXCode.includes('='))).map(s => s.ASXCode);
-            console.warn('[DEBUG-CONSOLE] Dashboard Candidates Received:', debugSample);
+            // const debugSample = rawItems.filter(i => i.ASXCode && (i.ASXCode.startsWith('^') || i.ASXCode === 'XJO' || i.ASXCode === 'XKO' || i.ASXCode.includes('='))).map(s => s.ASXCode);
+            // console.warn('[DEBUG-CONSOLE] Dashboard Candidates Received:', debugSample);
 
             // Normalize and return both prices and dashboard data
             return this._normalizePriceData(json);
@@ -183,7 +183,7 @@ export class DataService {
                 name: item.CompanyName || item.Name || item.companyName || String(item.ASXCode || '').trim().toUpperCase()
             }));
             if (dashboardData.length > 0) {
-                console.log(`[DataService] Recovered ${dashboardData.length} dashboard items from flat payload.`);
+                // console.log(`[DataService] Recovered ${dashboardData.length} dashboard items from flat payload.`);
             }
         } else if (Array.isArray(dashboardData)) {
             // Even if explicit dashboardData exists, normalize the name property
@@ -195,7 +195,7 @@ export class DataService {
 
         // VERIFICATION: Log presence and count
         if (dashboardData.length > 0) {
-            console.log(`[DataService] Dashboard Content Found: ${dashboardData.length} items.`);
+            // console.log(`[DataService] Dashboard Content Found: ${dashboardData.length} items.`);
         }
 
         if (!Array.isArray(items)) {
@@ -211,13 +211,13 @@ export class DataService {
             const code = String(item.ASXCode).trim().toUpperCase();
 
             // DIAGNOSTIC (One-Time): Check for Day High/Low keys AND VALUES
-            if (code === 'ANZ' || code === 'WOW') {
-                console.log(`[DataService] Raw Data for ${code}:`, {
-                    H52: item.High52,
-                    L52: item.Low52,
-                    Live: item.LivePrice
-                });
-            }
+            // if (code === 'ANZ' || code === 'WOW') {
+            //     console.log(`[DataService] Raw Data for ${code}:`, {
+            //         H52: item.High52,
+            //         L52: item.Low52,
+            //         Live: item.LivePrice
+            //     });
+            // }
 
             // Skip invalid entries after normalization
             if (!code) return;

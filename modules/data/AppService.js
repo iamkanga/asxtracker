@@ -329,7 +329,7 @@ export class AppService {
      */
     async sanitizeCorruptedShares(userId) {
         if (!userId) return;
-        console.log("Running Data Sanitation: Checking for corrupted shares...");
+        // console.log("Running Data Sanitation: Checking for corrupted shares...");
 
         try {
             const shares = await userStore.getAllDocuments(userId, 'shares');
@@ -345,10 +345,10 @@ export class AppService {
             }
 
             if (deletedCount > 0) {
-                console.log(`Sanitize: Deleted ${deletedCount} corrupted records.`);
+                // console.log(`Sanitize: Deleted ${deletedCount} corrupted records.`);
                 // alert(`Sanitation Complete: Removed ${deletedCount} corrupted records.`); // Optional specific feedback
             } else {
-                console.log("Sanitize: No corrupted records found.");
+                // console.log("Sanitize: No corrupted records found.");
             }
         } catch (e) {
             console.error("Sanitize Error:", e);
@@ -410,20 +410,20 @@ export class AppService {
     async createDefaultOnboardingData(userId) {
         if (!userId) return;
 
-        console.log(`[AppService] Creating default onboarding data for user: ${userId}`);
+        // console.log(`[AppService] Creating default onboarding data for user: ${userId}`);
 
         try {
             // 1. Create default watchlist "My Watch List"
-            console.log(`[AppService] Creating 'My Watch List'...`);
+            // console.log(`[AppService] Creating 'My Watch List'...`);
             const watchlistId = await userStore.addWatchlist(userId, 'My Watch List');
-            console.log(`[AppService] Watchlist created with ID: ${watchlistId}`);
+            // console.log(`[AppService] Watchlist created with ID: ${watchlistId}`);
 
             // 2. Add 5 specific Australian top shares
             const defaultStocks = ['BHP', 'TLS', 'CBA', 'QBE', 'VAS'];
             const now = new Date().toISOString();
 
             for (const symbol of defaultStocks) {
-                console.log(`[AppService] Seeding stock: ${symbol}`);
+                // console.log(`[AppService] Seeding stock: ${symbol}`);
                 // EXCEPTION: User requested Portfolio and Cash be empty.
                 // We ONLY add these to the new "My Watch List".
                 if (watchlistId) {
@@ -436,17 +436,16 @@ export class AppService {
             const defaultCarousel = ['ALL', 'portfolio', 'CASH'];
             if (watchlistId) defaultCarousel.push(watchlistId);
 
-            console.log(`[AppService] Finalizing preferences (onboarded=true)...`);
+            // console.log(`[AppService] Finalizing preferences (onboarded=true)...`);
             await userStore.savePreferences(userId, {
                 carouselSelections: defaultCarousel,
                 lastWatchlistId: watchlistId || 'portfolio',
                 onboarded: true
             });
 
-            console.log(`[AppService] Default data created successfully for ${userId}`);
+            // console.log(`[AppService] Default data created successfully for ${userId}`);
         } catch (error) {
             console.error(`[AppService] CRITICAL FAILURE in onboarding data creation:`, error);
         }
     }
 }
-

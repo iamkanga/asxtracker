@@ -22,7 +22,7 @@ export class HeaderLayout {
         this._navActive = false; // Tracks if sidebar is in history stack
         this._isTitleListenerBound = false;
         this.container = document.getElementById(IDS.APP_HEADER); // Use ID constant
-        console.log('HeaderLayout: Instantiated. Container found:', !!this.container);
+        // console.log('HeaderLayout: Instantiated. Container found:', !!this.container);
     }
 
     init() {
@@ -30,11 +30,11 @@ export class HeaderLayout {
             console.error('HeaderLayout: Critical Error - #appHeader not found in DOM.');
             return;
         }
-        console.log('HeaderLayout: Initializing...');
+        // console.log('HeaderLayout: Initializing...');
         this.render();
         this.cacheDOM();
         this.bindEvents();
-        console.log('HeaderLayout: Render Complete.');
+        // console.log('HeaderLayout: Render Complete.');
 
         // Architectural Change: Removed JS-based padding adjustment.
         // We now rely on CSS sticky positioning for proper layout flow.
@@ -151,11 +151,11 @@ export class HeaderLayout {
         if (this.sidebarOverlay) {
             // Primary: Direct overlay click handler
             this.sidebarOverlay.addEventListener('click', (e) => {
-                console.log('[HeaderLayout] Overlay clicked directly');
+                // console.log('[HeaderLayout] Overlay clicked directly');
                 e.stopPropagation();
                 this._toggleSidebar(false);
             });
-            console.log('[HeaderLayout] Overlay click handler bound successfully');
+            // console.log('[HeaderLayout] Overlay click handler bound successfully');
         } else {
             console.error('[HeaderLayout] CRITICAL: Sidebar Overlay element NOT FOUND! ID sought:', IDS.SIDEBAR_OVERLAY);
         }
@@ -178,7 +178,7 @@ export class HeaderLayout {
             if (this.menuToggle && (this.menuToggle === e.target || this.menuToggle.contains(e.target))) return;
 
             // Outside interaction detected
-            console.log(`[HeaderLayout] Outside ${e.type} detected. Closing & Blocking.`);
+            // console.log(`[HeaderLayout] Outside ${e.type} detected. Closing & Blocking.`);
 
             // STOP EVERYTHING
             e.stopPropagation();
@@ -212,10 +212,10 @@ export class HeaderLayout {
         if (viewToggleBtn) {
             if (this.callbacks.onViewToggle) {
                 viewToggleBtn.addEventListener('click', () => {
-                    console.log('HeaderLayout: View Toggle Clicked');
+                    // console.log('HeaderLayout: View Toggle Clicked');
                     this.callbacks.onViewToggle();
                 });
-                console.log('HeaderLayout: View Toggle Button Bound Successfully');
+                // console.log('HeaderLayout: View Toggle Button Bound Successfully');
             } else {
                 console.warn('HeaderLayout: onViewToggle callback missing');
             }
@@ -229,12 +229,12 @@ export class HeaderLayout {
             const nextBtn = e.target.closest(`#${IDS.CAROUSEL_NEXT_BTN}`);
 
             if (prevBtn) {
-                console.log('[HeaderLayout] DELEGATED: Carousel Prev Clicked');
+                // console.log('[HeaderLayout] DELEGATED: Carousel Prev Clicked');
                 e.preventDefault();
                 e.stopPropagation();
                 if (this.callbacks.onCarouselPrev) this.callbacks.onCarouselPrev();
             } else if (nextBtn) {
-                console.log('[HeaderLayout] DELEGATED: Carousel Next Clicked');
+                // console.log('[HeaderLayout] DELEGATED: Carousel Next Clicked');
                 e.preventDefault();
                 e.stopPropagation();
                 if (this.callbacks.onCarouselNext) this.callbacks.onCarouselNext();
@@ -249,7 +249,7 @@ export class HeaderLayout {
                 // Check if the chevron was the direct target to toggle instead of opening modal
                 const chevron = e.target.closest(`#${IDS.SORT_PICKER_CHEVRON}`);
                 if (chevron) {
-                    console.log('[HeaderLayout] Sort Chevron Clicked -> Dispatching TOGGLE_SORT_DIRECTION');
+                    // console.log('[HeaderLayout] Sort Chevron Clicked -> Dispatching TOGGLE_SORT_DIRECTION');
                     e.stopPropagation();
                     document.dispatchEvent(new CustomEvent(EVENTS.TOGGLE_SORT_DIRECTION));
                     return;
@@ -298,10 +298,10 @@ export class HeaderLayout {
                 e.stopPropagation();
                 e.preventDefault();
 
-                console.log('[HeaderLayout] Watchlist Title Clicked -> Dispatching TOGGLE_WATCHLIST_MODAL');
+                // console.log('[HeaderLayout] Watchlist Title Clicked -> Dispatching TOGGLE_WATCHLIST_MODAL');
                 document.dispatchEvent(new CustomEvent(EVENTS.TOGGLE_WATCHLIST_MODAL));
             });
-            console.log('[HeaderLayout] Watchlist Title Publisher Bound.');
+            // console.log('[HeaderLayout] Watchlist Title Publisher Bound.');
         } else {
             console.error('[HeaderLayout] Critical: Watchlist Title Element Not Found!');
         }
@@ -354,7 +354,7 @@ export class HeaderLayout {
             this.createWatchlistSubmit.addEventListener('click', () => {
                 const name = this.createWatchlistInput.value.trim();
                 if (name) {
-                    console.log('HeaderLayout: Dispatching REQUEST_NEW_WATCHLIST with name:', name);
+                    // console.log('HeaderLayout: Dispatching REQUEST_NEW_WATCHLIST with name:', name);
                     document.dispatchEvent(new CustomEvent(EVENTS.REQUEST_NEW_WATCHLIST, {
                         detail: { name }
                     }));
@@ -451,10 +451,10 @@ export class HeaderLayout {
             this.editWatchlistSubmit.addEventListener('click', () => {
                 const newName = this.editWatchlistInput.value.trim();
                 if (newName && this.currentEditWatchlistId) {
-                    console.log('HeaderLayout: Dispatching REQUEST_UPDATE_WATCHLIST:', {
-                        id: this.currentEditWatchlistId,
-                        newName
-                    });
+                    // console.log('HeaderLayout: Dispatching REQUEST_UPDATE_WATCHLIST:', {
+                    //     id: this.currentEditWatchlistId,
+                    //     newName
+                    // });
                     document.dispatchEvent(new CustomEvent(EVENTS.REQUEST_UPDATE_WATCHLIST, {
                         detail: { id: this.currentEditWatchlistId, newName }
                     }));
@@ -467,9 +467,9 @@ export class HeaderLayout {
         if (this.editWatchlistDelete) {
             this.editWatchlistDelete.addEventListener('click', () => {
                 if (this.currentEditWatchlistId) {
-                    console.log('HeaderLayout: Dispatching REQUEST_DELETE_WATCHLIST:', {
-                        id: this.currentEditWatchlistId
-                    });
+                    // console.log('HeaderLayout: Dispatching REQUEST_DELETE_WATCHLIST:', {
+                    //     id: this.currentEditWatchlistId
+                    // });
                     document.dispatchEvent(new CustomEvent(EVENTS.REQUEST_DELETE_WATCHLIST, {
                         detail: { id: this.currentEditWatchlistId }
                     }));
@@ -616,7 +616,7 @@ export class HeaderLayout {
             this.sidebarNotificationsBtn.addEventListener('click', () => {
                 this._toggleSidebar(false);
                 setTimeout(() => {
-                    console.log('HeaderLayout: Dispatching OPEN_NOTIFICATIONS (Sidebar)');
+                    // console.log('HeaderLayout: Dispatching OPEN_NOTIFICATIONS (Sidebar)');
                     document.dispatchEvent(new CustomEvent(EVENTS.OPEN_NOTIFICATIONS, {
                         detail: { source: 'total' }
                     }));
@@ -629,7 +629,7 @@ export class HeaderLayout {
             this.btnSettings.addEventListener('click', () => {
                 this._toggleSidebar(false);
                 setTimeout(() => {
-                    console.log('HeaderLayout: Dispatching OPEN_SETTINGS');
+                    // console.log('HeaderLayout: Dispatching OPEN_SETTINGS');
                     document.dispatchEvent(new CustomEvent(EVENTS.OPEN_SETTINGS));
                 }, 150);
             });
@@ -640,7 +640,7 @@ export class HeaderLayout {
             this.btnGeneralSettings.addEventListener('click', () => {
                 this._toggleSidebar(false);
                 setTimeout(() => {
-                    console.log('HeaderLayout: Dispatching OPEN_GENERAL_SETTINGS');
+                    // console.log('HeaderLayout: Dispatching OPEN_GENERAL_SETTINGS');
                     document.dispatchEvent(new CustomEvent(EVENTS.OPEN_GENERAL_SETTINGS));
                 }, 150);
             });
@@ -652,7 +652,7 @@ export class HeaderLayout {
             this.btnBriefing.addEventListener('click', () => {
                 this._toggleSidebar(false);
                 setTimeout(() => {
-                    console.log('HeaderLayout: Dispatching SHOW_DAILY_BRIEFING');
+                    // console.log('HeaderLayout: Dispatching SHOW_DAILY_BRIEFING');
                     document.dispatchEvent(new CustomEvent(EVENTS.SHOW_DAILY_BRIEFING));
                 }, 150);
             });
@@ -664,7 +664,7 @@ export class HeaderLayout {
             this.btnFavoriteLinks.addEventListener('click', () => {
                 this._toggleSidebar(false);
                 setTimeout(() => {
-                    console.log('HeaderLayout: Dispatching OPEN_FAVORITE_LINKS');
+                    // console.log('HeaderLayout: Dispatching OPEN_FAVORITE_LINKS');
                     document.dispatchEvent(new CustomEvent(EVENTS.OPEN_FAVORITE_LINKS));
                 }, 150);
             });
