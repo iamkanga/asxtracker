@@ -677,6 +677,11 @@ export class NotificationStore {
                 if (!metPct && !metDol) return false;
             }
 
+            // --- HEARTBEAT SILENCE: Filter out items with no movement AND no recognized intent ---
+            const hasMovement = Math.abs(hit.pct || 0) > 0 || Math.abs(hit.change || 0) > 0;
+            const hasIntent = hit.intent && (hit.intent === 'target' || hit.intent.includes('hilo') || hit.intent === 'mover');
+            if (!hasMovement && !hasIntent) return false;
+
             return true;
         });
 

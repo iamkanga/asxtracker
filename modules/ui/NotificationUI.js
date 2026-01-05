@@ -843,8 +843,10 @@ export class NotificationUI {
                 return { text: txt, range: null };
             }
 
-            // 4. FALLBACK (Raw Percentage)
+            // 4. FALLBACK (Raw Percentage) - SILENCED IF NEGLIGIBLE
             const pct = Number(alertItem.pct || alertItem.changeInPercent || 0);
+            if (Math.abs(pct) < 0.01 && !intent) return { text: null, range: null }; // Silence 0% heartbeats
+
             const dirArrow = pct >= 0 ? '▲' : '▼';
             return { text: `Price ${dirArrow} ${Math.abs(pct).toFixed(2)}%`, range: null };
         };
@@ -875,12 +877,12 @@ export class NotificationUI {
                 explainerRange = obj.range || ''; // Set the Right Aligned Range
             }
 
-            // Generate Lines (Text Only). If we extracted range, we don't need to show it in the text stack to avoid duplicate/clutter
-            const labels = sortedMatches.map(m => {
-                const obj = getExplainer(m, type);
-                // Just display the text part in the left stack
-                return `<div style="line-height: 1.2;">${obj.text}</div>`;
-            });
+            // Generate Lines (Text Only). Filter out null/empty results.
+            const labels = sortedMatches
+                .map(m => getExplainer(m, type).text)
+                .filter(txt => txt && txt.trim().length > 0) // Explicit filter for valid strings
+                .map(txt => `<div style="line-height: 1.2;">${txt}</div>`);
+
             explainerText = labels.join('');
 
         } else {
@@ -985,7 +987,7 @@ export class NotificationUI {
 
         // --- EXPLAINER TEXT GENERATION (Moved after JIT) ---
         // Fix: Ensure we use the Enriched 'changePct' for the text, not the stale 'item.pct'.
-        if ((explainerText === 'Alert Triggered' || type === 'custom') && item.intent !== 'target' && item.intent !== 'target-hit') {
+        if ((explainerText === 'Alert Triggered' || (type === 'custom' && !explainerText)) && item.intent !== 'target' && item.intent !== 'target-hit') {
             // Re-evaluate direction based on FINAL changePct
             const ruleSet = changePct >= 0 ? (rules.up || {}) : (rules.down || {});
             const arrow = changePct >= 0 ? '▲' : '▼';
