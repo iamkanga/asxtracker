@@ -1204,6 +1204,7 @@ export const IDS = {
     SORT_MODE_HIDE: 'sort-mode-hide',
     RESEARCH_ADD_BTN: 'researchAddBtn',
     SORT_PICKER_LIST: 'sortPickerList',
+    SORT_GLOBAL_BTN: 'sort-global-btn',
 
     // Setup Elements
     SETUP_TITLE: 'setup-title',

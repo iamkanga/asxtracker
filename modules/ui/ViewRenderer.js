@@ -1135,13 +1135,16 @@ export class ViewRenderer {
             pendingDir = currentDir;
         }
 
+        // ROBUST: Merge with existing context if arguments are missing to prevent overwriting callbacks
+        const existingContext = this._sortContext || {};
+
         this._sortContext = {
             watchlistId,
             currentSort,
-            onSelect,
-            onHide,
-            onGlobalToggle,
-            onGlobalCancel,
+            onSelect: onSelect || existingContext.onSelect,
+            onHide: onHide || existingContext.onHide,
+            onGlobalToggle: onGlobalToggle || existingContext.onGlobalToggle,
+            onGlobalCancel: onGlobalCancel || existingContext.onGlobalCancel,
             pendingDir
         };
 
@@ -1245,14 +1248,86 @@ export class ViewRenderer {
                 </div>
 
                 <!-- Combined Reorder/Hide Header -->
-                <div id="sortEditHeaders" class="sort-header-row ${CSS_CLASSES.HIDDEN}">
-                    <span class="col-hide">Hide</span>
-                    <span class="col-spacer"></span>
-                    <span class="col-reorder">Reorder</span>
+                <!-- Grid Columns: 1fr (Hide) | 60px (Global) | 1fr (Reorder) -->
+                <div id="sortEditHeaders" class="sort-header-row ${CSS_CLASSES.HIDDEN}" style="display: grid; grid-template-columns: 1fr 60px 1fr; align-items: center; padding: 0 16px;">
+                    <span class="col-hide" style="justify-self: start;">Hide</span>
+                    <span class="col-global" style="justify-self: center;">Global</span>
+                    <span class="col-reorder" style="justify-self: end;">Reorder</span>
                 </div>
 
                 <div class="${CSS_CLASSES.SORT_PICKER_LIST}" id="${IDS.SORT_PICKER_LIST}"></div>
             </div>
+            <style>
+                /* Injected Styles for Global/Hide Controls */
+                .sort-global-access-btn {
+                    background: transparent;
+                    border: 1px solid var(--border-color);
+                    border-radius: 4px; /* Standard pill feel */
+                    color: var(--text-muted);
+                    font-size: 0.75rem;
+                    padding: 2px 8px; /* Tighter padding for header */
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    transition: all 0.2s;
+                }
+                .sort-global-access-btn:hover {
+                    background: var(--bg-tertiary);
+                    color: var(--color-accent);
+                    border-color: var(--color-accent);
+                }
+
+                /* Square Radio/Checkbox Styles (Reused from SettingsUI) */
+                .square-radio-wrapper {
+                    position: relative;
+                    width: 18px;
+                    height: 18px;
+                    cursor: pointer;
+                    flex-shrink: 0;
+                }
+                .square-radio-wrapper input {
+                    opacity: 0;
+                    position: absolute;
+                    width: 100%;
+                    height: 100%;
+                    cursor: pointer;
+                    z-index: 2;
+                    margin: 0;
+                }
+                .square-radio-visual {
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    border: 2px solid var(--text-muted) !important; /* Heavier Outline ALWAYS */
+                    background: transparent;
+                    border-radius: 0px; /* SHARP SQUARE - User Request "not rounded" */
+                    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+                /* Active State: Border color matches accent, NO background fill (Gap preserved) */
+                .square-radio-wrapper input:checked + .square-radio-visual {
+                    border-color: var(--color-accent) !important;
+                    background-color: transparent; 
+                }
+                /* Inner Square Fill */
+                .square-radio-visual::after {
+                    content: ''; /* Solid Square */
+                    width: 10px;
+                    height: 10px;
+                    background: var(--color-accent);
+                    border-radius: 0px; /* Sharp inner square too */
+                    transform: scale(0);
+                    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                }
+                .square-radio-wrapper input:checked + .square-radio-visual::after {
+                    transform: scale(1);
+                }
+            </style>
         `;
         document.body.appendChild(modal);
 
@@ -1345,7 +1420,13 @@ export class ViewRenderer {
                 }
 
                 this.isSortEditMode = !this.isSortEditMode;
-                this.sortPickerMode = this.isSortEditMode ? 'reorder' : 'default';
+                // Default toggle logic:
+                if (this.isSortEditMode) {
+                    this.sortPickerMode = 'reorder';
+                } else {
+                    this.sortPickerMode = 'default';
+                }
+
 
                 // Update Title Text & Style
                 const title = modal.querySelector(`#${IDS.SORT_MODAL_TITLE}`);
@@ -1381,9 +1462,64 @@ export class ViewRenderer {
 
                     // Update Modal State (Keep Open)
                     context.currentSort.direction = newDir;
-                    this.renderSortPickerModal(context.watchlistId, context.currentSort, context.onSelect);
+                    this.renderSortPickerModal(context.watchlistId, context.currentSort, context.onSelect, context.onHide, context.onGlobalToggle, context.onGlobalCancel);
                 } else {
-                    this.renderSortPickerModal(context.watchlistId, context.currentSort, context.onSelect);
+                    this.renderSortPickerModal(context.watchlistId, context.currentSort, context.onSelect, context.onHide, context.onGlobalToggle, context.onGlobalCancel);
+                }
+                return;
+            }
+
+
+
+            // Global Selection Radio Interaction (Center Column)
+            // UPDATED: Target the wrapper OR the input (event bubbling)
+            const globalRadioWrapper = e.target.closest('.global-sort-radio-wrapper');
+            if (globalRadioWrapper) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                const row = globalRadioWrapper.closest(`.${CSS_CLASSES.SORT_PICKER_ROW}`);
+                if (!row) return;
+
+                const key = row.dataset.key; // "field-direction"
+                const [field] = key.split('-');
+
+                // Use pending direction or default 'asc'. 
+                // Note: user wants to "force that selection option". 
+                // If the user clicks "Dividend", we should probably use the CURRENT direction of Dividends if active, or default 'desc'?
+                // However, without a toggle visible, we rely on the row's implicit direction?
+                // Actually, the row IS `field-direction`.
+                // So if we have "Target Price-asc" row, we use "asc".
+                // But the sort picker renders BOTH directions? No, it usually renders ONE row per field unless expanded?
+                // Wait, `SORT_OPTIONS` usually has defined directions like "High to Low".
+                // Let's use the direction FROM THE KEY. This is the precise option displayed.
+                const directionFromKey = key.split('-')[1];
+
+                const direction = directionFromKey || this._sortContext.pendingDir || 'asc';
+
+                console.log(`[ViewRenderer] Global Radio Clicked: ${field} (${direction})`);
+
+                // USER FEEDBACK: "It should just highlight the radio button"
+                // Reverting the "Switch to Default" logic so buttons don't disappear.
+                // We stay in Edit Mode, but the UI updates to show the checked state.
+
+                if (context.onGlobalToggle) {
+                    context.onGlobalToggle({ field, direction });
+                    // Stay in Edit Mode.
+
+                    // MANUAL TITLE UPDATE: "Global Sort Active" confirmation
+                    // User Feedback: "when I [select] a global radio button it did not change the global Sort active in the title bar"
+                    const title = document.getElementById(IDS.SORT_MODAL_TITLE);
+                    if (title) {
+                        const chevronHtml = `
+                        <svg class="modal-title-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity: 1; transform: rotate(180deg); margin-left: 8px; transition: transform 0.3s ease;">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>`;
+                        title.innerHTML = `<i class="fas ${UI_ICONS.GLOBE}"></i> Global Sort Active ${chevronHtml}`;
+                    }
+
+                } else {
+                    console.error('[ViewRenderer] onGlobalToggle callback missing!');
                 }
                 return;
             }
@@ -1435,7 +1571,8 @@ export class ViewRenderer {
             // Row Interaction (Hide / Select)
             if (this.sortPickerMode === 'reorder') {
                 // Label Interaction (Hide / Unhide) - User Requirement: "Hide Shares by Tapping Name"
-                if (e.target.closest(`.${CSS_CLASSES.SORT_PICKER_LABEL}`)) {
+                // UPDATED: Now supports tapping the Square Checkbox wrapper too.
+                if (e.target.closest(`.${CSS_CLASSES.SORT_PICKER_LABEL}`) || e.target.closest('.sort-hide-checkbox')) {
                     const type = row.dataset.type;
                     const stringKey = String(key);
                     if (!AppState.hiddenSortOptions[type]) AppState.hiddenSortOptions[type] = new Set();
@@ -1450,7 +1587,7 @@ export class ViewRenderer {
                     }
 
                     // Optimistic UI Update (Re-render)
-                    this.renderSortPickerModal(context.watchlistId, context.currentSort, context.onSelect, context.onHide);
+                    this.renderSortPickerModal(context.watchlistId, context.currentSort, context.onSelect, context.onHide, context.onGlobalToggle, context.onGlobalCancel);
                     return;
                 }
                 // Do not allow "Select" in reorder mode (unless we want to?)
@@ -1466,12 +1603,14 @@ export class ViewRenderer {
                 e.stopPropagation();
                 return;
             }
+            // Standard List Selection
+            if (!this.isSortEditMode && !isLongPress) {
+                const [field, direction] = key.split('-');
+                const pendingDir = this._sortContext.pendingDir || 'desc';
 
-            const [field, direction] = key.split('-');
-            const pendingDir = this._sortContext.pendingDir || 'desc';
-
-            context.onSelect({ field, direction: pendingDir }, 'LIST');
-            this._closeSortPickerInstance();
+                context.onSelect({ field, direction: pendingDir }, 'LIST');
+                this._closeSortPickerInstance();
+            }
         });
 
         return modal;
@@ -1486,9 +1625,9 @@ export class ViewRenderer {
                 <polyline points="6 9 12 15 18 9"></polyline>
             </svg>`;
 
-        // Dynamic Title
         if (this.isSortEditMode) {
-            title.innerHTML = `Hide / Reorder ${chevronHtml}`;
+            // UPDATED: "Hide / Global / Reorder" to match user request "Global in title bar"
+            title.innerHTML = `Hide / Global / Reorder ${chevronHtml}`;
             title.classList.add(CSS_CLASSES.TEXT_COFFEE);
         } else {
             // Check Global Sort
@@ -1502,8 +1641,14 @@ export class ViewRenderer {
         }
 
         // Show/Hide Header Row (Title Helper)
+        // Show/Hide Header Row (Title Helper)
         const headerRow = modal.querySelector('#sortEditHeaders');
         if (headerRow) {
+            // FORCE VISIBILITY via Inline Style to override any class/specificity issues
+            // Use 'grid' to match the original layout intent
+            headerRow.style.display = this.isSortEditMode ? 'grid' : 'none';
+
+            // Redundant class toggle for completeness/cleanliness
             if (this.isSortEditMode) {
                 headerRow.classList.remove(CSS_CLASSES.HIDDEN);
             } else {
@@ -1511,9 +1656,11 @@ export class ViewRenderer {
             }
         }
 
-        // Animate Chevron
+        // Animate Chevron (Hide in Global Mode or ensure consistent state)
         const chevron = modal.querySelector('.modal-title-chevron');
         if (chevron) {
+            // If Global Mode, we don't show the chevron usually as the title replaced it.
+            // But if we did, logic here:
             chevron.style.transform = this.isSortEditMode ? 'rotate(180deg)' : 'rotate(0deg)';
             chevron.style.opacity = this.isSortEditMode ? '1' : '0.3';
         }
@@ -1561,6 +1708,8 @@ export class ViewRenderer {
 
         // Filter Options for Default Mode (Hide Hidden Items)
         let filteredOptions = displayOptions;
+
+        // In Reorder/Edit Mode we show ALL options.
         if (!this.isSortEditMode) {
             filteredOptions = displayOptions.filter(opt => !hiddenSet.has(`${opt.field}-${opt.direction}`));
         }
@@ -1591,7 +1740,7 @@ export class ViewRenderer {
                 iconHtml = `
             <div class="sort-icon-slot">
                 <svg class="sort-asx-icon modal-asx-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <text x="0" y="24" dominant-baseline="alphabetic" text-anchor="start" font-family="Arial, sans-serif" font-weight="700" font-size="9" fill="currentColor">ASX</text>
+                    <text x="0" y="16" dominant-baseline="alphabetic" text-anchor="start" font-family="Arial, sans-serif" font-weight="700" font-size="9" fill="currentColor">ASX</text>
                 </svg>
             </div>`;
             } else {
@@ -1600,11 +1749,29 @@ export class ViewRenderer {
 
             // Right Control: Reorder Arrows (Edit Mode) vs Checkmark (Default)
             let rightControl = '';
+            let centerControl = '<div class="sort-spacer"></div>'; // Default spacer
+
+
+            // EDIT MODE: 3-Column Layout
+            // Col 1: Hide Checkbox + Info (Handled by startContent + rowContent)
+            // Col 2: Global Radio (Center)
+            // Col 3: Reorder Arrows (Right)
 
             if (this.isSortEditMode) {
+                // GLOBAL RADIO (Center Column)
+                const globalPref = AppState.preferences.globalSort;
+                const isGlobalActive = globalPref && (globalPref.field === opt.field);
+
+                centerControl = `
+                    <div class="global-sort-radio-wrapper square-radio-wrapper" style="margin: 0 auto;">
+                        <input type="radio" name="global-sort-edit-radio" ${isGlobalActive ? 'checked' : ''} style="pointer-events: none;">
+                        <div class="square-radio-visual"></div>
+                    </div>
+                `;
+
+                // REORDER CONTROLS (Right Column)
                 rightControl = `
                     <div class="sort-reorder-controls">
-                        ${isHidden ? `<i class="fas ${UI_ICONS.CHECK} hidden-tick-icon" style="color: var(--color-accent); margin-right: 15px;"></i>` : ''}
                         <div class="flex-row" style="gap: 15px;">
                             <button class="${CSS_CLASSES.MODAL_ACTION_BTN} ${CSS_CLASSES.MODAL_REORDER_BTN}" data-dir="up" ${index === 0 ? 'disabled' : ''}>
                                 <i class="fas ${UI_ICONS.CARET_UP}"></i>
@@ -1614,7 +1781,10 @@ export class ViewRenderer {
                             </button>
                         </div>
                     </div>`;
-            } else {
+            }
+
+            // DEFAULT MODE
+            else {
                 if (isActive) {
                     rightControl = `<div class="sort-selection-tick active"><i class="fas ${UI_ICONS.CHECK}"></i></div>`;
                 } else {
@@ -1622,13 +1792,34 @@ export class ViewRenderer {
                 }
             }
 
+            // MODIFIED ROW CONTENT FOR EDIT MODE
+            // Left Column is just Label + Icon (Click to Hide)
+            // Center Column is Global Radio
+
+            // Override grid template for row if in edit mode to match header
+            const rowStyle = this.isSortEditMode ? 'grid-template-columns: 1fr 60px 1fr !important;' : '';
+
+            // HIGHLIGHT LOGIC: If this row is the active global sort, startContent (Label/Icon) should be coffee colored
+            // We use the same condition 'isGlobalActive' calculated for the radio button above relative to Scope (Edit Mode)
+            // But wait, 'isGlobalActive' was defined inside the 'if (this.isSortEditMode)' block.
+            // We should lift validGlobal check to be accessible here or recalculate.
+            const validGlobal = AppState.preferences.globalSort;
+            const isRowGlobal = validGlobal && (validGlobal.field === opt.field);
+
+            // Apply coffee color to the TEXT/ICON container if global
+            const contentColorClass = isRowGlobal ? CSS_CLASSES.TEXT_COFFEE : '';
+
             return `
-                <div class="${rowClasses}" data-key="${uniqueKey}" data-index="${index}" data-type="${type}">
-                    <div class="${CSS_CLASSES.SORT_PICKER_ROW_CONTENT}">
+                <div class="${rowClasses}" data-key="${uniqueKey}" data-index="${index}" data-type="${type}" style="${rowStyle}">
+                    <div class="${CSS_CLASSES.SORT_PICKER_ROW_CONTENT} ${contentColorClass}" style="align-items: center;">
                         <div class="${CSS_CLASSES.SORT_PICKER_ICON}">${iconHtml}</div>
                         <div class="${CSS_CLASSES.SORT_PICKER_LABEL}">${opt.label}</div>
                     </div>
-                    <div class="sort-spacer"></div>
+                    
+                    <!-- Center Column (Global Radio or Spacer) -->
+                    ${centerControl}
+                    
+                    <!-- Right Column (Reorder or Tick) -->
                     ${rightControl}
                 </div>
             `;
