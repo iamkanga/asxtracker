@@ -56,15 +56,17 @@ export class DataService {
             const count = Array.isArray(json) ? (json.prices?.length || json.length) : (json.data ? json.data.length : 'Unknown');
             console.log(`DataService: Received ${count} primary items from API.`);
 
-            // The API response is expected to be an array of objects.
-            // If the API returns a wrapper (e.g. { data: [...] }), we might need to adjust,
-            // but based on legacy analysis 'json' usually is the array or contains it.
-            // We'll normalize whatever we get.
+            // INJECTED DEBUG LOG
+            const rawItems = Array.isArray(json) ? json : (json.prices || json.data || []);
+            const debugSample = rawItems.filter(i => i.ASXCode && (i.ASXCode.startsWith('^') || i.ASXCode === 'XJO' || i.ASXCode === 'XKO' || i.ASXCode.includes('='))).map(s => s.ASXCode);
+            console.warn('[DEBUG-CONSOLE] Dashboard Candidates Received:', debugSample);
+
+            // Normalize and return both prices and dashboard data
             return this._normalizePriceData(json);
 
         } catch (error) {
             console.error("DataService Exception:", error);
-            return new Map();
+            return { prices: new Map(), dashboard: [] };
         }
     }
 
@@ -159,23 +161,46 @@ export class DataService {
     }
 
     _normalizePriceData(apiResponse) {
-        const normalizedData = new Map();
+        const normalizedPrices = new Map();
+        let dashboardData = [];
 
         // Handle case where response might be structured { prices, dashboard } or flat (backward compatibility)
         const items = apiResponse.prices || (Array.isArray(apiResponse) ? apiResponse : (apiResponse.data || []));
+        dashboardData = apiResponse.dashboard || [];
 
-        // VERIFICATION (Dashboard Sheet): Log presence and count
-        if (apiResponse && typeof apiResponse === 'object' && apiResponse.dashboard) {
-            console.log(`[DataService] Dashboard Content Found: ${apiResponse.dashboard.length} items.`);
-            // Note: Dashboard data is available here for future UI expansion.
-        } else if (Array.isArray(apiResponse)) {
-            // Early diagnostic to see why it might be flat
-            // console.log('[DataService] Legacy flat payload detected.');
+        // RESILIENCE FIX: If dashboardData is missing/empty, auto-extract from the primary items list
+        if (dashboardData.length === 0 && Array.isArray(items)) {
+            dashboardData = items.filter(item => {
+                const code = String(item.ASXCode || '').trim().toUpperCase();
+                return code.startsWith('^') ||
+                    code.includes('.') ||
+                    code.includes('=') ||
+                    code === 'XJO' ||
+                    code === 'XKO';
+            }).map(item => ({
+                ...item,
+                code: String(item.ASXCode || '').trim().toUpperCase(),
+                name: item.CompanyName || item.Name || item.companyName || String(item.ASXCode || '').trim().toUpperCase()
+            }));
+            if (dashboardData.length > 0) {
+                console.log(`[DataService] Recovered ${dashboardData.length} dashboard items from flat payload.`);
+            }
+        } else if (Array.isArray(dashboardData)) {
+            // Even if explicit dashboardData exists, normalize the name property
+            dashboardData = dashboardData.map(item => ({
+                ...item,
+                name: item.name || item.CompanyName || item.Name || item.companyName || item.id || item.code || ''
+            }));
+        }
+
+        // VERIFICATION: Log presence and count
+        if (dashboardData.length > 0) {
+            console.log(`[DataService] Dashboard Content Found: ${dashboardData.length} items.`);
         }
 
         if (!Array.isArray(items)) {
             console.warn("DataService: Unexpected API response format", apiResponse);
-            return normalizedData;
+            return { prices: normalizedPrices, dashboard: dashboardData };
         }
 
         items.forEach(item => {
@@ -214,7 +239,7 @@ export class DataService {
             }
 
             // Set the map key using the strictly normalized code
-            normalizedData.set(code, {
+            normalizedPrices.set(code, {
                 code: code,
                 name: item.CompanyName || item.companyName || '', // Support both casings
                 live: isLiveValid ? live : 0,
@@ -233,6 +258,6 @@ export class DataService {
             });
         });
 
-        return normalizedData;
+        return { prices: normalizedPrices, dashboard: dashboardData };
     }
 }

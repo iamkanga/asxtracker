@@ -28,16 +28,6 @@ export class DashboardViewRenderer {
         // This ensures all codes from AppConstants appear even if Firestore metadata is missing.
         let displayData = this._getProcessedData(data);
 
-        if (!displayData || displayData.length === 0) {
-            this.container.innerHTML = `
-                <div class="${CSS_CLASSES.EMPTY_STATE}">
-                    <i class="fas fa-chart-line ${CSS_CLASSES.TEXT_3XL} ${CSS_CLASSES.MB_MEDIUM} ${CSS_CLASSES.OPACITY_30}"></i>
-                    <p>No dashboard items found.</p>
-                </div>
-            `;
-            return;
-        }
-
         // Update header Sydney time if in Dashboard watchlist
         const headerTime = document.getElementById(IDS.DASHBOARD_REORDER_TOGGLE);
         if (headerTime) {
@@ -47,6 +37,19 @@ export class DashboardViewRenderer {
                 hour: '2-digit', minute: '2-digit', weekday: 'short'
             }).format(now);
             headerTime.innerHTML = `Sydney: ${sydneyTime}&nbsp;<i class="fas ${UI_ICONS.CARET_DOWN}"></i> ${this.reorderMode ? `<span class="${CSS_CLASSES.ML_SMALL} ${CSS_CLASSES.FONT_NORMAL} ${CSS_CLASSES.OPACITY_60}">(Adjusting...)</span>` : ''}`;
+        }
+
+        // Bind events early to ensure toggle functionality persists even if data is empty/loading
+        this._bindEvents();
+
+        if (!displayData || displayData.length === 0) {
+            this.container.innerHTML = `
+                <div class="${CSS_CLASSES.EMPTY_STATE}">
+                    <i class="fas fa-chart-line ${CSS_CLASSES.TEXT_3XL} ${CSS_CLASSES.MB_MEDIUM} ${CSS_CLASSES.OPACITY_30}"></i>
+                    <p>No dashboard items found.</p>
+                </div>
+            `;
+            return;
         }
 
         const viewMode = (AppState.viewMode || 'TABLE').toUpperCase();
@@ -65,7 +68,6 @@ export class DashboardViewRenderer {
         // Final sanity check before updating DOM
         if (html.includes('dashboard-row')) {
             this.container.innerHTML = html;
-            this._bindEvents();
             this._initClocks(); // Initialize analog clocks
         }
     }
@@ -203,20 +205,34 @@ export class DashboardViewRenderer {
         const statusClass = isOpen ? 'open' : 'closed';
 
         const liveValue = live || 0;
+
+        // --- FORMATTING LOGIC REFINEMENT ---
+        // 1. Identify "Non-Monetary" Patterns (Points/Values, no $)
+        const isIndex = code.startsWith('^') || ['XJO', 'XKO', 'XAO', 'INX', '.DJI', '.IXIC', '^VIX'].includes(code);
+        const isFuture = code.endsWith('=F') || ['GCW00', 'SIW00', 'BZW00'].includes(code);
+        const isForex = code.includes('=X') || ['AUDUSD', 'AUDTHB', 'USDTHB'].includes(code);
+        const isCrypto = code.includes('BTC'); // Standard to show $ for Bitcoin price
+
         let formattedValue;
+        let formattedChange;
+
         if (liveValue === 0) {
             formattedValue = '--';
-        } else if (['AUDUSD', 'AUDTHB', 'USDTHB'].includes(code)) {
+            formattedChange = '--';
+        } else if (isForex) {
+            // Forex: 4 Decimals, no $
             formattedValue = new Intl.NumberFormat('en-AU', { minimumFractionDigits: 4, maximumFractionDigits: 4 }).format(liveValue);
-        } else if (code === 'BTCUSD') {
-            formattedValue = new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(liveValue);
-        } else if (['XJO', 'XKO', 'XAO', 'INX', '.DJI', '.IXIC', 'GCW00', 'SIW00', 'BZW00'].includes(code)) {
+            formattedChange = valueChange.toFixed(4);
+        } else if (isIndex || isFuture) {
+            // Indices/Futures: 2 Decimals (usually), no $
             formattedValue = new Intl.NumberFormat('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(liveValue);
+            formattedChange = valueChange.toFixed(2);
         } else {
+            // Default: Monetary (Shares, Crypto, etc.) -> use $
             formattedValue = formatCurrency(liveValue);
+            formattedChange = valueChange.toFixed(2);
         }
 
-        const formattedChange = (liveValue === 0) ? '--' : (['AUDUSD', 'AUDTHB', 'USDTHB'].includes(code) ? valueChange.toFixed(4) : valueChange.toFixed(2));
         const formattedPct = (liveValue === 0) ? '--' : formatPercent(pctChange);
 
         // Layout Selection
@@ -227,8 +243,6 @@ export class DashboardViewRenderer {
         if (viewMode === 'COMPACT' || viewMode === 'SNAPSHOT') {
             return `
                 <div class="${CSS_CLASSES.DASHBOARD_ROW} ${sentimentClass} ${clickableClass} ${this.reorderMode ? CSS_CLASSES.REORDER_ACTIVE : ''}" ${dataUrlAttr}>
-                    <!-- ANALOG CLOCK CONTAINER (Absolute Positioned for Cards) -->
-                    <div class="analog-clock-hook" data-open="${isOpen}" style="width:16px; height:16px; position: absolute; top: 12px; right: 12px; z-index: 5;"></div>
                     ${this.reorderMode ? `
                         <div class="${CSS_CLASSES.DASHBOARD_REORDER_CONTROLS}">
                             ${index > 0 ? `<button class="${CSS_CLASSES.REORDER_BTN}" data-code="${code}" data-dir="up"><i class="fas fa-chevron-up"></i></button>` : '<div style="height:24px"></div>'}
@@ -236,8 +250,9 @@ export class DashboardViewRenderer {
                         </div>
                     ` : ''}
                     <div class="${CSS_CLASSES.DASHBOARD_CELL_LEFT} vertical-stack">
-                        <div class="${CSS_CLASSES.DASHBOARD_ITEM_NAME}">
-                            ${name}
+                        <div class="${CSS_CLASSES.DASHBOARD_ITEM_NAME}" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                            <span>${name}</span>
+                            <div class="analog-clock-hook" data-open="${isOpen}" style="width:14px; height:14px; opacity:0.8;"></div>
                         </div>
                         <div class="${CSS_CLASSES.DASHBOARD_ITEM_PRICE}">${formattedValue}</div>
                         <div class="${CSS_CLASSES.DASHBOARD_ITEM_CHANGE} ${isPositive ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}">
@@ -386,7 +401,16 @@ export class DashboardViewRenderer {
         // DYNAMIC SOURCE:
         // We now accept anything from the backend, merged with our static known symbols.
         const backendCodes = (firestoreArray || []).map(item => item.ASXCode || item.code).filter(Boolean);
-        const uniqueSet = new Set([...DASHBOARD_SYMBOLS, ...backendCodes]);
+
+        // REFACTOR: Use LIVE DATA keys as the "Source of Truth" if available.
+        // This ensures what we display matches exactly what we fetched from the Sheet/Yahoo.
+        // We fallback to DASHBOARD_SYMBOLS only if we have zero live data (offline/boot).
+        // STRICK SOURCE OF TRUTH:
+        // We only show what is explicitly provided by the Backend/Spreadsheet.
+        // Legacy "Smart Filters" and fallback DASHBOARD_SYMBOLS are removed.
+        const candidates = backendCodes;
+
+        const uniqueSet = new Set(candidates);
         let activeSymbols = Array.from(uniqueSet);
 
         const savedOrder = AppState.preferences.dashboardOrder;
@@ -444,11 +468,22 @@ export class DashboardViewRenderer {
                 priceData = AppState.livePrices.get(upCode + '.AX');
             }
 
-            // Always add the item if it's in DASHBOARD_SYMBOLS, even if data is missing
+            // Priority Name Resolution:
+            // 1. Explicit name from Spreadsheet/Firestore (normalized in DataService)
+            // 2. CompanyName from Spreadsheet/Firestore
+            // 3. Name from Live Price Cache (also from spreadsheet)
+            // 4. Hardcoded nameMap fallback
+            // 5. Code itself
+            const resolvedName = firestoreData?.name ||
+                firestoreData?.CompanyName ||
+                priceData?.name ||
+                nameMap[upCode] ||
+                upCode;
+
             processed.push({
                 id: upCode,
                 code: upCode,
-                name: firestoreData?.name || nameMap[upCode] || upCode,
+                name: resolvedName,
                 live: firestoreData?.live || priceData?.live || 0,
                 pctChange: firestoreData?.pctChange || priceData?.pctChange || 0,
                 valueChange: firestoreData?.valueChange || priceData?.change || 0,

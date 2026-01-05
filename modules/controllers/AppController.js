@@ -322,12 +322,19 @@ export class AppController {
         AppState._isFetching = true;
 
         try {
-            const freshPrices = await this.dataService.fetchLivePrices(codesToFetch);
+            const result = await this.dataService.fetchLivePrices(codesToFetch);
+            const freshPrices = result?.prices;
+            const freshDashboard = result?.dashboard;
+
             if (freshPrices && freshPrices.size > 0) {
                 const prevSize = AppState.livePrices.size;
                 AppState.livePrices = new Map([...AppState.livePrices, ...freshPrices]);
                 AppState.lastGlobalFetch = Date.now();
                 console.log(`Global Price Seed: COMPLETE. Merged ${freshPrices.size} prices. Cache size: ${prevSize} -> ${AppState.livePrices.size}`);
+
+                if (freshDashboard && Array.isArray(freshDashboard)) {
+                    AppState.data.dashboard = freshDashboard;
+                }
 
                 if (this.watchlistUI && AppState.watchlist.id) {
                     this.updateDataAndRender(false);
@@ -619,12 +626,13 @@ export class AppController {
                         // No render needed, but essential for next watchlist switch
                     }
 
-                    // 7.2 Sync Dashboard Order & Hidden (Missed in previous architecture)
+                    // 7.2 Sync Dashboard Order & Hidden
                     if (prefs.dashboardOrder) {
                         AppState.preferences.dashboardOrder = prefs.dashboardOrder;
                         localStorage.setItem(STORAGE_KEYS.DASHBOARD_ORDER, JSON.stringify(prefs.dashboardOrder));
                         needsRender = true;
                     }
+
                     if (prefs.dashboardHidden) {
                         AppState.preferences.dashboardHidden = prefs.dashboardHidden;
                         localStorage.setItem(STORAGE_KEYS.DASHBOARD_HIDDEN, JSON.stringify(prefs.dashboardHidden));
@@ -938,10 +946,17 @@ export class AppController {
             requestAnimationFrame(() => {
                 setTimeout(async () => {
                     try {
-                        const freshPrices = await this.dataService.fetchLivePrices(codes);
+                        const result = await this.dataService.fetchLivePrices(codes);
+                        const freshPrices = result?.prices;
+                        const freshDashboard = result?.dashboard;
+
                         if (freshPrices && freshPrices.size > 0) {
                             // CACHE STABILITY FIX: Merge instead of Replace
                             AppState.livePrices = new Map([...AppState.livePrices, ...freshPrices]);
+
+                            if (freshDashboard && Array.isArray(freshDashboard)) {
+                                AppState.data.dashboard = freshDashboard;
+                            }
 
                             // Update global timestamp if we fetched a significant amount (e.g. > 50 codes)
                             if (codes.length > 50) {
@@ -2033,7 +2048,8 @@ export class AppController {
             }
 
             // Fetch fresh
-            const map = await this.dataService.fetchLivePrices([code]);
+            const result = await this.dataService.fetchLivePrices([code]);
+            const map = result?.prices;
             if (map && map.has(code)) {
                 const data = map.get(code);
                 AppState.livePrices.set(code, data);

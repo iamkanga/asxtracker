@@ -207,7 +207,12 @@ export class DashboardFilterModal {
 
         // DYNAMIC SOURCE: AppState.data.dashboard + Filter Duplicates
         const backendCodes = (AppState.data.dashboard || []).map(item => item.ASXCode || item.code).filter(Boolean);
-        const uniqueSet = new Set([...DASHBOARD_SYMBOLS, ...backendCodes]);
+
+        // REFACTOR: Use LIVE DATA keys as the "Source of Truth" to align with Dashboard View.
+        // STRICK SOURCE OF TRUTH: 100% Backend/Spreadsheet
+        const candidates = backendCodes;
+
+        const uniqueSet = new Set(candidates);
         const masterList = Array.from(uniqueSet);
 
         // Sorting Logic: Saved Order > Master List Fallback

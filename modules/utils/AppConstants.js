@@ -7,40 +7,8 @@ export const ALL_SHARES_ID = 'ALL';
 export const KANGAROO_ICON_SRC = 'favicon.svg';
 export const CASH_WATCHLIST_ID = 'CASH';
 export const DASHBOARD_WATCHLIST_ID = 'DASHBOARD';
-export const DASHBOARD_SYMBOLS = [
-    'XJO', 'XKO', 'XAO', 'INX', '.DJI', '.IXIC',
-    'AUDUSD', 'AUDTHB', 'USDTHB', 'BTCUSD',
-    'GCW00', 'SIW00', 'BZW00',
-    // New Manual Additions
-    '^GSPC', '^DJI', '^IXIC', '^FTSE', '^N225', '^HSI', '^STOXX50E', '^AXJO',
-    'GC=F', 'SI=F', 'CL=F', 'BZ=F', 'HG=F',
-    'BTC-USD', 'BTC-AUD',
-    'AUDUSD=X', 'AUDGBP=X', 'AUDEUR=X', 'AUDJPY=X', 'AUDTHB=X',
-    // Futures & VIX
-    'YAP=F', 'TIO=F', '^VIX',
-    // Spot Commodities
-    'XAUUSD=X', 'XAGUSD=X'
-];
-export const DASHBOARD_LINKS = {
-    // Indices
-    'XJO': 'https://www.marketindex.com.au/asx200',
-    'XKO': 'https://www.marketindex.com.au/asx300',
-    'XAO': 'https://www.marketindex.com.au/all-ordinaries',
-    'INX': 'https://www.google.com/finance/quote/.INX:INDEXSP',
-    '.DJI': 'https://www.google.com/finance/quote/.DJI:INDEXDJX',
-    '.IXIC': 'https://www.google.com/finance/quote/.IXIC:INDEXNASDAQ',
-
-    // FX & Crypto
-    'AUDUSD': 'https://www.google.com/finance/quote/AUD-USD',
-    'AUDTHB': 'https://www.google.com/finance/quote/AUD-THB',
-    'USDTHB': 'https://www.google.com/finance/quote/USD-THB',
-    'BTCUSD': 'https://www.google.com/finance/quote/BTC-usd',
-
-    // Commodities
-    'GCW00': 'https://www.marketindex.com.au/gold',
-    'SIW00': 'https://www.marketindex.com.au/silver',
-    'BZW00': 'https://www.marketindex.com.au/crude-oil'
-};
+export const DASHBOARD_SYMBOLS = [];
+export const DASHBOARD_LINKS = {};
 export const PORTFOLIO_ID = 'portfolio';
 export const SEARCH_WATCHLIST_ID = 'search';
 
@@ -608,6 +576,7 @@ export const CSS_CLASSES = {
     CASH_BORDER_PREFIX: 'cash-border-',
 
     // Dashboard / Sparklines
+    DASHBOARD_CONTAINER: 'dashboard-container',
     DASHBOARD_SPARK_CONTAINER: 'dashboard-spark-container',
     RANGE_LABEL: 'range-label',
     RANGE_LOW: 'range-low',

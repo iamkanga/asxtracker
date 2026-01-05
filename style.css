@@ -880,8 +880,9 @@ body.dark-theme .dashboard-row.clickable:hover {
 }
 
 .dashboard-container.view-mode-compact .dashboard-item-change {
-    font-size: 0.9rem;
-    opacity: 0.85;
+    font-size: 0.95rem;
+    /* Increased slightly to match prominence */
+    opacity: 0.9;
     display: flex;
     justify-content: space-between;
     width: 100%;
@@ -890,7 +891,7 @@ body.dark-theme .dashboard-row.clickable:hover {
 /* SNAPSHOT VIEW (3 COLUMNS) */
 .dashboard-container.view-mode-snapshot {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 8px;
     padding: 8px;
 }
@@ -898,7 +899,7 @@ body.dark-theme .dashboard-row.clickable:hover {
 .dashboard-container.view-mode-snapshot .dashboard-row {
     flex-direction: column;
     align-items: flex-start;
-    padding: 12px;
+    padding: 12px 10px;
     background: rgba(var(--color-accent-rgb), 0.02);
     /* Strict "Square End" Fix using Box Shadow */
     /* This copies the bulletproof technique from .view-table (lines 4621+) */
@@ -938,11 +939,18 @@ body.dark-theme .dashboard-row.clickable:hover {
 }
 
 .dashboard-container.view-mode-snapshot .dashboard-item-change {
-    font-size: 0.8rem;
-    opacity: 0.8;
+    font-size: 0.9rem;
+    /* Match Compact change size for consistency */
+    opacity: 0.9;
     display: flex;
     justify-content: space-between;
     width: 100%;
+}
+
+.dashboard-container .change-value,
+.dashboard-container .change-percent {
+    font-size: inherit !important;
+    /* Force identical sizing and override global mobile rules */
 }
 
 /* Vertical Stacking for Compact/Snapshot */
@@ -4782,6 +4790,7 @@ body.dark-theme .sort-picker-row.active {
     display: none !important;
 }
 
+
 .dashboard-row {
     background: var(--card-bg);
     border: 1px solid var(--border-color);
@@ -7623,3 +7632,7 @@ body.dark-theme .calc-result-card {
 .justify-start {
     justify-content: flex-start !important;
 }
+
+/* -------------------------------------------------------------------------- */
+/*                     MOBILE GRID OVERRIDES (V85)                            */
+/* -------------------------------------------------------------------------- */
