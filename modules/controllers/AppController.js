@@ -193,6 +193,12 @@ export class AppController {
         });
         this.headerLayout.init();
 
+        // Sort Toggle Listener (Chevron in Title Bar)
+        document.addEventListener(EVENTS.TOGGLE_SORT_DIRECTION, () => {
+            console.log('[AppController] TOGGLE_SORT_DIRECTION Event Received.');
+            this._handleSortToggle();
+        });
+
         // 3b. Initialize Calculator UI
         this.calculatorUI = new CalculatorUI();
 
@@ -1316,6 +1322,46 @@ export class AppController {
 
         this.changeViewMode(nextMode);
         this.headerLayout.updateViewToggleIcon(nextMode);
+    }
+
+    /**
+     * Toggles the current sort direction (Triggered by Title Bar chevron)
+     * Replicates the logic of the directional toggle button in the modal.
+     */
+    _handleSortToggle() {
+        const currentSort = AppState.sortConfig;
+        if (!currentSort) return;
+
+        const newDirection = currentSort.direction === 'asc' ? 'desc' : 'asc';
+        const newSort = { ...currentSort, direction: newDirection };
+
+        console.log(`[AppController] Toggling Sort Direction: ${currentSort.direction} -> ${newDirection}`);
+
+        // 1. Handle Global Sort Persistence
+        const isGlobalActive = !!AppState.preferences.globalSort;
+        if (isGlobalActive) {
+            const currentGlobal = AppState.preferences.globalSort;
+            if (currentGlobal.field === newSort.field) {
+                console.log('[AppController] Updating active Global Sort direction');
+                AppState.saveGlobalSort(newSort, true); // Persist updated direction
+                if (this.watchlistUI) this.watchlistUI.updateHeaderTitle();
+            }
+        }
+
+        // 2. Update State & Local Persistence
+        AppState.sortConfig = newSort;
+        AppState.saveSortConfigForWatchlist(AppState.watchlist.id);
+
+        // 3. Refresh Data
+        if (AppState.watchlist.type === 'cash') {
+            this.cashController.refreshView();
+        } else {
+            this.updateDataAndRender(false);
+        }
+
+        // 4. Update UI Button
+        const contextId = AppState.watchlist.type === 'cash' ? 'CASH' : AppState.watchlist.id;
+        this.viewRenderer.updateSortButtonUI(contextId, newSort);
     }
 
     _handleSortClick() {

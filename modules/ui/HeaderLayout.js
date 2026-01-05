@@ -245,6 +245,16 @@ export class HeaderLayout {
         if (sortBtn && this.callbacks.onSort) {
             sortBtn.addEventListener('click', (e) => {
                 e.preventDefault();
+
+                // Check if the chevron was the direct target to toggle instead of opening modal
+                const chevron = e.target.closest(`#${IDS.SORT_PICKER_CHEVRON}`);
+                if (chevron) {
+                    console.log('[HeaderLayout] Sort Chevron Clicked -> Dispatching TOGGLE_SORT_DIRECTION');
+                    e.stopPropagation();
+                    document.dispatchEvent(new CustomEvent(EVENTS.TOGGLE_SORT_DIRECTION));
+                    return;
+                }
+
                 this.callbacks.onSort();
             });
         }

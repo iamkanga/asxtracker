@@ -103,7 +103,8 @@ export const EVENTS = {
     SHOW_DAILY_BRIEFING: 'show-daily-briefing', // Sidebar Button Trigger
     FIREBASE_DATA_LOADED: 'firebase-data-loaded', // Splash Screen Trigger
     OPEN_FAVORITE_LINKS: 'open-favorite-links',
-    FAVORITE_LINKS_UPDATED: 'favorite-links-updated'
+    FAVORITE_LINKS_UPDATED: 'favorite-links-updated',
+    TOGGLE_SORT_DIRECTION: 'toggle-sort-direction'
 };
 
 export const SORT_OPTIONS = {
@@ -1254,7 +1255,7 @@ export const IDS = {
     ADD_FAVORITE_BTN: 'add-favorite-btn',
     FAVORITE_LINKS_TITLE: 'favorite-links-title',
     FAVORITE_MODE_CONTAINER: 'favorite-mode-container',
-    FAV_MODE_VIEW: 'fav-mode-view',
     FAV_MODE_EDIT: 'fav-mode-edit',
-    FAV_LINKS_CHEVRON: 'fav-links-chevron'
+    FAV_LINKS_CHEVRON: 'fav-links-chevron',
+    SORT_PICKER_CHEVRON: 'sortPickerChevron'
 };

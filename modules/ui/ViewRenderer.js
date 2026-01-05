@@ -996,8 +996,9 @@ export class ViewRenderer {
             }
 
             // Update innerHTML
-            // REMOVED: Extra space between iconHtml and span for tighter Title Bar spacing
-            sortBtn.innerHTML = `${iconHtml}<span>${activeOption.label}</span> <i class="fas ${arrowIcon} ${arrowClass}"></i>`;
+            // Chevron Padding Expanded: Left (20px) overlaps text, Right (30px) extends right.
+            // Matching Negative Margins ensure the icon remains in its original visual location.
+            sortBtn.innerHTML = `${iconHtml}<span>${activeOption.label}</span> <span id="${IDS.SORT_PICKER_CHEVRON}" class="${CSS_CLASSES.CHEVRON_ICON}" style="padding: 10px 30px 10px 20px; margin-right: -30px; margin-left: -18px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.2s;"><i class="fas ${arrowIcon} ${arrowClass}"></i></span>`;
         }
     }
 
