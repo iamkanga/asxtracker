@@ -7,6 +7,7 @@ import { formatCurrency, formatPercent } from '../utils/formatters.js';
 import { IDS, CSS_CLASSES, DASHBOARD_SYMBOLS, STORAGE_KEYS, DASHBOARD_LINKS, UI_ICONS } from '../utils/AppConstants.js?v=5';
 import { AppState } from '../state/AppState.js';
 import { DashboardFilterModal } from './DashboardFilterModal.js';
+import { LinkHelper } from '../utils/LinkHelper.js';
 
 export class DashboardViewRenderer {
     constructor() {
@@ -39,8 +40,8 @@ export class DashboardViewRenderer {
             headerTime.innerHTML = `Sydney: ${sydneyTime}&nbsp;<i class="fas ${UI_ICONS.CARET_DOWN}"></i> ${this.reorderMode ? `<span class="${CSS_CLASSES.ML_SMALL} ${CSS_CLASSES.FONT_NORMAL} ${CSS_CLASSES.OPACITY_60}">(Adjusting...)</span>` : ''}`;
         }
 
-        // Bind events early to ensure toggle functionality persists even if data is empty/loading
-        this._bindEvents();
+        // Bind events moved to post-render to ensure elements exist
+
 
         if (!displayData || displayData.length === 0) {
             this.container.innerHTML = `
@@ -69,6 +70,7 @@ export class DashboardViewRenderer {
         if (html.includes('dashboard-row')) {
             this.container.innerHTML = html;
             this._initClocks(); // Initialize analog clocks
+            this._bindEvents(); // Bind events AFTER elements are in DOM
         }
     }
 
@@ -236,7 +238,7 @@ export class DashboardViewRenderer {
         const formattedPct = (liveValue === 0) ? '--' : formatPercent(pctChange);
 
         // Layout Selection
-        const url = DASHBOARD_LINKS[code];
+        const url = DASHBOARD_LINKS[code] || LinkHelper.getFinanceUrl(code);
         const clickableClass = url ? 'clickable' : '';
         const dataUrlAttr = url ? `data-url="${url}"` : '';
 

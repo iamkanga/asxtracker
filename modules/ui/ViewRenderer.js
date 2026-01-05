@@ -8,7 +8,9 @@
 import { formatCurrency, formatPercent, formatFriendlyDate } from '../utils/formatters.js';
 import { AppState } from '../state/AppState.js';
 import { SORT_OPTIONS, UI_ICONS, USER_MESSAGES, RESEARCH_LINKS_TEMPLATE, CSS_CLASSES, IDS, EVENTS, SUMMARY_TYPES, STORAGE_KEYS, PORTFOLIO_ID, KANGAROO_ICON_SRC } from '../utils/AppConstants.js?v=10';
-import { SnapshotUI } from './SnapshotUI.js'; // Added import
+import { SnapshotUI } from './SnapshotUI.js';
+import { LinkHelper } from '../utils/LinkHelper.js';
+
 import { navManager } from '../utils/NavigationManager.js';
 
 export class ViewRenderer {
@@ -1708,7 +1710,12 @@ export class ViewRenderer {
         container.querySelectorAll(`.${CSS_CLASSES.ASX_DROPDOWN_PILL}`).forEach(pill => {
             pill.addEventListener('click', () => {
                 const code = pill.dataset.code;
-                document.dispatchEvent(new CustomEvent(EVENTS.ASX_CODE_CLICK, { detail: { code } }));
+                const url = LinkHelper.getFinanceUrl(code);
+                if (url) {
+                    window.open(url, '_blank');
+                } else {
+                    document.dispatchEvent(new CustomEvent(EVENTS.ASX_CODE_CLICK, { detail: { code } }));
+                }
             });
         });
     }
