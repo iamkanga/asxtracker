@@ -580,6 +580,9 @@
                 <button id="btn-open-calculator" class="sidebar-btn">
                     <i class="fas fa-calculator"></i> Calculators
                 </button>
+                <button id="btn-favorite-links" class="sidebar-btn">
+                    <i class="fas fa-link"></i> Favorite Links
+                </button>
                 <button id="hardReloadBtn" class="sidebar-btn">
                     <i class="fas fa-sync-alt"></i> Reload App
                 </button>
@@ -682,6 +685,32 @@
                     <!-- Suggestions / Dropdown -->
                     <!-- Note: Controller expects 'asx-dropdown-menu' for toggling. -->
                     <div id="search-feedback" class="search-feedback"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Favorite Links Modal -->
+        <div id="modal-favorite-links" class="modal hidden">
+            <div class="modal-overlay"></div>
+            <div class="modal-content modal-content-large">
+                <div class="modal-header">
+                    <h2 id="favorite-links-title" class="modal-title clickable">
+                        Favorite Links <i class="fas fa-chevron-down text-coffee"></i>
+                    </h2>
+                    <div class="modal-actions">
+                        <button id="add-favorite-btn" class="modal-action-btn" title="Add Link">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                        <button class="modal-close-btn">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Mode Selector Removed (Direct Toggle Active) -->
+
+                <div class="modal-body scrollable-body">
+                    <div id="favorite-links-list" class="favorite-links-grid"></div>
                 </div>
             </div>
         </div>

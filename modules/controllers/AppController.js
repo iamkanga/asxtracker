@@ -19,6 +19,7 @@ import { NotificationStore } from '../state/NotificationStore.js';
 import { BriefingUI } from '../ui/BriefingUI.js';
 import { SnapshotUI } from '../ui/SnapshotUI.js'; // Added
 import { SettingsUI } from '../ui/SettingsUI.js';
+import { FavoriteLinksUI } from '../ui/FavoriteLinksUI.js';
 import { notificationStore } from '../state/NotificationStore.js';
 import { DashboardViewRenderer } from '../ui/DashboardViewRenderer.js?v=5';
 import { ModalController } from './ModalController.js';
@@ -128,6 +129,10 @@ export class AppController {
         document.addEventListener(EVENTS.OPEN_SETTINGS, () => {
             console.log('[AppController] Opening Scanner Settings...');
             SettingsUI.showModal(AppState.user?.uid);
+        });
+        document.addEventListener(EVENTS.OPEN_FAVORITE_LINKS, () => {
+            console.log('[AppController] Opening Favorite Links...');
+            FavoriteLinksUI.showModal();
         });
         document.addEventListener(EVENTS.SHOW_DAILY_BRIEFING, () => BriefingUI.show());
 
@@ -254,6 +259,7 @@ export class AppController {
         // Schedule sync
         this._syncTimeout = setTimeout(async () => {
             try {
+                // console.log('[AppController] Executing Outbound Sync. Base Prefs:', prefs);
                 // REFRESH DATA (Directive 025):
                 // To prevent "Stale Snapshot Race Conditions", we explicitly read fresh state 
                 // for critical fields that might have been hydrated during the debounce window.
@@ -534,6 +540,8 @@ export class AppController {
                     // Mark as loaded before processing specific updates so handleSecurityLock works
                     this._cloudPrefsLoaded = true;
 
+                    // console.log('[AppController] INBOUND SYNC RECEIVED:', prefs); 
+
                     let needsRender = false;
 
                     // 0. Sync Security Prefs (CRITICAL: Prioritize this)
@@ -603,6 +611,42 @@ export class AppController {
                         AppState.preferences.watchlistOrder = prefs.watchlistOrder;
                         localStorage.setItem(STORAGE_KEYS.WATCHLIST_ORDER, JSON.stringify(prefs.watchlistOrder));
                         needsRender = true;
+                    }
+
+                    // 5.1 Sync Favorite Links
+                    if (prefs.favoriteLinks && Array.isArray(prefs.favoriteLinks)) {
+                        // MERGE STRATEGY (Startup Race Condition Fix):
+                        // If user has added links locally before Cloud Sync arrives, we must not overwrite them with empty/stale cloud data.
+                        // We perform a Union based on URL.
+                        const currentLinks = AppState.preferences.favoriteLinks || [];
+                        const cloudLinks = prefs.favoriteLinks || [];
+
+                        // 1. Create Map of Cloud Links (Source of Truth)
+                        const linkMap = new Map();
+                        cloudLinks.forEach(l => linkMap.set(l.url, l));
+
+                        // 2. Merge Local Links (Preserve additions)
+                        currentLinks.forEach(l => {
+                            if (!linkMap.has(l.url)) {
+                                linkMap.set(l.url, l);
+                            }
+                        });
+
+                        // 3. Convert back to array
+                        const mergedLinks = Array.from(linkMap.values());
+
+                        // 4. Update State
+                        AppState.preferences.favoriteLinks = mergedLinks;
+                        localStorage.setItem(STORAGE_KEYS.FAVORITE_LINKS, JSON.stringify(mergedLinks));
+
+                        // LIVE UPDATE: If modal is open, refresh it
+                        if (!document.getElementById(IDS.MODAL_FAVORITE_LINKS).classList.contains(CSS_CLASSES.HIDDEN)) {
+                            // console.log('[AppController] Live Updating Favorite Links Modal');
+                            import('../ui/FavoriteLinksUI.js').then(module => {
+                                const event = new CustomEvent('favorite-links-updated');
+                                window.dispatchEvent(event);
+                            });
+                        }
                     }
 
                     // 6. Sync Watchlist Mode

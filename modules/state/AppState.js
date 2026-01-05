@@ -105,7 +105,15 @@ export const AppState = {
                 return [];
             }
         })(),
-        snapshotSort: localStorage.getItem(STORAGE_KEYS.SNAPSHOT_SORT) || 'desc'
+        snapshotSort: localStorage.getItem(STORAGE_KEYS.SNAPSHOT_SORT) || 'desc',
+        favoriteLinks: (() => {
+            try {
+                const stored = localStorage.getItem(STORAGE_KEYS.FAVORITE_LINKS);
+                return stored ? JSON.parse(stored) : [];
+            } catch (e) {
+                return [];
+            }
+        })()
     },
 
     // Security Runtime State
@@ -216,14 +224,13 @@ export const AppState = {
 
     _triggerSync() {
         if (this.onPersistenceUpdate && typeof this.onPersistenceUpdate === 'function') {
-            this.onPersistenceUpdate({
+            const payload = {
                 lastWatchlistId: this.watchlist.id,
                 sortConfigMap: this.sortConfigMap,
                 hiddenAssets: [...this.hiddenAssets],
                 security: this.preferences.security,
                 dashboardOrder: this.preferences.dashboardOrder || [],
                 dashboardHidden: this.preferences.dashboardHidden || [],
-                watchlistOrder: this.preferences.watchlistOrder || [],
                 watchlistOrder: this.preferences.watchlistOrder || [],
                 sortOptionOrder: this.preferences.sortOptionOrder || {},
                 globalSort: this.preferences.globalSort || null,
@@ -238,8 +245,13 @@ export const AppState = {
                         out[key] = [...this.hiddenSortOptions[key]];
                     }
                     return out;
-                })()
-            });
+                })(),
+                favoriteLinks: this.preferences.favoriteLinks || []
+            };
+            // console.log('[AppState] Triggering Sync with payload:', payload);
+            this.onPersistenceUpdate(payload);
+        } else {
+            console.warn('[AppState] _triggerSync called but no onPersistenceUpdate handler connected.');
         }
     },
 
@@ -391,6 +403,12 @@ export const AppState = {
     saveSnapshotSort(sortOrder) {
         this.preferences.snapshotSort = sortOrder;
         localStorage.setItem(STORAGE_KEYS.SNAPSHOT_SORT, sortOrder);
+        this._triggerSync();
+    },
+
+    saveFavoriteLinks(links) {
+        this.preferences.favoriteLinks = links;
+        localStorage.setItem(STORAGE_KEYS.FAVORITE_LINKS, JSON.stringify(links));
         this._triggerSync();
     },
 

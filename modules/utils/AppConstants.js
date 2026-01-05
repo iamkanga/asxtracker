@@ -38,7 +38,8 @@ export const STORAGE_KEYS = {
     NOTIFICATIONS_VIEWED: 'ASX_NEXT_notificationsViewed',
     USER_CATEGORIES: 'ASX_NEXT_userCategories',
     SNAPSHOT_SORT: 'ASX_NEXT_snapshotSort',
-    DASHBOARD_HIDDEN: 'ASX_NEXT_dashboardHidden'
+    DASHBOARD_HIDDEN: 'ASX_NEXT_dashboardHidden',
+    FAVORITE_LINKS: 'ASX_NEXT_favoriteLinks'
 };
 
 export const EVENTS = {
@@ -100,7 +101,8 @@ export const EVENTS = {
     SAVE_SCANNER_SETTINGS: 'save-scanner-settings',
     REQUEST_REFRESH_DETAILS: 'request-refresh-details',
     SHOW_DAILY_BRIEFING: 'show-daily-briefing', // Sidebar Button Trigger
-    FIREBASE_DATA_LOADED: 'firebase-data-loaded' // Splash Screen Trigger
+    FIREBASE_DATA_LOADED: 'firebase-data-loaded', // Splash Screen Trigger
+    OPEN_FAVORITE_LINKS: 'open-favorite-links'
 };
 
 export const SORT_OPTIONS = {
@@ -1241,5 +1243,15 @@ export const IDS = {
 
     // Settings Specific IDs
     PREF_EMAIL_ADDR: 'pref-emailAddr',
-    TOGGLE_DAILY_EMAIL: 'toggle-pref-dailyEmail'
+    TOGGLE_DAILY_EMAIL: 'toggle-pref-dailyEmail',
+
+    // Favorite Links
+    BTN_FAVORITE_LINKS: 'btn-favorite-links',
+    MODAL_FAVORITE_LINKS: 'modal-favorite-links',
+    FAVORITE_LINKS_LIST: 'favorite-links-list',
+    ADD_FAVORITE_BTN: 'add-favorite-btn',
+    FAVORITE_LINKS_TITLE: 'favorite-links-title',
+    FAVORITE_MODE_CONTAINER: 'favorite-mode-container',
+    FAV_MODE_VIEW: 'fav-mode-view',
+    FAV_MODE_EDIT: 'fav-mode-edit'
 };

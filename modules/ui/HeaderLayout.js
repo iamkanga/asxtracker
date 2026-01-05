@@ -647,6 +647,18 @@ export class HeaderLayout {
                 }, 150);
             });
         }
+
+        // Sidebar Favorite Links Entry
+        this.btnFavoriteLinks = document.getElementById(IDS.BTN_FAVORITE_LINKS);
+        if (this.btnFavoriteLinks) {
+            this.btnFavoriteLinks.addEventListener('click', () => {
+                this._toggleSidebar(false);
+                setTimeout(() => {
+                    console.log('HeaderLayout: Dispatching OPEN_FAVORITE_LINKS');
+                    document.dispatchEvent(new CustomEvent(EVENTS.OPEN_FAVORITE_LINKS));
+                }, 150);
+            });
+        }
     }
 
     updateNotificationBadge(totalCount, customCount) {
