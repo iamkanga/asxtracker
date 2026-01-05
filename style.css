@@ -7921,6 +7921,15 @@ body.dark-theme .calc-result-card {
     font-size: 1.1rem;
 }
 
+/* PREMIUM CHEVRON V5 */
+#favorite-links-title .chevron-premium-v5 {
+    margin-left: 8px;
+    opacity: 0.3;
+    transition: transform 0.3s ease;
+    width: 16px;
+    height: 16px;
+}
+
 /* Empty State for Favorite Links */
 .favorite-links-grid .empty-state {
     grid-column: 1 / -1;
@@ -7935,5 +7944,3 @@ body.dark-theme .calc-result-card {
         grid-template-columns: 1fr;
     }
 }
-/* PREMIUM CHEVRON V5 */
-#favorite-links-title .chevron-premium-v5 { margin-left: 8px; opacity: 0.3; transition: transform 0.3s ease; width: 16px; height: 16px; }

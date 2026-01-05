@@ -643,7 +643,7 @@ export class AppController {
                         if (!document.getElementById(IDS.MODAL_FAVORITE_LINKS).classList.contains(CSS_CLASSES.HIDDEN)) {
                             // console.log('[AppController] Live Updating Favorite Links Modal');
                             import('../ui/FavoriteLinksUI.js').then(module => {
-                                const event = new CustomEvent('favorite-links-updated');
+                                const event = new CustomEvent(EVENTS.FAVORITE_LINKS_UPDATED);
                                 window.dispatchEvent(event);
                             });
                         }

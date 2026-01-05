@@ -24,7 +24,7 @@ export class FavoriteLinksUI {
         if (titleEl) {
             titleEl.innerHTML = `
                 Favorite Links
-                <svg id="fav-links-chevron" class="chevron-premium-v5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <svg id="${IDS.FAV_LINKS_CHEVRON}" class="chevron-premium-v5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                     <polyline points="6 9 12 15 18 9"></polyline>
                 </svg>
             `;
@@ -32,22 +32,13 @@ export class FavoriteLinksUI {
 
         this._currentMode = 'open'; // Default to Open
 
-        // Initialize defaults if empty
-        // CRITICAL FIX: Disabled auto-defaults to prevent overwriting Cloud Data during sync race conditions.
-        // If the user has data in the cloud, we must wait for it rather than assuming they are new and nuking it with defaults.
-        /*
-        if (!AppState.preferences.favoriteLinks || AppState.preferences.favoriteLinks.length === 0) {
-            this._populateDefaults();
-        }
-        */
-
         // Subscribe to Live Updates (Sync)
         if (!this._liveUpdateListener) {
             this._liveUpdateListener = () => {
                 console.log('[FavoriteLinksUI] Received Live Update Event. Re-rendering.');
                 this._renderContent(modal);
             };
-            window.addEventListener('favorite-links-updated', this._liveUpdateListener);
+            window.addEventListener(EVENTS.FAVORITE_LINKS_UPDATED, this._liveUpdateListener);
         }
 
         this._renderContent(modal);
@@ -128,7 +119,7 @@ export class FavoriteLinksUI {
         const modal = document.getElementById(IDS.MODAL_FAVORITE_LINKS);
 
         // Rotate Chevron (Standard Icon)
-        const icon = modal.querySelector('#fav-links-chevron');
+        const icon = modal.querySelector(`#${IDS.FAV_LINKS_CHEVRON}`);
         if (icon) {
             icon.style.transform = this._currentMode === 'manage' ? 'rotate(180deg)' : 'rotate(0deg)';
         }
