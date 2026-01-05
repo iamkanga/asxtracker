@@ -167,10 +167,12 @@ export class FavoriteLinksUI {
             let hostname = '';
             try { hostname = new URL(link.url).hostname; } catch (e) { hostname = 'unknown'; }
 
+            const iconSrc = link.customIcon || `https://www.google.com/s2/favicons?domain=${hostname}&sz=64`;
+
             return `
                 <div class="favorite-link-item" data-index="${index}">
                     <a href="${link.url}" target="_blank" rel="noopener noreferrer" class="favorite-link-btn">
-                        <img src="https://www.google.com/s2/favicons?domain=${hostname}&sz=64" class="link-favicon" alt="">
+                        <img src="${iconSrc}" class="link-favicon" alt="">
                         <span class="link-name">${link.name}</span>
                     </a>
                 </div>
@@ -185,10 +187,12 @@ export class FavoriteLinksUI {
             let hostname = '';
             try { hostname = new URL(link.url).hostname; } catch (e) { hostname = 'unknown'; }
 
+            const iconSrc = link.customIcon || `https://www.google.com/s2/favicons?domain=${hostname}&sz=64`;
+
             return `
                 <div class="favorite-manage-row" data-index="${index}">
                     <div class="manage-row-content" onclick="FavoriteLinksUI._editLinkDetails(${index})">
-                        <img src="https://www.google.com/s2/favicons?domain=${hostname}&sz=64" class="link-favicon" alt="">
+                        <img src="${iconSrc}" class="link-favicon" alt="" style="width: 32px; height: 32px;">
                         <span class="manage-link-name">
                             ${link.name}
                             <i class="fas fa-pencil-alt manage-edit-icon"></i>
@@ -196,6 +200,11 @@ export class FavoriteLinksUI {
                     </div>
                     
                     <div class="manage-controls">
+                        <!-- Upload Custom Icon -->
+                        <button class="btn-upload-icon" onclick="FavoriteLinksUI._handleIconUpload(${index})" title="Upload Custom Icon">
+                            <i class="fas fa-camera"></i>
+                        </button>
+
                         <!-- Reorder Up -->
                         <button class="btn-reorder" onclick="FavoriteLinksUI._moveLink(${index}, -1)" ${index === 0 ? 'disabled' : ''}>
                             <i class="fas fa-chevron-up"></i>
@@ -214,6 +223,34 @@ export class FavoriteLinksUI {
                 </div>
             `;
         }).join('');
+    }
+
+    static _handleIconUpload(index) {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.onchange = (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            // Limit file size to 100KB to prevent bloated AppState
+            if (file.size > 102400) {
+                alert('Image is too large. Please use an image smaller than 100KB.');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const links = this._getEffectiveLinks();
+                links[index].customIcon = event.target.result; // Base64
+                AppState.saveFavoriteLinks(links);
+
+                const modal = document.getElementById(IDS.MODAL_FAVORITE_LINKS);
+                this._renderContent(modal);
+            };
+            reader.readAsDataURL(file);
+        };
+        input.click();
     }
 
     static _moveLink(index, direction) {
