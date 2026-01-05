@@ -113,7 +113,9 @@ export const AppState = {
             } catch (e) {
                 return [];
             }
-        })()
+        })(),
+        dailyEmail: localStorage.getItem(STORAGE_KEYS.DAILY_EMAIL) === 'true',
+        alertEmailRecipients: localStorage.getItem(STORAGE_KEYS.EMAIL_RECIPIENTS) || ''
     },
 
     // Security Runtime State
@@ -246,7 +248,9 @@ export const AppState = {
                     }
                     return out;
                 })(),
-                favoriteLinks: this.preferences.favoriteLinks || []
+                favoriteLinks: this.preferences.favoriteLinks || [],
+                dailyEmail: this.preferences.dailyEmail || false,
+                alertEmailRecipients: this.preferences.alertEmailRecipients || ''
             };
             // console.log('[AppState] Triggering Sync with payload:', payload);
             this.onPersistenceUpdate(payload);

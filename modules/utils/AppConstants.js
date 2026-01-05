@@ -39,7 +39,9 @@ export const STORAGE_KEYS = {
     USER_CATEGORIES: 'ASX_NEXT_userCategories',
     SNAPSHOT_SORT: 'ASX_NEXT_snapshotSort',
     DASHBOARD_HIDDEN: 'ASX_NEXT_dashboardHidden',
-    FAVORITE_LINKS: 'ASX_NEXT_favoriteLinks'
+    FAVORITE_LINKS: 'ASX_NEXT_favoriteLinks',
+    DAILY_EMAIL: 'ASX_NEXT_dailyEmail',
+    EMAIL_RECIPIENTS: 'ASX_NEXT_emailRecipients'
 };
 
 export const EVENTS = {

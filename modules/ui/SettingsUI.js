@@ -460,8 +460,8 @@ export class SettingsUI {
         const personalEnabled = rules.personalEnabled !== false; // Capture Personal Flag
         const showBadges = prefs.showBadges !== false;
 
-        // FORCE ON: If email address is present, Daily Email is ALWAYS ON.
-        const dailyEmail = !!prefs.alertEmailRecipients || (prefs.dailyEmail === true);
+        // Use the saved preference directly without forcing it based on the presence of an email address.
+        const dailyEmail = prefs.dailyEmail === true;
 
         // Format helper: None if null/undefined, otherwise text
         const fmtVal = (pct, dol) => {
@@ -891,6 +891,17 @@ export class SettingsUI {
             };
 
             userStore.savePreferences(userId, newPrefs);
+
+            // UPDATE APP STATE (Flick Fix): Ensure the global sync payload has fresh data.
+            AppState.preferences.dailyEmail = newPrefs.dailyEmail;
+            AppState.preferences.alertEmailRecipients = newPrefs.alertEmailRecipients;
+
+            // Persist locally as well (Registry Rule)
+            localStorage.setItem(STORAGE_KEYS.DAILY_EMAIL, newPrefs.dailyEmail);
+            localStorage.setItem(STORAGE_KEYS.EMAIL_RECIPIENTS, newPrefs.alertEmailRecipients);
+
+            // Trigger AppState Sync (notify AppController to sync with Apps Script)
+            if (AppState.triggerSync) AppState.triggerSync();
         };
 
         const close = () => {

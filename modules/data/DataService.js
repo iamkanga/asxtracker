@@ -71,6 +71,30 @@ export class DataService {
     }
 
     /**
+     * Triggers the Apps Script to synchronize user profile settings to central global settings.
+     * Uses JSONP style fallback (callback param) as the Apps Script handles it via doGet.
+     * @param {string} userId - The Firebase UID of the current user.
+     */
+    async syncUserSettings(userId) {
+        if (!userId) return;
+        try {
+            const url = new URL(API_ENDPOINT);
+            url.searchParams.append('userId', userId);
+            url.searchParams.append('callback', 'sync_callback_' + Date.now());
+            url.searchParams.append('_ts', Date.now());
+
+            // We use a simple fetch. Since it's JSONP-style on the backend, 
+            // it will return a 200 OK with a javascript body.
+            const response = await fetch(url.toString());
+            if (!response.ok) {
+                console.warn(`DataService: Sync request failed with status ${response.status}`);
+            }
+        } catch (err) {
+            console.error('DataService: Sync Exception:', err);
+        }
+    }
+
+    /**
      * Normalizes raw API response into a clean Map.
      * @param {Array|Object} apiResponse 
      * @returns {Map<string, Object>}

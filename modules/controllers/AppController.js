@@ -288,6 +288,12 @@ export class AppController {
                 //     console.log('[AppController] 🐛 OUTBOUND SYNC: Saving hiddenAssets:', freshPrefs.hiddenAssets);
                 // }
                 await this.appService.saveUserPreferences(freshPrefs);
+
+                // NOTIFY APPS SCRIPT (Issue #EmailNotifications):
+                // Trigger a sync of user settings to the central globalSettings doc.
+                if (AppState.user) {
+                    await this.dataService.syncUserSettings(AppState.user.uid);
+                }
             } catch (err) {
                 console.warn('Sync failed:', err);
             } finally {
