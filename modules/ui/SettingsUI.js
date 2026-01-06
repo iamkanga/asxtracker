@@ -491,6 +491,7 @@ export class SettingsUI {
         updateCheck('toggle-hiloEnabled', hiloEnabled);
         updateCheck('toggle-personalEnabled', personalEnabled); // Sync Checkbox
         updateCheck('toggle-pref-showBadges', showBadges);
+        updateCheck('toggle-pref-dailyEmail', dailyEmail);
 
 
         // Debug Log
