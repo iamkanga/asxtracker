@@ -170,12 +170,14 @@ function runGlobal52WeekScan() {
       const n = Number(s);
       return isFinite(n) ? n : null;
     }
-    const rawMinPrice = sanitizeNumber_(settings.hiLoMinimumPrice);
-    const rawMinMcap  = sanitizeNumber_(settings.hiLoMinimumMarketCap);
-    const appliedMinPrice = (rawMinPrice != null && rawMinPrice > 0) ? rawMinPrice : 0;
-    const appliedMinMarketCap = (rawMinMcap != null && rawMinMcap > 0) ? rawMinMcap : 0;
+
+    // NOTE: In multi-user mode, the background scan must be broad enough 
+    // to capture hits for EVERY user's potential threshold.
+    // We will capture EVERYTHING and filter later during email generation.
+    const appliedMinPrice = 0;
+    const appliedMinMarketCap = 0;
     const emailEnabled = !!settings.emailAlertsEnabled;
-    Logger.log('[HiLo] Filters -> minPrice=%s minMcap=%s (raw values price=%s mcap=%s)', appliedMinPrice, appliedMinMarketCap, settings.hiLoMinimumPrice, settings.hiLoMinimumMarketCap);
+    Logger.log('[HiLo] Scan - capturing all hits for multi-user support.');
 
     const highObjs = []; const lowObjs = [];
     let scanned = 0, afterFilter = 0;
@@ -490,6 +492,7 @@ function sendHiLoEmailIfAny_(results, settings) {
 
 function sendMoversEmailIfAny_(results, settings) {
   // Disabled: email sending for movers from frequent scan moved to daily digest only.
+  // Keep a lightweight log for diagnostics.
   try {
     const upCount = (results && Array.isArray(results.up)) ? results.up.length : 0;
     const downCount = (results && Array.isArray(results.down)) ? results.down.length : 0;
@@ -509,31 +512,37 @@ function runGlobalMoversScan() {
     const inHours = (hourSydney >= 10 && hourSydney < 17);
     if (!inHours) console.log('[MoversScan] Outside market hours (' + hourSydney + 'h) – still executing for freshness.');
 
-    const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
-    // Guaranteed latest settings via multi-attempt loop
     const guaranteed = fetchGlobalSettingsGuaranteedLatest_(3, 200);
     if (!guaranteed.ok || !guaranteed.data) { console.log('[MoversScan] FAILED settings fetch: ' + (guaranteed.error || 'unknown')); return; }
     const settings = guaranteed.data;
-    let thresholds = normalizeDirectionalThresholds_(settings);
-    if (!thresholds.anyActive) {
-      console.log('[MoversScan] No directional thresholds configured; clearing doc.');
-      writeGlobalMoversDoc_([], [], thresholds, { source: 'scan', reason: 'no-thresholds', inHours, settingsSnapshot: settings, settingsUpdateTime: guaranteed.updateTime || null, settingsFetchAttempts: guaranteed.attempts, fetchStrategy: 'guaranteed-loop' + (guaranteed.fallback ? '+fallback' : '') });
-      return; }
+    
+    // For Multi-User support, we use a "Wide Net" threshold for the background scan.
+    // This records any move over 0.1% or $0.01 regardless of global settings.
+    const scanThresholds = {
+      upPercent: 0.1,
+      upDollar: 0.01,
+      downPercent: 0.1,
+      downDollar: 0.01,
+      minimumPrice: 0,
+      anyActive: true
+    };
+    
+    const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
 
     const priceRows = fetchPriceRowsForMovers_(spreadsheet);
     if (!priceRows.length) { console.log('[MoversScan] No price data rows; aborting.'); return; }
 
-    // Micro-final read to catch last-millisecond updates
-    const microFinal = fetchGlobalSettingsFromFirestore({ noCache: true });
-    if (microFinal.ok && microFinal.data && microFinal.updateTime && guaranteed.updateTime && microFinal.updateTime > guaranteed.updateTime) {
-      console.log('[MoversScan] Micro-final settings newer: ' + guaranteed.updateTime + ' -> ' + microFinal.updateTime);
-      thresholds = normalizeDirectionalThresholds_(microFinal.data);
-    }
+    const { upMovers, downMovers } = evaluateMovers_(priceRows, scanThresholds);
+    console.log('[MoversScan] Evaluation complete', { up: upMovers.length, down: downMovers.length, total: upMovers.length + downMovers.length, scanThresholds, inHours });
 
-    const { upMovers, downMovers } = evaluateMovers_(priceRows, thresholds);
-    console.log('[MoversScan] Evaluation complete', { up: upMovers.length, down: downMovers.length, total: upMovers.length + downMovers.length, thresholds, inHours, settingsUpdateTime: microFinal.updateTime || guaranteed.updateTime });
-
-  writeGlobalMoversDoc_(upMovers, downMovers, thresholds, { source: 'scan', inHours, settingsSnapshot: settings, settingsUpdateTime: microFinal.updateTime || guaranteed.updateTime || null, settingsFetchAttempts: guaranteed.attempts, fetchStrategy: 'guaranteed-loop+micro-final' + (guaranteed.fallback ? '+fallback' : '') });
+    writeGlobalMoversDoc_(upMovers, downMovers, scanThresholds, { 
+      source: 'scan', 
+      inHours, 
+      settingsSnapshot: settings,
+      settingsUpdateTime: guaranteed.updateTime || null,
+      settingsFetchAttempts: guaranteed.attempts,
+      fetchStrategy: 'guaranteed-loop' + (guaranteed.fallback ? '+fallback' : '')
+    });
 
     // Append persistent daily movers hits so intra-scan events are retained per day
     try {
@@ -1326,7 +1335,7 @@ function fetchGlobalSettingsGuaranteedLatest_(attempts, delayMs) {
  * trigger that periodically reconciles changes.
  *
  * Behavior:
- *  - Reads /artifacts/{APP_ID}/users/{userId}/profile/settings via REST helper
+ *  - Reads /artifacts/{APP_ID}/users/{userId}/preferences/config via REST helper
  *  - Normalizes the canonical keys used by the backend scans (directional & hi/lo)
  *  - Writes an object to /artifacts/{APP_ID}/config/globalSettings using commitCentralDoc_
  *  - Adds updatedAt and updatedByUserId metadata
@@ -1337,36 +1346,41 @@ function fetchGlobalSettingsGuaranteedLatest_(attempts, delayMs) {
 function syncUserProfileToCentralGlobalSettings(userId) {
   if (!userId) return { ok: false, error: 'userId required' };
   try {
-    // Prefer the canonical profile/settings path but fall back to legacy location for compatibility.
-    const primaryDocPath = ['artifacts', APP_ID, 'users', userId, 'profile', 'settings'];
+    // Current frontend path: artifacts/{APP_ID}/users/{userId}/preferences/config
+    const primaryDocPath = ['artifacts', APP_ID, 'users', userId, 'preferences', 'config'];
     let res = _fetchFirestoreDocument_(primaryDocPath);
     let pathUsed = primaryDocPath.join('/');
-    if (!res.ok) {
-      if (res.notFound) {
-        // Try legacy fallback path used by older clients
-        const legacyDocPath = ['artifacts', APP_ID, 'users', userId, 'settings', 'general'];
-        const legacyRes = _fetchFirestoreDocument_(legacyDocPath);
-        if (legacyRes.ok) {
-          res = legacyRes;
-          pathUsed = legacyDocPath.join('/');
-        }
+    
+    // Fallback path check (profile/settings)
+    if (!res.ok && res.notFound) {
+      const altDocPath = ['artifacts', APP_ID, 'users', userId, 'profile', 'settings'];
+      const altRes = _fetchFirestoreDocument_(altDocPath);
+      if (altRes.ok) {
+        res = altRes;
+        pathUsed = altDocPath.join('/');
       }
     }
+    
     if (!res.ok) {
-      if (res.notFound) return { ok: false, status: 404, error: 'User profile settings not found', pathTried: pathUsed };
-      return { ok: false, status: res.status, error: res.error || 'Failed to fetch user profile settings', pathTried: pathUsed };
+      if (res.notFound) return { ok: false, status: 404, error: 'User preferences not found', pathTried: pathUsed };
+      return { ok: false, status: res.status, error: res.error || 'Failed to fetch user preferences', pathTried: pathUsed };
     }
+    
     const data = res.data || {};
-    // Only copy the expected global keys to avoid crowding central config with user-specific metadata
+    const rules = data.scannerRules || {};
+    
+    // Support path-based extraction from frontend schema
+    // Frontend structure: scannerRules: { up: { percentThreshold, dollarThreshold }, ... }
     const centralPayload = {
-      globalPercentIncrease: data.globalPercentIncrease != null ? Number(data.globalPercentIncrease) : null,
-      globalDollarIncrease: data.globalDollarIncrease != null ? Number(data.globalDollarIncrease) : null,
-      globalPercentDecrease: data.globalPercentDecrease != null ? Number(data.globalPercentDecrease) : null,
-      globalDollarDecrease: data.globalDollarDecrease != null ? Number(data.globalDollarDecrease) : null,
-      globalMinimumPrice: data.globalMinimumPrice != null ? Number(data.globalMinimumPrice) : null,
-      hiLoMinimumPrice: data.hiLoMinimumPrice != null ? Number(data.hiLoMinimumPrice) : null,
+      globalPercentIncrease: (rules.up && rules.up.percentThreshold != null) ? Number(rules.up.percentThreshold) : null,
+      globalDollarIncrease: (rules.up && rules.up.dollarThreshold != null) ? Number(rules.up.dollarThreshold) : null,
+      globalPercentDecrease: (rules.down && rules.down.percentThreshold != null) ? Number(rules.down.percentThreshold) : null,
+      globalDollarDecrease: (rules.down && rules.down.dollarThreshold != null) ? Number(rules.down.dollarThreshold) : null,
+      globalMinimumPrice: rules.minPrice != null ? Number(rules.minPrice) : null,
+      hiLoMinimumPrice: rules.hiloMinPrice != null ? Number(rules.hiloMinPrice) : null,
+      // Note: hiLoMinimumMarketCap is not currently in SettingsUI but preserved if already in doc
       hiLoMinimumMarketCap: data.hiLoMinimumMarketCap != null ? Number(data.hiLoMinimumMarketCap) : null,
-      emailAlertsEnabled: (typeof data.emailAlertsEnabled === 'boolean') ? data.emailAlertsEnabled : (data.emailAlertsEnabled != null ? !!data.emailAlertsEnabled : null),
+      emailAlertsEnabled: (typeof data.dailyEmail === 'boolean') ? data.dailyEmail : (data.emailAlertsEnabled != null ? !!data.emailAlertsEnabled : null),
       alertEmailRecipients: data.alertEmailRecipients != null ? String(data.alertEmailRecipients) : null,
       // metadata
       updatedByUserId: userId,
@@ -1393,15 +1407,17 @@ function syncUserProfileToCentralGlobalSettings(userId) {
   }
 }
 
-/**
- * Convenience wrapper to reconcile the calling user's settings into central globalSettings.
- * This function inspects the active user's email address from Session.getActiveUser().getEmail()
- * or may be called directly with a userId. When run as a triggered Apps Script (or via
- * the web app with appropriate auth), it will write the profile settings into central config.
- *
- * @param {{userId?:string}} options
- * @return {{ok:boolean,error?:string,status?:number}}
- */
+// ------------------------------------------------------------------
+// Manual Test / Debug Helper
+// ------------------------------------------------------------------
+
+// Convenience wrapper to reconcile the calling user's settings into central globalSettings.
+// This function inspects the active user's email address from Session.getActiveUser().getEmail()
+// and attempts to find a matching Firestore user document. If found (and if the user is authorized to
+// the web app with appropriate auth), it will write the profile settings into central config.
+// 
+// @param {{userId?:string}} options
+// @return {{ok:boolean,error?:string,status?:number}}
 function reconcileCurrentUserSettings(options) {
   const userId = (options && options.userId) ? options.userId : null;
   try {
@@ -1650,91 +1666,167 @@ function debugDailyHitsParity() {
 
 // ================== DAILY COMBINED EMAIL DIGEST ==================
 function sendCombinedDailyDigest_() {
-  // Only send digest on ASX trading weekdays (Mon-Fri). Abort on Saturday/Sunday in ASX timezone.
+  // 1) Weekday Guard
   try {
     const now = new Date();
-    // 'u' returns ISO day number 1..7 (Mon=1 .. Sun=7)
     const isoDay = Number(Utilities.formatDate(now, ASX_TIME_ZONE, 'u'));
-    if (isoDay === 6 || isoDay === 7) { // Saturday (6) or Sunday (7)
-      console.log('[DailyDigest] Today is weekend in ASX timezone (isoDay=' + isoDay + '); skipping email send.');
+    if (isoDay === 6 || isoDay === 7) { 
+      console.log('[DailyDigest] Today is weekend; skipping email send.');
       return;
     }
   } catch (dayErr) {
-    console.log('[DailyDigest] Failed to determine ASX weekday, proceeding cautiously:', dayErr);
-    // If timezone check fails, proceed (safe default) — this is conservative; alternatively could abort.
+    console.log('[DailyDigest] Day check failed, proceeding cautiously:', dayErr);
   }
-  // Check settings and email recipient
-  const settingsRes = fetchGlobalSettingsFromFirestore({ noCache: true });
-  if (!settingsRes.ok || !settingsRes.data) { console.log('[DailyDigest] Settings fetch failed or empty'); return; }
-  const settings = settingsRes.data;
-  if (!settings.emailAlertsEnabled) { console.log('[DailyDigest] Email alerts disabled; skipping.'); return; }
-  const recipient = settings.alertEmailRecipients || ALERT_RECIPIENT;
-  if (!recipient) { console.log('[DailyDigest] No recipient configured; skipping.'); return; }
 
-  // Fetch sources: movers hits, 52w hits, custom hits
+  // 2) Master Toggle Check (Central Settings)
+  const masterSettingsRes = fetchGlobalSettingsFromFirestore({ noCache: true });
+  if (!masterSettingsRes.ok || !masterSettingsRes.data) {
+    console.log('[DailyDigest] Master settings fetch failed; skipping service.');
+    return;
+  }
+  if (masterSettingsRes.data.emailAlertsEnabled === false) {
+    console.log('[DailyDigest] Master switch (emailAlertsEnabled) is OFF; skipping all sends.');
+    return;
+  }
+
+  // 3) Global Data Retrieval (Fetch once for all users)
+  console.log('[DailyDigest] Fetching global hit data...');
   const moversHitsRes = _fetchFirestoreDocument_(DAILY_MOVERS_HITS_DOC_SEGMENTS, { noCache: true });
-  const moversHits = (moversHitsRes && moversHitsRes.ok && moversHitsRes.data) ? moversHitsRes.data : { upHits: [], downHits: [], dayKey: getSydneyDayKey_() };
+  const moversHits = (moversHitsRes && moversHitsRes.ok && moversHitsRes.data) ? moversHitsRes.data : { upHits: [], downHits: [] };
+  
   const hiloHitsRes = _fetchFirestoreDocument_(DAILY_HILO_HITS_DOC_SEGMENTS, { noCache: true });
-  const hiloHits = (hiloHitsRes && hiloHitsRes.ok && hiloHitsRes.data) ? hiloHitsRes.data : { highHits: [], lowHits: [], dayKey: getSydneyDayKey_() };
+  const hiloHits = (hiloHitsRes && hiloHitsRes.ok && hiloHitsRes.data) ? hiloHitsRes.data : { highHits: [], lowHits: [] };
+  
   const customHitsRes = _fetchFirestoreDocument_(DAILY_CUSTOM_HITS_DOC_SEGMENTS, { noCache: true });
-  const customHits = (customHitsRes && customHitsRes.ok && customHitsRes.data) ? customHitsRes.data : { hits: [], dayKey: getSydneyDayKey_() };
+  const customHits = (customHitsRes && customHitsRes.ok && customHitsRes.data) ? customHitsRes.data : { hits: [] };
 
   const sydneyDateStr = Utilities.formatDate(new Date(), ASX_TIME_ZONE, 'dd-MM-yyyy');
   const num = v => (v!=null && isFinite(v)) ? Number(v) : null;
 
-  // Sort as requested
-  const losers = (Array.isArray(moversHits.downHits) ? moversHits.downHits.slice() : []).sort((a,b)=> Math.abs(num(b.pct)||0) - Math.abs(num(a.pct)||0));
-  const gainers = (Array.isArray(moversHits.upHits) ? moversHits.upHits.slice() : []).sort((a,b)=> (num(b.pct)||0) - (num(a.pct)||0));
-  const lows = (Array.isArray(hiloHits.lowHits) ? hiloHits.lowHits.slice() : []).sort((a,b)=> (num(b.live)||0) - (num(a.live)||0));
-  const highs = (Array.isArray(hiloHits.highHits) ? hiloHits.highHits.slice() : []).sort((a,b)=> (num(b.live)||0) - (num(a.live)||0));
-  const customs = Array.isArray(customHits.hits) ? customHits.hits.slice() : [];
-
-  // HTML helpers
+  // 4) HTML Helper Functions
   function esc(s){ return String(s==null?'':s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
   function td(v){ return '<td style="padding:6px 10px;border-bottom:1px solid #eee;">' + esc(v==null?'' : v) + '</td>'; }
   function fmtMoney(n){ const x = num(n); return x==null? '' : ('$' + x.toFixed(x<1?4:2)); }
   function fmtPct(n){ const x = num(n); return x==null? '' : ((x>=0?'+':'') + x.toFixed(2) + '%'); }
 
-  function table(title, rows, headersHtml) {
+  function createTable(title, rows, headersHtml) {
+    if (!rows || rows.length === 0) return '';
     return (
-      '<h3 style="margin:16px 0 8px 0;font-family:Arial,Helvetica,sans-serif;">' + esc(title) + '</h3>' +
-      '<table cellspacing="0" cellpadding="0" style="border-collapse:collapse;width:100%;font-family:Arial,Helvetica,sans-serif;font-size:13px;">' +
-        '<thead><tr style="text-align:left;background:#fafafa;">' + headersHtml + '</tr></thead>' +
+      '<h3 style="margin:16px 0 8px 0;font-family:Arial,Helvetica,sans-serif;color:#333;">' + esc(title) + '</h3>' +
+      '<table cellspacing="0" cellpadding="0" style="border-collapse:collapse;width:100%;font-family:Arial,Helvetica,sans-serif;font-size:13px;border:1px solid #eee;">' +
+        '<thead><tr style="text-align:left;background:#f9f9f9;color:#555;">' + headersHtml + '</tr></thead>' +
         '<tbody>' + rows.join('') + '</tbody>' +
       '</table>'
     );
   }
 
-  // Sections
-  const losersRows = losers.map(o => ('<tr>' + td(o.code) + td(esc(o.name||'')) + td(fmtMoney(o.live)) + td(fmtPct(o.pct)) + td(fmtMoney(o.change)) + '</tr>'));
-  const gainersRows = gainers.map(o => ('<tr>' + td(o.code) + td(esc(o.name||'')) + td(fmtMoney(o.live)) + td(fmtPct(o.pct)) + td(fmtMoney(o.change)) + '</tr>'));
-  const lowsRows = lows.map(o => ('<tr>' + td(o.code) + td(esc(o.name||'')) + td(fmtMoney(o.live)) + td(fmtMoney(o.low52)) + td(fmtMoney(o.high52)) + '</tr>'));
-  const highsRows = highs.map(o => ('<tr>' + td(o.code) + td(esc(o.name||'')) + td(fmtMoney(o.live)) + td(fmtMoney(o.low52)) + td(fmtMoney(o.high52)) + '</tr>'));
-  const customRows = customs.map(o => ('<tr>' + td(o.code) + td(esc(o.name||'')) + td(fmtMoney(o.live)) + td(fmtMoney(o.target)) + td(o.direction||'') + td(o.intent||'') + '</tr>'));
+  // 5) Prepare Raw Global Data (Fetched once)
+  const allDown = Array.isArray(moversHits.downHits) ? moversHits.downHits : [];
+  const allUp = Array.isArray(moversHits.upHits) ? moversHits.upHits : [];
+  const allLows = Array.isArray(hiloHits.lowHits) ? hiloHits.lowHits : [];
+  const allHighs = Array.isArray(hiloHits.highHits) ? hiloHits.highHits : [];
 
   const hdrMovers = td('Code')+td('Name')+td('Price')+td('% Change')+td('Δ');
   const hdrHiLo = td('Code')+td('Name')+td('Price')+td('52W Low')+td('52W High');
   const hdrCustom = td('Code')+td('Name')+td('Price')+td('Target')+td('Direction')+td('Intent');
 
-  const parts = [];
-  // Order per requirement
-  parts.push(table('Global Movers — Losers', losersRows, hdrMovers));
-  parts.push(table('Global Movers — Gainers', gainersRows, hdrMovers));
-  parts.push(table('52-Week Lows', lowsRows, hdrHiLo));
-  parts.push(table('52-Week Highs', highsRows, hdrHiLo));
-  if (customRows.length) parts.push(table('Custom Triggers', customRows, hdrCustom));
+  // 6) Iterate Users & Send Personalized Emails
+  console.log('[DailyDigest] Listing users for personalized delivery...');
+  const userListRes = _listFirestoreCollection_(['artifacts', APP_ID, 'users']);
+  if (!userListRes.ok || !userListRes.docs) {
+    console.log('[DailyDigest] User list fetch failed: ' + userListRes.error);
+    return;
+  }
 
-  const counts = `Movers: ${gainersRows.length} up, ${losersRows.length} down | 52-Week: ${highsRows.length} high, ${lowsRows.length} low`;
-  const subject = `ASX Daily Briefing — ${sydneyDateStr} (${counts})`;
-  const htmlBody = (
-    '<div style="font-family:Arial,Helvetica,sans-serif;color:#222;line-height:1.4;">' +
-    `<h2 style="margin:0 0 12px 0;">ASX Daily Briefing — ${esc(sydneyDateStr)}</h2>` +
-    parts.join('<div style="height:14px;"></div>') +
-    '<div style="margin-top:16px;color:#666;font-size:12px;">This email is generated automatically from your ASX Alerts settings.</div>' +
-    '</div>'
-  );
+  let sendCount = 0;
+  userListRes.docs.forEach(uDoc => {
+    try {
+      const userId = (uDoc.name || '').split('/').pop();
+      if (!userId) return;
 
-  MailApp.sendEmail({ to: recipient, subject, htmlBody });
+      // Fetch User Preferences (Path: artifacts/{APP_ID}/users/{userId}/preferences/config)
+      const prefPath = ['artifacts', APP_ID, 'users', userId, 'preferences', 'config'];
+      const prefRes = _fetchFirestoreDocument_(prefPath, { noCache: true });
+      if (!prefRes.ok || !prefRes.data) return;
+
+      const prefs = prefRes.data;
+      const emailEnabled = prefs.dailyEmail === true;
+      const recipient = (prefs.alertEmailRecipients || '').trim();
+      if (!emailEnabled || !recipient) return;
+
+      // Individual Threshold Extraction (Scanner Rules)
+      const rules = prefs.scannerRules || {};
+      const t = {
+        upPct: num(rules.up && rules.up.percentThreshold),
+        upDol: num(rules.up && rules.up.dollarThreshold),
+        downPct: num(rules.down && rules.down.percentThreshold),
+        downDol: num(rules.down && rules.down.dollarThreshold),
+        minPrice: num(rules.minPrice),
+        hiloPrice: num(rules.hiloMinPrice)
+      };
+
+      // Helper: Does mover qualify for this specific user?
+      const qualifies = (o) => {
+        const live = num(o.live);
+        if (t.minPrice && live < t.minPrice) return false;
+        const pct = Math.abs(num(o.pct)||0);
+        const dol = Math.abs(num(o.change)||0);
+        if (o.direction === 'up') {
+          return (t.upPct && pct >= t.upPct) || (t.upDol && dol >= t.upDol) || (!t.upPct && !t.upDol);
+        } else {
+          return (t.downPct && pct >= t.downPct) || (t.downDol && dol >= t.downDol) || (!t.downPct && !t.downDol);
+        }
+      };
+
+      // Filter Movers
+      const userDown = allDown.filter(qualifies).sort((a,b)=> Math.abs(num(b.pct)||0) - Math.abs(num(a.pct)||0));
+      const userUp = allUp.filter(qualifies).sort((a,b)=> (num(b.pct)||0) - (num(a.pct)||0));
+      
+      // Filter 52-Week Hits
+      const userLows = allLows.filter(o => !t.hiloPrice || num(o.live) >= t.hiloPrice).sort((a,b)=> (num(b.live)||0) - (num(a.live)||0));
+      const userHighs = allHighs.filter(o => !t.hiloPrice || num(o.live) >= t.hiloPrice).sort((a,b)=> (num(b.live)||0) - (num(a.live)||0));
+
+      // Filter User-Specific Custom Triggers
+      const userCustomHits = (Array.isArray(customHits.hits) ? customHits.hits : [])
+        .filter(h => h.userId === userId)
+        .map(o => '<tr>'+td(o.code)+td(o.name)+td(fmtMoney(o.live))+td(fmtMoney(o.target))+td(o.direction)+td(o.intent)+'</tr>');
+
+      // Assemble Tables
+      const sections = [
+        createTable('Global Movers — Losers', userDown.map(o => '<tr>'+td(o.code)+td(o.name)+td(fmtMoney(o.live))+td(fmtPct(o.pct))+td(fmtMoney(o.change))+'</tr>'), hdrMovers),
+        createTable('Global Movers — Gainers', userUp.map(o => '<tr>'+td(o.code)+td(o.name)+td(fmtMoney(o.live))+td(fmtPct(o.pct))+td(fmtMoney(o.change))+'</tr>'), hdrMovers),
+        createTable('52-Week Lows', userLows.map(o => '<tr>'+td(o.code)+td(o.name)+td(fmtMoney(o.live))+td(fmtMoney(o.low52))+td(fmtMoney(o.high52))+'</tr>'), hdrHiLo),
+        createTable('52-Week Highs', userHighs.map(o => '<tr>'+td(o.code)+td(o.name)+td(fmtMoney(o.live))+td(fmtMoney(o.low52))+td(fmtMoney(o.high52))+'</tr>'), hdrHiLo),
+        createTable('Your Personal Alerts', userCustomHits, hdrCustom)
+      ].filter(s => !!s);
+
+      if (sections.length === 0) {
+        console.log(`[DailyDigest] No qualifying hits for ${recipient}; skipping email.`);
+        return;
+      }
+
+      // Final Assembly
+      const counts = `Movers: ${userUp.length+userDown.length} | 52-Week: ${userHighs.length+userLows.length} | Personal: ${userCustomHits.length}`;
+      const subject = `ASX Daily Briefing — ${sydneyDateStr} (${counts})`;
+      const htmlBody = (
+        '<div style="font-family:Arial,Helvetica,sans-serif;color:#222;line-height:1.4;max-width:800px;margin:auto;">' +
+        `<h2 style="margin:0 0 12px 0;color:#1a73e8;">ASX Daily Briefing — ${esc(sydneyDateStr)}</h2>` +
+        sections.join('<div style="height:20px;"></div>') +
+        '<div style="margin-top:24px;color:#888;font-size:11px;border-top:1px solid #eee;padding-top:12px;">' +
+        'This automated briefing is matched to your personal ASX Tracker thresholds. To change your notification settings, visit the app.' +
+        '</div></div>'
+      );
+
+      MailApp.sendEmail({ to: recipient, subject, htmlBody });
+      sendCount++;
+      console.log(`[DailyDigest] Sent to: ${recipient} (UID: ${userId}) [${counts}]`);
+
+    } catch (userErr) {
+      console.log(`[DailyDigest] Failed to process user ${uDoc.name}: ${userErr}`);
+    }
+  });
+
+  console.log(`[DailyDigest] Completed. Total emails sent: ${sendCount}`);
 }
 
 // Public wrapper for trigger safety: Apps Script triggers call global functions.
@@ -2409,9 +2501,9 @@ function setupDashboardList() {
   // 1. The Clean List (Ordered)
   const items = [
     // --- AUSTRALIA ---
-    { code: '^AXJO', name: 'S&P/ASX 200' },
-    { code: '^AORD', name: 'All Ordinaries' },
-    { code: 'XKO',   name: 'ASX 300 (Check Code)' }, // Placeholder per request
+    { code: '^AXJO', name: 'ASX 200' },
+    { code: '^AORD', name: 'All Ords' },
+    { code: 'XKO',   name: 'ASX 300' }, // Placeholder per request
     { code: 'YAP=F', name: 'ASX SPI 200 Futures' },
     
     // --- USA & GLOBAL ---
@@ -2436,7 +2528,6 @@ function setupDashboardList() {
     // --- CRYPTO ---
     { code: 'BTC-AUD', name: 'Bitcoin (AUD)' },
     { code: 'BTC-USD', name: 'Bitcoin (USD)' },
-    { code: 'ETH-USD', name: 'Ethereum (USD)' },
     
     // --- COMMODITIES ---
     { code: 'GC=F',  name: 'Gold Futures' },
@@ -2444,7 +2535,7 @@ function setupDashboardList() {
     { code: 'HG=F',  name: 'Copper Futures' },
     { code: 'CL=F',  name: 'Crude Oil (WTI)' },
     { code: 'BZ=F',  name: 'Brent Crude Oil' },
-    { code: 'TIO=F', name: 'Iron Ore (62% Fe)' }
+    { code: 'TIO=F', name: 'Iron Ore' }
   ];
   
   // 2. Prepare Data Grid and Headers
@@ -2481,40 +2572,4 @@ function checkDashboardCodes() {
   const values = sheet.getRange("A1:A12").getValues();
   console.log('=== CURRENT DASHBOARD SHEET CONTENT ===');
   values.forEach((r, i) => console.log(`Row ${i+1}: ${r[0]}`));
-}
-
-/**
- * DIAGNOSTIC: Simulate the API Feed
- * detailed log of what the 'doGet' function is actually building.
- */
-function diagnosePriceFeed() {
-  console.log('=== SIMULATING PRICE FEED GENERATION ===');
-  
-  // 1. Check Sheet content
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const dashSheet = ss.getSheetByName('Dashboard');
-  console.log(`Sheet 'Dashboard' exists? ${!!dashSheet}`);
-  if (dashSheet) {
-    console.log(`Sheet Last Row: ${dashSheet.getLastRow()}`);
-  }
-  
-  // 2. Run the actual builder function used by doGet
-  try {
-    const feed = buildPriceFeedArray_(null, { compact: false });
-    
-    // Filter for just dashboard items to keep log short
-    // (We assume dashboard items don't have 'ASX' style codes usually, or just check count)
-    const dashboardItems = feed.filter(f => f.ASXCode && (f.ASXCode.startsWith('^') || f.ASXCode.includes('=') || f.ASXCode === 'XKO'));
-    
-    console.log(`Total Feed Items: ${feed.length}`);
-    console.log(`Likely Dashboard Items found in Feed: ${dashboardItems.length}`);
-    
-    // Print the first few to see if they are the NEW ones
-    dashboardItems.slice(0, 5).forEach(item => {
-      console.log(`Feed Item: ${item.ASXCode} | ${item.LivePrice}`);
-    });
-    
-  } catch (e) {
-    console.log(`ERROR generating feed: ${e.message}`);
-  }
 }

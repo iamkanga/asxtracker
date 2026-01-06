@@ -1668,7 +1668,7 @@ function sendCombinedDailyDigest_() {
   if (!settingsRes.ok || !settingsRes.data) { console.log('[DailyDigest] Settings fetch failed or empty'); return; }
   const settings = settingsRes.data;
   if (!settings.emailAlertsEnabled) { console.log('[DailyDigest] Email alerts disabled; skipping.'); return; }
-  const recipient = settings.alertEmailRecipients || ALERT_RECIPIENT;
+  const recipient = settings.alertEmailRecipients;
   if (!recipient) { console.log('[DailyDigest] No recipient configured; skipping.'); return; }
 
   // Fetch sources: movers hits, 52w hits, custom hits
