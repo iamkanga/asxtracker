@@ -1902,12 +1902,7 @@ export class ViewRenderer {
         container.querySelectorAll(`.${CSS_CLASSES.ASX_DROPDOWN_PILL}`).forEach(pill => {
             pill.addEventListener('click', () => {
                 const code = pill.dataset.code;
-                const url = LinkHelper.getFinanceUrl(code);
-                if (url) {
-                    window.open(url, '_blank');
-                } else {
-                    document.dispatchEvent(new CustomEvent(EVENTS.ASX_CODE_CLICK, { detail: { code } }));
-                }
+                document.dispatchEvent(new CustomEvent(EVENTS.ASX_CODE_CLICK, { detail: { code } }));
             });
         });
     }
