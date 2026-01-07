@@ -1946,6 +1946,7 @@ function deleteTriggers() {
 // fields are leaked. Only sheet-derived columns are exposed.
 
 function doGet(e) {
+  const startT = Date.now();
   try {
     // Support JSONP callbacks to allow browser clients to bypass strict CORS
     // preflight issues by using a <script> tag insertion as a fallback.
@@ -1966,6 +1967,12 @@ function doGet(e) {
   const compact = params.compact === 'true' || params.compact === '1';
 
     const data = buildPriceFeedArray_(requestedCode, { compact });
+    const elapsed = (Date.now() - startT) / 1000;
+    
+    // Inject debug meta
+    if (!data.meta) data.meta = {};
+    data.meta.executionTime = elapsed + 's';
+    
     const json = JSON.stringify(data);
 
     // JSONP fallback if callback specified (callback variable parsed earlier)
@@ -2180,12 +2187,20 @@ function repairBrokenPrices() {
 /**
  * Internal helper to repair a specific sheet.
  */
+/**
+ * Internal helper to repair a specific sheet.
+ * ARCHITECTURAL RULE:
+ * 1. 'Dashboard': Pure API-driven. Writes DIRECTLY to LivePrice/PrevClose/etc. (No formulas to protect).
+ * 2. 'Prices' (or others): Formula-driven. Writes ONLY to API_* columns. (Protects GoogleFinance formulas).
+ */
 function repairSheet_(sheetName) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = ss.getSheetByName(sheetName);
   if (!sheet) { Logger.log('Skipping ' + sheetName + ': Sheet not found'); return; }
   
-  Logger.log('Scanning ' + sheetName + ' for broken prices...');
+  // Policy Determination
+  const isDashboard = (sheetName === 'Dashboard');
+  const policy = isDashboard ? 'DIRECT_OVERWRITE' : 'SAFE_FALLBACK';
   
   const data = sheet.getDataRange().getValues();
   if (data.length < 2) return;
@@ -2195,35 +2210,70 @@ function repairSheet_(sheetName) {
   
   const findIdx = (pattern) => headers.findIndex(h => pattern.test(String(h)));
   const codeIdx = headers.indexOf('ASXCODE') !== -1 ? headers.indexOf('ASXCODE') : headers.indexOf('CODE');
-  const priceIdx = headers.findIndex(h => ['LIVEPRICE', 'LAST', 'LASTPRICE', 'LASTTRADE', 'PRICE', 'CURRENT'].includes(h));
   
+  // Standard Columns
+  const priceIdx = headers.findIndex(h => ['LIVEPRICE', 'LAST', 'LASTPRICE', 'LASTTRADE', 'PRICE', 'CURRENT'].includes(h));
+  const prevIdx = headers.findIndex(h => ['PREVCLOSE','PREVDAYCLOSE','PREVIOUSCLOSE','LASTCLOSE'].includes(h));
+  const highIdx = headers.findIndex(h => ['HIGH52','52WEEKHIGH','HIGH52WEEK'].includes(h));
+  const lowIdx = headers.findIndex(h => ['LOW52','52WEEKLOW','LOW52WEEK'].includes(h));
+
+  // Fallback API Columns
   const apiPriceIdx = findIdx(/api.*price/i) || findIdx(/price.*api/i) || findIdx(/pi.*price/i);
   const apiPrevIdx = findIdx(/api.*prev/i) || findIdx(/prev.*api/i) || findIdx(/pi.*prev/i);
   const apiHighIdx = findIdx(/api.*high/i) || findIdx(/high.*api/i) || findIdx(/api.*hi/i);
   const apiLowIdx = findIdx(/api.*low/i) || findIdx(/low.*api/i) || findIdx(/api.*lo/i);
   
-  if (codeIdx === -1 || priceIdx === -1) {
-    Logger.log('[' + sheetName + '] Skipped: Mandatory columns (Code/Price) missing.');
-    return;
+  // Target Determination based on Policy
+  let targetPrice = -1, targetPrev = -1, targetHigh = -1, targetLow = -1;
+
+  if (policy === 'DIRECT_OVERWRITE') {
+    // Dashboard: Write to primary columns
+    targetPrice = priceIdx;
+    targetPrev = prevIdx;
+    targetHigh = highIdx;
+    targetLow = lowIdx;
+  } else {
+    // Safe Mode: Write to API columns only
+    targetPrice = apiPriceIdx;
+    targetPrev = apiPrevIdx;
+    targetHigh = apiHighIdx;
+    targetLow = apiLowIdx;
+    
+    // Safety Abort
+    if (targetPrice === -1) {
+      Logger.log('[' + sheetName + '] Skipped repair: No "API Price" fallback column found. Protecting formulas.');
+      return;
+    }
   }
   
-  const targetPriceIdx = apiPriceIdx !== -1 ? apiPriceIdx : priceIdx;
-  const targetPrevIdx = apiPrevIdx !== -1 ? apiPrevIdx : (apiPriceIdx === -1 ? headers.findIndex(h => ['PREVCLOSE','PREVDAYCLOSE'].includes(h)) : -1);
-  const targetHighIdx = apiHighIdx !== -1 ? apiHighIdx : (apiPriceIdx === -1 ? headers.findIndex(h => ['HIGH52','52WEEKHIGH'].includes(h)) : -1);
-  const targetLowIdx = apiLowIdx !== -1 ? apiLowIdx : (apiPriceIdx === -1 ? headers.findIndex(h => ['LOW52','52WEEKLOW'].includes(h)) : -1);
+  if (codeIdx === -1 || targetPrice === -1) {
+    Logger.log('[' + sheetName + '] Skipped: Missing target columns for ' + policy + ' mode.');
+    return;
+  }
 
   const problems = [];
   // Skip header, start at row 2
   for (let i = 1; i < data.length; i++) {
     const codeRaw = data[i][codeIdx];
-    const price = data[i][priceIdx];
+    // For Dashboard, we always update everything (it's a feed). 
+    // For Prices, we only check for broken/missing values.
+    const priceVal = (priceIdx !== -1) ? data[i][priceIdx] : null;
     
-    // Check if broken
-    // Exclude "INVALID", "DELISTED", "ERROR" from being considered broken
-    const isExplicitError = (typeof price === 'string' && (price.includes('INVALID') || price.includes('DELISTED') || price.includes('ERROR')));
-    const isPriceBroken = !isExplicitError && (price === 0 || price === '' || isNaN(price) || (typeof price === 'string')); 
+    // Definition of 'Needs Update':
+    // Dashboard: Always update (ensure freshness). 
+    // Prices: Only if broken (0, blank, error).
+    let needsUpdate = false;
     
-    if (codeRaw && isPriceBroken) {
+    if (policy === 'DIRECT_OVERWRITE') {
+       needsUpdate = true; // Always fetch fresh for dashboard
+    } else {
+       // Safe Mode: Check if primary is broken
+       const isExplicitError = (typeof priceVal === 'string' && (priceVal.includes('INVALID') || priceVal.includes('DELISTED') || priceVal.includes('ERROR')));
+       const isPriceBroken = !isExplicitError && (priceVal === 0 || priceVal === '' || isNaN(priceVal) || (typeof priceVal === 'string')); 
+       needsUpdate = isPriceBroken;
+    }
+    
+    if (codeRaw && needsUpdate) {
         let ticker = String(codeRaw).trim().toUpperCase();
         ticker = ticker.replace(/\u00A0/g, ' ').trim();
         if (ticker.indexOf(':') !== -1) ticker = ticker.split(':')[1];
@@ -2232,12 +2282,9 @@ function repairSheet_(sheetName) {
     }
   }
   
-  if (problems.length === 0) {
-    Logger.log('[' + sheetName + '] OK: No broken prices found.');
-    return;
-  }
+  if (problems.length === 0) return;
   
-  Logger.log('[' + sheetName + '] Mending ' + problems.length + ' items...');
+  Logger.log('[' + sheetName + '] Updating ' + problems.length + ' items (' + policy + ')...');
   
   // Process in batches
   for (let i = 0; i < problems.length; i += 50) {
@@ -2246,6 +2293,7 @@ function repairSheet_(sheetName) {
     
     try {
       const results = {};
+      // ... (Rest of fetch logic remains similar, assuming standard Yahoo fetch)
       const requests = tickers.map(t => ({
         url: 'https://query1.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(t),
         muteHttpExceptions: true
@@ -2255,50 +2303,34 @@ function repairSheet_(sheetName) {
       responses.forEach((resp, idx) => {
         const ticker = tickers[idx];
         const code = resp.getResponseCode();
-        
         if (code === 200) {
           try {
             const json = JSON.parse(resp.getContentText());
             const meta = json.chart.result[0].meta;
             let safePrice = meta.regularMarketPrice;
             const safePrev = meta.chartPreviousClose || meta.previousClose;
-            
             if (safePrice == null && safePrev != null) safePrice = safePrev;
-            
             let status = 'OK';
             if (safePrice === 0 || safePrice == null) status = 'DELISTED';
 
-            results[ticker] = {
-              status: status,
-              price: safePrice,
-              prevClose: safePrev,
-              high52: meta.fiftyTwoWeekHigh,
-              low52: meta.fiftyTwoWeekLow
-            };
-          } catch(e) {
-             results[ticker] = { status: 'ERROR' };
-          }
-        } else {
-             results[ticker] = { status: 'INVALID' };
-        }
+            results[ticker] = { status: 'OK', price: safePrice, prevClose: safePrev, high52: meta.fiftyTwoWeekHigh, low52: meta.fiftyTwoWeekLow };
+          } catch(e) { results[ticker] = { status: 'ERROR' }; }
+        } else { results[ticker] = { status: 'INVALID' }; }
       });
       
       batch.forEach(p => {
         const data = results[p.code];
         if (data && data.status === 'OK' && data.price != null) {
-          sheet.getRange(p.row, targetPriceIdx + 1).setValue(data.price).setBackground(null); // Clear Highlight if any
-          
-          if (targetPrevIdx !== -1 && data.prevClose != null) sheet.getRange(p.row, targetPrevIdx + 1).setValue(data.prevClose);
-          if (targetHighIdx !== -1 && data.high52 != null) sheet.getRange(p.row, targetHighIdx + 1).setValue(data.high52);
-          if (targetLowIdx !== -1 && data.low52 != null) sheet.getRange(p.row, targetLowIdx + 1).setValue(data.low52);
-        } 
-        else if (data && data.status !== 'OK') {
-           sheet.getRange(p.row, targetPriceIdx + 1).setValue(data.status).setBackground(null);
-        }
-        else {
-          if (apiPriceIdx !== -1) {
-            sheet.getRange(p.row, targetPriceIdx + 1).clearContent();
-          }
+          sheet.getRange(p.row, targetPrice + 1).setValue(data.price).setBackground(null);
+          if (targetPrev !== -1 && data.prevClose != null) sheet.getRange(p.row, targetPrev + 1).setValue(data.prevClose);
+          if (targetHigh !== -1 && data.high52 != null) sheet.getRange(p.row, targetHigh + 1).setValue(data.high52);
+          if (targetLow !== -1 && data.low52 != null) sheet.getRange(p.row, targetLow + 1).setValue(data.low52);
+        } else if (data && data.status !== 'OK') {
+           // For safe mode, we verify we are writing to API col before writing error status
+           sheet.getRange(p.row, targetPrice + 1).setValue(data.status).setBackground(null);
+        } else {
+           // Clear if no data
+           sheet.getRange(p.row, targetPrice + 1).clearContent();
         }
       });
       Logger.log('[' + sheetName + '] Batch ' + (i/50 + 1) + ' processed.');
@@ -2546,7 +2578,7 @@ function setupDashboardList() {
   ];
   
   // 2. Prepare Data Grid and Headers
-  // We strictly enforce the column order: Code, Name, LivePrice, PrevClose, Change, Change%, High52, Low52
+  // Standard Dashboard columns ONLY (No API prefix columns needed for Direct Overwrite)
   const values = [['Code', 'Name', 'LivePrice', 'Change', 'PctChange', 'PrevClose', 'High52', 'Low52']];
   
   items.forEach(item => {
@@ -2558,6 +2590,7 @@ function setupDashboardList() {
   sheet.getRange(1, 1, values.length, values[0].length).setValues(values);
   
   // 4. Formatting
+  // 4. Formatting (Headers)
   sheet.getRange(1, 1, 1, 8).setFontWeight('bold');
   sheet.setFrozenRows(1);
   
@@ -2568,15 +2601,4 @@ function setupDashboardList() {
   repairBrokenPrices();
 }
 
-/**
- * VERIFICATION TOOL
- * Reads the first 10 codes from the Dashboard sheet to confirm if the update worked.
- */
-function checkDashboardCodes() {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Dashboard');
-  if (!sheet) { console.log('❌ Dashboard sheet missing!'); return; }
-  
-  const values = sheet.getRange("A1:A12").getValues();
-  console.log('=== CURRENT DASHBOARD SHEET CONTENT ===');
-  values.forEach((r, i) => console.log(`Row ${i+1}: ${r[0]}`));
-}
+

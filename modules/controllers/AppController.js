@@ -18,7 +18,7 @@ import { NotificationUI } from '../ui/NotificationUI.js';
 import { NotificationStore } from '../state/NotificationStore.js';
 import { BriefingUI } from '../ui/BriefingUI.js';
 import { SnapshotUI } from '../ui/SnapshotUI.js'; // Added
-import { SettingsUI } from '../ui/SettingsUI.js';
+import { SettingsUI } from '../ui/SettingsUI.js?v=2';
 import { FavoriteLinksUI } from '../ui/FavoriteLinksUI.js';
 import { notificationStore } from '../state/NotificationStore.js';
 import { DashboardViewRenderer } from '../ui/DashboardViewRenderer.js?v=5';
@@ -336,10 +336,11 @@ export class AppController {
 
         if (codesToFetch.length === 0) return;
 
-        // console.log(`Global Price Seed: STARTING fetch for ${codesToFetch.length} codes...`);
+        console.log(`[DEBUG] Global Price Seed: STARTING fetch for ${codesToFetch.length} codes...`);
         AppState._isFetching = true;
 
         try {
+            console.log('[DEBUG] AppController calling fetchLivePrices...');
             const result = await this.dataService.fetchLivePrices(codesToFetch);
             const freshPrices = result?.prices;
             const freshDashboard = result?.dashboard;

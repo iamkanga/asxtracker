@@ -1,5 +1,5 @@
 ---
-description: System Architecture & Operational Constitution - Hardened rules for all code changes
+description: looking for structurally code 
 ---
 
 🧱 SYSTEM ARCHITECTURE & OPERATIONAL CONSTITUTION (v2.2 - Hardened Edition)STATUS: [ACTIVE LAW]INSTRUCTION: READ AND ACKNOWLEDGE. THIS IS THE HIGHEST AUTHORITY IN THE CONTEXT.1. Core PhilosophyAspectStandardArchitectureStrict MVC (Model-View-Controller)PatternDecoupled & Event-DrivenResilienceAsynchronous Readiness & Null-Safety (New)Goal"Bulletproof" modularity. Zero global pollution. Zero magic strings. No Race Conditions.2. Directory Structure & ResponsibilitiesFileRoleResponsibilitymain.jsControllerBootstraps the app with try/catch safety wrappers.AppController.jsControllerThe Brain. Manages logic via Event Listeners. NEVER assigns functions to window.ViewRenderer.jsViewThe Artist. Generates HTML. Must check Store.isReady before rendering.AppConstants.jsRegistryThe Single Source of Truth for CSS_CLASSES, EVENTS, and IDS.style.cssStyleFollows the 7-Section Standard. No "append-only" coding.3. ⚠️ Non-Negotiable Architectural MandatesI. THE REGISTRY RULE (Anti-Magic String)You are FORBIDDEN from using hardcoded string literals for CSS classes or IDs in JavaScript.JavaScript// ❌ Illegal (Magic String):

@@ -68,10 +68,11 @@ export function processShares(allShares, watchlistId, livePrices, sortConfig, hi
     const mergedData = filteredShares.map(share => {
         // STRICT LOOKUP: Trim and Uppercase to match DataService keys
         const lookupKey = String(share.shareName).trim().toUpperCase();
-        const priceData = livePrices.get(lookupKey);
+        let priceData = livePrices.get(lookupKey);
 
-        if (!priceData) {
-            // Optional: Log warning if needed, but keeping logic pure
+        // Fallback: Try appending .AX if not found and not already suffixed (Common for ASX stocks)
+        if (!priceData && !lookupKey.includes('.')) {
+            priceData = livePrices.get(lookupKey + '.AX');
         }
 
         const currentPrice = priceData ? (parseFloat(priceData.live) || 0) : (parseFloat(share.enteredPrice) || 0);
@@ -331,7 +332,12 @@ export function getSingleShareData(code, allShares, livePrices, userWatchlists =
 
     // 4. Lookup Price
     const lookupKey = normalizedCode;
-    const priceData = livePrices.get(lookupKey);
+    let priceData = livePrices.get(lookupKey);
+
+    // Fallback: Try appending .AX if not found
+    if (!priceData && !lookupKey.includes('.')) {
+        priceData = livePrices.get(lookupKey + '.AX');
+    }
 
     // 5. Process Primary Data (using fields from the first share found)
     const currentPrice = priceData ? priceData.live : (parseFloat(primaryShare.enteredPrice) || 0);
@@ -407,7 +413,13 @@ export function getSingleShareData(code, allShares, livePrices, userWatchlists =
 export function getASXCodesStatus(codes, livePrices) {
     return codes.map(code => {
         const lookupKey = String(code).trim().toUpperCase();
-        const priceData = livePrices.get(lookupKey);
+        let priceData = livePrices.get(lookupKey);
+
+        // Fallback
+        if (!priceData && !lookupKey.includes('.')) {
+            priceData = livePrices.get(lookupKey + '.AX');
+        }
+
         let status = 'neutral';
 
         if (priceData) {

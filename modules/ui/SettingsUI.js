@@ -248,79 +248,7 @@ export class SettingsUI {
         container.appendChild(summaryCard);
 
 
-        // --- 2. TRIGGER CONFIGURATION ---
-        const triggerCard = document.createElement('div');
-        triggerCard.className = CSS_CLASSES.DETAIL_CARD;
-        triggerCard.style.border = '1px solid var(--border-color)'; // Uniform thin border
-        triggerCard.innerHTML = `
-            <div class="${CSS_CLASSES.DETAIL_CARD_HEADER}" style="justify-content: space-between; border-bottom: none;">
-                <h3 class="${CSS_CLASSES.DETAIL_LABEL}" style="text-decoration: none; border-bottom: none; color: white;">
-                    <i class="fas fa-sliders-h" style="color: var(--color-accent);"></i> Threshold Settings
-                </h3>
-            </div>
-
-            <!-- Column Headers for Percentage/Global logic -->
-             <div class="${CSS_CLASSES.DETAIL_ROW}" style="margin-top: 12px; margin-bottom: 2px;">
-                 <div style="width: 80px; margin-right: 10px;"></div> <!-- Spacer for Label -->
-                 <div class="${CSS_CLASSES.DETAIL_LABEL} ${CSS_CLASSES.TEXT_XXS}" style="flex: 1; text-align: center;">Volatility</div>
-                 <div class="${CSS_CLASSES.DETAIL_LABEL} ${CSS_CLASSES.TEXT_XXS}" style="flex: 1; text-align: center; padding-left: 10px;">52 Wk H/L</div>
-             </div>
-
-            <!-- Row 1: Threshold Implementation (Aligned) -->
-            <div class="${CSS_CLASSES.DETAIL_ROW}" style="align-items: center; gap: 10px; margin-bottom: 15px;">
-                <div class="${CSS_CLASSES.DETAIL_LABEL}" style="width: 80px; color: white;">Threshold</div>
-                
-                <div style="flex: 1;">
-                    <div class="input-wrapper">
-                        <div class="input-icon"><i class="fas fa-dollar-sign"></i></div>
-                        <input type="number" id="global-minPrice" class="settings-input-dark standard-input compact-input" step="0.01" placeholder="0">
-                    </div>
-                </div>
-                <div style="flex: 1;">
-                    <div class="input-wrapper">
-                        <div class="input-icon"><i class="fas fa-dollar-sign"></i></div>
-                        <input type="number" id="hilo-minPrice" class="settings-input-dark standard-input compact-input" step="0.01" placeholder="0">
-                    </div>
-                </div>
-            </div>
-
-            <!-- Column Headers for Percentage/Global logic -->
-             <div class="${CSS_CLASSES.DETAIL_ROW}" style="margin-top: 12px; margin-bottom: 2px;">
-                 <div style="width: 80px; margin-right: 10px;"></div> <!-- Spacer for Label -->
-                 <div class="${CSS_CLASSES.DETAIL_LABEL} ${CSS_CLASSES.TEXT_XXS}" style="flex: 1; text-align: center;">Percentage</div>
-                 <div class="${CSS_CLASSES.DETAIL_LABEL} ${CSS_CLASSES.TEXT_XXS}" style="flex: 1; text-align: center;">Dollar</div>
-             </div>
-
-            <!-- Row 2: Increase (Green) -->
-            <div class="${CSS_CLASSES.DETAIL_ROW}" style="align-items: center; gap: 10px; margin-bottom: 10px;">
-                <div class="${CSS_CLASSES.DETAIL_LABEL}" style="width: 80px; color: white;">Increase</div>
-                <div class="input-wrapper" style="flex: 1;">
-                    <div class="input-icon"><i class="fas fa-percent"></i></div>
-                    <input type="number" id="up-percentVal" class="settings-input-dark standard-input compact-input" placeholder="0">
-                </div>
-                <div class="input-wrapper" style="flex: 1;">
-                    <div class="input-icon"><i class="fas fa-dollar-sign"></i></div>
-                    <input type="number" id="up-dollarVal" class="settings-input-dark standard-input compact-input" step="0.01" placeholder="0">
-                </div>
-            </div>
-
-            <!-- Row 3: Decrease (Red) -->
-            <div class="${CSS_CLASSES.DETAIL_ROW}" style="align-items: center; gap: 10px;">
-                <div class="${CSS_CLASSES.DETAIL_LABEL}" style="width: 80px; color: white;">Decrease</div>
-                <div class="input-wrapper" style="flex: 1;">
-                    <div class="input-icon"><i class="fas fa-percent"></i></div>
-                    <input type="number" id="down-percentVal" class="settings-input-dark standard-input compact-input" placeholder="0">
-                </div>
-                <div class="input-wrapper" style="flex: 1;">
-                    <div class="input-icon"><i class="fas fa-dollar-sign"></i></div>
-                    <input type="number" id="down-dollarVal" class="settings-input-dark standard-input compact-input" step="0.01" placeholder="0">
-                </div>
-            </div>
-        `;
-        container.appendChild(triggerCard);
-
-
-        // --- 3. ALERTS (User Prefs) ---
+        // --- 2. ALERTS (User Prefs) ---
         const notifCard = document.createElement('div');
         notifCard.className = CSS_CLASSES.DETAIL_CARD;
         notifCard.style.border = '1px solid var(--border-color)'; // Uniform thin border
@@ -386,19 +314,82 @@ export class SettingsUI {
         `;
         container.appendChild(notifCard);
 
-        // --- 4. SECTOR SELECTOR (Redesigned) ---
-        const sectorCard = document.createElement('div');
-        sectorCard.className = CSS_CLASSES.DETAIL_CARD;
-        sectorCard.style.border = '1px solid var(--border-color)'; // Uniform thin border
-        sectorCard.innerHTML = `
-             <div class="${CSS_CLASSES.DETAIL_CARD_HEADER}" style="border-bottom: none; justify-content: space-between;">
-                 <h3 class="${CSS_CLASSES.DETAIL_LABEL}" style="text-decoration: none; border-bottom: none; font-weight: 700; color: white;">
-                     <i class="fas fa-layer-group" style="color: var(--color-accent);"></i> Sector Selector
-                 </h3>
-             </div>
-             <div style="padding: 0 16px 16px 16px;">
+
+        // --- 3. COMBINED THRESHOLD & SECTOR SELECTOR ---
+        const combinedCard = document.createElement('div');
+        combinedCard.className = CSS_CLASSES.DETAIL_CARD;
+        combinedCard.style.border = '1px solid var(--border-color)'; // Uniform thin border
+        combinedCard.innerHTML = `
+            <div class="${CSS_CLASSES.DETAIL_CARD_HEADER}" style="flex-direction: column; align-items: flex-start; gap: 1px; border-bottom: none; padding-bottom: 0;">
+                <h3 class="${CSS_CLASSES.DETAIL_LABEL}" style="text-decoration: none !important; border-bottom: none !important; color: white !important; display: flex !important; align-items: center !important; gap: 8px !important; margin-bottom: 0 !important; text-transform: none !important;">
+                    <i class="fas fa-sliders-h" style="color: var(--color-accent); width: 18px; text-align: center;"></i> Market Parameters
+                </h3>
+                <div style="font-size: 0.7rem; color: var(--text-muted); opacity: 0.7; font-style: italic; margin-left: 0; padding-left: 2px;">
+                    Control notifications volume via $, %, or sector
+                </div>
+            </div>
+
+            <div style="padding: 0 16px 16px 16px;">
+                <!-- Threshold Implementation (from triggerCard) -->
+                <div class="${CSS_CLASSES.DETAIL_ROW}" style="margin-top: 4px; margin-bottom: 2px;">
+                    <div style="width: 80px; margin-right: 10px;"></div> <!-- Spacer for Label -->
+                    <div class="${CSS_CLASSES.DETAIL_LABEL} ${CSS_CLASSES.TEXT_XXS}" style="flex: 1; text-align: center;">Volatility</div>
+                    <div class="${CSS_CLASSES.DETAIL_LABEL} ${CSS_CLASSES.TEXT_XXS}" style="flex: 1; text-align: center; padding-left: 10px;">52 Wk H/L</div>
+                </div>
+
+                <div class="${CSS_CLASSES.DETAIL_ROW}" style="align-items: center; gap: 10px; margin-bottom: 20px;">
+                    <div class="${CSS_CLASSES.DETAIL_LABEL}" style="width: 80px; color: white;">Threshold</div>
+                    <div style="flex: 1;">
+                        <div class="input-wrapper">
+                            <div class="input-icon"><i class="fas fa-dollar-sign"></i></div>
+                            <input type="number" id="global-minPrice" class="settings-input-dark standard-input compact-input" step="0.01" placeholder="0">
+                        </div>
+                    </div>
+                    <div style="flex: 1;">
+                        <div class="input-wrapper">
+                            <div class="input-icon"><i class="fas fa-dollar-sign"></i></div>
+                            <input type="number" id="hilo-minPrice" class="settings-input-dark standard-input compact-input" step="0.01" placeholder="0">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="${CSS_CLASSES.DETAIL_ROW}" style="margin-top: 12px; margin-bottom: 2px;">
+                    <div style="width: 80px; margin-right: 10px;"></div> <!-- Spacer for Label -->
+                    <div class="${CSS_CLASSES.DETAIL_LABEL} ${CSS_CLASSES.TEXT_XXS}" style="flex: 1; text-align: center;">Percentage</div>
+                    <div class="${CSS_CLASSES.DETAIL_LABEL} ${CSS_CLASSES.TEXT_XXS}" style="flex: 1; text-align: center;">Dollar</div>
+                </div>
+
+                <div class="${CSS_CLASSES.DETAIL_ROW}" style="align-items: center; gap: 10px; margin-bottom: 10px;">
+                    <div class="${CSS_CLASSES.DETAIL_LABEL}" style="width: 80px; color: white;">Increase</div>
+                    <div class="input-wrapper" style="flex: 1;">
+                        <div class="input-icon"><i class="fas fa-percent"></i></div>
+                        <input type="number" id="up-percentVal" class="settings-input-dark standard-input compact-input" placeholder="0">
+                    </div>
+                    <div class="input-wrapper" style="flex: 1;">
+                        <div class="input-icon"><i class="fas fa-dollar-sign"></i></div>
+                        <input type="number" id="up-dollarVal" class="settings-input-dark standard-input compact-input" step="0.01" placeholder="0">
+                    </div>
+                </div>
+
+                <div class="${CSS_CLASSES.DETAIL_ROW}" style="align-items: center; gap: 10px; margin-bottom: 25px;">
+                    <div class="${CSS_CLASSES.DETAIL_LABEL}" style="width: 80px; color: white;">Decrease</div>
+                    <div class="input-wrapper" style="flex: 1;">
+                        <div class="input-icon"><i class="fas fa-percent"></i></div>
+                        <input type="number" id="down-percentVal" class="settings-input-dark standard-input compact-input" placeholder="0">
+                    </div>
+                    <div class="input-wrapper" style="flex: 1;">
+                        <div class="input-icon"><i class="fas fa-dollar-sign"></i></div>
+                        <input type="number" id="down-dollarVal" class="settings-input-dark standard-input compact-input" step="0.01" placeholder="0">
+                    </div>
+                </div>
+
+                <!-- Subtle Separator for Sector Selector (Previously sectorCard title) -->
+                <div style="border-top: 1px solid var(--border-color); padding-top: 20px; margin-top: 20px; margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
+                     <i class="fas fa-layer-group" style="color: var(--color-accent); font-size: 0.9rem;"></i>
+                     <span style="font-size: 0.85rem; font-weight: 800; color: white; letter-spacing: -0.01em;">Sector Filtering</span>
+                </div>
                  
-                  <!-- "Watchlist Override" Option (Pill Redesign - Minimalist) -->
+                  <!-- "Watchlist Override" Option -->
                   <div class="${CSS_CLASSES.DETAIL_ROW}" style="justify-content: space-between; align-items: center; margin-bottom: 24px;">
                       <div style="display: flex; flex-direction: column; gap: 3px;">
                          <div style="display: flex; align-items: center; gap: 8px;">
@@ -412,8 +403,7 @@ export class SettingsUI {
                       <input type="checkbox" id="toggle-pref-excludePortfolio" class="hidden">
                   </div>
 
-
-                 <!-- Master Select (Pill Redesign - Large) -->
+                 <!-- Master Select -->
                  <div class="${CSS_CLASSES.DETAIL_ROW}" style="justify-content: space-between; align-items: center; margin-bottom: 24px;">
                      <div style="display: flex; flex-direction: column; gap: 4px;">
                         <span class="${CSS_CLASSES.DETAIL_LABEL}" style="font-size: 0.85rem; font-weight: 800; color: white; letter-spacing: -0.01em;">Select</span>
@@ -424,7 +414,7 @@ export class SettingsUI {
                      </div>
                  </div>
 
-                 <!-- NEW: View All Control -->
+                 <!-- View All Control -->
                  <div class="${CSS_CLASSES.DETAIL_ROW}" style="justify-content: space-between; align-items: center; margin-bottom: 24px;">
                      <div style="display: flex; flex-direction: column; gap: 4px;">
                         <span class="${CSS_CLASSES.DETAIL_LABEL}" style="font-size: 0.85rem; font-weight: 800; color: white; letter-spacing: -0.01em;">View All</span>
@@ -439,9 +429,9 @@ export class SettingsUI {
                  <div id="settings-sector-accordion" style="display: flex; flex-direction: column; gap: 10px;">
                      <!-- Dynamically Populated by _renderSectorAccordion -->
                  </div>
-             </div>
-         `;
-        container.appendChild(sectorCard);
+            </div>
+        `;
+        container.appendChild(combinedCard);
 
     }
 

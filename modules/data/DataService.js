@@ -42,30 +42,42 @@ export class DataService {
             }
 
             // TRACE LOGGING
-            // console.log(`DataService: Fetching Live Prices. URL: ${url.toString()}`);
+            console.log(`[DataService] Fetching Live Prices. URL: ${url.toString()}`);
 
-            const response = await fetch(url.toString());
+            // TIMEOUT PROTECTION (8 Seconds)
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 8000);
 
-            if (!response.ok) {
-                console.error(`DataService Fetch Error: ${response.status} ${response.statusText}`);
-                return new Map();
+            try {
+                const response = await fetch(url.toString(), { signal: controller.signal });
+                clearTimeout(timeoutId);
+
+                if (!response.ok) {
+                    console.error(`DataService Fetch Error: ${response.status} ${response.statusText}`);
+                    return new Map();
+                }
+
+                const json = await response.json();
+
+                // DIAGNOSTIC LOOP: Check Dashboard Items
+                if (json.dashboard) {
+                    // Diagnostic removed after verification
+                }
+
+                // Normalize and return both prices and dashboard data
+                return this._normalizePriceData(json);
+
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    console.error("DataService: Fetch timed out (8s limit).");
+                } else {
+                    console.error("DataService Exception:", error);
+                }
+                return { prices: new Map(), dashboard: [] };
             }
-
-            const json = await response.json();
-
-            const count = Array.isArray(json) ? (json.prices?.length || json.length) : (json.data ? json.data.length : 'Unknown');
-            // console.log(`DataService: Received ${count} primary items from API.`);
-
-            // INJECTED DEBUG LOG
-            const rawItems = Array.isArray(json) ? json : (json.prices || json.data || []);
-            // const debugSample = rawItems.filter(i => i.ASXCode && (i.ASXCode.startsWith('^') || i.ASXCode === 'XJO' || i.ASXCode === 'XKO' || i.ASXCode.includes('='))).map(s => s.ASXCode);
-            // console.warn('[DEBUG-CONSOLE] Dashboard Candidates Received:', debugSample);
-
-            // Normalize and return both prices and dashboard data
-            return this._normalizePriceData(json);
-
         } catch (error) {
-            console.error("DataService Exception:", error);
+            // This outer catch handles errors from URL construction or initial setup
+            console.error("DataService: Outer fetchLivePrices error:", error);
             return { prices: new Map(), dashboard: [] };
         }
     }
@@ -210,16 +222,22 @@ export class DataService {
                 // console.log(`[DataService] Recovered ${dashboardData.length} dashboard items from flat payload.`);
             }
         } else if (Array.isArray(dashboardData)) {
-            // Even if explicit dashboardData exists, normalize the name property
+            // ROBUST MAPPING: Explicitly normalize keys for the UI to consume directly
             dashboardData = dashboardData.map(item => ({
                 ...item,
-                name: item.name || item.CompanyName || item.Name || item.companyName || item.id || item.code || ''
+                code: String(item.ASXCode || item.code || '').trim().toUpperCase(),
+                name: item.name || item.CompanyName || item.Name || item.companyName || item.id || item.code || '',
+                // CRITICAL FIX: Pass the price directly to the UI object so it doesn't rely solely on the Map
+                live: parseFloat(item.LivePrice || item.live || 0),
+                valueChange: parseFloat(item.Change || item.valueChange || 0),
+                pctChange: parseFloat(item.PctChange || item.pctChange || 0)
             }));
         }
 
         // VERIFICATION: Log presence and count
         if (dashboardData.length > 0) {
-            // console.log(`[DataService] Dashboard Content Found: ${dashboardData.length} items.`);
+            const sample = dashboardData[0];
+            // console.log(`[DataService] Dashboard Normalized Sample: Code=${sample.code} Live=${sample.live}`);
         }
 
         if (!Array.isArray(items)) {
