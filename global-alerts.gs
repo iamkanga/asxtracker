@@ -1587,10 +1587,20 @@ function captureDailyClosePrice() {
   const values = range.getValues();
   if (values.length === 0) return;
   const headers = values[0];
-  const headersMap = headers.reduce((acc, header, index) => { acc[header.replace(/[^a-zA-Z0-9]/g, '')] = index; return acc; }, {});
-  const livePriceColIndex = headersMap['LivePrice'];
-  const prevCloseColIndex = headersMap['PrevDayClose'];
-  if (livePriceColIndex === undefined || prevCloseColIndex === undefined) { console.error('Missing essential columns.'); return; }
+  const headersMap = headers.reduce((acc, header, index) => { 
+    const key = String(header).replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+    acc[key] = index; 
+    return acc; 
+  }, {});
+
+  // Robust matching for essential columns
+  const livePriceColIndex = headersMap['LIVEPRICE'] ?? headersMap['LAST'] ?? headersMap['PRICE'];
+  const prevCloseColIndex = headersMap['PREVDAYCLOSE'] ?? headersMap['PREVCLOSE'] ?? headersMap['CLOSEYEST'];
+
+  if (livePriceColIndex === undefined || prevCloseColIndex === undefined) {
+    console.error('Missing essential columns. Headers found: ' + JSON.stringify(headersMap));
+    return;
+  }
   // Optimize: Read column, update in memory, write back column
   // We want to update only the PrevDayClose column.
   // Data starts at row 2 (index 1).
@@ -1861,6 +1871,13 @@ function createTriggers() {
     const existing = _getTriggersByHandler_(handlerName);
     if (existing && existing.length > 0) {
       console.log('[Triggers] Existing trigger(s) found for ' + handlerName + ': ' + existing.length);
+      // Clean up duplicates if more than one exists
+      if (existing.length > 1) {
+        for (let i = 1; i < existing.length; i++) {
+          ScriptApp.deleteTrigger(existing[i]);
+        }
+        console.log('[Triggers] Cleaned up ' + (existing.length - 1) + ' redundant trigger(s) for ' + handlerName);
+      }
       return;
     }
     // Always enforce Sydney timezone on the builder so project-level timezone is irrelevant.
@@ -1870,15 +1887,9 @@ function createTriggers() {
     console.log('[Triggers] Created time-based trigger for ' + handlerName);
   }
 
-  // --- 1) Preserve existing triggers as-is (to avoid behavior changes) ---
-  // Note: These may create duplicates if run repeatedly, but we keep them
-  // unchanged per existing behavior. Only movers/52w are made idempotent below.
-  // Minute-based triggers cannot be combined with atHour/nearMinute; use one or the other.
-  // (Legacy checkMarketAlerts triggers removed)
-  // Daily triggers must specify a recurrence interval before atHour/nearMinute.
-  // Explicitly set timezone to Australia/Sydney so project-level timezone is not required.
-  ScriptApp.newTrigger('captureDailyClosePrice').timeBased().inTimezone(ASX_TIME_ZONE).everyDays(1).atHour(16).nearMinute(5).create();
-  ScriptApp.newTrigger('dailyResetTrigger').timeBased().inTimezone(ASX_TIME_ZONE).everyDays(1).atHour(3).nearMinute(0).create();
+  // --- 1) Essential Daily Triggers (Now Idempotent) ---
+  _ensureTimeTrigger_('captureDailyClosePrice', b => b.everyDays(1).atHour(16).nearMinute(5));
+  _ensureTimeTrigger_('dailyResetTrigger', b => b.everyDays(1).atHour(3).nearMinute(0));
 
   // --- 2) Fix Issue #2: Ensure Global Movers recurring trigger is active (idempotent) ---
   _ensureTimeTrigger_('runGlobalMoversScan', b => b.everyMinutes(10));

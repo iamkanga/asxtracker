@@ -129,13 +129,16 @@ export class FavoriteLinksUI {
 
     static get DEFAULTS() {
         return [
-            { name: 'ASX Official', url: 'https://www2.asx.com.au' },
-            { name: 'Google Finance', url: 'https://www.google.com/finance' },
             { name: 'Yahoo Finance', url: 'https://au.finance.yahoo.com' },
+            { name: 'Google Finance', url: 'https://www.google.com/finance' },
+            { name: 'ASX Official', url: 'https://www2.asx.com.au' },
             { name: 'Market Index', url: 'https://www.marketindex.com.au' },
             { name: 'HotCopper', url: 'https://hotcopper.com.au' },
             { name: 'CommSec', url: 'https://www.commsec.com.au' },
-            { name: 'TradingView', url: 'https://www.tradingview.com' }
+            { name: 'TradingView', url: 'https://www.tradingview.com' },
+            { name: 'Rask Media', url: 'https://www.raskmedia.com.au' },
+            { name: 'Motley Fool', url: 'https://www.fool.com.au' },
+            { name: 'Google News', url: 'https://news.google.com' }
         ];
     }
 
