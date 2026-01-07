@@ -124,21 +124,11 @@ export class LinkHelper {
     }
 
     /**
-     * Gets the preferred finance URL (Google first, then Yahoo fallback).
+     * Gets the preferred finance URL (Yahoo Finance).
      * @param {string} symbol
      * @returns {string}
      */
     static getFinanceUrl(symbol) {
-        const googleUrl = this.getGoogleFinanceUrl(symbol);
-
-        // If Google result is a generic search, use Yahoo instead as it usually has a real quote page
-        if (googleUrl.includes('google.com/search')) {
-            const yahooUrl = this.getYahooFinanceUrl(symbol);
-            if (yahooUrl && !yahooUrl.includes('search')) {
-                return yahooUrl;
-            }
-        }
-
-        return googleUrl;
+        return this.getYahooFinanceUrl(symbol);
     }
 }

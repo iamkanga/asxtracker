@@ -8,7 +8,10 @@ export const KANGAROO_ICON_SRC = 'favicon.svg';
 export const CASH_WATCHLIST_ID = 'CASH';
 export const DASHBOARD_WATCHLIST_ID = 'DASHBOARD';
 export const DASHBOARD_SYMBOLS = [];
-export const DASHBOARD_LINKS = {};
+export const DASHBOARD_LINKS = {
+    'NICKEL': 'https://au.finance.yahoo.com/quote/NICKEL=F',
+    'TIO=F': 'https://www.marketindex.com.au/commodities'
+};
 export const PORTFOLIO_ID = 'portfolio';
 export const SEARCH_WATCHLIST_ID = 'search';
 
@@ -394,6 +397,7 @@ export const USER_MESSAGES = {
 };
 
 export const RESEARCH_LINKS_TEMPLATE = [
+    { name: 'Yahoo Finance', url: 'https://au.finance.yahoo.com/quote/${code}.AX' },
     { name: 'Google Finance', url: 'https://www.google.com/finance/quote/${code}:ASX' },
     { name: 'ASX Official', url: 'https://www2.asx.com.au/markets/company/${code}' },
     { name: 'Market Index', url: 'https://www.marketindex.com.au/asx/${code}' },
@@ -402,8 +406,7 @@ export const RESEARCH_LINKS_TEMPLATE = [
     { name: 'Rask Media', url: 'https://www.raskmedia.com.au/asx/${code}/' },
     { name: 'TradingView', url: 'https://www.tradingview.com/symbols/ASX-${code}/' },
     { name: 'Google News', url: 'https://www.google.com/search?q=${code}+ASX&tbm=nws' },
-    { name: 'Motley Fool', url: 'https://www.fool.com.au/tickers/asx-${code}/' },
-    { name: 'Yahoo Finance', url: 'https://au.finance.yahoo.com/quote/${code}.AX' }
+    { name: 'Motley Fool', url: 'https://www.fool.com.au/tickers/asx-${code}/' }
 ];
 
 

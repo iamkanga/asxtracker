@@ -227,7 +227,10 @@ export class DataService {
             return { prices: normalizedPrices, dashboard: dashboardData };
         }
 
-        items.forEach(item => {
+        // FULL NORMALIZATION: Both 'prices' and 'dashboard' should be in the Map
+        const allItems = [...items, ...dashboardData];
+
+        allItems.forEach(item => {
             // Keys based on user provided reference: ASXCode, LivePrice, PrevClose
             if (!item.ASXCode) return;
 

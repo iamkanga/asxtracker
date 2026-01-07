@@ -187,7 +187,8 @@ export class DashboardViewRenderer {
             'XJO': 'ASX 200', 'XKO': 'ASX 300', 'XAO': 'All Ords',
             'INX': 'S&P 500', '.DJI': 'Dow Jones', '.IXIC': 'Nasdaq',
             'AUDUSD': 'AUD/USD', 'AUDTHB': 'AUD/THB', 'USDTHB': 'USD/THB',
-            'BTCUSD': 'Bitcoin', 'GCW00': 'Gold', 'SIW00': 'Silver', 'BZW00': 'Brent Oil'
+            'BTCUSD': 'Bitcoin', 'GCW00': 'Gold', 'SIW00': 'Silver', 'BZW00': 'Brent Oil',
+            'NICKEL': 'Nickel', 'TIO=F': 'Iron Ore (62%)'
         };
 
         const code = lookupCode;
@@ -455,7 +456,8 @@ export class DashboardViewRenderer {
             'AUDEUR=X': 'AUD/EUR', 'AUDJPY=X': 'AUD/JPY', 'AUDTHB=X': 'AUD/THB',
             // Futures
             'YAP=F': 'ASX SPI 200', 'TIO=F': 'Iron Ore (62%)', '^VIX': 'Volatility Index',
-            'XAUUSD=X': 'Gold Spot (USD)', 'XAGUSD=X': 'Silver Spot (USD)'
+            'XAUUSD=X': 'Gold Spot (USD)', 'XAGUSD=X': 'Silver Spot (USD)',
+            'NICKEL': 'Nickel'
         };
 
         activeSymbols.forEach(code => {

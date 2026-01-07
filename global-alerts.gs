@@ -1971,10 +1971,11 @@ function doGet(e) {
 
 function buildPriceFeedArray_(singleCode, options) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const out = [];
+  const pricesOut = [];
+  const dashboardOut = [];
 
   // Helper to process a specific sheet
-  const processSheet = (sheetName) => {
+  const processSheet = (sheetName, targetArray) => {
     const sheet = ss.getSheetByName(sheetName);
     if (!sheet) return;
     const values = sheet.getDataRange().getValues();
@@ -2098,15 +2099,18 @@ function buildPriceFeedArray_(singleCode, options) {
         if (i && String(i).trim()) obj.Industry = String(i).trim();
       }
 
-      out.push(obj);
+      targetArray.push(obj);
     });
   };
 
-  // Process both sheets
-  processSheet(PRICE_SHEET_NAME);
-  processSheet(DASHBOARD_SHEET_NAME);
+  // Process both sheets into separate buckets
+  processSheet(PRICE_SHEET_NAME, pricesOut);
+  processSheet(DASHBOARD_SHEET_NAME, dashboardOut);
 
-  return out;
+  return {
+    prices: pricesOut,
+    dashboard: dashboardOut
+  };
 }
 
 // ===============================================================
@@ -2209,19 +2213,11 @@ function repairSheet_(sheetName) {
     const isPriceBroken = !isExplicitError && (price === 0 || price === '' || isNaN(price) || (typeof price === 'string')); 
     
     if (codeRaw && isPriceBroken) {
-      let needsRepair = true;
-      if (apiPriceIdx !== -1) {
-         const backup = data[i][apiPriceIdx];
-         if (backup !== '' && backup != null && backup !== 0) needsRepair = false;
-      }
-      
-      if (needsRepair) {
         let ticker = String(codeRaw).trim().toUpperCase();
         ticker = ticker.replace(/\u00A0/g, ' ').trim();
         if (ticker.indexOf(':') !== -1) ticker = ticker.split(':')[1];
         if (/^[A-Z0-9]+$/.test(ticker)) ticker += '.AX';
         problems.push({ row: i + 1, code: ticker });
-      }
     }
   }
   

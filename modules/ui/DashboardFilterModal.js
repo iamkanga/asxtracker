@@ -247,9 +247,9 @@ export class DashboardFilterModal {
                 'BTC-USD': 'Bitcoin (USD)', 'BTC-AUD': 'Bitcoin (AUD)',
                 'AUDUSD=X': 'AUD/USD', 'AUDGBP=X': 'AUD/GBP',
                 'AUDEUR=X': 'AUD/EUR', 'AUDJPY=X': 'AUD/JPY', 'AUDTHB=X': 'AUD/THB',
-                // Futures
                 'YAP=F': 'ASX SPI 200', 'TIO=F': 'Iron Ore (62%)', '^VIX': 'Volatility Index',
-                'XAUUSD=X': 'Gold Spot (USD)', 'XAGUSD=X': 'Silver Spot (USD)'
+                'XAUUSD=X': 'Gold Spot (USD)', 'XAGUSD=X': 'Silver Spot (USD)',
+                'NICKEL': 'Nickel'
             };
             const name = nameMap[code] || code;
 
