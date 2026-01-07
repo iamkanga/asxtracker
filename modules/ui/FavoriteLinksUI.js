@@ -129,16 +129,24 @@ export class FavoriteLinksUI {
 
     static get DEFAULTS() {
         return [
-            { name: 'Yahoo Finance', url: 'https://au.finance.yahoo.com' },
             { name: 'Google Finance', url: 'https://www.google.com/finance' },
-            { name: 'ASX Official', url: 'https://www2.asx.com.au' },
+            { name: 'Sharesight', url: 'https://www.sharesight.com/au/login/' },
             { name: 'Market Index', url: 'https://www.marketindex.com.au' },
+            { name: 'ASX Official', url: 'https://www2.asx.com.au' },
+            { name: 'Yahoo Finance', url: 'https://au.finance.yahoo.com' },
+            { name: 'Motley Fool', url: 'https://www.fool.com.au' },
             { name: 'HotCopper', url: 'https://hotcopper.com.au' },
             { name: 'CommSec', url: 'https://www.commsec.com.au' },
             { name: 'TradingView', url: 'https://www.tradingview.com' },
-            { name: 'Rask Media', url: 'https://www.raskmedia.com.au' },
-            { name: 'Motley Fool', url: 'https://www.fool.com.au' },
-            { name: 'Google News', url: 'https://news.google.com' }
+            { name: 'AFR', url: 'https://www.afr.com' },
+            { name: 'Livewire', url: 'https://www.livewiremarkets.com' },
+            { name: 'Smallcaps', url: 'https://smallcaps.com.au' },
+            { name: 'Listcorp', url: 'https://www.listcorp.com' },
+            { name: 'Marketwatch', url: 'https://www.marketwatch.com' },
+            { name: 'Morningstar', url: 'https://www.morningstar.com.au' },
+            { name: 'Stockhead', url: 'https://stockhead.com.au' },
+            { name: 'Intelligent Investor', url: 'https://www.intelligentinvestor.com.au' },
+            { name: 'Rask', url: 'https://www.rask.com.au' }
         ];
     }
 
