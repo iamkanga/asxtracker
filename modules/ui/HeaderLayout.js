@@ -7,7 +7,7 @@ import { AppState } from '../state/AppState.js';
 import { ToastManager } from './ToastManager.js';
 
 // Custom Event Names removed (Registry Rule)
-import { EVENTS, UI_ICONS, IDS } from '../utils/AppConstants.js';
+import { EVENTS, UI_ICONS, IDS, WATCHLIST_NAMES, ALL_SHARES_ID, PORTFOLIO_ID, CASH_WATCHLIST_ID, DASHBOARD_WATCHLIST_ID } from '../utils/AppConstants.js';
 import { navManager } from '../utils/NavigationManager.js';
 
 export class HeaderLayout {
@@ -486,13 +486,29 @@ export class HeaderLayout {
         if (!this.editWatchlistModal) return;
 
         // Get current watchlist ID from AppState
-        const currentId = AppState.watchlist?.id;
-        const currentName = AppState.watchlist?.name || '';
+        const currentId = AppState.watchlist?.id || PORTFOLIO_ID;
 
-        // Prevent editing system views
-        if (!currentId || currentId === 'portfolio' || currentId === 'ALL' || currentId === 'CASH') {
-            ToastManager.error('Cannot edit system views. Please select a custom watchlist first.');
-            return;
+        // Resolve display name (respecting custom names)
+        const customNames = AppState.preferences.customWatchlistNames || {};
+        let currentName = customNames[currentId];
+
+        if (!currentName) {
+            if (currentId === ALL_SHARES_ID) currentName = WATCHLIST_NAMES.ALL_SHARES;
+            else if (currentId === PORTFOLIO_ID || currentId === 'portfolio') currentName = WATCHLIST_NAMES.PORTFOLIO;
+            else if (currentId === DASHBOARD_WATCHLIST_ID) currentName = WATCHLIST_NAMES.DASHBOARD;
+            else if (currentId === CASH_WATCHLIST_ID) currentName = WATCHLIST_NAMES.CASH;
+            else {
+                const w = (AppState.data.watchlists || []).find(it => it.id === currentId);
+                currentName = w ? w.name : 'Watchlist';
+            }
+        }
+
+        // Handle system vs custom UI (Hide delete for system views)
+        const systemIds = [ALL_SHARES_ID, PORTFOLIO_ID, 'portfolio', CASH_WATCHLIST_ID, DASHBOARD_WATCHLIST_ID];
+        const isSystem = systemIds.includes(currentId);
+
+        if (this.editWatchlistDelete) {
+            this.editWatchlistDelete.style.display = isSystem ? 'none' : 'block';
         }
 
         // Store the current ID for save/delete operations

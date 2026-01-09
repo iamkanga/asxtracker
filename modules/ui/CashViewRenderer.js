@@ -175,11 +175,11 @@ export class CashViewRenderer {
             balanceEl.classList.add(CSS_CLASSES.CASH_VALUE_NEGATIVE);
         } else {
             // Neutral - Coffee Color
-            balanceEl.style.color = 'var(--accent-color)';
+            balanceEl.style.color = 'var(--color-accent)';
         }
 
-        rightCol.appendChild(eyeWrapper);
         rightCol.appendChild(balanceEl);
+        rightCol.appendChild(eyeWrapper);
 
         // Assemble
         card.appendChild(leftCol);

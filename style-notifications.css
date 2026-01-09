@@ -252,47 +252,101 @@
 }
 
 
-/* --- Filter Chips (Header) --- */
+/* --- V3 Unified Header Surface (Control Dashboard) --- */
+.notif-header-surface {
+    background: var(--bg-secondary, #1a1a1a);
+    border-bottom: 2px solid var(--border-color);
+    margin-bottom: 0;
+    /* Tight integration with list */
+    z-index: 10;
+    position: relative;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+}
+
+/* --- Summary Dashboard Grid (V3) --- */
 .filter-chips-container {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    /* 3 items per row on desktop */
-    gap: 8px;
-    padding: 10px 16px;
+    /* 3 columns */
+    grid-template-rows: repeat(2, auto);
+    /* 2 rows */
+    gap: 1px;
+    /* Divider effect between tiles */
+    background: var(--border-color);
+    /* Acts as grid lines */
+    padding: 0;
     width: 100%;
-    /* Ensure full width */
-    max-width: 100%;
-    /* Constrain to parent/modal width */
     box-sizing: border-box;
-    /* Ensure padding doesn't cause overflow */
-    border-bottom: 1px solid var(--border-color);
-    margin-bottom: 12px;
 }
 
 .filter-chip {
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    /* Center content */
     gap: 4px;
-    /* Reduced gap */
-    padding: 6px 4px;
-    /* Reduced padding to fit 3 in row */
-    border-radius: 0;
-    /* SHARP Look (Was 4px) */
-    background-color: transparent;
-    white-space: nowrap;
-    /* Prevent overflow wrap */
-    flex-shrink: 0;
-    /* Prevent squishing */
-    border: 1px solid var(--border-color);
+    padding: 16px 8px;
+    background: var(--bg-secondary, #1a1a1a);
+    /* Tile background */
+    border: none;
     color: var(--text-muted);
-    font-size: 0.75rem;
-    /* Reduced font size */
-    font-weight: 500;
-    white-space: nowrap;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+}
+
+.filter-chip:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-color);
+}
+
+.filter-chip.active {
+    background: rgba(164, 148, 148, 0.1);
+    color: var(--color-accent);
+}
+
+.filter-chip.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 20%;
+    right: 20%;
+    height: 3px;
+    background: var(--color-accent);
+    border-radius: 4px 4px 0 0;
+}
+
+/* Tile Metrics */
+.chip-label {
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    opacity: 0.8;
+}
+
+.chip-badge {
+    font-size: 1.1rem;
+    /* Bolder Count */
+    font-weight: 900;
+    color: var(--text-color);
+}
+
+.filter-chip.active .chip-badge {
+    color: var(--color-accent);
+}
+
+/* Color Accents for Tiles */
+.chip-green .chip-badge {
+    color: var(--color-positive);
+}
+
+.chip-red .chip-badge {
+    color: var(--color-negative);
+}
+
+.chip-neutral .chip-badge {
+    color: var(--color-accent);
 }
 
 /* Floating Bell Hover - No Background */
@@ -305,22 +359,41 @@
     /* Keep scale effect */
 }
 
-.filter-chip:hover,
-.filter-chip.active {
-    background-color: transparent !important;
-    color: var(--text-color);
-    border: 1px solid transparent;
-    border-left: 2px solid var(--accent-color);
-    box-shadow: none !important;
-    /* Strict Sharp */
-    border-left: 2px solid var(--accent-color);
-    /* Fallback side border */
-    border-radius: 0;
-    /* Strict Sharp */
+/* --- Status Bar Integration --- */
+.notif-status-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    background: rgba(0, 0, 0, 0.2);
+    border-top: 1px solid rgba(255, 255, 255, 0.03);
+    font-size: 0.72rem;
+    cursor: pointer;
 }
 
-.filter-chip.chip-green {
-    border-color: var(--color-positive);
+.status-bar-prefix {
+    color: var(--text-muted);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-size: 0.6rem;
+    opacity: 0.6;
+}
+
+.status-bar-pills {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.status-bar-pill {
+    color: var(--color-accent);
+    background: rgba(164, 148, 148, 0.1);
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    border: 1px solid rgba(164, 148, 148, 0.15);
 }
 
 .filter-chip.chip-green.active {

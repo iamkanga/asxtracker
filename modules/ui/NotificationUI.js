@@ -332,15 +332,18 @@ export class NotificationUI {
                     </div>
                 </div>
 
-                <!-- 1. Filter Chips Header -->
-                <div class="filter-chips-container" id="filterChips">
-                    <!-- Dynamic Chips -->
-                </div>
+                <!-- Unified Control Surface (Command Bar) -->
+                <div class="notif-header-surface">
+                    <!-- 1. Filter Chips Header -->
+                    <div class="filter-chips-container" id="filterChips">
+                        <!-- Dynamic Chips -->
+                    </div>
 
-                <!-- Status Bar: Shows only disabled monitors (hidden if all ON) -->
-                <div id="notif-status-bar" class="notif-status-bar hidden" style="padding: 6px 12px; font-size: 0.7rem; color: var(--text-muted); background: rgba(255,255,255,0.03); border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 8px; cursor: pointer;" title="Tap to open settings">
-                    <span style="opacity: 0.6;">Disabled:</span>
-                    <span id="notif-status-pills" style="display: flex; gap: 6px; flex-wrap: wrap;"></span>
+                    <!-- Status Bar: Shows only disabled monitors (hidden if all ON) -->
+                    <div id="notif-status-bar" class="notif-status-bar hidden" title="Tap to open settings">
+                        <span class="status-bar-prefix">Disabled:</span>
+                        <span id="notif-status-pills" class="status-bar-pills"></span>
+                    </div>
                 </div>
 
                 <!-- 2. Dashboard Content (Scrolling) -->
@@ -651,11 +654,11 @@ export class NotificationUI {
 
         // Structure Definitions - REORDERED & SPLIT
         const sections = [
-            { id: 'custom', title: customTitleChip, headerTitle: customTitleHeader, subtitle: '<span style="color: var(--color-accent);">Watchlist prices and Market filters</span>', items: sortedLocal, type: 'custom', color: 'neutral' },
-            { id: 'high', title: '52 Week High', subtitle: hiloStrHigh, items: finalHiloHigh, type: 'hilo', color: 'green' },
-            { id: 'low', title: '52 Week Low', subtitle: hiloStrLow, items: finalHiloLow, type: 'hilo', color: 'red' },
-            { id: 'gainers', title: 'Market Gainers', subtitle: upStr, items: finalMoversUp, type: 'gainers', color: 'green' },
-            { id: 'losers', title: 'Market Losers', subtitle: downStr, items: finalMoversDown, type: 'losers', color: 'red' }
+            { id: 'custom', title: 'Custom', chipLabel: 'Watcher', headerTitle: customTitleHeader, subtitle: '<span style="color: var(--color-accent);">Watchlist prices and Market filters</span>', items: sortedLocal, type: 'custom', color: 'neutral' },
+            { id: 'high', title: '52 Week High', chipLabel: '52w High', subtitle: hiloStrHigh, items: finalHiloHigh, type: 'hilo', color: 'green' },
+            { id: 'low', title: '52 Week Low', chipLabel: '52w Low', subtitle: hiloStrLow, items: finalHiloLow, type: 'hilo', color: 'red' },
+            { id: 'gainers', title: 'Market Gainers', chipLabel: 'Gainers', subtitle: upStr, items: finalMoversUp, type: 'gainers', color: 'green' },
+            { id: 'losers', title: 'Market Losers', chipLabel: 'Losers', subtitle: downStr, items: finalMoversDown, type: 'losers', color: 'red' }
         ];
 
         // --- DEBUG LOGGING: RENDER COUNT ---
@@ -663,31 +666,31 @@ export class NotificationUI {
         sections.forEach(s => totalRendered += s.items.length);
         // console.log(`[NotificationUI] Rendered Item Count: ${totalRendered}`);
 
-        // Render Chips & Sections
-        // 1. "Open All" Chip
-        // 1. "Open All" Chip
+        // Render Summary Dashboard (V3 Grid)
+        // 1. "Dashboard" Tile (Master View)
         const openAllChip = document.createElement('div');
-        openAllChip.className = `${CSS_CLASSES.FILTER_CHIP} ${CSS_CLASSES.CHIP_NEUTRAL}`;
+        openAllChip.className = `${CSS_CLASSES.FILTER_CHIP} chip-neutral active`;
         openAllChip.dataset.target = 'open-all';
-        // Add badge count here:
-        openAllChip.innerHTML = `Open All <span class="chip-badge">${totalRendered}</span>`;
+        openAllChip.innerHTML = `
+            <span class="chip-badge">${totalRendered}</span>
+            <span class="chip-label">Dashboard</span>
+        `;
         chips.appendChild(openAllChip);
 
         sections.forEach(sec => {
-            // Chip
+            // Summary Tile
             const chip = document.createElement('div');
-            // 'chip-green', 'chip-red', 'chip-custom' logic
-            let chipClass = '';
-            if (sec.color === 'green') chipClass = CSS_CLASSES.CHIP_GREEN;
-            if (sec.color === 'red') chipClass = CSS_CLASSES.CHIP_RED;
-            if (sec.id === 'custom') chipClass = CSS_CLASSES.CHIP_CUSTOM;
+            const chipClass = `chip-${sec.color || 'neutral'}`;
 
-            chip.className = `${CSS_CLASSES.FILTER_CHIP} ${chipClass} ${sec.id === 'custom' ? CSS_CLASSES.ACTIVE : ''}`;
+            chip.className = `${CSS_CLASSES.FILTER_CHIP} ${chipClass}`;
             chip.dataset.target = sec.id;
-            chip.innerHTML = `${sec.title} <span class="chip-badge">${sec.items.length}</span>`;
+            chip.innerHTML = `
+                <span class="chip-badge">${sec.items.length}</span>
+                <span class="chip-label">${sec.chipLabel || sec.title}</span>
+            `;
             chips.appendChild(chip);
 
-            // Accordion
+            // Accordion (Always Added to List Body)
             const accordion = this._renderAccordion(sec, rules);
             list.appendChild(accordion);
         });
@@ -699,51 +702,35 @@ export class NotificationUI {
     static _bindAccordionEvents(modal) {
         const chips = modal.querySelectorAll(`.${CSS_CLASSES.FILTER_CHIP}`);
         const sections = modal.querySelectorAll(`.${CSS_CLASSES.ACCORDION_SECTION}`);
+        const listBody = modal.querySelector('#notificationList');
 
-        const toggleSection = (targetId, expand) => {
-            const section = modal.querySelector(`#section-${targetId}`);
-            if (!section) return;
+        // INITIAL STATE: Expand All by Default (Transparency)
+        sections.forEach(s => {
+            s.style.display = 'block';
+            s.classList.add(CSS_CLASSES.EXPANDED);
+        });
 
-            const chip = modal.querySelector(`.${CSS_CLASSES.FILTER_CHIP}[data-target="${targetId}"]`);
+        // Navigation Sync: Update Active Tile based on scroll position
+        if (listBody) {
+            listBody.addEventListener('scroll', () => {
+                let currentId = 'open-all';
+                const scrollPos = listBody.scrollTop + 50; // Offset for better triggering
 
-            if (expand) {
-                section.classList.add(CSS_CLASSES.EXPANDED);
-                if (chip) chip.classList.add(CSS_CLASSES.ACTIVE);
-            } else {
-                section.classList.remove(CSS_CLASSES.EXPANDED);
-                if (chip) chip.classList.remove(CSS_CLASSES.ACTIVE);
-            }
-        };
+                sections.forEach(sec => {
+                    if (sec.offsetTop <= scrollPos) {
+                        currentId = sec.id.replace('section-', '');
+                    }
+                });
 
-        const closeAll = () => {
-            sections.forEach(s => s.classList.remove(CSS_CLASSES.EXPANDED));
-            chips.forEach(c => {
-                c.classList.remove(CSS_CLASSES.ACTIVE);
-                if (c.dataset.target === 'open-all') {
-                    // Restore Text but KEEP Badge
-                    const badge = c.querySelector('.chip-badge');
-                    const count = badge ? badge.textContent : '0';
-                    c.innerHTML = `Open All <span class="chip-badge">${count}</span>`;
-                }
-            });
-        };
+                // Update Tile Highlights
+                chips.forEach(c => {
+                    if (c.dataset.target === currentId) c.classList.add(CSS_CLASSES.ACTIVE);
+                    else c.classList.remove(CSS_CLASSES.ACTIVE);
+                });
+            }, { passive: true });
+        }
 
-        const openAll = () => {
-            sections.forEach(s => s.classList.add(CSS_CLASSES.EXPANDED));
-            chips.forEach(c => {
-                if (c.dataset.target === 'open-all') {
-                    c.classList.add(CSS_CLASSES.ACTIVE);
-                    // Toggle Text but KEEP Badge
-                    const badge = c.querySelector('.chip-badge');
-                    const count = badge ? badge.textContent : '0';
-                    c.innerHTML = `Close All <span class="chip-badge">${count}</span>`;
-                } else {
-                    c.classList.add(CSS_CLASSES.ACTIVE);
-                }
-            });
-        };
-
-        // Chip Events
+        // Tile Events (Anchor Navigation)
         chips.forEach(chip => {
             chip.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -751,29 +738,11 @@ export class NotificationUI {
                 const list = modal.querySelector('#notificationList');
 
                 if (targetId === 'open-all') {
-                    if (chip.innerHTML.includes('Close All')) {
-                        closeAll();
-                    } else {
-                        openAll();
-                        // Scroll to top when opening all to show the first section
-                        if (list) list.scrollTo({ top: 0, behavior: 'smooth' });
-                    }
+                    if (list) list.scrollTo({ top: 0, behavior: 'smooth' });
                 } else {
-                    const isActive = chip.classList.contains(CSS_CLASSES.ACTIVE);
-                    closeAll(); // Close others
-
-                    if (!isActive) {
-                        toggleSection(targetId, true); // Open target
-
-                        // Scroll to section (Unify logic)
-                        const sec = modal.querySelector(`#section-${targetId}`);
-                        if (sec && list) {
-                            // Position section header directly under chips
-                            // We wait for the transition to settle to get a stable offsetTop
-                            setTimeout(() => {
-                                list.scrollTo({ top: sec.offsetTop, behavior: 'smooth' });
-                            }, 350);
-                        }
+                    const sec = modal.querySelector(`#section-${targetId}`);
+                    if (sec && list) {
+                        list.scrollTo({ top: sec.offsetTop, behavior: 'smooth' });
                     }
                 }
             });
@@ -831,8 +800,8 @@ export class NotificationUI {
 
     static _renderAccordion(section, rules = {}) {
         const wrap = document.createElement('div');
-        // Expand 'Custom Triggers' by default, others collapsed
-        const isExpanded = section.id === 'custom';
+        // All sections expanded by default for V3 Dashboard Transparency
+        const isExpanded = true;
         wrap.className = `${CSS_CLASSES.ACCORDION_SECTION} ${isExpanded ? CSS_CLASSES.EXPANDED : ''}`;
         wrap.id = `section-${section.id}`;
 
@@ -1475,7 +1444,7 @@ export class NotificationUI {
 
             // Render pills
             pillsContainer.innerHTML = disabled.map(label =>
-                `<span style="padding: 2px 6px; background: rgba(255,255,255,0.05); border-radius: 3px; font-size: 0.65rem; opacity: 0.7;">${label}</span>`
+                `<span class="status-bar-pill">${label}</span>`
             ).join('');
         }
 

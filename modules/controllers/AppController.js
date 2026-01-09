@@ -173,7 +173,14 @@ export class AppController {
         // 2. Initialize Watchlist UI
         this.watchlistUI = new WatchlistUI({
             onWatchlistChange: (watchlistId) => this.handleSwitchWatchlist(watchlistId),
-            onRenameWatchlist: async (id, name) => await this.appService.renameWatchlist(id, name)
+            onRenameWatchlist: async (id, name) => {
+                const systemIds = [ALL_SHARES_ID, PORTFOLIO_ID, CASH_WATCHLIST_ID, DASHBOARD_WATCHLIST_ID, 'portfolio'];
+                if (systemIds.includes(id)) {
+                    AppState.saveCustomWatchlistName(id, name);
+                    return;
+                }
+                await this.appService.renameWatchlist(id, name);
+            },
         });
         this.watchlistUI.init();
 
@@ -1184,16 +1191,7 @@ export class AppController {
         }
 
         // === STEP 3.1: HANDLE EDIT WATCHLIST GHOSTING ===
-        const editWatchlistBtn = document.getElementById(IDS.BTN_EDIT_WATCHLIST);
-        if (editWatchlistBtn) {
-            const systemIds = [DASHBOARD_WATCHLIST_ID, ALL_SHARES_ID, PORTFOLIO_ID, CASH_WATCHLIST_ID, 'portfolio', null];
-            const isSystemView = systemIds.includes(AppState.watchlist.id) || AppState.isPortfolioVisible;
-            if (isSystemView) {
-                editWatchlistBtn.classList.add(CSS_CLASSES.GHOSTED);
-            } else {
-                editWatchlistBtn.classList.remove(CSS_CLASSES.GHOSTED);
-            }
-        }
+        // SYSTEM VIEW GHOSTING REMOVED: All portfolios (including system defaults) are now editable/renameable.
 
         this.watchlistUI.updateHeaderTitle();
         this.watchlistUI.renderWatchlistDropdown();
@@ -1948,15 +1946,17 @@ export class AppController {
                 return;
             }
 
-            // Prevent editing system views
-            if (id === 'portfolio' || id === 'ALL' || id === 'CASH') {
-                alert(USER_MESSAGES.RENAME_SYSTEM_VIEW);
-                return;
-            }
+            // Handle system vs custom watchlist renaming
+            const systemIds = [ALL_SHARES_ID, PORTFOLIO_ID, CASH_WATCHLIST_ID, DASHBOARD_WATCHLIST_ID, 'portfolio'];
+            const isSystem = systemIds.includes(id);
 
             try {
                 console.log('AppController: Renaming watchlist:', id, 'to', newName);
-                await this.appService.renameWatchlist(id, newName);
+                if (isSystem) {
+                    AppState.saveCustomWatchlistName(id, newName);
+                } else {
+                    await this.appService.renameWatchlist(id, newName);
+                }
                 // Refresh UI
                 this.watchlistUI.updateHeaderTitle();
                 this.watchlistUI.renderWatchlistDropdown();

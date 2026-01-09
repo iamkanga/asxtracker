@@ -109,19 +109,47 @@ export class DashboardFilterModal {
 
                 /* --- ROW STYLES --- */
                 .dashboard-filter-row {
-                    display: flex;
+                    display: grid;
+                    grid-template-columns: 1fr 80px 40px;
                     align-items: center;
-                    padding: 12px 20px;
+                    padding: 8px 15px;
                     background: var(--bg-card);
+                    min-height: 40px;
                 }
                 .df-name-col {
-                    flex: 1;
-                    margin-left: 15px;
                     display: flex;
-                    flex-direction: column;
+                    align-items: center;
+                    gap: 10px;
+                    overflow: hidden;
+                    white-space: nowrap;
+                    text-overflow: ellipsis;
                 }
                 .df-main-text { font-weight: 700; font-size: 0.95rem; }
                 .df-sub-text { font-size: 0.75rem; color: var(--text-muted); }
+                
+                .df-reorder-col {
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    justify-self: center;
+                }
+                
+                .df-check-col {
+                    display: flex;
+                    justify-content: flex-end;
+                    align-items: center;
+                    justify-self: end;
+                }
+                
+                .df-row-hidden .df-main-text {
+                    color: var(--color-accent) !important;
+                    text-decoration: line-through;
+                    opacity: 0.7;
+                }
+                .df-row-hidden .df-sub-text {
+                    color: var(--color-accent) !important;
+                    opacity: 0.5;
+                }
                 
                 .df-reorder-group {
                     display: flex;
@@ -206,24 +234,27 @@ export class DashboardFilterModal {
             const name = nameMap[code] || code;
 
             const row = document.createElement('div');
-            row.className = 'dashboard-filter-row';
+            row.className = `dashboard-filter-row ${isHidden ? 'df-row-hidden' : ''}`;
             row.draggable = true; // ENABLE DRAG
             row.dataset.code = code;
 
             row.innerHTML = `
-                <div class="square-radio-wrapper">
-                    <input type="checkbox" class="df-check" data-code="${code}" ${isChecked ? 'checked' : ''}>
-                    <div class="square-radio-visual"></div>
-                </div>
-
                 <div class="df-name-col">
                     <span class="df-main-text">${name}</span>
-                    <span class="df-sub-text">${code}</span>
+                    <span class="df-sub-text" style="margin-left: 8px; opacity: 0.5;">${code}</span>
                 </div>
 
-                <!-- DRAG HANDLE -->
-                <div class="df-reorder-handle" title="Drag to reorder" style="cursor: grab; padding: 10px; color: var(--text-muted); opacity: 0.7;">
-                    <i class="fas fa-grip-lines"></i>
+                <div class="df-reorder-col">
+                    <div class="df-reorder-handle" title="Drag to reorder" style="cursor: grab; color: var(--text-muted); opacity: 0.7;">
+                        <i class="fas fa-grip-lines"></i>
+                    </div>
+                </div>
+
+                <div class="df-check-col">
+                    <div class="square-radio-wrapper">
+                        <input type="checkbox" class="df-check" data-code="${code}" ${isChecked ? 'checked' : ''}>
+                        <div class="square-radio-visual"></div>
+                    </div>
                 </div>
             `;
             listContainer.appendChild(row);

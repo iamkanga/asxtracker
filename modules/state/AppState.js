@@ -411,6 +411,13 @@ export const AppState = {
         this._triggerSync();
     },
 
+    saveCustomWatchlistName(id, name) {
+        if (!this.preferences.customWatchlistNames) this.preferences.customWatchlistNames = {};
+        this.preferences.customWatchlistNames[id] = name;
+        localStorage.setItem('ASX_NEXT_customWatchlistNames', JSON.stringify(this.preferences.customWatchlistNames));
+        this._triggerSync();
+    },
+
     saveFavoriteLinks(links) {
         this.preferences.favoriteLinks = links;
         localStorage.setItem(STORAGE_KEYS.FAVORITE_LINKS, JSON.stringify(links));

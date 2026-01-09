@@ -298,12 +298,14 @@ export class WatchlistUI {
                 chevron.style.opacity = '1';
             }
             if (headerRow) headerRow.classList.remove(CSS_CLASSES.HIDDEN);
+            modal.querySelector(`.${CSS_CLASSES.MODAL_CONTENT}`).classList.add('edit-mode');
         } else {
             if (chevron) {
                 chevron.style.transform = 'rotate(0deg)';
                 chevron.style.opacity = '0.3';
             }
             if (headerRow) headerRow.classList.add(CSS_CLASSES.HIDDEN);
+            modal.querySelector(`.${CSS_CLASSES.MODAL_CONTENT}`).classList.remove('edit-mode');
         }
 
         // 2. Prepare List Data
@@ -400,11 +402,14 @@ export class WatchlistUI {
             } else {
                 // --- DEFAULT VIEW ---
                 innerHTML = `
-                    <div style="flex: 1; display: flex; align-items: center;">
-                        <i class="fas ${it.icon}" style="width: 25px;"></i>
-                        <span>${it.name}</span>
+                    <div class="watchlist-col-hide">
+                        <i class="fas ${it.icon}" style="width: 20px; margin-right: 8px;"></i>
+                        <span class="watchlist-name-span">${it.name}</span>
                     </div>
-                    ${isActive ? `<i class="fas ${UI_ICONS.CHECK}" style="color: var(--color-accent);"></i>` : ''}
+                    <div class="watchlist-col-carousel"></div>
+                    <div class="watchlist-col-reorder">
+                        ${isActive ? `<i class="fas ${UI_ICONS.CHECK}" style="color: var(--color-accent); font-size: 0.8em;"></i>` : ''}
+                    </div>
                 `;
             }
 
