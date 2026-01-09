@@ -2170,7 +2170,8 @@ export class AppController {
             const { query } = e.detail;
 
             // Retrieve Global Scanner Filters
-            const activeFilters = AppState.preferences.scanner?.activeFilters || [];
+            const filters = AppState.preferences.scanner?.activeFilters;
+            const activeFilters = (Array.isArray(filters) && filters.length > 0) ? filters : null;
 
             // Pass filters to DataService (Unified Search)
             const results = this.dataService.searchStocks(query, AppState.livePrices, activeFilters);

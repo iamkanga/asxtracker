@@ -119,7 +119,7 @@ export class DataService {
      * @param {Map} livePrices - The Map of live price objects.
      * @returns {Array} - Array of matching stock objects (limit 50).
      */
-    searchStocks(query, livePrices, industryFilters = []) {
+    searchStocks(query, livePrices, industryFilters = null) {
         if (!livePrices) return [];
 
         // Allow empty query if industryFilters is present (Scanner Mode)
