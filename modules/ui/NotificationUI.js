@@ -43,6 +43,12 @@ export class NotificationUI {
             if (modal && !modal.classList.contains(CSS_CLASSES.HIDDEN)) {
                 // console.log('[NotificationUI] Data update received while modal open. Refreshing list...');
                 this._updateList(modal);
+
+                // 3. Update Dismiss Button State (Live)
+                if (notificationStore) {
+                    const latestCounts = notificationStore.getBadgeCounts();
+                    this._updateDismissState(modal, latestCounts.custom);
+                }
             }
         });
 
@@ -142,7 +148,7 @@ export class NotificationUI {
         }
     }
 
-    static showModal(activeTabId = 'custom', source = 'total') {
+    static async showModal(activeTabId = 'custom', source = 'total') {
         this._currentSource = source || 'total';
 
         // SECURITY: Prevent notifications from overriding Lock Screen
@@ -217,6 +223,47 @@ export class NotificationUI {
                 modal.classList.remove(CSS_CLASSES.HIDDEN);
                 console.log('[NotificationUI] Modal visibility class removed.');
             });
+
+            // 6. Inject Header Icon (Kangaroo)
+            try {
+                const response = await fetch('notification_icon.svg');
+                if (response.ok) {
+                    let svgContent = await response.text();
+                    svgContent = svgContent.replace(/width=".*?"/g, 'width="100%"').replace(/height=".*?"/g, 'height="100%"');
+                    const headerWrapper = modal.querySelector('.header-icon-wrapper');
+                    if (headerWrapper) {
+                        headerWrapper.innerHTML = svgContent;
+                        // Style the SVG path to match accent color
+                        const path = headerWrapper.querySelector('path');
+                        if (path) path.style.fill = 'var(--color-accent)';
+                    }
+
+                    // 7. Inject Dismiss Icon with Better Styling
+                    const dismissWrapper = modal.querySelector('.dismiss-icon-wrapper');
+                    if (dismissWrapper) {
+                        dismissWrapper.innerHTML = svgContent;
+                        // Target the SVG directly to force size
+                        const svg = dismissWrapper.querySelector('svg');
+                        if (svg) {
+                            svg.style.width = '100%';
+                            svg.style.height = '100%';
+                            svg.style.display = 'block';
+                            svg.style.fill = 'var(--color-accent)'; /* Force fill on SVG */
+                        }
+                        // Fallback: Target all paths
+                        const paths = dismissWrapper.querySelectorAll('path');
+                        paths.forEach(p => p.style.fill = 'var(--color-accent)');
+                    }
+
+                    // 8. Initial Dismiss State (Sync with Store)
+                    if (notificationStore) {
+                        const counts = notificationStore.getBadgeCounts();
+                        this._updateDismissState(modal, counts.custom);
+                    }
+                }
+            } catch (e) {
+                console.warn('Failed to load Header SVG:', e);
+            }
         } catch (err) {
             console.error('[NotificationUI] CRITICAL FAILURE in showModal:', err);
         }
@@ -271,7 +318,7 @@ export class NotificationUI {
                 
                 <div class="${CSS_CLASSES.MODAL_HEADER}">
                     <h2 class="${CSS_CLASSES.MODAL_TITLE}">
-                        <i class="fas ${UI_ICONS.BELL}" style="margin-right: 8px;"></i> Notifications
+                        <div class="header-icon-wrapper" style="width: 24px; height: 24px; margin-right: 8px; display: inline-block;"></div> Notifications
                     </h2>
                     <div style="margin-left: auto; display: flex; gap: 15px; align-items: center;">
                         <button id="btn-daily-briefing" title="Daily Briefing" style="background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem;">
@@ -281,7 +328,7 @@ export class NotificationUI {
                             <i class="fas ${UI_ICONS.PEN}"></i>
                         </button>
                         <button id="notif-mark-read-btn" title="Dismiss Badge" style="background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem;">
-                            <i class="fas ${UI_ICONS.BELL_SLASH}"></i>
+                             <div class="dismiss-icon-wrapper" style="width: 32px; height: 32px; display: inline-block;"></div>
                         </button>
                         <button class="${CSS_CLASSES.MODAL_CLOSE_BTN}" title="Close">
                             <i class="fas ${UI_ICONS.CLOSE}"></i>
@@ -369,7 +416,15 @@ export class NotificationUI {
             markReadBtn.addEventListener('click', () => {
                 if (notificationStore) {
                     console.log(`[NotificationUI] Dismiss Badge clicked. Source: ${this._currentSource}`);
-                    notificationStore.markAsViewed(this._currentSource);
+                    notificationStore.markAsViewed('custom');
+
+                    // FORCE UPDATE: Immediately hide the ENTIRE Desktop Icon (Kangaroo FAB)
+                    const floatingBell = document.getElementById('floating-bell');
+                    const bellContainer = document.getElementById('floating-bell-container');
+
+                    if (floatingBell) floatingBell.classList.add(CSS_CLASSES.HIDDEN);
+                    if (bellContainer) bellContainer.classList.add(CSS_CLASSES.HIDDEN);
+
                     // Visual feedback
                     markReadBtn.style.opacity = '0.5';
                     markReadBtn.disabled = true;
@@ -438,6 +493,12 @@ export class NotificationUI {
         const timeArea = modal.querySelector('#notif-timestamp');
         const lastUpd = notificationStore.lastUpdated ? new Date(notificationStore.lastUpdated).toLocaleTimeString() : 'Never';
         if (timeArea) timeArea.textContent = `Last synced: ${lastUpd}`;
+
+        // 0. Update Dismiss Button State (Live)
+        if (notificationStore) {
+            const counts = notificationStore.getBadgeCounts();
+            NotificationUI._updateDismissState(modal, counts.custom);
+        }
 
         // 1. Fetch Data
         // Local Alerts: Returns { pinned: [], fresh: [] }
@@ -565,7 +626,16 @@ export class NotificationUI {
         const hiloStrHigh = hiloStrBase;
         const hiloStrLow = hiloStrBase;
 
-        // SORT: Target Hits (Coffee) FIRST in Custom Section
+        // --- OVERRIDE INDICATOR --- 
+        // User Request: "Next custom title in the notifications I would like to have some sort of display letting the user if the watch list override is on or off"
+        const excludePortfolio = AppState.preferences?.excludePortfolio ?? true;
+        const overrideLabel = excludePortfolio
+            ? `<span style="font-size: 0.65rem; color: var(--color-accent); font-weight: normal; margin-left: 8px; opacity: 0.8; letter-spacing: 0.5px;">OVERRIDE ON</span>`
+            : `<span style="font-size: 0.65rem; color: var(--text-muted); font-weight: normal; margin-left: 8px; opacity: 0.5; letter-spacing: 0.5px;">OVERRIDE OFF</span>`;
+
+        const customTitle = `Custom Movers${overrideLabel}`;
+
+        // SURFACING: Sort Target Hits (Coffee) FIRST in Custom Section
         const sortedLocal = [...localAlerts].sort((a, b) => {
             const isTargetA = a.intent === 'target' || a.intent === 'target-hit';
             const isTargetB = b.intent === 'target' || b.intent === 'target-hit';
@@ -576,7 +646,7 @@ export class NotificationUI {
 
         // Structure Definitions - REORDERED & SPLIT
         const sections = [
-            { id: 'custom', title: 'Custom Movers', subtitle: '<span style="color: var(--color-accent);">Watchlist prices and Market filters</span>', items: sortedLocal, type: 'custom', color: 'neutral' },
+            { id: 'custom', title: customTitle, subtitle: '<span style="color: var(--color-accent);">Watchlist prices and Market filters</span>', items: sortedLocal, type: 'custom', color: 'neutral' },
             { id: 'high', title: '52 Week High', subtitle: hiloStrHigh, items: finalHiloHigh, type: 'hilo', color: 'green' },
             { id: 'low', title: '52 Week Low', subtitle: hiloStrLow, items: finalHiloLow, type: 'hilo', color: 'red' },
             { id: 'gainers', title: 'Market Gainers', subtitle: upStr, items: finalMoversUp, type: 'gainers', color: 'green' },
@@ -1333,4 +1403,28 @@ export class NotificationUI {
         // Initialize Badge
         // Handled by AppController via event
     }
+
+    /**
+     * Updates the Dismiss Button state based on count.
+     * Ghosted if 0, Active if > 0.
+     */
+    static _updateDismissState(modal, customCount) {
+        const dismissBtn = modal.querySelector('#notif-mark-read-btn');
+        if (!dismissBtn) return;
+
+        // Count must be > 0 to dismiss
+        const canDismiss = (customCount > 0);
+
+        if (canDismiss) {
+            dismissBtn.style.opacity = '1';
+            dismissBtn.disabled = false;
+            dismissBtn.style.cursor = 'pointer';
+        } else {
+            dismissBtn.style.opacity = '0.5';
+            dismissBtn.disabled = true;
+            dismissBtn.style.cursor = 'default';
+        }
+    }
+
+
 }

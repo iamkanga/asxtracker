@@ -575,9 +575,12 @@ export class AppController {
                     if (prefs.excludePortfolio !== undefined) {
                         AppState.preferences.excludePortfolio = prefs.excludePortfolio;
                     }
-                    if (prefs.dailyEmail !== undefined) {
-                        AppState.preferences.dailyEmail = prefs.dailyEmail === true;
-                        localStorage.setItem(STORAGE_KEYS.DAILY_EMAIL, AppState.preferences.dailyEmail);
+                    if (prefs.dailyEmail !== undefined && prefs.dailyEmail !== null) {
+                        // ROBUSTNESS: Handle string 'true' from legacy/external updates
+                        const val = prefs.dailyEmail;
+                        const isTrue = (val === true || val === 'true');
+                        AppState.preferences.dailyEmail = isTrue;
+                        localStorage.setItem(STORAGE_KEYS.DAILY_EMAIL, isTrue);
                         needsRender = true;
                     }
 
