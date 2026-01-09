@@ -274,8 +274,7 @@ export class SettingsUI {
                         <!-- 1. Scope (Custom / All) -->
                         <div class="${CSS_CLASSES.SUMMARY_TILE} thin">
                             <div class="${CSS_CLASSES.SUMMARY_TILE_HEADER}">
-                                <span class="${CSS_CLASSES.SUMMARY_TILE_LABEL}">Custom / All</span>
-                                <span id="val-scope" style="font-size: 0.65rem; color: var(--color-accent); font-weight: 800; margin-top: 2px;">Custom</span>
+                                <span id="val-scope" class="${CSS_CLASSES.SUMMARY_TILE_LABEL}" style="font-size: 0.65rem; color: var(--color-accent); font-weight: 800;">Badge Custom</span>
                             </div>
                             <div class="${CSS_CLASSES.SUMMARY_STATUS_INDICATOR} kangaroo large always-on"></div>
                         </div>
@@ -344,19 +343,10 @@ export class SettingsUI {
                     </div>
                     <div class="summary-grid-paired" style="margin-top: 8px; grid-template-columns: 1fr 1fr;">
                         <!-- Sectors & Override -->
-                        <div class="${CSS_CLASSES.SUMMARY_TILE}" style="align-items: center;">
+                        <div class="${CSS_CLASSES.SUMMARY_TILE}" style="align-items: center; grid-column: span 2;">
                             <div class="${CSS_CLASSES.SUMMARY_TILE_HEADER}" style="justify-content: center;"><span class="${CSS_CLASSES.SUMMARY_TILE_LABEL}">Industry Sectors</span></div>
                             <div class="${CSS_CLASSES.SUMMARY_TILE_BODY}" style="justify-content: center; flex-direction: column;">
                                 <span class="${CSS_CLASSES.SUMMARY_TILE_VALUE}" id="summary-sectors-text" style="font-size: 0.8rem;">Loading...</span>
-                            </div>
-                        </div>
-                        <div class="${CSS_CLASSES.SUMMARY_TILE}" style="align-items: center;">
-                            <div class="${CSS_CLASSES.SUMMARY_TILE_HEADER}" style="justify-content: center; width: 100%;">
-                                <span class="${CSS_CLASSES.SUMMARY_TILE_LABEL}">Watchlist Override</span>
-                            </div>
-                            <div class="${CSS_CLASSES.SUMMARY_TILE_BODY}" style="justify-content: center; align-items: center; gap: 8px;">
-                                <span class="${CSS_CLASSES.SUMMARY_TILE_VALUE}" id="${IDS.SUMMARY_PORTFOLIO_OVERRIDE}">Off</span>
-                                <div id="ind-override" class="${CSS_CLASSES.SUMMARY_STATUS_INDICATOR} kangaroo large" style="margin-top: 0; margin-bottom: 0;"></div>
                             </div>
                         </div>
                     </div>
@@ -513,13 +503,13 @@ export class SettingsUI {
                     <div style="flex: 1;">
                         <div class="input-wrapper" style="position: relative; height: 32px;">
                             <div class="input-icon" style="position: absolute; left: 0; top: 50%; transform: translateY(-50%); display: flex; align-items: center; justify-content: flex-start; padding-left: 4px; pointer-events: none; color: var(--text-muted);"><i class="fas fa-dollar-sign"></i></div>
-                            <input type="number" id="${IDS.PREF_GLOBAL_MIN_PRICE}" class="settings-input-dark standard-input compact-input ${CSS_CLASSES.SETTINGS_INPUT_ALIGNED}" step="0.01" placeholder="0" style="height: 100%;">
+                            <input type="number" id="${IDS.PREF_GLOBAL_MIN_PRICE}" class="settings-input-dark standard-input compact-input ${CSS_CLASSES.SETTINGS_INPUT_ALIGNED}" step="0.01" placeholder="0" style="height: 100%; z-index: 10; pointer-events: auto;">
                         </div>
                     </div>
                     <div style="flex: 1;">
                         <div class="input-wrapper" style="position: relative; height: 32px;">
                             <div class="input-icon" style="position: absolute; left: 0; top: 50%; transform: translateY(-50%); display: flex; align-items: center; justify-content: flex-start; padding-left: 4px; pointer-events: none; color: var(--text-muted);"><i class="fas fa-dollar-sign"></i></div>
-                            <input type="number" id="${IDS.PREF_HILO_MIN_PRICE}" class="settings-input-dark standard-input compact-input ${CSS_CLASSES.SETTINGS_INPUT_ALIGNED}" step="0.01" placeholder="0" style="height: 100%;">
+                            <input type="number" id="${IDS.PREF_HILO_MIN_PRICE}" class="settings-input-dark standard-input compact-input ${CSS_CLASSES.SETTINGS_INPUT_ALIGNED}" step="0.01" placeholder="0" style="height: 100%; z-index: 10; pointer-events: auto;">
                         </div>
                     </div>
                 </div>
@@ -543,13 +533,13 @@ export class SettingsUI {
                     <div style="flex: 1;">
                         <div class="input-wrapper" style="position: relative; height: 32px;">
                              <div class="input-icon" style="position: absolute; left: 0; top: 50%; transform: translateY(-50%); display: flex; align-items: center; justify-content: flex-start; font-weight: bold; font-size: 0.85rem; color: var(--text-muted); padding-left: 4px; pointer-events: none;">%</div>
-                             <input type="number" id="${IDS.PREF_UP_PERCENT}" class="settings-input-dark standard-input compact-input ${CSS_CLASSES.SETTINGS_INPUT_ALIGNED}" placeholder="0" style="height: 100%;">
+                             <input type="number" id="${IDS.PREF_UP_PERCENT}" class="settings-input-dark standard-input compact-input ${CSS_CLASSES.SETTINGS_INPUT_ALIGNED}" placeholder="0" style="height: 100%; z-index: 10; pointer-events: auto;">
                         </div>
                     </div>
                     <div style="flex: 1;">
                         <div class="input-wrapper" style="position: relative; height: 32px;">
                              <div class="input-icon" style="position: absolute; left: 0; top: 50%; transform: translateY(-50%); display: flex; align-items: center; justify-content: flex-start; font-weight: bold; font-size: 0.85rem; color: var(--text-muted); padding-left: 4px; pointer-events: none;">$</div>
-                             <input type="number" id="${IDS.PREF_UP_DOLLAR}" class="settings-input-dark standard-input compact-input ${CSS_CLASSES.SETTINGS_INPUT_ALIGNED}" step="0.01" placeholder="0" style="height: 100%;">
+                             <input type="number" id="${IDS.PREF_UP_DOLLAR}" class="settings-input-dark standard-input compact-input ${CSS_CLASSES.SETTINGS_INPUT_ALIGNED}" step="0.01" placeholder="0" style="height: 100%; z-index: 10; pointer-events: auto;">
                         </div>
                     </div>
                 </div>
@@ -564,13 +554,13 @@ export class SettingsUI {
                     <div style="flex: 1;">
                         <div class="input-wrapper" style="position: relative; height: 32px;">
                              <div class="input-icon" style="position: absolute; left: 0; top: 50%; transform: translateY(-50%); display: flex; align-items: center; justify-content: flex-start; font-weight: bold; font-size: 0.85rem; color: var(--text-muted); padding-left: 4px; pointer-events: none;">%</div>
-                             <input type="number" id="${IDS.PREF_DOWN_PERCENT}" class="settings-input-dark standard-input compact-input ${CSS_CLASSES.SETTINGS_INPUT_ALIGNED}" placeholder="0" style="height: 100%;">
+                             <input type="number" id="${IDS.PREF_DOWN_PERCENT}" class="settings-input-dark standard-input compact-input ${CSS_CLASSES.SETTINGS_INPUT_ALIGNED}" placeholder="0" style="height: 100%; z-index: 10; pointer-events: auto;">
                         </div>
                     </div>
                     <div style="flex: 1;">
                         <div class="input-wrapper" style="position: relative; height: 32px;">
                              <div class="input-icon" style="position: absolute; left: 0; top: 50%; transform: translateY(-50%); display: flex; align-items: center; justify-content: flex-start; font-weight: bold; font-size: 0.85rem; color: var(--text-muted); padding-left: 4px; pointer-events: none;">$</div>
-                             <input type="number" id="${IDS.PREF_DOWN_DOLLAR}" class="settings-input-dark standard-input compact-input ${CSS_CLASSES.SETTINGS_INPUT_ALIGNED}" step="0.01" placeholder="0" style="height: 100%;">
+                             <input type="number" id="${IDS.PREF_DOWN_DOLLAR}" class="settings-input-dark standard-input compact-input ${CSS_CLASSES.SETTINGS_INPUT_ALIGNED}" step="0.01" placeholder="0" style="height: 100%; z-index: 10; pointer-events: auto;">
                         </div>
                     </div>
                 </div>
@@ -730,8 +720,8 @@ export class SettingsUI {
             },
             alertEmailRecipients: modal.querySelector('#pref-emailAddr')?.value || '',
             scannerRules: {
-                minPrice: getNum('global-minPrice'),
-                hiloMinPrice: getNum('hilo-minPrice'),
+                minPrice: getNum(IDS.PREF_GLOBAL_MIN_PRICE),
+                hiloMinPrice: getNum(IDS.PREF_HILO_MIN_PRICE),
                 moversEnabled: getCheck('toggle-moversEnabled'),
                 hiloEnabled: getCheck('toggle-hiloEnabled'),
                 personalEnabled: getCheck('toggle-personalEnabled'),
@@ -746,7 +736,7 @@ export class SettingsUI {
         this._updateValues(modal, currentState);
     }
 
-    static _updateValues(modal, prefs) {
+    static _updateValues(modal, prefs, skipInputs = false) {
         const rules = prefs.scannerRules || {};
         const upPct = rules.up?.percentThreshold ?? null;
         const upDol = rules.up?.dollarThreshold ?? null;
@@ -811,11 +801,11 @@ export class SettingsUI {
         updateTile(null, 'ind-icon', showBadges);
         updateTile(null, 'ind-email', dailyEmail);
 
-        // Update Scope Value Display
+        // Update Scope Value Display - Now shows "Badge Custom" or "Badge All"
         const scopeEl = modal.querySelector('#val-scope');
         if (scopeEl) {
             const scope = prefs.badgeScope || 'custom';
-            scopeEl.textContent = scope.charAt(0).toUpperCase() + scope.slice(1);
+            scopeEl.textContent = `Badge ${scope.charAt(0).toUpperCase() + scope.slice(1)}`;
         }
 
         // 2. Parameters (Middle Row)
@@ -858,13 +848,15 @@ export class SettingsUI {
             }
         };
 
-        updateInput(IDS.PREF_GLOBAL_MIN_PRICE, minPrice);
-        updateInput(IDS.PREF_HILO_MIN_PRICE, hiloPrice);
-        updateInput(IDS.PREF_UP_PERCENT, upPct);
-        updateInput(IDS.PREF_UP_DOLLAR, upDol);
-        updateInput(IDS.PREF_DOWN_PERCENT, downPct);
-        updateInput(IDS.PREF_DOWN_DOLLAR, downDol);
-        updateInput('pref-emailAddr', prefs.alertEmailRecipients);
+        if (!skipInputs) {
+            updateInput(IDS.PREF_GLOBAL_MIN_PRICE, minPrice);
+            updateInput(IDS.PREF_HILO_MIN_PRICE, hiloPrice);
+            updateInput(IDS.PREF_UP_PERCENT, upPct);
+            updateInput(IDS.PREF_UP_DOLLAR, upDol);
+            updateInput(IDS.PREF_DOWN_PERCENT, downPct);
+            updateInput(IDS.PREF_DOWN_DOLLAR, downDol);
+            updateInput('pref-emailAddr', prefs.alertEmailRecipients);
+        }
 
         // Toggles UI Updates
         modal.querySelectorAll('.pill-segment-movers').forEach(pill => {
@@ -1150,7 +1142,7 @@ export class SettingsUI {
             clearTimeout(updateTimer);
             updateTimer = setTimeout(() => {
                 const currentState = this._harvestState(modal);
-                this._updateValues(modal, currentState); // Update Summary UI
+                this._updateValues(modal, currentState, true); // Update Summary UI, SKIP Inputs (Prevent typing glitch)
 
                 // If requested, trigger the actual persistence
                 if (shouldSave) {
@@ -1160,26 +1152,43 @@ export class SettingsUI {
             }, 50);
         };
 
-        // 1. Inputs/Toggles (Direct)
+        // 1. Inputs (Text/Number): UI Update Only (Real-time summary)
         modal.addEventListener('input', (e) => {
             if (e.target.matches('input')) {
-                // Inputs trigger UI update + Debounced Save
-                let label = e.target.previousElementSibling?.textContent || e.target.getAttribute('placeholder') || 'Setting';
-                if (label.includes('Threshold')) label = 'Thresholds';
-                triggerUpdate(true, `${label} saved`);
+                // UI update only while typing (Prevents jumpiness)
+                triggerUpdate(false);
             }
         });
 
-        // Change usually fires on commit (blur for text, click for check)
-        // For text, 'input' covers it. For checkboxes, 'change' is key.
+        // 2. Commit Changes (Blur/Enter): Actual Save
         modal.addEventListener('change', (e) => {
-            if (e.target.type !== 'text' && e.target.type !== 'number' && e.target.type !== 'email') {
-                // Toggles/Selects -> Immediate Save
-                // Try to find label
-                const row = e.target.closest('.settings-row');
+            const input = e.target;
+            const inputId = input.id || '';
+            const value = input.value;
+            let contextMsg = 'Setting saved';
+
+            // Build descriptive message for persistence
+            if (inputId.includes('pct') || inputId.includes('Pct')) {
+                contextMsg = `${value}% threshold saved`;
+            } else if (inputId.includes('dol') || inputId.includes('Dol')) {
+                contextMsg = `$${value} threshold saved`;
+            } else if (inputId.includes('min') || inputId.includes('Min')) {
+                contextMsg = `$${value} minimum saved`;
+            } else if (input.type === 'checkbox' || input.type === 'radio') {
+                const row = input.closest('.settings-row');
                 const label = row ? row.querySelector('.settings-label')?.textContent : 'Preference';
-                triggerUpdate('immediate', `${label} updated`);
+                contextMsg = `${label} updated`;
+                // Checkboxes/Pills save immediately on click
+                triggerUpdate('immediate', contextMsg);
+                return;
+            } else {
+                let label = input.previousElementSibling?.textContent || input.getAttribute('placeholder') || 'Setting';
+                if (label.includes('Threshold')) label = 'Thresholds';
+                contextMsg = `${label} saved`;
             }
+
+            // Save on change (Blur)
+            triggerUpdate('immediate', contextMsg);
         });
 
         // 1b. Ring Radio Specialist (YES/NO Toggles)

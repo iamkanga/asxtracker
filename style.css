@@ -3706,8 +3706,15 @@ h1.modal-title,
     background: url('favicon.svg') no-repeat center center;
     background-size: contain;
     opacity: 1;
-    filter: drop-shadow(0 0 2px var(--color-accent));
+    filter: sepia(1) saturate(3) hue-rotate(-10deg) brightness(0.9);
+    /* Coffee-colored filter */
     box-shadow: none;
+}
+
+/* Always-on state for Badge Count kangaroo */
+.summary-status-indicator.kangaroo.always-on {
+    opacity: 1;
+    filter: sepia(1) saturate(3) hue-rotate(-10deg) brightness(0.9);
 }
 
 .summary-tile-body {
@@ -3745,7 +3752,7 @@ h1.modal-title,
 
 .summary-section-title i {
     font-size: 0.8rem;
-    opacity: 0.5;
+    opacity: 1;
 }
 
 /* Specific Grid Pairings */

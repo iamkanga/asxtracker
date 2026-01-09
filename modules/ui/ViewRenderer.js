@@ -1787,9 +1787,9 @@ export class ViewRenderer {
             // DEFAULT MODE
             else {
                 if (isActive) {
-                    rightControl = `<div class="sort-selection-tick active"><i class="fas ${UI_ICONS.CHECK}"></i></div>`;
+                    rightControl = `<div class="sort-selection-tick active" style="margin-left: auto;"><i class="fas ${UI_ICONS.CHECK}"></i></div>`;
                 } else {
-                    rightControl = `<div></div>`; // Empty placeholder for grid
+                    rightControl = `<div style="margin-left: auto;"></div>`; // Empty placeholder for grid
                 }
             }
 
@@ -1798,7 +1798,10 @@ export class ViewRenderer {
             // Center Column is Global Radio
 
             // Override grid template for row if in edit mode to match header
-            const rowStyle = this.isSortEditMode ? 'grid-template-columns: 1fr 60px 1fr !important;' : '';
+            // For default mode, use flex layout for better control
+            const rowStyle = this.isSortEditMode
+                ? 'grid-template-columns: 1fr 60px 1fr !important;'
+                : 'display: flex !important; justify-content: space-between !important; align-items: center !important;';
 
             // HIGHLIGHT LOGIC: If this row is the active global sort, startContent (Label/Icon) should be coffee colored
             // We use the same condition 'isGlobalActive' calculated for the radio button above relative to Scope (Edit Mode)
@@ -1807,18 +1810,18 @@ export class ViewRenderer {
             const validGlobal = AppState.preferences.globalSort;
             const isRowGlobal = validGlobal && (validGlobal.field === opt.field);
 
-            // Apply coffee color to the TEXT/ICON container if global
-            const contentColorClass = isRowGlobal ? CSS_CLASSES.TEXT_COFFEE : '';
+            // Apply coffee color to the TEXT/ICON container if global OR active in default mode
+            const contentColorClass = (isRowGlobal || (!this.isSortEditMode && isActive)) ? CSS_CLASSES.TEXT_COFFEE : '';
 
             return `
                 <div class="${rowClasses}" data-key="${uniqueKey}" data-index="${index}" data-type="${type}" style="${rowStyle}">
-                    <div class="${CSS_CLASSES.SORT_PICKER_ROW_CONTENT} ${contentColorClass}" style="align-items: center;">
+                    <div class="${CSS_CLASSES.SORT_PICKER_ROW_CONTENT} ${contentColorClass}" style="align-items: center; white-space: nowrap;">
                         <div class="${CSS_CLASSES.SORT_PICKER_ICON}">${iconHtml}</div>
                         <div class="${CSS_CLASSES.SORT_PICKER_LABEL}">${opt.label}</div>
                     </div>
                     
-                    <!-- Center Column (Global Radio or Spacer) -->
-                    ${centerControl}
+                    <!-- Center Column (Global Radio or Spacer) - Only in Edit Mode -->
+                    ${this.isSortEditMode ? centerControl : ''}
                     
                     <!-- Right Column (Reorder or Tick) -->
                     ${rightControl}

@@ -43,6 +43,8 @@ export class NotificationUI {
             if (modal && !modal.classList.contains(CSS_CLASSES.HIDDEN)) {
                 // console.log('[NotificationUI] Data update received while modal open. Refreshing list...');
                 this._updateList(modal);
+                // 2b. Live Update Status Bar (in case disabled logic changed)
+                this._updateStatusBar(modal);
 
                 // 3. Update Dismiss Button State (Live)
                 if (notificationStore) {
@@ -218,25 +220,21 @@ export class NotificationUI {
             console.log('[NotificationUI] Updating notification list content...');
             this._updateList(modal);
 
+            // 4b. Update Status Bar (shows disabled monitors)
+            this._updateStatusBar(modal);
+
             // 5. Show with animation
             requestAnimationFrame(() => {
                 modal.classList.remove(CSS_CLASSES.HIDDEN);
                 console.log('[NotificationUI] Modal visibility class removed.');
             });
 
-            // 6. Inject Header Icon (Kangaroo)
+            // 6. Inject Dismiss Icon (Kangaroo)
             try {
                 const response = await fetch('notification_icon.svg');
                 if (response.ok) {
                     let svgContent = await response.text();
                     svgContent = svgContent.replace(/width=".*?"/g, 'width="100%"').replace(/height=".*?"/g, 'height="100%"');
-                    const headerWrapper = modal.querySelector('.header-icon-wrapper');
-                    if (headerWrapper) {
-                        headerWrapper.innerHTML = svgContent;
-                        // Style the SVG path to match accent color
-                        const path = headerWrapper.querySelector('path');
-                        if (path) path.style.fill = 'var(--color-accent)';
-                    }
 
                     // 7. Inject Dismiss Icon with Better Styling
                     const dismissWrapper = modal.querySelector('.dismiss-icon-wrapper');
@@ -317,9 +315,7 @@ export class NotificationUI {
             <div class="${CSS_CLASSES.MODAL_CONTENT} ${CSS_CLASSES.MODAL_CONTENT_MEDIUM}" style="height: 85vh; display: flex; flex-direction: column; overflow: hidden !important;">
                 
                 <div class="${CSS_CLASSES.MODAL_HEADER}">
-                    <h2 class="${CSS_CLASSES.MODAL_TITLE}">
-                        <div class="header-icon-wrapper" style="width: 24px; height: 24px; margin-right: 8px; display: inline-block;"></div> Notifications
-                    </h2>
+                    <h2 class="${CSS_CLASSES.MODAL_TITLE}">Notifications</h2>
                     <div style="margin-left: auto; display: flex; gap: 15px; align-items: center;">
                         <button id="btn-daily-briefing" title="Daily Briefing" style="background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem;">
                             <i class="fas fa-coffee"></i>
@@ -339,6 +335,12 @@ export class NotificationUI {
                 <!-- 1. Filter Chips Header -->
                 <div class="filter-chips-container" id="filterChips">
                     <!-- Dynamic Chips -->
+                </div>
+
+                <!-- Status Bar: Shows only disabled monitors (hidden if all ON) -->
+                <div id="notif-status-bar" class="notif-status-bar hidden" style="padding: 6px 12px; font-size: 0.7rem; color: var(--text-muted); background: rgba(255,255,255,0.03); border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 8px; cursor: pointer;" title="Tap to open settings">
+                    <span style="opacity: 0.6;">Disabled:</span>
+                    <span id="notif-status-pills" style="display: flex; gap: 6px; flex-wrap: wrap;"></span>
                 </div>
 
                 <!-- 2. Dashboard Content (Scrolling) -->
@@ -633,7 +635,10 @@ export class NotificationUI {
             ? `<span style="font-size: 0.65rem; color: var(--color-accent); font-weight: normal; margin-left: 8px; opacity: 0.8; letter-spacing: 0.5px;">OVERRIDE ON</span>`
             : `<span style="font-size: 0.65rem; color: var(--text-muted); font-weight: normal; margin-left: 8px; opacity: 0.5; letter-spacing: 0.5px;">OVERRIDE OFF</span>`;
 
-        const customTitle = `Custom Movers${overrideLabel}`;
+
+
+        const customTitleChip = 'Custom Movers';
+        const customTitleHeader = `Custom Movers${overrideLabel}`;
 
         // SURFACING: Sort Target Hits (Coffee) FIRST in Custom Section
         const sortedLocal = [...localAlerts].sort((a, b) => {
@@ -646,7 +651,7 @@ export class NotificationUI {
 
         // Structure Definitions - REORDERED & SPLIT
         const sections = [
-            { id: 'custom', title: customTitle, subtitle: '<span style="color: var(--color-accent);">Watchlist prices and Market filters</span>', items: sortedLocal, type: 'custom', color: 'neutral' },
+            { id: 'custom', title: customTitleChip, headerTitle: customTitleHeader, subtitle: '<span style="color: var(--color-accent);">Watchlist prices and Market filters</span>', items: sortedLocal, type: 'custom', color: 'neutral' },
             { id: 'high', title: '52 Week High', subtitle: hiloStrHigh, items: finalHiloHigh, type: 'hilo', color: 'green' },
             { id: 'low', title: '52 Week Low', subtitle: hiloStrLow, items: finalHiloLow, type: 'hilo', color: 'red' },
             { id: 'gainers', title: 'Market Gainers', subtitle: upStr, items: finalMoversUp, type: 'gainers', color: 'green' },
@@ -846,8 +851,8 @@ export class NotificationUI {
             : `<div class="${CSS_CLASSES.ACCORDION_SUBTITLE}" style="${colorStyle}">${section.subtitle}</div>`;
 
         header.innerHTML = `
-            <div class="accordion-header-content">
-                <div class="accordion-title">${section.title}</div>
+            <div class="accordion-title-row">
+                <div class="accordion-title">${section.headerTitle || section.title}</div>
                 ${subtitleHTML}
             </div>
             <div class="accordion-meta">
@@ -1426,5 +1431,58 @@ export class NotificationUI {
         }
     }
 
+    /**
+     * Updates the status bar to show disabled monitors.
+     * Hidden if all monitors are ON.
+     */
+    static _updateStatusBar(modal) {
+        const statusBar = modal.querySelector('#notif-status-bar');
+        const pillsContainer = modal.querySelector('#notif-status-pills');
+        if (!statusBar || !pillsContainer) return;
+
+        // Get current settings via Store (Handles Fallbacks)
+        const rules = notificationStore.getScannerRules() || {};
+        const prefs = AppState.preferences || {};
+
+        // Check which monitors are OFF
+        const disabled = [];
+
+        // Check explicit false (undefined = enabled default)
+        if (rules.hiloEnabled === false) disabled.push('52w');
+        if (rules.moversEnabled === false) disabled.push('Movers');
+        if (rules.personalEnabled === false) disabled.push('Personal');
+
+        // AppState typically has these, but fall back safely
+        if (prefs.showBadges === false) disabled.push('Icon');
+        if (prefs.dailyEmail === false) disabled.push('Email');
+
+        // Watchlist Override (Exclude Portfolio)
+        // If OFF (False) -> Strict filtering (Silent Warning).
+        if (rules.excludePortfolio === false) disabled.push('Override');
+
+        console.log('[NotificationUI] Status Bar Check:', {
+            activeRules: rules,
+            disabledList: disabled
+        });
+
+        // Show/hide the bar
+        if (disabled.length === 0) {
+            statusBar.classList.add(CSS_CLASSES.HIDDEN);
+            statusBar.style.display = 'none';
+        } else {
+            statusBar.classList.remove(CSS_CLASSES.HIDDEN);
+            statusBar.style.display = 'flex';
+
+            // Render pills
+            pillsContainer.innerHTML = disabled.map(label =>
+                `<span style="padding: 2px 6px; background: rgba(255,255,255,0.05); border-radius: 3px; font-size: 0.65rem; opacity: 0.7;">${label}</span>`
+            ).join('');
+        }
+
+        // Add click handler to open settings
+        statusBar.onclick = () => {
+            document.dispatchEvent(new CustomEvent(EVENTS.OPEN_SETTINGS));
+        };
+    }
 
 }
