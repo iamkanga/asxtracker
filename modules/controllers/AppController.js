@@ -572,6 +572,14 @@ export class AppController {
                     if (prefs.alertEmailRecipients !== undefined) {
                         AppState.preferences.alertEmailRecipients = prefs.alertEmailRecipients || '';
                     }
+                    if (prefs.excludePortfolio !== undefined) {
+                        AppState.preferences.excludePortfolio = prefs.excludePortfolio;
+                    }
+                    if (prefs.dailyEmail !== undefined) {
+                        AppState.preferences.dailyEmail = prefs.dailyEmail === true;
+                        localStorage.setItem(STORAGE_KEYS.DAILY_EMAIL, AppState.preferences.dailyEmail);
+                        needsRender = true;
+                    }
 
                     // 1. Sync Watchlist ID (if different and valid)
                     if (prefs.lastWatchlistId && prefs.lastWatchlistId !== AppState.watchlist.id) {

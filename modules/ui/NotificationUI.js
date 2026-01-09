@@ -579,8 +579,8 @@ export class NotificationUI {
             { id: 'custom', title: 'Custom Movers', subtitle: '<span style="color: var(--color-accent);">Watchlist prices and Market filters</span>', items: sortedLocal, type: 'custom', color: 'neutral' },
             { id: 'high', title: '52 Week High', subtitle: hiloStrHigh, items: finalHiloHigh, type: 'hilo', color: 'green' },
             { id: 'low', title: '52 Week Low', subtitle: hiloStrLow, items: finalHiloLow, type: 'hilo', color: 'red' },
-            { id: 'gainers', title: 'Market Gainers', subtitle: upStr, items: finalMoversUp, type: 'movers', color: 'green' },
-            { id: 'losers', title: 'Market Losers', subtitle: downStr, items: finalMoversDown, type: 'movers', color: 'red' }
+            { id: 'gainers', title: 'Market Gainers', subtitle: upStr, items: finalMoversUp, type: 'gainers', color: 'green' },
+            { id: 'losers', title: 'Market Losers', subtitle: downStr, items: finalMoversDown, type: 'losers', color: 'red' }
         ];
 
         // --- DEBUG LOGGING: RENDER COUNT ---
@@ -818,14 +818,18 @@ export class NotificationUI {
         // ... (middle of _renderCard) ...
 
         // --- UI CUSTOMIZATION: EXPLAINER TEXT ---
-        // --- UI CUSTOMIZATION: EXPLAINER TEXT ---
         // Helper to Generate Text for a Single Logic Item
         // RETURNS: { text: string, range: string | null }
-        const getExplainer = (alertItem, alertType) => {
+        const getExplainer = (alertItem, alertType, enrichedPct = null) => {
             const intent = alertItem.intent || '';
             const type = alertItem.type || '';
 
             const isHiLo = intent === 'hilo' || intent.includes('hilo') || alertType.includes('hilo');
+
+            // Fix: Explicitly define isGainers / isLosers derived from type/intent
+            const isGainers = alertType === 'gainers' || intent === 'gainers';
+            const isLosers = alertType === 'losers' || intent === 'losers';
+
             const isMover = intent === 'mover' || intent === 'up' || intent === 'down' ||
                 alertType === 'gainers' || alertType === 'losers' || alertType === 'up' || alertType === 'down' || alertType === 'movers';
 
@@ -870,9 +874,31 @@ export class NotificationUI {
                 };
             }
 
-            // 3. GLOBAL GAINERS / LOSERS (Priority 3: Threshold Rules)
+            // 3. GLOBAL GAINERS / LOSERS (Modified Logic)
+            if (isGainers || isLosers) {
+                const rule = isGainers ? (rules.up || {}) : (rules.down || {});
+                const dirArrow = isGainers ? '▲' : '▼';
+
+                const tPct = rule.percentThreshold || 0;
+                const tDol = rule.dollarThreshold || 0;
+
+                let parts = [];
+                if (tPct > 0) parts.push(`${tPct}%`);
+                if (tDol > 0) parts.push(`$${tDol}`);
+
+                let text = '';
+                if (parts.length > 0) {
+                    text = `${dirArrow} ${parts.join(' or ')}`;
+                } else {
+                    text = `${dirArrow} 0%`; // Default if no rule set
+                }
+
+                return { text: text, range: null };
+            }
+
+            // 4. GENERIC / FALLBACK MOVERS
             if (isMover) {
-                const isUp = type === 'up' || intent === 'up' || alertType === 'gainers' || alertType === 'up';
+                const isUp = type === 'up' || intent === 'up';
                 const rule = isUp ? (rules.up || {}) : (rules.down || {});
                 const dirArrow = isUp ? '▲' : '▼';
 
@@ -893,61 +919,13 @@ export class NotificationUI {
                 return { text: txt, range: null };
             }
 
-            // 4. FALLBACK (Raw Percentage) - SILENCED IF NEGLIGIBLE
+            // 5. GENERIC FALLBACK (Raw Percentage)
             const pct = Number(alertItem.pct || alertItem.changeInPercent || 0);
             if (Math.abs(pct) < 0.01 && !intent) return { text: null, range: null }; // Silence 0% heartbeats
 
             const dirArrow = pct >= 0 ? '▲' : '▼';
             return { text: `Price ${dirArrow} ${Math.abs(pct).toFixed(2)}%`, range: null };
         };
-
-        // RENDERING LOGIC: SINGLE VS STACKED
-        // For Stacked (Consolidated), we will just stack the text in the left cell.
-        // Range support for consolidated items is tricky, we'll assume primary single item logic for now.
-
-        let explainerText = '';
-        let explainerRange = ''; // Only for primary single item if applicable
-
-        // Check for Consolidated Matches (Custom Type Only)
-        if (type === 'custom' && item.matches && item.matches.length > 1) {
-            // Sort: Hilo First, then Target/Mover
-            // 52W High/Low should be at top of stack.
-            const sortedMatches = [...item.matches].sort((a, b) => {
-                const isHiloA = a.intent && a.intent.includes('hilo');
-                const isHiloB = b.intent && b.intent.includes('hilo');
-                if (isHiloA && !isHiloB) return -1;
-                if (!isHiloA && isHiloB) return 1;
-                return 0;
-            });
-
-            // EXTRACT RANGE: Find the first Hilo match and pull its range for the right side
-            const hiloMatch = sortedMatches.find(m => m.intent && m.intent.includes('hilo'));
-            if (hiloMatch) {
-                const obj = getExplainer(hiloMatch, type);
-                explainerRange = obj.range || ''; // Set the Right Aligned Range
-            }
-
-            // Generate Lines (Text Only). Filter out null/empty results.
-            const labels = sortedMatches
-                .map(m => getExplainer(m, type).text)
-                .filter(txt => txt && txt.trim().length > 0) // Explicit filter for valid strings
-                .map(txt => `<div style="line-height: 1.2;">${txt}</div>`);
-
-            explainerText = labels.join('');
-
-        } else {
-            // Single Item
-            if (item.reason) {
-                explainerText = item.reason;
-            } else {
-                const obj = getExplainer(item, type);
-                explainerText = obj.text;
-                explainerRange = obj.range || '';
-            }
-
-            // USER FEEDBACK FIX: If "Alert Triggered" generic text, try to show metrics
-            // [Moved Explainer Generation to after JIT Enrichment]
-        }
 
         // --- ROBUST KEY MAPPING & ENRICHMENT ---
         let code = String(item.code || item.shareName || item.symbol || item.s || item.shareCode || '???').toUpperCase();
@@ -1032,6 +1010,51 @@ export class NotificationUI {
                     rawPrice = currentPrice;
                     price = formatCurrency(rawPrice);
                 }
+            }
+        }
+
+        // RENDERING LOGIC: SINGLE VS STACKED
+        // For Stacked (Consolidated), we will just stack the text in the left cell.
+        // Range support for consolidated items is tricky, we'll assume primary single item logic for now.
+
+        let explainerText = '';
+        let explainerRange = ''; // Only for primary single item if applicable
+
+        // Check for Consolidated Matches (Custom Type Only)
+        if (type === 'custom' && item.matches && item.matches.length > 1) {
+            // Sort: Hilo First, then Target/Mover
+            // 52W High/Low should be at top of stack.
+            const sortedMatches = [...item.matches].sort((a, b) => {
+                const isHiloA = a.intent && a.intent.includes('hilo');
+                const isHiloB = b.intent && b.intent.includes('hilo');
+                if (isHiloA && !isHiloB) return -1;
+                if (!isHiloA && isHiloB) return 1;
+                return 0;
+            });
+
+            // EXTRACT RANGE: Find the first Hilo match and pull its range for the right side
+            const hiloMatch = sortedMatches.find(m => m.intent && m.intent.includes('hilo'));
+            if (hiloMatch) {
+                const obj = getExplainer(hiloMatch, type, changePct);
+                explainerRange = obj.range || ''; // Set the Right Aligned Range
+            }
+
+            // Generate Lines (Text Only). Filter out null/empty results.
+            const labels = sortedMatches
+                .map(m => getExplainer(m, type, changePct).text)
+                .filter(txt => txt && txt.trim().length > 0) // Explicit filter for valid strings
+                .map(txt => `<div style="line-height: 1.2;">${txt}</div>`);
+
+            explainerText = labels.join('');
+
+        } else {
+            // Single Item
+            if (item.reason) {
+                explainerText = item.reason;
+            } else {
+                const obj = getExplainer(item, type, changePct);
+                explainerText = obj.text;
+                explainerRange = obj.range || '';
             }
         }
 
@@ -1156,6 +1179,11 @@ export class NotificationUI {
     static _enrichAndFilter(list, rules, direction) {
         if (!list || list.length === 0) return [];
 
+        // Check Override Preference
+        const excludePortfolio = AppState.preferences?.excludePortfolio ?? true; // Default True (Override ON)
+        // FIX: Use shareName as primary key (UserStore standard), fall back to code.
+        const myCodes = excludePortfolio ? new Set((AppState.data?.shares || []).map(s => s.shareName || s.code)) : null;
+
         const enrichedList = list.map(item => {
             const clone = { ...item };
             const code = clone.code || clone.shareName || clone.symbol;
@@ -1165,8 +1193,8 @@ export class NotificationUI {
                 const live = AppState.livePrices.get(code);
 
                 // Prioritize 'dayChangePercent' (Standard) or 'pct'
-                const lPct = Number(live.dayChangePercent || live.changeInPercent || live.pct || 0);
-                const lDol = Number(live.change || live.c || 0);
+                const lPct = Number(live.dayChangePercent ?? live.changeInPercent ?? live.pctChange ?? live.pct ?? 0);
+                const lDol = Number(live.change ?? live.c ?? live.dayChange ?? 0);
 
                 if (Math.abs(lPct) > 0 || Math.abs(lDol) > 0) {
                     clone.pct = lPct;
@@ -1191,9 +1219,13 @@ export class NotificationUI {
             if (direction === 'down' && pct >= 0) return false;
 
             // 3. Threshold Check
-            // If NO thresholds set, allow all in that direction (unless User implies "None" means Off, but typical UI implies "Show All")
-            // However, user complaint suggests thresholds ARE set but ignored.
+            // EXCEPTION: Targets and 52-Week Hi/Lo hits are explicit events. They bypass generic movement thresholds.
+            // EXCEPTION: If Override is ON (shouldBypass), we ignore the numeric threshold checks.
+            const code = item.code || item.shareName || item.symbol;
             if (limitPct === 0 && limitDol === 0) return true; // Show all if no limits
+
+            // OVERRIDE LOGIC: Bypass if in Watchlist
+            if (myCodes && myCodes.has(code)) return true;
 
             const absPct = Math.abs(pct);
             const absDol = Math.abs(dol);
