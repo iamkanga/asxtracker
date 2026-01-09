@@ -41,19 +41,17 @@ export class SettingsUI {
 
         modal.innerHTML = `
             <div class="${CSS_CLASSES.MODAL_OVERLAY}"></div>
-            <div class="${CSS_CLASSES.MODAL_CONTENT} ${CSS_CLASSES.MODAL_CONTENT_MEDIUM} scrollable-modal">
-                
-                <div class="${CSS_CLASSES.MODAL_HEADER}">
-                    <h2 class="${CSS_CLASSES.MODAL_TITLE}">Global Price Alerts</h2>
-                    <div style="display: flex; align-items: center; gap: 1rem;">
-                        <!-- Save Button Removed (Auto-Save) -->
-                        <button class="${CSS_CLASSES.MODAL_CLOSE_BTN}" title="Close">
-                            <i class="fas ${UI_ICONS.CLOSE}"></i>
-                        </button>
-                    </div>
+            <div class="${CSS_CLASSES.MODAL_CONTENT} settings-modal-body" style="display: flex; flex-direction: column; max-height: 90vh;">
+                <!-- Header: Standard Mobile Modal Type -->
+                <div class="${CSS_CLASSES.MODAL_HEADER}" style="display: flex; align-items: center; justify-content: space-between; padding: 15px; border-bottom: 1px solid var(--border-color); flex-shrink: 0;">
+                    <span class="${CSS_CLASSES.MODAL_TITLE}" style="font-size: 1.45rem; font-weight: 700;">Notification Settings</span>
+                    <button class="${CSS_CLASSES.MODAL_CLOSE_BTN}" style="background: none; border: none; color: var(--text-muted); font-size: 1.2rem; cursor: pointer; padding: 4px;">
+                        <i class="fas fa-times"></i>
+                    </button>
                 </div>
-
-                <div class="${CSS_CLASSES.MODAL_BODY} ${CSS_CLASSES.SCROLLABLE_BODY}" style="padding-top: 0.5rem;"></div>
+                
+                <!-- Scrollable Content: Explicit Overflow -->
+                <div class="scrollable-body" style="flex: 1; min-height: 0; padding-bottom: 20px; overflow-y: auto; overflow-x: hidden;"></div>
                 
                 <style>
                     /* Global Pill Architecture (Flush Design) */
@@ -68,7 +66,7 @@ export class SettingsUI {
                         box-sizing: border-box;
                     }
                     
-                    .pill-segment, .bulk-btn, .master-pill-segment, .pill-segment-movers, .pill-segment-hilo, .pill-segment-badge, .pill-segment-email, .pill-segment-override, .accordion-control-segment, .pill-segment-personal {
+                    .pill-segment, .bulk-btn, .master-pill-segment, .pill-segment-movers, .pill-segment-hilo, .pill-segment-badge, .pill-segment-email, .pill-segment-override, .accordion-control-segment, .pill-segment-personal, .pill-segment-badge-scope {
                         flex: 1;
                         height: 100%;
                         display: flex;
@@ -96,7 +94,8 @@ export class SettingsUI {
                     .pill-segment-email.active,
                     .pill-segment-override.active,
                     .accordion-control-segment.active,
-                    .pill-segment-personal.active {
+                    .pill-segment-personal.active,
+                    .pill-segment-badge-scope.active {
                         background: var(--color-accent) !important;
                         color: white !important;
                     }
@@ -108,8 +107,13 @@ export class SettingsUI {
                     .pill-segment-override:first-child,
                     .master-pill-segment:first-child,
                     .accordion-control-segment:first-child,
-                    .pill-segment-personal:first-child {
+                    .pill-segment-personal:first-child,
+                    .pill-segment-badge-scope:first-child {
                         border-right: 1px solid var(--border-color);
+                    }
+
+                    .master-pill-segment, .accordion-control-segment {
+                        font-size: 0.75rem;
                     }
 
                     /* Custom Square Radio-style Selectors */
@@ -159,6 +163,38 @@ export class SettingsUI {
                         transform: scale(1);
                     }
                     
+                    .summary-status-indicator.kangaroo.large {
+                        width: 24px;
+                        height: 24px;
+                        opacity: 0.2;
+                        margin-top: auto;
+                        margin-bottom: 2px;
+                    }
+                    .summary-status-indicator.kangaroo.large.status-on {
+                        opacity: 1;
+                    }
+                    .summary-status-indicator.kangaroo.large.always-on {
+                        opacity: 1;
+                        filter: drop-shadow(0 0 2px var(--color-accent));
+                    }
+
+                    .summary-tile.thin {
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        justify-content: space-between;
+                        padding: 8px 4px;
+                        min-height: 60px;
+                    }
+
+                    .summary-tile-header {
+                        width: 100%;
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        gap: 2px;
+                    }
+
                     /* Clickable Industry Row */
                     .clickable-industry-row {
                         cursor: pointer;
@@ -184,7 +220,7 @@ export class SettingsUI {
     }
 
     static _populateForm(modal, prefs) {
-        const container = modal.querySelector(`.${CSS_CLASSES.MODAL_BODY}`);
+        const container = modal.querySelector('.scrollable-body');
 
         // 1. Build Structure Once (Tracked via Flag)
         if (!modal.dataset.rendered) {
@@ -192,56 +228,138 @@ export class SettingsUI {
             modal.dataset.rendered = 'true';
         }
 
-        // 2. Update Values (Preserving Focus)
-        this._updateValues(modal, prefs);
+        // 2. Update Values
+        this._updateValuesOnly(modal, prefs);
+
+        // 3. Update Summary Board (Non-invasive)
+        this._updateSummaryBoard(modal);
     }
 
     static _buildStructure(container, modal) {
         // Change Modal Title to "Notification Settings"
         const modalTitle = modal.querySelector(`.${CSS_CLASSES.MODAL_TITLE}`);
-        if (modalTitle) modalTitle.innerHTML = 'Notification Settings';
+        if (modalTitle) {
+            modalTitle.innerHTML = 'Notification Settings';
+
+            // Add explainer underneath
+            const titleGroup = document.createElement('div');
+            titleGroup.style.display = 'flex';
+            titleGroup.style.flexDirection = 'column';
+            titleGroup.style.gap = '4px';
+
+            modalTitle.parentElement.insertBefore(titleGroup, modalTitle);
+            titleGroup.appendChild(modalTitle);
+
+            const explainer = document.createElement('div');
+            explainer.style.cssText = 'font-size: 0.73rem; color: var(--text-muted); opacity: 0.8; font-style: italic; margin-top: 4px;';
+            explainer.textContent = 'Set thresholds and sectors for the entire ASX';
+            titleGroup.appendChild(explainer);
+        }
 
         const summaryCard = document.createElement('div');
         summaryCard.className = CSS_CLASSES.DETAIL_CARD;
         summaryCard.style.border = '1px solid var(--border-color)'; // Uniform thin border
         summaryCard.innerHTML = `
-            <div class="${CSS_CLASSES.DETAIL_CARD_HEADER}" style="justify-content: flex-start; border-bottom: none !important; padding-left: 20px; padding-right: 20px;">
-                <h3 class="${CSS_CLASSES.DETAIL_LABEL}" style="text-decoration: none !important; border-bottom: none !important; color: white !important;">
-                    <i class="fas fa-cogs" style="color: var(--color-accent);"></i> Alert Settings
+            <div class="${CSS_CLASSES.DETAIL_CARD_HEADER}" style="justify-content: flex-start; border-bottom: none !important;">
+                <h3 class="${CSS_CLASSES.DETAIL_LABEL}" style="text-decoration: none !important; border-bottom: none !important; color: white !important; display: flex; align-items: center; font-size: 1.1rem !important;">
+                    <i class="fas fa-filter" style="color: var(--color-accent); margin-right: 8px; font-size: 0.9em;"></i> Filter Summary
                 </h3>
             </div>
             
-            <div class="settings-summary-grid" style="display: flex; justify-content: center; gap: 15px; padding-top: 5px;">
-                <div class="${CSS_CLASSES.DETAIL_ROW}" style="flex-direction: column; align-items: center; gap: 0;">
-                    <span class="${CSS_CLASSES.DETAIL_LABEL} ${CSS_CLASSES.TEXT_XXS}" style="font-size:0.65rem;">Volatility</span>
-                    <span class="${CSS_CLASSES.DETAIL_VALUE}" id="summary-global" style="font-size:0.85rem;">None</span>
+            <div class="${CSS_CLASSES.SUMMARY_BOARD}">
+                <!-- Monitoring Row: Compact Dots -->
+                <div class="summary-section">
+                    <div class="summary-section-title" style="color: white !important; font-size: 0.82rem;"><i class="fas fa-satellite-dish" style="color: var(--color-accent);"></i> Alert Monitors</div>
+                    <div class="summary-grid-compact">
+                        <!-- 1. Scope (Custom / All) -->
+                        <div class="${CSS_CLASSES.SUMMARY_TILE} thin">
+                            <div class="${CSS_CLASSES.SUMMARY_TILE_HEADER}">
+                                <span class="${CSS_CLASSES.SUMMARY_TILE_LABEL}">Custom / All</span>
+                                <span id="val-scope" style="font-size: 0.65rem; color: var(--color-accent); font-weight: 800; margin-top: 2px;">Custom</span>
+                            </div>
+                            <div class="${CSS_CLASSES.SUMMARY_STATUS_INDICATOR} kangaroo large always-on"></div>
+                        </div>
+                        <!-- 2. Alert Icon -->
+                        <div class="${CSS_CLASSES.SUMMARY_TILE} thin">
+                            <div class="${CSS_CLASSES.SUMMARY_TILE_HEADER}">
+                                <span class="${CSS_CLASSES.SUMMARY_TILE_LABEL}">Alert Icon</span>
+                            </div>
+                            <div id="ind-icon" class="${CSS_CLASSES.SUMMARY_STATUS_INDICATOR} kangaroo large"></div>
+                        </div>
+                        <!-- 3. 52w -->
+                        <div class="${CSS_CLASSES.SUMMARY_TILE} thin">
+                            <div class="${CSS_CLASSES.SUMMARY_TILE_HEADER}">
+                                <span class="${CSS_CLASSES.SUMMARY_TILE_LABEL}">52w</span>
+                            </div>
+                            <div id="ind-hilo" class="${CSS_CLASSES.SUMMARY_STATUS_INDICATOR} kangaroo large"></div>
+                        </div>
+                        <!-- 4. Movers -->
+                        <div class="${CSS_CLASSES.SUMMARY_TILE} thin">
+                            <div class="${CSS_CLASSES.SUMMARY_TILE_HEADER}">
+                                <span class="${CSS_CLASSES.SUMMARY_TILE_LABEL}">Movers</span>
+                            </div>
+                            <div id="ind-movers" class="${CSS_CLASSES.SUMMARY_STATUS_INDICATOR} kangaroo large"></div>
+                        </div>
+                        <!-- 5. Personal -->
+                        <div class="${CSS_CLASSES.SUMMARY_TILE} thin">
+                            <div class="${CSS_CLASSES.SUMMARY_TILE_HEADER}">
+                                <span class="${CSS_CLASSES.SUMMARY_TILE_LABEL}">Personal</span>
+                            </div>
+                            <div id="ind-personal" class="${CSS_CLASSES.SUMMARY_STATUS_INDICATOR} kangaroo large"></div>
+                        </div>
+                        <!-- 6. Email -->
+                        <div class="${CSS_CLASSES.SUMMARY_TILE} thin">
+                            <div class="${CSS_CLASSES.SUMMARY_TILE_HEADER}">
+                                <span class="${CSS_CLASSES.SUMMARY_TILE_LABEL}">Email</span>
+                            </div>
+                            <div id="ind-email" class="${CSS_CLASSES.SUMMARY_STATUS_INDICATOR} kangaroo large"></div>
+                        </div>
+                    </div>
                 </div>
-                <div class="${CSS_CLASSES.DETAIL_ROW}" style="flex-direction: column; align-items: center; gap: 0;">
-                    <span class="${CSS_CLASSES.DETAIL_LABEL} ${CSS_CLASSES.TEXT_XXS}" style="font-size:0.65rem;">52W Limit</span>
-                    <span class="${CSS_CLASSES.DETAIL_VALUE}" id="summary-hilo" style="font-size:0.85rem;">None</span>
-                </div>
-                <div class="${CSS_CLASSES.DETAIL_ROW}" style="flex-direction: column; align-items: center; gap: 0;">
-                    <span class="${CSS_CLASSES.DETAIL_LABEL} ${CSS_CLASSES.TEXT_XXS}" style="font-size:0.65rem;">Increase</span>
-                    <span class="${CSS_CLASSES.DETAIL_VALUE} ${CSS_CLASSES.POSITIVE}" id="summary-up" style="font-size:0.85rem;">None</span>
-                </div>
-                <div class="${CSS_CLASSES.DETAIL_ROW}" style="flex-direction: column; align-items: center; gap: 0;">
-                    <span class="${CSS_CLASSES.DETAIL_LABEL} ${CSS_CLASSES.TEXT_XXS}" style="font-size:0.65rem;">Decrease</span>
-                    <span class="${CSS_CLASSES.DETAIL_VALUE} ${CSS_CLASSES.NEGATIVE}" id="summary-down" style="font-size:0.85rem;">None</span>
-                </div>
-            </div>
 
-            <div class="settings-summary-grid" style="display: flex; justify-content: center; gap: 20px; padding-top: 8px; margin-top: 0;">
-                <div class="${CSS_CLASSES.DETAIL_ROW}" style="flex-direction: column; align-items: center; gap: 0;">
-                    <span class="${CSS_CLASSES.DETAIL_LABEL} ${CSS_CLASSES.TEXT_XXS}" style="font-size:0.65rem;">Sectors Active</span>
-                    <span class="${CSS_CLASSES.DETAIL_VALUE}" id="summary-sectors-active" style="font-size:0.85rem;">0</span>
-                </div>
-                <div class="${CSS_CLASSES.DETAIL_ROW}" style="flex-direction: column; align-items: center; gap: 0;">
-                    <span class="${CSS_CLASSES.DETAIL_LABEL} ${CSS_CLASSES.TEXT_XXS}" style="font-size:0.65rem;">Sectors Hidden</span>
-                    <span class="${CSS_CLASSES.DETAIL_VALUE}" id="summary-sectors-hidden" style="font-size:0.85rem;">0</span>
-                </div>
-                <div class="${CSS_CLASSES.DETAIL_ROW}" style="flex-direction: column; align-items: center; gap: 0;">
-                    <span class="${CSS_CLASSES.DETAIL_LABEL} ${CSS_CLASSES.TEXT_XXS}" style="font-size:0.65rem;">Sectors Total</span>
-                    <span class="${CSS_CLASSES.DETAIL_VALUE}" id="summary-sectors-total" style="font-size:0.85rem;">0</span>
+                <!-- Unified Parameter Filters Row -->
+                <div class="summary-section">
+                    <div class="summary-section-title" style="color: white !important; font-size: 0.82rem;"><i class="fas fa-sliders-h" style="color: var(--color-accent);"></i> Parameter Filters</div>
+                    <div class="summary-grid-paired">
+                        <!-- Movers & 52w Limit -->
+                        <div class="${CSS_CLASSES.SUMMARY_TILE}" style="align-items: center;">
+                            <div class="${CSS_CLASSES.SUMMARY_TILE_HEADER}" style="justify-content: center;"><span class="${CSS_CLASSES.SUMMARY_TILE_LABEL}">Movers Limit $</span></div>
+                            <div class="${CSS_CLASSES.SUMMARY_TILE_BODY}" style="justify-content: center;"><span class="${CSS_CLASSES.SUMMARY_TILE_VALUE}" id="sum-val-vol">None</span></div>
+                        </div>
+                        <div class="${CSS_CLASSES.SUMMARY_TILE}" style="align-items: center;">
+                            <div class="${CSS_CLASSES.SUMMARY_TILE_HEADER}" style="justify-content: center;"><span class="${CSS_CLASSES.SUMMARY_TILE_LABEL}">52w Limit $</span></div>
+                            <div class="${CSS_CLASSES.SUMMARY_TILE_BODY}" style="justify-content: center;"><span class="${CSS_CLASSES.SUMMARY_TILE_VALUE}" id="sum-val-hilo">None</span></div>
+                        </div>
+                    </div>
+                    <div class="summary-grid-paired" style="margin-top: 8px;">
+                        <!-- Up & Down Alert Thresholds -->
+                        <div class="${CSS_CLASSES.SUMMARY_TILE}" style="align-items: center;">
+                            <div class="${CSS_CLASSES.SUMMARY_TILE_HEADER}" style="justify-content: center;"><span class="${CSS_CLASSES.SUMMARY_TILE_LABEL}">Increase</span></div>
+                            <div class="${CSS_CLASSES.SUMMARY_TILE_BODY}" style="justify-content: center;"><span class="${CSS_CLASSES.SUMMARY_TILE_VALUE}" id="sum-val-up">None</span></div>
+                        </div>
+                        <div class="${CSS_CLASSES.SUMMARY_TILE}" style="align-items: center;">
+                            <div class="${CSS_CLASSES.SUMMARY_TILE_HEADER}" style="justify-content: center;"><span class="${CSS_CLASSES.SUMMARY_TILE_LABEL}">Decrease</span></div>
+                            <div class="${CSS_CLASSES.SUMMARY_TILE_BODY}" style="justify-content: center;"><span class="${CSS_CLASSES.SUMMARY_TILE_VALUE}" id="sum-val-down">None</span></div>
+                        </div>
+                    </div>
+                    <div class="summary-grid-paired" style="margin-top: 8px; grid-template-columns: 1fr 1fr;">
+                        <!-- Sectors & Override -->
+                        <div class="${CSS_CLASSES.SUMMARY_TILE}" style="align-items: center;">
+                            <div class="${CSS_CLASSES.SUMMARY_TILE_HEADER}" style="justify-content: center;"><span class="${CSS_CLASSES.SUMMARY_TILE_LABEL}">Industry Sectors</span></div>
+                            <div class="${CSS_CLASSES.SUMMARY_TILE_BODY}" style="justify-content: center; flex-direction: column;">
+                                <span class="${CSS_CLASSES.SUMMARY_TILE_VALUE}" id="summary-sectors-text" style="font-size: 0.8rem;">Loading...</span>
+                            </div>
+                        </div>
+                        <div class="${CSS_CLASSES.SUMMARY_TILE}" style="align-items: center;">
+                            <div class="${CSS_CLASSES.SUMMARY_TILE_HEADER}" style="justify-content: center; width: 100%;">
+                                <span class="${CSS_CLASSES.SUMMARY_TILE_LABEL}">Watchlist Override</span>
+                            </div>
+                            <div class="${CSS_CLASSES.SUMMARY_TILE_BODY}" style="justify-content: center; align-items: center; gap: 8px;">
+                                <span class="${CSS_CLASSES.SUMMARY_TILE_VALUE}" id="${IDS.SUMMARY_PORTFOLIO_OVERRIDE}">Off</span>
+                                <div id="ind-override" class="${CSS_CLASSES.SUMMARY_STATUS_INDICATOR} kangaroo large" style="margin-top: 0; margin-bottom: 0;"></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         `;
@@ -254,41 +372,25 @@ export class SettingsUI {
         notifCard.style.border = '1px solid var(--border-color)'; // Uniform thin border
         notifCard.innerHTML = `
             <div class="${CSS_CLASSES.DETAIL_CARD_HEADER}" style="border-bottom: none;">
-                <h3 class="${CSS_CLASSES.DETAIL_LABEL}" style="text-decoration: none; border-bottom: none; color: white;">
-                    <i class="fas fa-bell" style="color: var(--color-accent);"></i> Alerts
+                <h3 class="${CSS_CLASSES.DETAIL_LABEL}" style="text-decoration: none; border-bottom: none; color: white; font-size: 1.1rem;">
+                    <i id="btn-open-notifications-icon" class="fas ${UI_ICONS.ALERTS}" style="color: var(--color-accent); cursor: pointer;"></i> Alerts
                 </h3>
             </div>
 
+            <!-- 1. Custom Movers (Personal Alerts) -->
+            <!-- 1. Badge Count Scope (Moved to Top) -->
             <div class="${CSS_CLASSES.DETAIL_ROW}" style="justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <span class="${CSS_CLASSES.DETAIL_LABEL}" style="color: white; font-weight: 700;">Volatility</span>
-                <div class="pill-container large-pill movers-pill-selector" style="width: 100px;">
-                    <span class="pill-segment-movers" data-value="true">On</span>
-                    <span class="pill-segment-movers" data-value="false">Off</span>
+                <span class="${CSS_CLASSES.DETAIL_LABEL}" style="color: white; font-weight: 700; font-size: 0.82rem;">Badge Count</span>
+                <div class="pill-container large-pill badge-scope-selector" style="width: 100px;">
+                    <span class="pill-segment-badge-scope" data-value="custom" style="font-size: 0.65rem;">Custom</span>
+                    <span class="pill-segment-badge-scope" data-value="all" style="font-size: 0.65rem;">All</span>
                 </div>
-                <input type="checkbox" id="toggle-moversEnabled" class="hidden">
+                <input type="hidden" id="${IDS.PREF_BADGE_SCOPE}" value="custom">
             </div>
 
+            <!-- 2. Home Screen Alert Icon (Icon Visibility) -->
             <div class="${CSS_CLASSES.DETAIL_ROW}" style="justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <span class="${CSS_CLASSES.DETAIL_LABEL}" style="color: white; font-weight: 700;">52 Week</span>
-                <div class="pill-container large-pill hilo-pill-selector" style="width: 100px;">
-                    <span class="pill-segment-hilo" data-value="true">On</span>
-                    <span class="pill-segment-hilo" data-value="false">Off</span>
-                </div>
-                <input type="checkbox" id="toggle-hiloEnabled" class="hidden">
-            </div>
-
-            <!-- Personal Alerts (New) -->
-            <div class="${CSS_CLASSES.DETAIL_ROW}" style="justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <span class="${CSS_CLASSES.DETAIL_LABEL}" style="color: white; font-weight: 700;">Target</span>
-                 <div class="pill-container large-pill personal-pill-selector" style="width: 100px;">
-                      <span class="pill-segment-personal" data-value="true">On</span>
-                      <span class="pill-segment-personal" data-value="false">Off</span>
-                  </div>
-                  <input type="checkbox" id="toggle-personalEnabled" class="hidden">
-            </div>
-
-            <div class="${CSS_CLASSES.DETAIL_ROW}" style="justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <span class="${CSS_CLASSES.DETAIL_LABEL}" style="color: white; font-weight: 700;">App Badges</span>
+                <span class="${CSS_CLASSES.DETAIL_LABEL}" style="color: white; font-weight: 700; font-size: 0.82rem;">Home Screen Alert Icon</span>
                 <div class="pill-container large-pill pill-selector-badges" style="width: 100px;">
                     <span class="pill-segment-badge" data-value="true">On</span>
                     <span class="pill-segment-badge" data-value="false">Off</span>
@@ -296,8 +398,48 @@ export class SettingsUI {
                 <input type="checkbox" id="toggle-pref-showBadges" class="hidden">
             </div>
 
+            <!-- 3. 52 week Movers -->
+            <div class="${CSS_CLASSES.DETAIL_ROW}" style="justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <div style="display: flex; flex-direction: column; gap: 0;">
+                    <span class="${CSS_CLASSES.DETAIL_LABEL}" style="color: white; font-weight: 700; font-size: 0.82rem;">52 week Movers</span>
+                    <div style="font-size: 0.65rem; opacity: 0.5; color: var(--text-muted); margin-bottom: 2px; margin-top: -1px;">Market filters 52w high low</div>
+                </div>
+                <div class="pill-container large-pill hilo-pill-selector" style="width: 100px;">
+                    <span class="pill-segment-hilo" data-value="true">On</span>
+                    <span class="pill-segment-hilo" data-value="false">Off</span>
+                </div>
+                <input type="checkbox" id="toggle-hiloEnabled" class="hidden">
+            </div>
+
+            <!-- 4. Market Movers (Volatility) -->
+            <div class="${CSS_CLASSES.DETAIL_ROW}" style="justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <div style="display: flex; flex-direction: column; gap: 0;">
+                    <span class="${CSS_CLASSES.DETAIL_LABEL}" style="color: white; font-weight: 700; font-size: 0.82rem;">Market Movers</span>
+                    <div style="font-size: 0.65rem; opacity: 0.5; color: var(--text-muted); margin-bottom: 2px; margin-top: -1px;">Market filters gainers and losers</div>
+                </div>
+                <div class="pill-container large-pill movers-pill-selector" style="width: 100px;">
+                    <span class="pill-segment-movers" data-value="true">On</span>
+                    <span class="pill-segment-movers" data-value="false">Off</span>
+                </div>
+                <input type="checkbox" id="toggle-moversEnabled" class="hidden">
+            </div>
+
+            <!-- 5. Personal Alerts (Targets) -->
+            <div class="${CSS_CLASSES.DETAIL_ROW}" style="justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <div style="display: flex; flex-direction: column; gap: 0;">
+                    <span class="${CSS_CLASSES.DETAIL_LABEL}" style="color: white; font-weight: 700; font-size: 0.82rem;">Personal Alerts</span>
+                    <div style="font-size: 0.65rem; opacity: 0.5; color: var(--text-muted); margin-bottom: 2px; margin-top: -1px;">Watchlist and individual targets</div>
+                </div>
+                <div class="pill-container large-pill personal-pill-selector" style="width: 100px;">
+                    <span class="pill-segment-personal" data-value="true">On</span>
+                    <span class="pill-segment-personal" data-value="false">Off</span>
+                </div>
+                <input type="checkbox" id="toggle-personalEnabled" class="hidden">
+            </div>
+
+            <!-- 6. Daily Email -->
             <div class="${CSS_CLASSES.DETAIL_ROW}" style="justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                 <span class="${CSS_CLASSES.DETAIL_LABEL}" style="color: white; font-weight: 700;">Daily Email</span>
+                 <span class="${CSS_CLASSES.DETAIL_LABEL}" style="color: white; font-weight: 700; font-size: 0.82rem;">Daily Email</span>
                  <div class="pill-container large-pill pill-selector-email" style="width: 100px;">
                     <span class="pill-segment-email" data-value="true">On</span>
                     <span class="pill-segment-email" data-value="false">Off</span>
@@ -307,7 +449,7 @@ export class SettingsUI {
 
             <div class="${CSS_CLASSES.DETAIL_ROW}" style="padding-top: 10px;">
                 <div class="input-wrapper" style="width: 100%;">
-                    <div class="input-icon"><i class="fas fa-envelope"></i></div>
+                    <div class="input-icon"><i class="fas fa-envelope" style="color: var(--color-accent);"></i></div>
                     <input type="email" id="pref-emailAddr" class="settings-input-dark standard-input" placeholder="Email Address">
                 </div>
             </div>
@@ -320,109 +462,155 @@ export class SettingsUI {
         combinedCard.className = CSS_CLASSES.DETAIL_CARD;
         combinedCard.style.border = '1px solid var(--border-color)'; // Uniform thin border
         combinedCard.innerHTML = `
-            <div class="${CSS_CLASSES.DETAIL_CARD_HEADER}" style="flex-direction: column; align-items: flex-start; gap: 1px; border-bottom: none; padding-bottom: 0;">
-                <h3 class="${CSS_CLASSES.DETAIL_LABEL}" style="text-decoration: none !important; border-bottom: none !important; color: white !important; display: flex !important; align-items: center !important; gap: 8px !important; margin-bottom: 0 !important; text-transform: none !important;">
+            <div class="${CSS_CLASSES.DETAIL_CARD_HEADER}" style="flex-direction: column; align-items: flex-start; gap: 0; border-bottom: none; padding-bottom: 0;">
+                <h3 class="${CSS_CLASSES.DETAIL_LABEL}" style="text-decoration: none !important; border-bottom: none !important; color: white !important; display: flex !important; align-items: center !important; gap: 8px !important; margin-bottom: 0 !important; text-transform: none !important; line-height: 1.0 !important; font-size: 1.1rem !important;">
                     <i class="fas fa-sliders-h" style="color: var(--color-accent); width: 18px; text-align: center;"></i> Market Parameters
                 </h3>
-                <div style="font-size: 0.7rem; color: var(--text-muted); opacity: 0.7; font-style: italic; margin-left: 0; padding-left: 2px;">
+                <div style="font-size: 0.7rem; color: var(--text-muted); opacity: 0.7; font-style: italic; margin-left: 0; padding-left: 0; margin-top: -6px;">
                     Control notifications volume via $, %, or sector
                 </div>
             </div>
 
+            <!-- "Watchlist Override" Option (Direct child, like Alerts rows) -->
+            <div class="${CSS_CLASSES.DETAIL_ROW}" style="justify-content: space-between; align-items: center; margin-top: 20px; margin-bottom: 0;">
+                <div style="display: flex; flex-direction: column; gap: 0;">
+                   <span class="${CSS_CLASSES.DETAIL_LABEL}" style="font-size: 0.82rem; font-weight: 700; color: white; line-height: 1.1;">Watchlist Override</span>
+                   <div style="font-size: 0.65rem; opacity: 0.5; color: var(--text-muted); margin-bottom: 2px; margin-top: -1px;">Ignore active filters sector and threshold</div>
+                </div>
+                <div class="pill-container large-pill portfolio-pill-selector" style="width: 100px;">
+                    <span class="pill-segment-override" data-value="true">On</span>
+                    <span class="pill-segment-override" data-value="false">Off</span>
+                </div>
+                <input type="checkbox" id="${IDS.PREF_EXCLUDE_PORTFOLIO}" class="hidden">
+            </div>
+
             <div style="padding: 0 16px 16px 16px;">
-                <!-- Threshold Implementation (from triggerCard) -->
-                <div class="${CSS_CLASSES.DETAIL_ROW}" style="margin-top: 4px; margin-bottom: 2px;">
-                    <div style="width: 80px; margin-right: 10px;"></div> <!-- Spacer for Label -->
-                    <div class="${CSS_CLASSES.DETAIL_LABEL} ${CSS_CLASSES.TEXT_XXS}" style="flex: 1; text-align: center;">Volatility</div>
+                <!-- Thresholds Section -->
+                <!-- Thresholds Section -->
+                <!-- Thresholds Section -->
+                <div style="margin-bottom: 20px; margin-top: 24px; margin-left: -16px; display: flex; flex-direction: column; gap: 0;">
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                        <i class="fas fa-ruler-combined" style="color: var(--color-accent); font-size: 0.9em;"></i>
+                        <span class="${CSS_CLASSES.DETAIL_LABEL}" style="font-size: 0.82rem; font-weight: 700; color: white; line-height: 1.1;">Thresholds</span>
+                    </div>
+                    <div style="font-size: 0.65rem; opacity: 0.5; color: var(--text-muted); margin-bottom: 2px; margin-top: -1px;">Ignore stocks below</div>
+                </div>
+
+                <!-- Range Headers (Volatility | 52 Wk H/L) -->
+                <div class="${CSS_CLASSES.DETAIL_ROW}" style="margin-top: 0; margin-bottom: 2px;">
+                    <div class="${CSS_CLASSES.DETAIL_LABEL} ${CSS_CLASSES.TEXT_XXS}" style="flex: 1; text-align: center;">Movers</div>
                     <div class="${CSS_CLASSES.DETAIL_LABEL} ${CSS_CLASSES.TEXT_XXS}" style="flex: 1; text-align: center; padding-left: 10px;">52 Wk H/L</div>
                 </div>
 
-                <div class="${CSS_CLASSES.DETAIL_ROW}" style="align-items: center; gap: 10px; margin-bottom: 20px;">
-                    <div class="${CSS_CLASSES.DETAIL_LABEL}" style="width: 80px; color: white;">Threshold</div>
+                <!-- Range Inputs -->
+                <div class="${CSS_CLASSES.DETAIL_ROW}" style="align-items: center; gap: 10px; margin-bottom: 32px;">
                     <div style="flex: 1;">
-                        <div class="input-wrapper">
-                            <div class="input-icon"><i class="fas fa-dollar-sign"></i></div>
-                            <input type="number" id="global-minPrice" class="settings-input-dark standard-input compact-input" step="0.01" placeholder="0">
+                        <div class="input-wrapper" style="position: relative; height: 32px;">
+                            <div class="input-icon" style="position: absolute; left: 0; top: 50%; transform: translateY(-50%); display: flex; align-items: center; justify-content: flex-start; padding-left: 4px; pointer-events: none; color: var(--text-muted);"><i class="fas fa-dollar-sign"></i></div>
+                            <input type="number" id="${IDS.PREF_GLOBAL_MIN_PRICE}" class="settings-input-dark standard-input compact-input ${CSS_CLASSES.SETTINGS_INPUT_ALIGNED}" step="0.01" placeholder="0" style="height: 100%;">
                         </div>
                     </div>
                     <div style="flex: 1;">
-                        <div class="input-wrapper">
-                            <div class="input-icon"><i class="fas fa-dollar-sign"></i></div>
-                            <input type="number" id="hilo-minPrice" class="settings-input-dark standard-input compact-input" step="0.01" placeholder="0">
+                        <div class="input-wrapper" style="position: relative; height: 32px;">
+                            <div class="input-icon" style="position: absolute; left: 0; top: 50%; transform: translateY(-50%); display: flex; align-items: center; justify-content: flex-start; padding-left: 4px; pointer-events: none; color: var(--text-muted);"><i class="fas fa-dollar-sign"></i></div>
+                            <input type="number" id="${IDS.PREF_HILO_MIN_PRICE}" class="settings-input-dark standard-input compact-input ${CSS_CLASSES.SETTINGS_INPUT_ALIGNED}" step="0.01" placeholder="0" style="height: 100%;">
                         </div>
                     </div>
                 </div>
 
-                <div class="${CSS_CLASSES.DETAIL_ROW}" style="margin-top: 12px; margin-bottom: 2px;">
-                    <div style="width: 80px; margin-right: 10px;"></div> <!-- Spacer for Label -->
-                    <div class="${CSS_CLASSES.DETAIL_LABEL} ${CSS_CLASSES.TEXT_XXS}" style="flex: 1; text-align: center;">Percentage</div>
-                    <div class="${CSS_CLASSES.DETAIL_LABEL} ${CSS_CLASSES.TEXT_XXS}" style="flex: 1; text-align: center;">Dollar</div>
+                <!-- Movers Section -->
+                <div style="margin-bottom: 20px; margin-top: 24px; margin-left: -16px; display: flex; flex-direction: column; gap: 0;">
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                        <i class="fas fa-chart-line" style="color: var(--color-accent); font-size: 0.9em;"></i>
+                        <span class="${CSS_CLASSES.DETAIL_LABEL}" style="font-size: 0.82rem; font-weight: 700; color: white; line-height: 1.1;">Movers</span>
+                    </div>
+                    <div style="font-size: 0.65rem; opacity: 0.5; color: var(--text-muted); margin-bottom: 2px; margin-top: -1px;">Triggers when either set limit is met or exceeded</div>
                 </div>
 
-                <div class="${CSS_CLASSES.DETAIL_ROW}" style="align-items: center; gap: 10px; margin-bottom: 10px;">
-                    <div class="${CSS_CLASSES.DETAIL_LABEL}" style="width: 80px; color: white;">Increase</div>
-                    <div class="input-wrapper" style="flex: 1;">
-                        <div class="input-icon"><i class="fas fa-percent"></i></div>
-                        <input type="number" id="up-percentVal" class="settings-input-dark standard-input compact-input" placeholder="0">
+                <!-- Movers Headers (Increase | Decrease) -->
+                <div class="${CSS_CLASSES.DETAIL_ROW}" style="margin-top: 0; margin-bottom: 2px;">
+                    <div class="${CSS_CLASSES.DETAIL_LABEL} ${CSS_CLASSES.TEXT_XXS}" style="flex: 1; text-align: center;">Increase</div>
+                </div>
+
+                <!-- Increase Row (% and $) -->
+                <div class="${CSS_CLASSES.DETAIL_ROW}" style="align-items: center; gap: 10px; margin-bottom: 16px;">
+                    <div style="flex: 1;">
+                        <div class="input-wrapper" style="position: relative; height: 32px;">
+                             <div class="input-icon" style="position: absolute; left: 0; top: 50%; transform: translateY(-50%); display: flex; align-items: center; justify-content: flex-start; font-weight: bold; font-size: 0.85rem; color: var(--text-muted); padding-left: 4px; pointer-events: none;">%</div>
+                             <input type="number" id="${IDS.PREF_UP_PERCENT}" class="settings-input-dark standard-input compact-input ${CSS_CLASSES.SETTINGS_INPUT_ALIGNED}" placeholder="0" style="height: 100%;">
+                        </div>
                     </div>
-                    <div class="input-wrapper" style="flex: 1;">
-                        <div class="input-icon"><i class="fas fa-dollar-sign"></i></div>
-                        <input type="number" id="up-dollarVal" class="settings-input-dark standard-input compact-input" step="0.01" placeholder="0">
+                    <div style="flex: 1;">
+                        <div class="input-wrapper" style="position: relative; height: 32px;">
+                             <div class="input-icon" style="position: absolute; left: 0; top: 50%; transform: translateY(-50%); display: flex; align-items: center; justify-content: flex-start; font-weight: bold; font-size: 0.85rem; color: var(--text-muted); padding-left: 4px; pointer-events: none;">$</div>
+                             <input type="number" id="${IDS.PREF_UP_DOLLAR}" class="settings-input-dark standard-input compact-input ${CSS_CLASSES.SETTINGS_INPUT_ALIGNED}" step="0.01" placeholder="0" style="height: 100%;">
+                        </div>
                     </div>
                 </div>
 
-                <div class="${CSS_CLASSES.DETAIL_ROW}" style="align-items: center; gap: 10px; margin-bottom: 25px;">
-                    <div class="${CSS_CLASSES.DETAIL_LABEL}" style="width: 80px; color: white;">Decrease</div>
-                    <div class="input-wrapper" style="flex: 1;">
-                        <div class="input-icon"><i class="fas fa-percent"></i></div>
-                        <input type="number" id="down-percentVal" class="settings-input-dark standard-input compact-input" placeholder="0">
+                <!-- Decrease Header -->
+                <div class="${CSS_CLASSES.DETAIL_ROW}" style="margin-top: 0; margin-bottom: 2px;">
+                    <div class="${CSS_CLASSES.DETAIL_LABEL} ${CSS_CLASSES.TEXT_XXS}" style="flex: 1; text-align: center;">Decrease</div>
+                </div>
+
+                <!-- Decrease Row (% and $) -->
+                <div class="${CSS_CLASSES.DETAIL_ROW}" style="align-items: center; gap: 10px; margin-bottom: 24px;">
+                    <div style="flex: 1;">
+                        <div class="input-wrapper" style="position: relative; height: 32px;">
+                             <div class="input-icon" style="position: absolute; left: 0; top: 50%; transform: translateY(-50%); display: flex; align-items: center; justify-content: flex-start; font-weight: bold; font-size: 0.85rem; color: var(--text-muted); padding-left: 4px; pointer-events: none;">%</div>
+                             <input type="number" id="${IDS.PREF_DOWN_PERCENT}" class="settings-input-dark standard-input compact-input ${CSS_CLASSES.SETTINGS_INPUT_ALIGNED}" placeholder="0" style="height: 100%;">
+                        </div>
                     </div>
-                    <div class="input-wrapper" style="flex: 1;">
-                        <div class="input-icon"><i class="fas fa-dollar-sign"></i></div>
-                        <input type="number" id="down-dollarVal" class="settings-input-dark standard-input compact-input" step="0.01" placeholder="0">
+                    <div style="flex: 1;">
+                        <div class="input-wrapper" style="position: relative; height: 32px;">
+                             <div class="input-icon" style="position: absolute; left: 0; top: 50%; transform: translateY(-50%); display: flex; align-items: center; justify-content: flex-start; font-weight: bold; font-size: 0.85rem; color: var(--text-muted); padding-left: 4px; pointer-events: none;">$</div>
+                             <input type="number" id="${IDS.PREF_DOWN_DOLLAR}" class="settings-input-dark standard-input compact-input ${CSS_CLASSES.SETTINGS_INPUT_ALIGNED}" step="0.01" placeholder="0" style="height: 100%;">
+                        </div>
                     </div>
                 </div>
 
                 <!-- Subtle Separator for Sector Selector (Previously sectorCard title) -->
-                <div style="border-top: 1px solid var(--border-color); padding-top: 20px; margin-top: 20px; margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
-                     <i class="fas fa-layer-group" style="color: var(--color-accent); font-size: 0.9rem;"></i>
-                     <span style="font-size: 0.85rem; font-weight: 800; color: white; letter-spacing: -0.01em;">Sector Filtering</span>
+                <div style="border-top: none; padding-top: 0; margin-top: 24px; margin-bottom: 24px; margin-left: -16px; display: flex; align-items: center; gap: 4px;">
+                     <i class="fas fa-layer-group" style="color: var(--color-accent); font-size: 0.9em;"></i>
+                     <span class="${CSS_CLASSES.DETAIL_LABEL}" style="font-size: 0.82rem; font-weight: 700; color: white; letter-spacing: 0; line-height: 1.1;">Sector Filtering</span>
                 </div>
                  
-                  <!-- "Watchlist Override" Option -->
-                  <div class="${CSS_CLASSES.DETAIL_ROW}" style="justify-content: space-between; align-items: center; margin-bottom: 24px;">
-                      <div style="display: flex; flex-direction: column; gap: 3px;">
-                         <div style="display: flex; align-items: center; gap: 8px;">
-                            <span class="${CSS_CLASSES.DETAIL_LABEL}" style="font-weight: 700; color: white;">Watchlist Override</span>
-                         </div>
-                      </div>
-                      <div class="pill-container large-pill portfolio-pill-selector" style="width: 125px;">
-                          <span class="pill-segment-override" data-value="true">On</span>
-                          <span class="pill-segment-override" data-value="false">Off</span>
-                      </div>
-                      <input type="checkbox" id="toggle-pref-excludePortfolio" class="hidden">
-                  </div>
 
-                 <!-- Master Select -->
-                 <div class="${CSS_CLASSES.DETAIL_ROW}" style="justify-content: space-between; align-items: center; margin-bottom: 24px;">
-                     <div style="display: flex; flex-direction: column; gap: 4px;">
-                        <span class="${CSS_CLASSES.DETAIL_LABEL}" style="font-size: 0.85rem; font-weight: 800; color: white; letter-spacing: -0.01em;">Select</span>
+
+                 <!-- Master Select & View All Row -->
+                 <div class="${CSS_CLASSES.DETAIL_ROW}" style="justify-content: space-between; align-items: flex-start; margin-bottom: 24px;">
+                     
+                     <!-- Bulk Select Control -->
+                     <div style="display: flex; flex-direction: column; gap: 0; flex: 1; align-items: flex-start;">
+                        <span class="${CSS_CLASSES.DETAIL_LABEL}" style="font-size: 0.75rem; font-weight: 700; color: white; letter-spacing: 0; line-height: 1.1;">Bulk Select</span>
+                        <div style="font-size: 0.65rem; opacity: 0.5; color: var(--text-muted); margin-bottom: 2px; margin-top: -1px;">All checked or unchecked</div>
+                        <div class="pill-container large-pill master-pill-selector" style="width: 100px;">
+                              <span class="master-pill-segment" data-action="all">All</span>
+                              <span class="master-pill-segment" data-action="none">None</span>
+                        </div>
                      </div>
-                     <div class="pill-container large-pill master-pill-selector" style="width: 125px;">
-                          <span class="master-pill-segment" data-action="all">All</span>
-                          <span class="master-pill-segment" data-action="none">None</span>
+
+                     <!-- Spacer -->
+                     <div style="width: 15px;"></div>
+
+                     <!-- View All Control -->
+                     <div style="display: flex; flex-direction: column; gap: 0; flex: 1; align-items: flex-end;">
+                        <div style="display: flex; flex-direction: column; align-items: flex-start; width: 100px;">
+                            <span class="${CSS_CLASSES.DETAIL_LABEL}" style="font-size: 0.75rem; font-weight: 700; color: white; letter-spacing: 0; line-height: 1.1;">View All</span>
+                            <div style="font-size: 0.65rem; opacity: 0.5; color: var(--text-muted); margin-bottom: 2px; margin-top: -1px;">Display ${Object.values(SECTOR_INDUSTRY_MAP).flat().length} sectors</div>
+                            <div class="pill-container large-pill accordion-pill-selector" style="width: 100px;">
+                                  <span class="accordion-control-segment" data-action="expand">Open</span>
+                                  <span class="accordion-control-segment active" data-action="collapse">Close</span>
+                            </div>
+                        </div>
                      </div>
+
                  </div>
+                 
 
-                 <!-- View All Control -->
-                 <div class="${CSS_CLASSES.DETAIL_ROW}" style="justify-content: space-between; align-items: center; margin-bottom: 24px;">
-                     <div style="display: flex; flex-direction: column; gap: 4px;">
-                        <span class="${CSS_CLASSES.DETAIL_LABEL}" style="font-size: 0.85rem; font-weight: 800; color: white; letter-spacing: -0.01em;">View All</span>
-                     </div>
-                     <div class="pill-container large-pill accordion-pill-selector" style="width: 125px;">
-                          <span class="accordion-control-segment" data-action="expand">Open</span>
-                          <span class="accordion-control-segment active" data-action="collapse">Close</span>
-                     </div>
+                 <!-- Sectors Section Title -->
+                 <div style="margin-bottom: 12px; margin-top: 0;">
+                    <span class="${CSS_CLASSES.DETAIL_LABEL}" style="font-size: 0.75rem; font-weight: 700; color: white;">Sectors</span>
                  </div>
                  
                  <!-- Dynamic Accordion Container -->
@@ -433,6 +621,123 @@ export class SettingsUI {
         `;
         container.appendChild(combinedCard);
 
+        // --- Event Listeners ---
+        // 1. Notification Icon Click
+        const notifIcon = notifCard.querySelector('#btn-open-notifications-icon');
+        if (notifIcon) {
+            notifIcon.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                // Direct Open (Relies on Z-Index to surface)
+                document.dispatchEvent(new CustomEvent(EVENTS.OPEN_NOTIFICATIONS));
+            });
+        }
+
+    }
+
+    static _updateValuesOnly(modal, prefs) {
+        // Initialize Form from Prefs
+        const rules = prefs.scannerRules || {};
+        const updateCheck = (id, val) => {
+            // Flexible Input Resolution (Inline)
+            let el = modal.querySelector(`#${id}`);
+            if (!el && !id.startsWith('toggle-')) el = modal.querySelector(`#toggle-${id}`);
+            if (!el && id.startsWith('toggle-')) el = modal.querySelector(`#${id.replace('toggle-', '')}`);
+
+            if (el) {
+                if (el.type === 'checkbox' || el.type === 'radio') el.checked = val;
+                else el.value = (val === null || val === undefined) ? '' : String(val);
+            }
+        };
+
+        updateCheck('toggle-moversEnabled', rules.moversEnabled !== false);
+        updateCheck('toggle-hiloEnabled', rules.hiloEnabled !== false);
+        updateCheck('toggle-personalEnabled', rules.personalEnabled !== false);
+        updateCheck('toggle-pref-showBadges', prefs.showBadges !== false);
+        updateCheck('toggle-pref-dailyEmail', prefs.dailyEmail === true);
+        // Robustly check constants
+        updateCheck(IDS.PREF_EXCLUDE_PORTFOLIO, prefs.excludePortfolio ?? true);
+        updateCheck(IDS.PREF_BADGE_SCOPE, prefs.badgeScope || 'custom');
+
+        // Thresholds & Min Prices
+        updateCheck('global-minPrice', rules.minPrice);
+        updateCheck('hilo-minPrice', rules.hiloMinPrice);
+        updateCheck('up-percentVal', rules.up?.percentThreshold);
+        updateCheck('up-dollarVal', rules.up?.dollarThreshold);
+        updateCheck('down-percentVal', rules.down?.percentThreshold);
+        updateCheck('down-dollarVal', rules.down?.dollarThreshold);
+
+        // Email
+        updateCheck('pref-emailAddr', prefs.alertEmailRecipients || '');
+
+        // Initial Sector Population
+        const activeFilters = (prefs.scanner?.activeFilters || []).map(f => f.toUpperCase());
+        this._renderSectorAccordion(modal, activeFilters);
+
+        // Initial Summary Update
+        this._updateSummaryBoard(modal);
+    }
+
+    /**
+     * Harvests the CURRENT DOM state of all settings inputs.
+     * Used for real-time summary updates and before saving.
+     */
+    static _harvestState(modal) {
+        const getNum = (id) => {
+            const el = modal.querySelector(`#${id}`);
+            if (!el || el.value === '') return null;
+            const f = parseFloat(el.value);
+            return Number.isNaN(f) ? null : f;
+        };
+
+        const getCheck = (id) => {
+            // Flexible Input Resolution (Inline)
+            let el = modal.querySelector(`#${id}`);
+            if (!el && !id.startsWith('toggle-')) el = modal.querySelector(`#toggle-${id}`);
+            if (!el && id.startsWith('toggle-')) el = modal.querySelector(`#${id.replace('toggle-', '')}`);
+
+            if (!el) return null;
+            if (el.type === 'checkbox' || el.type === 'radio') return el.checked;
+            return el.value === 'true';
+        };
+
+        const harvestRules = (type) => ({
+            percentThreshold: getNum(`${type}-percentVal`),
+            dollarThreshold: getNum(`${type}-dollarVal`)
+        });
+
+        const activeFilters = [];
+        modal.querySelectorAll('.sector-toggle').forEach(cb => {
+            if (cb.checked) {
+                const ind = cb.dataset.industry;
+                if (ind) activeFilters.push(ind.toUpperCase()); // NORMALIZATION
+            }
+        });
+
+        return {
+            showBadges: getCheck('toggle-pref-showBadges'),
+            badgeScope: modal.querySelector(`#${IDS.PREF_BADGE_SCOPE}`)?.value || 'custom',
+            dailyEmail: getCheck('toggle-pref-dailyEmail'),
+            excludePortfolio: getCheck(IDS.PREF_EXCLUDE_PORTFOLIO),
+            scanner: {
+                activeFilters: activeFilters
+            },
+            alertEmailRecipients: modal.querySelector('#pref-emailAddr')?.value || '',
+            scannerRules: {
+                minPrice: getNum('global-minPrice'),
+                hiloMinPrice: getNum('hilo-minPrice'),
+                moversEnabled: getCheck('toggle-moversEnabled'),
+                hiloEnabled: getCheck('toggle-hiloEnabled'),
+                personalEnabled: getCheck('toggle-personalEnabled'),
+                up: harvestRules('up'),
+                down: harvestRules('down')
+            }
+        };
+    }
+
+    static _updateSummaryBoard(modal) {
+        const currentState = this._harvestState(modal);
+        this._updateValues(modal, currentState);
     }
 
     static _updateValues(modal, prefs) {
@@ -444,186 +749,126 @@ export class SettingsUI {
         const minPrice = rules.minPrice ?? null;
         const hiloPrice = rules.hiloMinPrice ?? null;
 
-
         const moversEnabled = rules.moversEnabled !== false;
         const hiloEnabled = rules.hiloEnabled !== false;
-        const personalEnabled = rules.personalEnabled !== false; // Capture Personal Flag
+        const personalEnabled = rules.personalEnabled !== false;
         const showBadges = prefs.showBadges !== false;
-
-        // Use the saved preference directly without forcing it based on the presence of an email address.
         const dailyEmail = prefs.dailyEmail === true;
+        const isExclude = prefs.excludePortfolio ?? true;
 
-        // Format helper: None if null/undefined, otherwise text
-        const fmtVal = (pct, dol) => {
-            const hasPct = (pct !== null && pct !== undefined);
-            const hasDol = (dol !== null && dol !== undefined);
+        const activeFilters = (prefs.scanner?.activeFilters || []).map(f => f.toUpperCase());
 
-            if (!hasPct && !hasDol) return 'None';
-
-            const p = hasPct ? `${pct}%` : '';
-            const d = hasDol ? `$${dol}` : '';
-            if (p && d) return `${p} & ${d}`;
-            return p || d;
+        // Helper to safely update text and indicators
+        const updateTile = (id, indicatorId, isOn, val) => {
+            const valEl = modal.querySelector(`#${id}`);
+            const indEl = modal.querySelector(`#${indicatorId}`);
+            if (valEl) {
+                valEl.textContent = val !== undefined ? val : (isOn ? 'On' : 'Off');
+                valEl.style.opacity = isOn ? '1' : '0.5';
+            }
+            if (indEl) {
+                indEl.classList.toggle(CSS_CLASSES.STATUS_ON, isOn);
+            }
         };
 
-        // Update Summary Texts (Safe Update)
-        const updateText = (id, text) => {
+        const updateParam = (id, val, isLimit = false) => {
             const el = modal.querySelector(`#${id}`);
-            if (el) el.textContent = text;
+            if (el) {
+                // If isLimit (Movers/52w Limit), treat 0 as "None" for display
+                const isZero = (val === 0 || val === '0' || val === '$0.00' || val === '0.0%');
+                const isBlank = (val === null || val === undefined || val === '—');
+
+                if (isLimit && isZero) {
+                    el.textContent = 'None';
+                    el.parentElement.style.opacity = '0.4';
+                } else {
+                    el.textContent = isBlank ? '—' : val;
+                    el.parentElement.style.opacity = isBlank ? '0.4' : '1';
+                }
+            }
         };
 
-        // Helper for checkboxes
-        const updateCheck = (id, val) => {
-            const el = modal.querySelector(`#${id}`);
-            if (el) el.checked = val;
+        const fmtParam = (pct, dol) => {
+            const hasP = (pct !== null && pct !== undefined && pct !== 0 && String(pct) !== '');
+            const hasD = (dol !== null && dol !== undefined && dol !== 0 && String(dol) !== '');
+            const p = hasP ? `${parseFloat(pct).toFixed(1)}%` : 'None %';
+            const d = hasD ? `$${parseFloat(dol).toFixed(2)}` : '$ None';
+
+            if (!hasP && !hasD) return null;
+            return `${p} | ${d}`;
         };
-        updateCheck('toggle-moversEnabled', moversEnabled);
-        updateCheck('toggle-hiloEnabled', hiloEnabled);
-        updateCheck('toggle-personalEnabled', personalEnabled); // Sync Checkbox
-        updateCheck('toggle-pref-showBadges', showBadges);
-        updateCheck('toggle-pref-dailyEmail', dailyEmail);
 
+        // 1. Alert Monitors (Top Row)
+        updateTile(null, 'ind-personal', personalEnabled);
+        updateTile(null, 'ind-hilo', hiloEnabled);
+        updateTile(null, 'ind-movers', moversEnabled);
+        updateTile(null, 'ind-icon', showBadges);
+        updateTile(null, 'ind-email', dailyEmail);
 
-        // Debug Log
-        // console.warn('[SettingsUI DEBUG] Update Values:', { upPct, upDol, minPrice, hiloPrice });
+        // Update Scope Value Display
+        const scopeEl = modal.querySelector('#val-scope');
+        if (scopeEl) {
+            const scope = prefs.badgeScope || 'custom';
+            scopeEl.textContent = scope.charAt(0).toUpperCase() + scope.slice(1);
+        }
 
-        updateText('summary-up', fmtVal(upPct, upDol));
-        updateText('summary-down', fmtVal(downPct, downDol));
-        updateText('summary-global', (minPrice !== null && minPrice !== undefined) ? `$${minPrice}` : 'None');
-        updateText('summary-hilo', (hiloPrice !== null && hiloPrice !== undefined) ? `$${hiloPrice}` : 'None');
+        // 2. Parameters (Middle Row)
+        // Pass "true" for isLimit to handle 0 as None
+        updateParam('sum-val-vol', (minPrice !== null && minPrice !== undefined) ? `$${parseFloat(minPrice).toFixed(2)}` : null, true);
+        updateParam('sum-val-hilo', (hiloPrice !== null && hiloPrice !== undefined) ? `$${parseFloat(hiloPrice).toFixed(2)}` : null, true);
+
+        const upTxt = fmtParam(upPct, upDol);
+        const downTxt = fmtParam(downPct, downDol);
+        updateParam('sum-val-up', upTxt);
+        updateParam('sum-val-down', downTxt);
+
+        // Apply Color Triggers
+        const upEl = modal.querySelector('#sum-val-up');
+        const downEl = modal.querySelector('#sum-val-down');
+        if (upEl) {
+            upEl.style.color = upTxt ? 'var(--color-positive)' : 'var(--text-muted)';
+        }
+        if (downEl) {
+            downEl.style.color = downTxt ? 'var(--color-negative)' : 'var(--text-muted)';
+        }
+
+        // 3. Scanner Depth (Bottom Row)
+        updateTile(IDS.SUMMARY_PORTFOLIO_OVERRIDE, 'ind-override', isExclude, isExclude ? 'On' : 'Off');
+        const overrideEl = modal.querySelector(`#${IDS.SUMMARY_PORTFOLIO_OVERRIDE}`);
+        if (overrideEl) {
+            overrideEl.style.color = isExclude ? 'var(--color-positive)' : 'var(--color-negative)';
+        }
+
+        // Update Sector tallies
+        this._updateSectorTallies(modal, activeFilters || [], prefs.scanner?.activeFilters === null);
 
         // Helper to safely update input values (prevent focus loss)
         const updateInput = (id, val) => {
             const el = modal.querySelector(`#${id}`);
             if (el && el !== document.activeElement) {
-                // console.log(`[SettingsUI] Updating Input ${id} -> ${val}`);
-
-                // Treat NaN as empty
-                if (Number.isNaN(val)) val = '';
-
-                // FIX: Distinguish 0 from Null.
-                if (val === 0) {
-                    el.value = '0';
-                } else if (val === null || val === undefined || val === '') {
-                    el.value = '';
-                } else {
-                    el.value = val;
-                }
-            } else {
-                // console.log(`[SettingsUI] Skipped Input ${id} (Active/Missing)`);
+                if (val === 0) el.value = '0';
+                else if (val === null || val === undefined || val === '') el.value = '';
+                else el.value = val;
             }
         };
 
-
-        // --- DATA SANITIZATION ---
-        // Treat legacy defaults and '0' as NULL (Disabled) for specific alerts to prevent "0%" spam display.
-        // User Intent: "None" should be displayed, and Input should be empty.
-
-        const cleanVal = (val, blacklist = []) => {
-            if (val === null || val === undefined) return null;
-            if (blacklist.includes(val)) return null;
-            return val;
-        };
-
-        const cleanMinPrice = cleanVal(minPrice, [0.05]); // Hide legacy 0.05 default as 'None'
-        const cleanHilo = cleanVal(hiloPrice, []);       // Allow '1' explicitly (User wants to see/edit it)
-
-        // For Up/Down, we MUST allow explicit 0 (User entered 0) while treating blank/null as None.
-        // We do NOT blacklist 0 here anymore.
-        const cleanUpPct = cleanVal(upPct, []);
-        const cleanUpDol = cleanVal(upDol, []);
-        const cleanDownPct = cleanVal(downPct, []);
-        const cleanDownDol = cleanVal(downDol, []);
-
-        // Toggles State (Defined early for Ghosting Logic)
-        const moversOn = rules.moversEnabled ?? true;
-        const hiloOn = rules.hiloEnabled ?? true;
-
-        // Update Summaries with Cleaned Values & Ghosting
-
-        // Helper for Ghosting & Coloring
-        const updateGhosted = (id, txt, isOn, isNeg = false) => {
-            const el = modal.querySelector(`#${id}`);
-            if (el) {
-                el.textContent = txt;
-                // Reset to base class
-                el.className = CSS_CLASSES.DETAIL_VALUE;
-
-                if (isOn) {
-                    // Active: Add Color Class (Positive/Negative) & Full Opacity
-                    // Note: 'isNeg' passed as true for Down (Red). False for Up (Green).
-                    el.classList.add(isNeg ? CSS_CLASSES.NEGATIVE : CSS_CLASSES.POSITIVE);
-                    el.style.opacity = '1';
-                    el.style.removeProperty('color');
-                } else {
-                    // Inactive: Remove Color Classes, Dim, and set to Muted (Ghosted White)
-                    el.classList.remove(CSS_CLASSES.POSITIVE, CSS_CLASSES.NEGATIVE);
-                    el.style.opacity = '0.5';
-                    el.style.color = 'var(--text-muted)';
-                }
-            }
-        };
-
-        updateGhosted('summary-up', fmtVal(cleanUpPct, cleanUpDol), moversOn, false); // False = Positive (Green)
-        updateGhosted('summary-down', fmtVal(cleanDownPct, cleanDownDol), moversOn, true); // True = Negative (Red)
-
-        // Volatility Limit (Global) with Ghosting
-        const globalEl = modal.querySelector('#summary-global');
-        if (globalEl) {
-            globalEl.textContent = (cleanMinPrice !== null && cleanMinPrice !== undefined) ? `$${cleanMinPrice}` : 'None';
-            if (moversOn) {
-                globalEl.style.opacity = '1';
-                globalEl.style.removeProperty('color');
-            } else {
-                globalEl.style.opacity = '0.5';
-                globalEl.style.color = 'var(--text-muted)';
-            }
-        }
-
-        // 52-Week Limit with Ghosting
-        // Note: Using multiple text outputs if distinct lines exist (High/Low) or single summary-hilo
-        // Based on previous reads, 'summary-hilo' seems legacy or specific. 
-        // If 'summary-hilo-high' exists (from previous steps), handle it.
-        // Let's try both to be safe (robustness).
-        const hiloTxt = (cleanHilo !== null && cleanHilo !== undefined) ? `$${cleanHilo}` : 'None';
-
-        const updateHiloGhost = (id) => {
-            const el = modal.querySelector(`#${id}`);
-            if (el) {
-                el.textContent = hiloTxt;
-                if (hiloOn) {
-                    el.style.opacity = '1';
-                    el.style.removeProperty('color');
-                } else {
-                    el.style.opacity = '0.5';
-                    el.style.color = 'var(--text-muted)';
-                }
-            }
-        };
-
-        updateHiloGhost('summary-hilo');      // Old/Single
-        updateHiloGhost('summary-hilo-high'); // New/Split?? Check html if uncertain.
-        updateHiloGhost('summary-hilo-low');  // New/Split??
-
-        // Inputs (Use Cleaned Values)
-        updateInput('global-minPrice', cleanMinPrice);
-        updateInput('hilo-minPrice', cleanHilo);
-        updateInput('up-percentVal', cleanUpPct);
-        updateInput('up-dollarVal', cleanUpDol);
-        updateInput('down-percentVal', cleanDownPct);
-        updateInput('down-dollarVal', cleanDownDol);
+        updateInput(IDS.PREF_GLOBAL_MIN_PRICE, minPrice);
+        updateInput(IDS.PREF_HILO_MIN_PRICE, hiloPrice);
+        updateInput(IDS.PREF_UP_PERCENT, upPct);
+        updateInput(IDS.PREF_UP_DOLLAR, upDol);
+        updateInput(IDS.PREF_DOWN_PERCENT, downPct);
+        updateInput(IDS.PREF_DOWN_DOLLAR, downDol);
         updateInput('pref-emailAddr', prefs.alertEmailRecipients);
 
         // Toggles UI Updates
         modal.querySelectorAll('.pill-segment-movers').forEach(pill => {
-            pill.classList.toggle('active', pill.dataset.value === String(moversOn));
+            pill.classList.toggle('active', pill.dataset.value === String(moversEnabled));
         });
 
-        // Selector tweak: Find pills strictly within the hilo container
         const hiloContainer = modal.querySelector('.hilo-pill-selector');
         if (hiloContainer) {
             hiloContainer.querySelectorAll('.pill-segment-hilo').forEach(pill => {
-                pill.classList.toggle('active', pill.dataset.value === String(hiloOn));
+                pill.classList.toggle('active', pill.dataset.value === String(hiloEnabled));
             });
         }
 
@@ -635,8 +880,6 @@ export class SettingsUI {
             pill.classList.toggle('active', pill.dataset.value === String(dailyEmail));
         });
 
-        const isExclude = prefs.excludePortfolio ?? true;
-        updateCheck('toggle-pref-excludePortfolio', isExclude);
         modal.querySelectorAll('.pill-segment-override').forEach(pill => {
             pill.classList.toggle('active', pill.dataset.value === String(isExclude));
         });
@@ -645,61 +888,63 @@ export class SettingsUI {
             pill.classList.toggle('active', pill.dataset.value === String(personalEnabled));
         });
 
-        // Sectors (Renamed to Scanner Filters: Hidden in Prefs -> Unchecked in UI)
-        // CRITICAL UPDATE: Scanner uses 'activeFilters' (Whitelist).
-        // BUT SettingsUI previously used 'hiddenSectors' (Blacklist).
-        // MIGRATION: 
-        // 1. If 'scanner.activeFilters' exists, use it.
-        // 2. If not, and 'hiddenSectors' exists, infer active? (Scary).
-        // 3. User requested "Global Settings". 
-        // Let's rely on 'scanner.activeFilters' from AppState preference structure, 
-        // BUT 'prefs' passed here is likely the UserStore object.
-        // We need to ensure we map correctly.
-
-        let activeFilters = [];
-        if (prefs.scanner?.activeFilters) {
-            activeFilters = prefs.scanner.activeFilters;
-        }
+        modal.querySelectorAll('.pill-segment-badge-scope').forEach(pill => {
+            pill.classList.toggle('active', pill.dataset.value === prefs.badgeScope);
+        });
 
         const totalIndustries = Object.values(SECTOR_INDUSTRY_MAP).flat().length;
-        const currentSelectedCount = activeFilters.length;
-
         modal.querySelectorAll('.master-pill-segment').forEach(seg => {
             const action = seg.dataset.action;
-            const isMatch = (action === 'all' && currentSelectedCount === totalIndustries) ||
-                (action === 'none' && currentSelectedCount === 0);
+            const isAllPill = prefs.scanner?.activeFilters === null || activeFilters.length === totalIndustries;
+            const isNonePill = Array.isArray(prefs.scanner?.activeFilters) && activeFilters.length === 0;
+            const isMatch = (action === 'all' && isAllPill) || (action === 'none' && isNonePill);
             seg.classList.toggle('active', isMatch);
         });
 
-        this._renderSectorAccordion(modal, activeFilters);
-        this._updateSectorTallies(modal, activeFilters);
+        // Efficient Sector Update: Only re-render if filters changed OR if accordion is currently empty (initial load fix)
+        const accordionContainer = modal.querySelector('#settings-sector-accordion');
+        const currentActive = Array.from(modal.querySelectorAll('.sector-toggle:checked')).map(cb => cb.dataset.industry);
+        const hasFilterChange = JSON.stringify(currentActive.sort()) !== JSON.stringify(activeFilters.sort());
+        const isEmpty = !accordionContainer || accordionContainer.children.length === 0;
+
+        // Render if data changed OR if this is the first time we are populating (isEmpty)
+        if (hasFilterChange || isEmpty) {
+            this._renderSectorAccordion(modal, activeFilters);
+        }
     }
 
     /**
      * Updates the summary tallies for active/hidden industries (detailed sectors)
      */
-    static _updateSectorTallies(modal, activeFilters) {
-        const activeEl = modal.querySelector('#summary-sectors-active');
-        const hiddenEl = modal.querySelector('#summary-sectors-hidden');
-        const totalEl = modal.querySelector('#summary-sectors-total');
-        if (!activeEl || !hiddenEl || !totalEl) return;
+    static _updateSectorTallies(modal, activeFilters, isNoFilter = false) {
+        const textEl = modal.querySelector('#summary-sectors-text');
+        if (!textEl) return;
 
-        // Total Industries Count (GICS Level)
         const allIndustries = Object.values(SECTOR_INDUSTRY_MAP).flat();
         const totalIndustries = allIndustries.length;
 
-        // Active filters are the WHITELIST of industry names
-        const activeCount = activeFilters.length;
-        const hiddenCount = totalIndustries - activeCount;
+        // activeFilters is an array here (normalized by caller)
+        const activeCount = (isNoFilter || activeFilters.length === totalIndustries) ? totalIndustries : activeFilters.length;
+        const inactiveCount = totalIndustries - activeCount;
 
-        activeEl.textContent = activeCount;
-        hiddenEl.textContent = hiddenCount;
-        totalEl.textContent = totalIndustries;
-
-        // Visual coloring for emphasis
-        hiddenEl.style.color = hiddenCount > 0 ? 'var(--color-negative)' : 'var(--text-muted)';
-        activeEl.style.color = activeCount > 0 ? 'var(--color-positive)' : 'var(--text-muted)';
-        totalEl.style.color = 'var(--text-muted)';
+        if (inactiveCount === 0) {
+            // All Active
+            textEl.textContent = `All ${totalIndustries} Active`;
+            textEl.style.color = 'var(--color-positive)';
+            textEl.style.fontSize = '0.9rem';
+        } else if (activeCount === 0) {
+            // All Inactive
+            textEl.textContent = `ALL ${totalIndustries} INACTIVE`;
+            textEl.style.color = 'var(--color-negative)';
+            textEl.style.fontWeight = '700';
+            textEl.style.fontSize = '0.9rem';
+        } else {
+            // Mixed
+            textEl.innerHTML = `<span style="color: var(--color-positive)">${activeCount} Active</span> <span style="opacity:0.3; margin: 0 4px;">|</span> <span style="color: var(--color-negative)">${inactiveCount} Inactive</span>`;
+            textEl.style.fontSize = '0.8rem';
+            textEl.style.width = '100%';
+            textEl.style.textAlign = 'center';
+        }
     }
 
     /**
@@ -761,7 +1006,7 @@ export class SettingsUI {
             const industries = SECTOR_INDUSTRY_MAP[sectorName] || [];
             if (industries.length === 0) return;
 
-            const activeCount = industries.filter(ind => activeFilters.includes(ind)).length;
+            const activeCount = industries.filter(ind => activeFilters.includes(ind.toUpperCase())).length;
             const hasActiveChild = activeCount > 0;
             const isAllSelected = activeCount === industries.length;
 
@@ -799,12 +1044,13 @@ export class SettingsUI {
                         </div>
                     </div>
                 </div>
-                <div class="filter-body ${isOpen ? '' : 'hidden'}" style="padding: 10px; background: var(--bg-card); display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; border-top: 1px solid var(--border-color);">
+                <div class="filter-body sector-industries-grid ${isOpen ? '' : 'hidden'}" style="padding: 10px; background: var(--bg-card); border-top: 1px solid var(--border-color);">
                     ${industries.map(ind => {
-                const isChecked = activeFilters.includes(ind);
+                const normalizedInd = ind.toUpperCase();
+                const isChecked = activeFilters.includes(normalizedInd);
                 return `
-                        <div class="filter-row clickable-industry-row" style="padding: 10px 12px; background: rgba(0,0,0,0.02); border-radius: 8px; border: 1px solid rgba(0,0,0,0.03); display: flex; align-items: center; justify-content: space-between; gap: 8px;">
-                            <span class="industry-name" style="font-size: 0.8rem; color: ${isChecked ? 'var(--color-accent)' : 'var(--text-normal)'}; line-height: 1.2; flex: 1; transition: color 0.2s; font-weight: 500;">${ind}</span>
+                        <div class="filter-row clickable-industry-row" style="padding: 8px 10px; background: rgba(0,0,0,0.02); border-radius: 6px; border: 1px solid rgba(0,0,0,0.03); display: flex; align-items: center; justify-content: space-between; gap: 6px; min-width: 0;">
+                            <span class="industry-name" style="font-size: 0.75rem; color: ${isChecked ? 'var(--color-accent)' : 'var(--text-normal)'}; line-height: 1.2; flex: 1; transition: color 0.2s; font-weight: 500; white-space: normal; word-break: break-word;">${ind}</span>
                              <div class="square-radio-wrapper">
                                 <input type="checkbox" class="sector-toggle" data-industry="${ind}" ${isChecked ? 'checked' : ''} onclick="event.stopPropagation()">
                                 <div class="square-radio-visual"></div>
@@ -820,85 +1066,64 @@ export class SettingsUI {
     }
 
     static _bindEvents(modal, userId, unsubscribe) {
-        // Auto-Save Logic
-        let debounceTimer;
-        let settingsDebounce = null; // High-level debounce for preference saving
+        // --- DYNAMIC AUTO-SAVE LOGIC ---
+        let pendingContext = null;
 
-        const saveSettings = () => {
-            if (!userId) return;
-
-            // INTERNAL DEBOUNCE: Prevent rapid fire from bulk UI events (e.g. Select All)
-            if (settingsDebounce) clearTimeout(settingsDebounce);
-            settingsDebounce = setTimeout(() => {
+        // Debounce wrapper for Inputs (prevent rapid write spam)
+        let saveTimer = null;
+        const debouncedSave = () => {
+            clearTimeout(saveTimer);
+            saveTimer = setTimeout(() => {
                 this._executeSave(modal, userId);
-            }, 350);
+            }, 800); // 800ms delay for typing
+        };
+
+        // Immediate Save for Toggles/Clicks
+        const immediateSave = () => {
+            this._executeSave(modal, userId);
         };
 
         this._executeSave = (modal, userId) => {
-            const getNum = (id) => {
-                const el = modal.querySelector(`#${id}`);
-                if (!el || el.value === '') return null;
-                const f = parseFloat(el.value);
-                return Number.isNaN(f) ? null : f;
-            };
-
-            const harvestRules = (type) => ({
-                percentThreshold: getNum(`${type}-percentVal`),
-                dollarThreshold: getNum(`${type}-dollarVal`)
-            });
-
-            // Explicit Boolean Harvesting
-            const getCheck = (id) => {
-                const el = modal.querySelector(`#${id}`);
-                return el ? el.checked : null;
-            };
-
-            // Harvest Sectors (Whitelist)
-            const activeFilters = [];
-            modal.querySelectorAll('.sector-toggle').forEach(cb => {
-                if (cb.checked) {
-                    const ind = cb.dataset.industry;
-                    if (ind) activeFilters.push(ind);
-                }
-            });
-
-            const newPrefs = {
-                scanner: {
-                    activeFilters: activeFilters
-                },
-                scannerRules: {
-                    minPrice: getNum('global-minPrice'),
-                    hiloMinPrice: getNum('hilo-minPrice'),
-                    moversEnabled: getCheck('toggle-moversEnabled') ?? true,
-                    hiloEnabled: getCheck('toggle-hiloEnabled') ?? true,
-                    personalEnabled: getCheck('toggle-personalEnabled') ?? true, // Harvest Personal Flag
-                    up: harvestRules('up'),
-                    down: harvestRules('down')
-                },
-                excludePortfolio: getCheck('toggle-pref-excludePortfolio') ?? true,
-                showBadges: getCheck('toggle-pref-showBadges') ?? true,
-                dailyEmail: getCheck('toggle-pref-dailyEmail') ?? false,
-                alertEmailRecipients: modal.querySelector('#pref-emailAddr')?.value.trim() || ''
-            };
+            const newPrefs = this._harvestState(modal);
 
             userStore.savePreferences(userId, newPrefs);
 
-            // UPDATE APP STATE (Flick Fix): Ensure the global sync payload has fresh data.
+            // UPDATE APP STATE: Ensure global sync payload has fresh data.
             AppState.preferences.dailyEmail = newPrefs.dailyEmail;
             AppState.preferences.alertEmailRecipients = newPrefs.alertEmailRecipients;
+            AppState.preferences.badgeScope = newPrefs.badgeScope;
+            AppState.preferences.showBadges = newPrefs.showBadges;
+            AppState.preferences.excludePortfolio = newPrefs.excludePortfolio;
+
+            // Sync scanner rules to AppState for immediate reactivity
+            if (!AppState.preferences.scannerRules) AppState.preferences.scannerRules = {};
+            Object.assign(AppState.preferences.scannerRules, newPrefs.scannerRules);
+
+            // Sync active filters
+            if (!AppState.preferences.scanner) AppState.preferences.scanner = {};
+            AppState.preferences.scanner.activeFilters = newPrefs.scanner.activeFilters;
 
             // Persist locally as well (Registry Rule)
             localStorage.setItem(STORAGE_KEYS.DAILY_EMAIL, newPrefs.dailyEmail);
             localStorage.setItem(STORAGE_KEYS.EMAIL_RECIPIENTS, newPrefs.alertEmailRecipients);
+            localStorage.setItem(STORAGE_KEYS.BADGE_SCOPE, newPrefs.badgeScope);
 
-            // Trigger AppState Sync (notify AppController to sync with Apps Script)
+            // Trigger Badge Update (Full Refresh using new persisted data)
+            document.dispatchEvent(new CustomEvent(EVENTS.NOTIFICATION_UPDATE, {
+                detail: { forceBadgeUpdate: true }
+            }));
+
+            // Trigger AppState Sync
             if (AppState.triggerSync) AppState.triggerSync();
+
+            // USER REQUEST: Toast Notification
+            const msg = pendingContext || 'Settings saved';
+            ToastManager.show(msg, 'success');
+            pendingContext = null; // Reset
         };
 
         const close = () => {
-            // Force save on close to capture any pending changes or active input
-            saveSettings();
-
+            // NO REVERT LOGIC - Auto-Saved.
             modal.classList.add(CSS_CLASSES.HIDDEN);
             setTimeout(() => modal.remove(), 300);
             if (unsubscribe) unsubscribe();
@@ -911,188 +1136,186 @@ export class SettingsUI {
         modal.querySelector(`.${CSS_CLASSES.MODAL_CLOSE_BTN}`).addEventListener('click', close);
         modal.querySelector(`.${CSS_CLASSES.MODAL_OVERLAY}`).addEventListener('click', close);
 
-        // --- CONSOLIDATED EVENT DELEGATION ---
+        // --- CONSOLIDATED EVENT DELEGATION (V3) ---
 
-        // 1. Unified Control Pill Handler (Movers, Badges, Email, Override, Personal)
-        modal.addEventListener('click', (e) => {
-            const pill = e.target.closest('[class*="pill-segment-"]');
-            if (!pill) return;
+        let updateTimer = null;
+        const triggerUpdate = (shouldSave = false, context = null) => {
+            if (context) pendingContext = context;
+            clearTimeout(updateTimer);
+            updateTimer = setTimeout(() => {
+                const currentState = this._harvestState(modal);
+                this._updateValues(modal, currentState); // Update Summary UI
 
-            const val = pill.dataset.value === 'true';
-            let targetId = '';
-
-            // Check Parent Container to distinguish specific logic
-            const container = pill.parentElement;
-
-            // Logic: Identify Target ID based on Pill Class or Container
-            if (container.classList.contains('hilo-pill-selector')) targetId = 'toggle-hiloEnabled';
-            else if (container.classList.contains('personal-pill-selector')) targetId = 'toggle-personalEnabled'; // Explicit Container Check
-            else if (pill.classList.contains('pill-segment-movers')) targetId = 'toggle-moversEnabled';
-            else if (pill.classList.contains('pill-segment-badge')) {
-                targetId = 'toggle-pref-showBadges';
-                // OPTIMISTIC UPDATE: Immediate Badge Reactivity
-                const newVal = pill.dataset.value === 'true';
-                if (window.AppState && window.AppState.preferences) {
-                    window.AppState.preferences.showBadges = newVal;
-                    // Dispatch event to force NotificationUI redrawing
-                    document.dispatchEvent(new CustomEvent('ASX_NOTIFICATION_UPDATE', {
-                        detail: { forceBadgeUpdate: true }
-                    }));
+                // If requested, trigger the actual persistence
+                if (shouldSave) {
+                    if (shouldSave === 'immediate') immediateSave();
+                    else debouncedSave();
                 }
-            }
-            else if (pill.classList.contains('pill-segment-email')) targetId = 'toggle-pref-dailyEmail';
-            else if (pill.classList.contains('pill-segment-override')) targetId = 'toggle-pref-excludePortfolio';
+            }, 50);
+        };
 
-            if (targetId) {
-                const hiddenCheck = modal.querySelector(`#${targetId}`);
-                if (hiddenCheck) {
-                    hiddenCheck.checked = val;
-                    // Update visuals within the container
-                    // Note: 'container' is already defined above
-                    container.querySelectorAll('span').forEach(s => s.classList.remove('active'));
-                    pill.classList.add('active');
-                    saveSettings();
+        // 1. Inputs/Toggles (Direct)
+        modal.addEventListener('input', (e) => {
+            if (e.target.matches('input')) {
+                // Inputs trigger UI update + Debounced Save
+                let label = e.target.previousElementSibling?.textContent || e.target.getAttribute('placeholder') || 'Setting';
+                if (label.includes('Threshold')) label = 'Thresholds';
+                triggerUpdate(true, `${label} saved`);
+            }
+        });
+
+        // Change usually fires on commit (blur for text, click for check)
+        // For text, 'input' covers it. For checkboxes, 'change' is key.
+        modal.addEventListener('change', (e) => {
+            if (e.target.type !== 'text' && e.target.type !== 'number' && e.target.type !== 'email') {
+                // Toggles/Selects -> Immediate Save
+                // Try to find label
+                const row = e.target.closest('.settings-row');
+                const label = row ? row.querySelector('.settings-label')?.textContent : 'Preference';
+                triggerUpdate('immediate', `${label} updated`);
+            }
+        });
+
+        // 1b. Ring Radio Specialist (YES/NO Toggles)
+        modal.addEventListener('click', (e) => {
+            const radio = e.target.closest('.ring-radio-input');
+            if (radio) {
+                const targetId = radio.dataset.target;
+                const val = radio.value === 'true';
+                const hiddenInput = modal.querySelector(`#${targetId}`);
+                if (hiddenInput) {
+                    hiddenInput.value = String(val);
+                    triggerUpdate('immediate', 'Selection saved'); // Immediate Save
                 }
             }
         });
 
-        // 2. Master "Select" Pill handler
+        // 2. Click Delegation (Pills, Bulk Actions, Accordions, Kangaroo)
         modal.addEventListener('click', (e) => {
-            const seg = e.target.closest('.master-pill-segment');
-            if (!seg) return;
+            // A0. Kangaroo Icon (Open Notifications)
+            const kangaroo = e.target.closest('.kangaroo');
+            if (kangaroo) {
+                // Open Notifications Logic
+                // Only if visible (opacity > 0.2 approx, or class status-on/always-on)
+                const isVisible = kangaroo.classList.contains('status-on') || kangaroo.classList.contains('always-on') || getComputedStyle(kangaroo).opacity > 0.5;
 
-            const action = seg.dataset.action;
-            const container = seg.parentElement;
+                if (isVisible) {
+                    // Dispatch standard Open Event
+                    document.dispatchEvent(new CustomEvent(EVENTS.OPEN_NOTIFICATIONS));
+                    return;
+                }
+            }
 
-            // Update visuals
-            container.querySelectorAll('.master-pill-segment').forEach(s => s.classList.remove('active'));
-            seg.classList.add('active');
+            // A. Alert/Monitoring Pill Selectors
+            const pill = e.target.closest('.pill-segment-badge, .pill-segment-email, .pill-segment-override, .movers-pill-selector span, .hilo-pill-selector span, .personal-pill-selector span, .pill-segment-badge-scope');
+            if (pill) {
+                const isBadgeScope = pill.classList.contains('pill-segment-badge-scope');
+                const val = isBadgeScope ? pill.dataset.value : (pill.dataset.value === 'true');
+                const container = pill.parentElement;
+                let targetId = null;
+                let contextMsg = 'Setting saved';
 
-            // Apply to all industry toggles
-            modal.querySelectorAll('.sector-toggle').forEach(cb => {
-                cb.checked = (action === 'all');
-                // Trigger change to update local sector headers
-                cb.dispatchEvent(new Event('change', { bubbles: true }));
-            });
+                if (pill.classList.contains('pill-segment-badge')) {
+                    targetId = 'toggle-pref-showBadges';
+                    contextMsg = val ? 'Badges Enabled' : 'Badges Disabled';
+                    // NOTE: _executeSave will sync to AppState, no need for manual set here if we save immediate.
+                }
+                else if (pill.classList.contains('pill-segment-badge-scope')) {
+                    targetId = IDS.PREF_BADGE_SCOPE;
+                    contextMsg = 'Badge Scope updated';
+                    // Auto-Save handles sync.
+                }
+                else if (pill.classList.contains('pill-segment-email')) {
+                    targetId = 'toggle-pref-dailyEmail';
+                    contextMsg = val ? 'Daily Email Enabled' : 'Daily Email Disabled';
+                }
+                else if (pill.classList.contains('pill-segment-override')) {
+                    targetId = IDS.PREF_EXCLUDE_PORTFOLIO;
+                    contextMsg = val ? 'Override Enabled' : 'Override Disabled';
+                }
+                else if (pill.closest('.movers-pill-selector')) { targetId = 'toggle-moversEnabled'; contextMsg = 'Movers Filter updated'; }
+                else if (pill.closest('.hilo-pill-selector')) { targetId = 'toggle-hiloEnabled'; contextMsg = '52w High/Low Filter updated'; }
+                else if (pill.closest('.personal-pill-selector')) { targetId = 'toggle-personalEnabled'; contextMsg = 'Personal Filter updated'; }
 
-            saveSettings();
-        });
+                if (targetId) {
+                    const hiddenInput = modal.querySelector(`#${targetId}`);
+                    if (hiddenInput) {
+                        // TYPE SAFETY: Ensure we don't accidentally check the checkbox with a string value like 'custom'
+                        if (hiddenInput.type === 'checkbox' || hiddenInput.type === 'radio') {
+                            if (typeof val === 'boolean') hiddenInput.checked = val;
+                        } else {
+                            hiddenInput.value = String(val);
+                        }
+                        // Update UI Active State
+                        Array.from(container.children).forEach(p => p.classList.toggle('active', p === pill));
+                        triggerUpdate('immediate', contextMsg); // Immediate Save
+                    }
+                }
+                return;
+            }
 
-        // 3. Sector-Level Bulk Action Handler
-        modal.addEventListener('click', (e) => {
-            const bulkBtn = e.target.closest('.bulk-btn');
-            if (!bulkBtn || bulkBtn.classList.contains('master-pill-segment')) return;
-
-            const action = bulkBtn.dataset.action;
-            const item = bulkBtn.closest('.filter-accordion-item');
-            if (item) {
-                item.querySelectorAll('.sector-toggle').forEach(cb => {
-                    cb.checked = (action === 'all');
+            // B. Master Sector Bulk Select
+            const masterSeg = e.target.closest('.master-pill-segment');
+            if (masterSeg) {
+                const action = masterSeg.dataset.action;
+                const isAll = action === 'all';
+                modal.querySelectorAll('.sector-toggle').forEach(cb => {
+                    cb.checked = isAll;
                     cb.dispatchEvent(new Event('change', { bubbles: true }));
                 });
-                saveSettings();
-            }
-        });
 
-        // 4. Sector Toggle & Reactive Meta Updates
-        // 4. Sector Toggle & Reactive Meta Updates
-        modal.addEventListener('change', (e) => {
-            if (e.target.matches('.sector-toggle')) {
-                const item = e.target.closest('.filter-accordion-item');
+                // Update Master Pill UI
+                masterSeg.parentElement.querySelectorAll('.master-pill-segment').forEach(s => s.classList.toggle('active', s.dataset.action === action));
+                triggerUpdate('immediate', 'Bulk Sector Update'); // Immediate Save
+                return;
+            }
+
+            // C. Sector-Level Bulk Action
+            const bulkBtn = e.target.closest('.bulk-btn');
+            if (bulkBtn && !bulkBtn.classList.contains('master-pill-segment')) {
+                const action = bulkBtn.dataset.action;
+                const item = bulkBtn.closest('.filter-accordion-item');
                 if (item) {
-                    const checkboxes = item.querySelectorAll('.sector-toggle');
-                    const checkedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
-                    const totalCount = checkboxes.length;
-
-                    const header = item.querySelector('.filter-header');
-                    const summarySpan = header.querySelector('.summary-text');
-                    const sectorSpan = header.querySelector('.sector-name');
-                    const pillAll = header.querySelector('.bulk-btn[data-action="all"]');
-                    const pillNone = header.querySelector('.bulk-btn[data-action="none"]');
-
-                    const hasActive = checkedCount > 0;
-                    const isAll = checkedCount === totalCount;
-
-                    // UI State
-                    summarySpan.textContent = (isAll || checkedCount === 0) ? '' : `${checkedCount} of ${totalCount}`;
-                    summarySpan.style.display = (isAll || checkedCount === 0) ? 'none' : 'inline-block';
-                    sectorSpan.style.color = hasActive ? 'var(--color-accent)' : 'white';
-                    header.style.borderLeft = `3px solid ${hasActive ? 'var(--color-accent)' : 'transparent'}`;
-
-                    // Industry Name Color
-                    const row = e.target.closest('.filter-row');
-                    if (row) {
-                        row.querySelector('.industry-name').style.color =
-                            e.target.checked ? 'var(--color-accent)' : 'var(--text-normal)';
-                    }
-
-                    // Pill Visuals
-                    if (pillAll) pillAll.classList.toggle('active', isAll);
-                    if (pillNone) pillNone.classList.toggle('active', checkedCount === 0);
+                    item.querySelectorAll('.sector-toggle').forEach(cb => {
+                        cb.checked = (action === 'all');
+                        cb.dispatchEvent(new Event('change', { bubbles: true }));
+                    });
+                    triggerUpdate('immediate', 'Sector Group Update'); // Immediate Save
                 }
-
-                // Global Master Select Sync
-                const allCBs = modal.querySelectorAll('.sector-toggle');
-                const activeFilters = Array.from(allCBs).filter(cb => cb.checked).map(cb => cb.dataset.industry);
-                const totalSelected = activeFilters.length;
-                const totalAvailable = allCBs.length;
-
-                modal.querySelectorAll('.master-pill-segment').forEach(seg => {
-                    const action = seg.dataset.action;
-                    const isMatch = (action === 'all' && totalSelected === totalAvailable) ||
-                        (action === 'none' && totalSelected === 0);
-                    seg.classList.toggle('active', isMatch);
-                });
-
-                // Update Sector Tallies Reactively
-                this._updateSectorTallies(modal, activeFilters);
+                return;
             }
 
-            saveSettings();
-        });
+            // D. View All / Accordion Global Control
+            const accordionSeg = e.target.closest(`.${CSS_CLASSES.ACCORDION_CONTROL_SEGMENT}`);
+            if (accordionSeg) {
+                const action = accordionSeg.dataset.action;
+                accordionSeg.parentElement.querySelectorAll(`.${CSS_CLASSES.ACCORDION_CONTROL_SEGMENT}`).forEach(s => s.classList.remove(CSS_CLASSES.ACTIVE));
+                accordionSeg.classList.add(CSS_CLASSES.ACTIVE);
 
-        // 5. View All Control (Expand/Collapse All)
-        modal.addEventListener('click', (e) => {
-            const seg = e.target.closest(`.${CSS_CLASSES.ACCORDION_CONTROL_SEGMENT}`);
-            if (!seg) return;
+                const isExpand = (action === 'expand');
+                modal.querySelectorAll(`.${CSS_CLASSES.FILTER_ACCORDION_ITEM}`).forEach(item => {
+                    const body = item.querySelector(`.${CSS_CLASSES.FILTER_BODY}`);
+                    const icon = item.querySelector(`.${CSS_CLASSES.FILTER_HEADER} i`);
+                    if (isExpand) { body.classList.remove(CSS_CLASSES.HIDDEN); icon.style.transform = 'rotate(180deg)'; }
+                    else { body.classList.add(CSS_CLASSES.HIDDEN); icon.style.transform = 'rotate(0deg)'; }
+                });
+                triggerUpdate(); // UI update only, no save needed for accordion state
+                return;
+            }
 
-            const action = seg.dataset.action;
-            const container = seg.parentElement;
-
-            // Visual Feedback (Persistent Active State)
-            container.querySelectorAll(`.${CSS_CLASSES.ACCORDION_CONTROL_SEGMENT}`).forEach(s => s.classList.remove(CSS_CLASSES.ACTIVE));
-            seg.classList.add(CSS_CLASSES.ACTIVE);
-
-            // Execute Logic
-            const isExpand = (action === 'expand');
-            modal.querySelectorAll(`.${CSS_CLASSES.FILTER_ACCORDION_ITEM}`).forEach(item => {
-                const body = item.querySelector(`.${CSS_CLASSES.FILTER_BODY}`);
-                const icon = item.querySelector(`.${CSS_CLASSES.FILTER_HEADER} i`);
-
-                if (isExpand) {
-                    body.classList.remove(CSS_CLASSES.HIDDEN);
-                    icon.style.transform = 'rotate(180deg)';
-                } else {
-                    body.classList.add(CSS_CLASSES.HIDDEN);
-                    icon.style.transform = 'rotate(0deg)';
-                }
-            });
-        });
-
-        // 6. Accordion & Row Logic (Toggle Single)
-        modal.addEventListener('click', (e) => {
+            // E. Single Accordion Header (Expand/Collapse)
             const header = e.target.closest(`.${CSS_CLASSES.FILTER_HEADER}`);
             if (header && !e.target.closest('.pill-container')) {
                 const item = header.closest(`.${CSS_CLASSES.FILTER_ACCORDION_ITEM}`);
                 const body = item.querySelector(`.${CSS_CLASSES.FILTER_BODY}`);
                 const icon = header.querySelector('i');
                 const isHidden = body.classList.contains(CSS_CLASSES.HIDDEN);
-
                 body.classList.toggle(CSS_CLASSES.HIDDEN);
                 icon.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
                 return;
             }
 
+            // F. Industrial Row Selection
             const row = e.target.closest(`.${CSS_CLASSES.CLICKABLE_INDUSTRY_ROW}`);
             if (row && !e.target.matches('input')) {
                 const cb = row.querySelector(`.${CSS_CLASSES.SECTOR_TOGGLE}`);
@@ -1103,42 +1326,44 @@ export class SettingsUI {
             }
         });
 
-        const triggerDebouncedSave = () => {
-            clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(saveSettings, 1000);
-        };
+        // 3. Sector Change Handler (Reactive Tallying + Save)
+        modal.addEventListener('change', (e) => {
+            if (e.target.matches('.sector-toggle')) {
+                // ... Tally Logic is same ...
+                const item = e.target.closest('.filter-accordion-item');
+                if (item) {
+                    // Re-run tally
+                    const checkboxes = item.querySelectorAll('.sector-toggle');
+                    const checkedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
+                    const totalCount = checkboxes.length;
+                    const header = item.querySelector('.filter-header');
+                    const summarySpan = header.querySelector('.summary-text');
+                    const sectorSpan = header.querySelector('.sector-name');
+                    const pillAll = header.querySelector('.bulk-btn[data-action="all"]');
+                    const pillNone = header.querySelector('.bulk-btn[data-action="none"]');
+                    const hasActive = checkedCount > 0;
+                    const isAll = checkedCount === totalCount;
 
-        modal.addEventListener('input', (e) => {
-            if (e.target.matches('input, select, textarea')) {
-                // AUTO-FLIP: If user types an email, auto-enable the daily email toggle.
-                if (e.target.id === IDS.PREF_EMAIL_ADDR && e.target.value.trim().length > 0) {
-                    const dailyCheck = modal.querySelector(`#${IDS.TOGGLE_DAILY_EMAIL}`);
-                    if (dailyCheck && !dailyCheck.checked) {
-                        dailyCheck.checked = true;
-                        // Update Pill UI
-                        const container = modal.querySelector(`.${CSS_CLASSES.PILL_SELECTOR_EMAIL}`);
-                        if (container) {
-                            container.querySelectorAll('span').forEach(s => s.classList.toggle(CSS_CLASSES.ACTIVE, s.dataset.value === 'true'));
+                    if (summarySpan) {
+                        if (checkedCount === 0) summarySpan.style.display = 'none';
+                        else if (isAll) summarySpan.style.display = 'none';
+                        else {
+                            summarySpan.style.display = 'inline-block';
+                            summarySpan.textContent = `${checkedCount} of ${totalCount}`;
                         }
                     }
+
+                    if (sectorSpan) sectorSpan.style.color = hasActive ? 'var(--color-accent)' : 'white';
+                    if (header) header.style.borderLeftColor = hasActive ? 'var(--color-accent)' : 'transparent';
+                    if (pillAll) pillAll.classList.toggle('active', isAll);
+                    if (pillNone) pillNone.classList.toggle('active', checkedCount === 0);
                 }
 
-                if (e.target.type === 'checkbox' || e.target.type === 'radio') {
-                    saveSettings();
-                } else {
-                    triggerDebouncedSave();
-                }
+                // SECTOR UPDATE: Trigger Immediate Save
+                // Note: The Sector Change Handler logic (see listener below) updates the DOM checkboxes.
+                // We just need to trigger the save cycle here.
+                triggerUpdate('immediate', 'Sectors updated'); // Immediate Save on sector check
             }
         });
-
-        modal.addEventListener('change', (e) => {
-            if (e.target.matches('input, select, textarea')) {
-                if (e.target.type !== 'checkbox' && e.target.type !== 'radio') {
-                    saveSettings();
-                    clearTimeout(debounceTimer);
-                }
-            }
-        });
-
     }
 }

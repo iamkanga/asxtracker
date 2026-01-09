@@ -44,9 +44,9 @@ export class DataService {
             // TRACE LOGGING
             console.log(`[DataService] Fetching Live Prices. URL: ${url.toString()}`);
 
-            // TIMEOUT PROTECTION (8 Seconds)
+            // TIMEOUT PROTECTION (20 Seconds)
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 8000);
+            const timeoutId = setTimeout(() => controller.abort(), 20000);
 
             try {
                 const response = await fetch(url.toString(), { signal: controller.signal });
@@ -122,12 +122,11 @@ export class DataService {
     searchStocks(query, livePrices, industryFilters = []) {
         if (!livePrices) return [];
 
-        // Normalize Filters: Ensure array
-        const filters = Array.isArray(industryFilters) ? industryFilters : (industryFilters ? [industryFilters] : []);
-        const hasFilters = filters.length > 0;
-
-        // Allow empty query if filter is present (Scanner Mode)
-        if ((!query || typeof query !== 'string') && !hasFilters) return [];
+        // Allow empty query if industryFilters is present (Scanner Mode)
+        // If industryFilters is null/undefined, it means "No Filter" (Show All).
+        // If industryFilters is an array (even empty), it means "Whitelist".
+        const isWhitelistMode = Array.isArray(industryFilters);
+        if ((!query || typeof query !== 'string') && !isWhitelistMode) return [];
 
         const q = (query || '').toUpperCase().trim();
         const hasQuery = q.length > 0;
@@ -152,13 +151,10 @@ export class DataService {
             };
 
             // 1. FILTER: Industry (Global Scanner)
-            if (hasFilters) {
-                // Robust Match: Case-insensitive check
-                // filters are from UI (likely correct casing), but let's normalize to be safe
+            if (isWhitelistMode) {
                 const itemIndustry = (data.industry || '').trim().toUpperCase();
-
-                // Check if *any* filter (uppercase) matches this item
-                const match = filters.some(f => f.toUpperCase() === itemIndustry);
+                // If whitelist is [], match will always be false (None selected)
+                const match = industryFilters.some(f => f.toUpperCase() === itemIndustry);
 
                 if (!match) {
                     continue;
@@ -175,7 +171,7 @@ export class DataService {
                     bucketNameContains.push(resultItem);
                 }
             } else {
-                // If no query but filter exists, just add to a bucket (Scanner Mode)
+                // If no query but whitelist exists, just add to a bucket (Scanner Mode)
                 bucketTickerStart.push(resultItem);
             }
         }

@@ -9,7 +9,7 @@ import { db } from '../auth/AuthService.js';
 import { AppState } from './AppState.js';
 // Import userStore to listen for Preference Updates
 import { userStore } from '../data/DataService.js';
-import { EVENTS, STORAGE_KEYS, DASHBOARD_SYMBOLS } from '../utils/AppConstants.js';
+import { EVENTS, STORAGE_KEYS, DASHBOARD_SYMBOLS, SECTOR_INDUSTRY_MAP } from '../utils/AppConstants.js';
 import { doc, getDoc, updateDoc, arrayUnion, arrayRemove, onSnapshot, setDoc, getDocFromServer } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const APP_ID = "asx-watchlist-app";
@@ -323,6 +323,24 @@ export class NotificationStore {
     }
 
     /**
+     * Retrieves Scanner Rules.
+     * PRIORITY: AppState (Live Preview) > Internal Store > Empty
+     */
+    getScannerRules() {
+        // 1. Try Live AppState (Reactive Preview from Settings)
+        if (AppState.preferences && AppState.preferences.scannerRules) {
+            // Ensure we merge with activeFilters if stored separately in scanner.activeFilters
+            const rules = { ...AppState.preferences.scannerRules };
+            if (AppState.preferences.scanner && AppState.preferences.scanner.activeFilters) {
+                rules.activeFilters = AppState.preferences.scanner.activeFilters;
+            }
+            return rules;
+        }
+        // 2. Fallback to Internal Store (persisted)
+        return this.scannerRules || {};
+    }
+
+    /**
      * Filters list of hits against User Thresholds.
      * strictMode = If true, requires at least one threshold (or explicit 0) to be active.
      */
@@ -335,28 +353,57 @@ export class NotificationStore {
         // FIX: STRICT MODE
         // If User set everything to 0/None -> Disable alerts for this category.
         // Assuming NULL means Disabled.
-        if (strictMode) {
+        // EXCEPTION: If Override is ON, we must process list to find implicit items.
+        const overrideOn = rules.excludePortfolio !== false;
+        if (strictMode && !overrideOn) {
             const isDefined = (hasPct || hasDol);
             if (!isDefined) return [];
         }
 
         // Use Defaults for Comparison (0 if null/undefined)
         // logic allows 0 to match >0.
-        const tPct = rules.percentThreshold || 0;
-        const tDol = rules.dollarThreshold || 0;
-        const minPrice = rules.minPrice || 0; // Global Min Price Filter
+        const tPct = (rules.percentThreshold === null || rules.percentThreshold === undefined) ? null : rules.percentThreshold;
+        const tDol = (rules.dollarThreshold === null || rules.dollarThreshold === undefined) ? null : rules.dollarThreshold;
+        const minPrice = (rules.minPrice === null || rules.minPrice === undefined) ? null : rules.minPrice;
+
+        // NEW LOGIC: Blank = Off for ALL containers.
+        // For Increase/Decrease: 0 = Off.
+        // For Limit Containers (Min Price): 0 = On (Show All).
+        const hasTPct = rules.isHilo ? (tPct !== null) : (tPct !== null && tPct !== 0);
+        const hasTDol = rules.isHilo ? (tDol !== null) : (tDol !== null && tDol !== 0);
+        const hasMinPrice = (minPrice !== null);
+
+        // If both thresholds are OFF -> filter out this category
+        if (!hasTPct && !hasTDol) return [];
+        // If Min Price (Limit) is OFF -> filter out
+        if (!hasMinPrice) return [];
 
         return hits.filter(hit => {
+            // CONSTANTS & BYPASS LOGIC (Moved to Top for Reference Safety)
+            const activeFilters = rules.activeFilters || [];
+            const isLocal = hit._isLocal === true;
+            const overrideOn = rules.excludePortfolio !== false;
+            const isTarget = (hit.intent === 'target' || hit.intent === 'TARGET');
+            const shouldBypass = isTarget || (isLocal && overrideOn);
+
             // 1. Zombie Check
             // Block items with no meaningful movement. Handles undefined or NaN values.
-            const pctZero = Number(hit.pct) === 0 || isNaN(Number(hit.pct));
-            const changeZero = hit.change === undefined || Number(hit.change) === 0;
-            if (pctZero && changeZero) return false;
+            // EXCEPTION: Always allow 52-Week High/Low notifications even if daily move is flat.
+            if (!rules.isHilo) {
+                const pctZero = Number(hit.pct) === 0 || isNaN(Number(hit.pct));
+                const changeZero = hit.change === undefined || Number(hit.change) === 0;
+                if (pctZero && changeZero) return false;
+            }
 
             // 2. Global Price Filter (Min Price)
             // Handle different property names (live, price, lastPrice)
             const price = hit.live || hit.price || hit.lastPrice || 0;
-            if (minPrice > 0 && price < minPrice) {
+            const thresholdMin = minPrice || 0;
+
+            // OVERRIDE LOGIC: 
+            // If Override is ON, we bypass the global minPrice check for items in the user's watchlist (`shouldBypass`).
+            // However, we still respect it for generic global alerts.
+            if (!shouldBypass && thresholdMin > 0 && price < thresholdMin) {
                 return false;
             }
 
@@ -389,12 +436,6 @@ export class NotificationStore {
             // Block alerts from industries NOT in the activeFilters whitelist.
             // EXCEPTION 1: Always show if the stock is in the user's watchlist AND override is enabled.
             // EXCEPTION 2: Always show Price Targets (User Intent) regardless of sector.
-            const activeFilters = rules.activeFilters || [];
-            const isLocal = hit._isLocal === true;
-            const overrideOn = rules.excludePortfolio !== false;
-            const isTarget = (hit.intent === 'target' || hit.intent === 'TARGET');
-            const shouldBypass = isTarget || (isLocal && overrideOn);
-
             if (!shouldBypass) {
                 // If Whitelist is empty, block everything that isn't bypassed
                 if (activeFilters.length === 0) return false;
@@ -417,20 +458,20 @@ export class NotificationStore {
             }
 
             // 3. Threshold Check
+            // EXCEPTION: Targets and 52-Week Hi/Lo hits are explicit events. They bypass generic movement thresholds.
+            if (isTarget || rules.isHilo) return true;
+
             // OR LOGIC:
-            // If Pct Threshold is > 0, check if Pct met.
-            // If Dol Threshold is > 0, check if Dol met.
-            // If both 0 (but enabled/defined), it passes (Show All).
+            // Use the 'has' flags defined above.
+            const valPct = Math.abs(Number(hit.pct) || 0);
+            const valDol = Math.abs(Number(hit.change) || 0);
 
-            const matchesPct = (tPct > 0 ? Math.abs(hit.pct) >= tPct : true);
-            const matchesDol = (tDol > 0 ? Math.abs(hit.change) >= tDol : true);
-
-            if (tPct > 0 && tDol > 0) {
-                return (Math.abs(hit.pct) >= tPct) || (Math.abs(hit.change) >= tDol);
-            } else if (tPct > 0) {
-                return Math.abs(hit.pct) >= tPct;
-            } else if (tDol > 0) {
-                return Math.abs(hit.change) >= tDol;
+            if (hasTPct && hasTDol) {
+                return (valPct >= (tPct || 0)) || (valDol >= (tDol || 0));
+            } else if (hasTPct) {
+                return valPct >= (tPct || 0);
+            } else if (hasTDol) {
+                return valDol >= (tDol || 0);
             }
 
             // If strictMode is OFF (bypass), and no thresholds set -> Show All (passed via boolean Logic above)
@@ -628,13 +669,7 @@ export class NotificationStore {
 
             // --- STRICT FILTER FOR PERSONAL MOVERS (RMD FIX) ---
             if (hit.intent === 'mover') {
-                // BYPASS: Implicit Watchlist Movers (e.g. >5%) always show, regardless of global settings
-                // Note: Implicit ones are generated client-side and already passed strict filtering.
-                if (hit.isImplicit) return true;
-
-                const rules = this.scannerRules || {};
-
-                // FIX: GLOBAL DISABLE CHECK
+                // 1. Global Feature Toggle: If Movers are disabled entirely, block EVERYTHING.
                 if (rules.moversEnabled === false) return false;
 
                 const isDown = (hit.direction || '').toLowerCase() === 'down' || (hit.pct || 0) < 0;
@@ -647,6 +682,10 @@ export class NotificationStore {
                 // If the user set "Increase Threshold" to "None" (0), they want NO ALERTS.
                 // We must block backend hits in this case.
                 if (thresholdPct === 0 && thresholdDol === 0) return false;
+
+                // 2. Override Logic: If Override is ON, implicit items bypass NUMERIC Thresholds (but not Disabled ones).
+                // REVERTED: User requested that Watchlist Items MUST respect Thresholds even if Override is ON.
+                // if (hit.isImplicit && overrideOn) return true;
 
                 // --- JIT ENRICHMENT FOR ACCURATE FILTERING & DISPLAY ---
                 // Use Live Data if available, otherwise fallback to snapshot
@@ -852,9 +891,10 @@ export class NotificationStore {
         const local = this.getLocalAlerts();
         const localMovers = (local.fresh || []).filter(item => item.intent === 'mover' || item.intent === 'up' || item.intent === 'down');
 
-        // Split Local by Direction
-        const localUp = localMovers.filter(i => i.type === 'up' || i.pct > 0);
-        const localDown = localMovers.filter(i => i.type === 'down' || i.pct < 0);
+        // Split Local by Direction - STRICT SIGN CHECK
+        // Using 'type' label is risky if price flipped. Trust the math.
+        const localUp = localMovers.filter(i => (Number(i.pct) || 0) > 0);
+        const localDown = localMovers.filter(i => (Number(i.pct) || 0) < 0);
 
         // 3. Merge Strategies (Dedup by Code)
         const personalEnabled = rules.personalEnabled !== false; // Check Personal Alerts Preference
@@ -883,6 +923,7 @@ export class NotificationStore {
         // If bypassStrict is TRUE, strictMode is FALSE.
         // If bypassStrict is FALSE (Default), strictMode is TRUE (Original Behavior).
         const strictMode = !bypassStrict;
+        const overrideOn = rules.excludePortfolio !== false;
 
         if (rules.moversEnabled !== false) {
             // MERGE BEFORE FILTERING? 
@@ -893,12 +934,36 @@ export class NotificationStore {
             let mergedDown = mergeLists(rawGlobalDown, localDown);
 
             // FORCE FINAL SORT (Desc for Up, Asc for Down)
+            // FORCE FINAL SORT (Desc for Up, Asc for Down)
+            // RE-FILTER SIGN: Ensure purity of lists (Fixes negative stocks in Gainers)
+            // Use Number() casting to prevent string comparison errors.
+            mergedUp = mergedUp.filter(i => Number(i.pctChange || i.pct || 0) > 0);
             mergedUp.sort((a, b) => (b.pctChange || b.pct || 0) - (a.pctChange || a.pct || 0));
+
+            mergedDown = mergedDown.filter(i => Number(i.pctChange || i.pct || 0) < 0);
             mergedDown.sort((a, b) => (a.pctChange || a.pct || 0) - (b.pctChange || b.pct || 0));
 
             // Pass Global minPrice, activeFilters, and excludePortfolio into filterHits rules
-            const upRules = { ...(rules.up || {}), minPrice: rules.minPrice || 0, activeFilters: rules.activeFilters || [], excludePortfolio: rules.excludePortfolio !== false };
-            const downRules = { ...(rules.down || {}), minPrice: rules.minPrice || 0, activeFilters: rules.activeFilters || [], excludePortfolio: rules.excludePortfolio !== false };
+            // FIX: Remove '|| 0' from minPrice. Allow null (Blank) to pass through as "Off".
+            // FIX: If activeFilters is null/undefined, it means "Show All". Populate with ALL sectors.
+            // If it is [], it means "None" (Block All).
+
+            const allSectors = Object.values(SECTOR_INDUSTRY_MAP).flat().map(s => s.toUpperCase());
+            const userFilters = rules.activeFilters; // Can be null (All) or [] (None)
+            const resolveFilters = (f) => (f === null || f === undefined) ? allSectors : f;
+
+            const upRules = {
+                ...(rules.up || {}),
+                minPrice: rules.minPrice,
+                activeFilters: resolveFilters(userFilters),
+                excludePortfolio: overrideOn
+            };
+            const downRules = {
+                ...(rules.down || {}),
+                minPrice: rules.minPrice,
+                activeFilters: resolveFilters(userFilters),
+                excludePortfolio: overrideOn
+            };
 
             movers.up = this.filterHits(mergedUp, upRules, strictMode);
             movers.down = this.filterHits(mergedDown, downRules, strictMode);
@@ -908,7 +973,7 @@ export class NotificationStore {
         // FIX: If hiloMinPrice is NULL (Blank) OR 0, Disable. User must set > 0 to enable.
         // NEW: Respect Explicit "52W Notifications" Switch.
         const hiloLimit = rules.hiloMinPrice;
-        const hiloEnabled = (rules.hiloEnabled !== false) && (hiloLimit !== null && hiloLimit > 0);
+        const hiloEnabled = (rules.hiloEnabled !== false);
 
         // Merge Local HiLo? (User didn't explicitly ask, but consistent).
         // Local Alerts includes 'hilo'.
@@ -916,19 +981,32 @@ export class NotificationStore {
         const localHigh = localHilo.filter(i => i.type === 'high');
         const localLow = localHilo.filter(i => i.type === 'low');
 
-        let mergedHigh = hiloEnabled ? mergeLists(rawGlobalHigh, localHigh) : [];
-        let mergedLow = hiloEnabled ? mergeLists(rawGlobalLow, localLow) : [];
+        // LOGIC: If Hilo Disabled, but Override ON -> Merge Local Only.
+        let mergedHigh = hiloEnabled ? mergeLists(rawGlobalHigh, localHigh) : (overrideOn ? localHigh : []);
+        let mergedLow = hiloEnabled ? mergeLists(rawGlobalLow, localLow) : (overrideOn ? localLow : []);
 
         // FORCE FINAL SORT for HiLo (Based on PCT Change, as requested)
-        if (hiloEnabled) {
+        if (hiloEnabled || overrideOn) {
             // Highs: Biggest Gainers First
             mergedHigh.sort((a, b) => (b.pctChange || b.pct || 0) - (a.pctChange || a.pct || 0));
             // Lows: Biggest Losers First
             mergedLow.sort((a, b) => (a.pctChange || a.pct || 0) - (b.pctChange || b.pct || 0));
         }
 
-        // Match Global minPrice for HiLo too
-        const hiloRules = { percentThreshold: 0, dollarThreshold: 0, minPrice: rules.hiloMinPrice || 0, activeFilters: rules.activeFilters || [], excludePortfolio: rules.excludePortfolio !== false };
+        // Match Global minPrice for HiLo too. Treat Blank minPrice as Off (null).
+        // Treat Null activeFilters as Show All.
+        const allSectorsHilo = Object.values(SECTOR_INDUSTRY_MAP).flat().map(s => s.toUpperCase());
+        const userFiltersHilo = rules.activeFilters;
+        const resolveFiltersHilo = (f) => (f === null || f === undefined) ? allSectorsHilo : f;
+
+        const hiloRules = {
+            percentThreshold: 0,
+            dollarThreshold: 0,
+            minPrice: rules.hiloMinPrice, // No default 0
+            activeFilters: resolveFiltersHilo(userFiltersHilo),
+            excludePortfolio: rules.excludePortfolio !== false,
+            isHilo: true
+        };
 
         const enrichHilo = (list) => {
             return list.map(hit => {
@@ -1395,12 +1473,25 @@ export class NotificationStore {
                     }
 
                     // 2. 52-WEEK HIGH/LOW (Implicit Watchlist Alerts)
-                    // FIX: GOVERNED BY GLOBAL SETTINGS. 
-                    // If 52W Limit is "Blank" (Null) OR 0, Disable. 
-                    const hiloLimit = rules.hiloMinPrice;
-                    const hiloEnabled = (hiloLimit !== null && hiloLimit !== undefined && hiloLimit > 0);
+                    // FIX: Respect Global Toggle AND Min Price.
+                    const hiloLimit = rules.hiloMinPrice || 0;
 
-                    if (hiloEnabled) {
+                    // OVERRIDE LOGIC: If Override is ON, we bypass the Min Price check (`hiloLimit`).
+                    // We still respect the Global Feature Toggle (`hiloEnabled`).
+                    // User Request: "It also needs to ignore the 52 week high low threshold" (Min Price).
+                    const overrideActive = rules.excludePortfolio !== false;
+                    const featureEnabled = rules.hiloEnabled !== false;
+
+                    // Condition: Feature ON AND (Price >= Limit OR Override ON)
+                    // Note: If hiloLimit is 0/null and Override is OFF, effectively everything passes or fails depending on interpretation? 
+                    // Standard logic: If Limit > 0, strict. If Limit is 0, allow all? OR block all?
+                    // Previous logic: hiloLimit > 0 was required. 
+                    // New Logic: If Override is ON, we allow REGARDLESS of hiloLimit value.
+
+                    const passesThreshold = (hiloLimit > 0 && price >= hiloLimit);
+                    const shouldProcess = featureEnabled && (passesThreshold || overrideActive);
+
+                    if (shouldProcess) {
                         const high52 = Number(liveData.high || liveData.high52 || liveData.high_52 || 0);
                         const low52 = Number(liveData.low || liveData.low52 || liveData.low_52 || 0);
                         const tolerance = 0.001; // FP tolerance
@@ -1447,15 +1538,15 @@ export class NotificationStore {
                     if (code === 'GAP') console.groupEnd();
 
                     // 3. MOVERS (Implicit Watchlist Alerts)
-                    // Removed strict Volume check as it may be missing in some data feeds.
-                    // Replaced with MATH SANITY CHECK to filter Stale Data.
+                    // If Override is ON, we generate movers regardless of Thresholds, BUT MUST respect Global Toggle.
+                    const overrideOn = rules.excludePortfolio !== false;
+
                     if (rules.moversEnabled !== false) {
                         // Variables pctChange, dolChange, absPct, absChange inherited from parent scope.
 
                         // ZOMBIE CHECK (Math):
                         // Inherited 'isPhantom' from parent scope.
                         if (isPhantom) {
-                            // console.warn(`[NotificationStore] Blocked PHANTOM Alert for ${code}`);
                             return;
                         }
 
@@ -1469,15 +1560,16 @@ export class NotificationStore {
 
                         let isHit = false;
 
-                        // Strict NULL check.
-                        // If Pct is set (>=0), check match.
-                        // If Pct is null, ignore Pct check (unless Dol is also null -> disable).
-                        const hasPct = (thresholdPct !== null && thresholdPct !== undefined);
-                        const hasDol = (thresholdDol !== null && thresholdDol !== undefined);
+                        // FIX: Treat 0 as "Disabled" (None).
+                        const hasPct = (thresholdPct !== null && thresholdPct !== undefined && thresholdPct !== 0);
+                        const hasDol = (thresholdDol !== null && thresholdDol !== undefined && thresholdDol !== 0);
 
                         if (!hasPct && !hasDol) {
-                            // Both blank = Disabled.
+                            // Both blank = Disabled (Respect "Off" setting even if Override is ON).
                             isHit = false;
+                        } else if (overrideOn) {
+                            // Override ON: Bypass specific threshold values (e.g. 5%), assuming feature is enabled.
+                            isHit = true;
                         } else {
                             if (hasPct && absPct >= thresholdPct) isHit = true;
                             if (hasDol && absChange >= thresholdDol) isHit = true;

@@ -17,6 +17,7 @@ export class NotificationUI {
     static _bellManuallyHidden = false; // Track manual dismissal
     static _prevCount = 0; // Track previous count for change detection
     static _openLock = false; // Debounce lock for modal opening
+    static _settingsRestorable = false; // Track if we hid settings
 
     static init() {
         this.renderFloatingBell();
@@ -24,7 +25,18 @@ export class NotificationUI {
         // Listen for updates from the Store (Unified Event Bus)
         document.addEventListener(EVENTS.NOTIFICATION_UPDATE, (e) => {
             // 1. Update Badge (Floating Bell)
-            this.updateBadgeCount(e.detail.customCount);
+            // PRIORITY: Use explicit scope from event detail if provided (instant refresh), fallback to AppState
+            const scope = e.detail?.scope || AppState?.preferences?.badgeScope || 'custom';
+
+            // If forced, fetch fresh counts from store immediately
+            if (e.detail?.forceBadgeUpdate && notificationStore) {
+                const counts = notificationStore.getBadgeCounts();
+                const count = (scope === 'all') ? counts.total : counts.custom;
+                this.updateBadgeCount(count);
+            } else {
+                const count = (scope === 'all') ? e.detail.totalCount : e.detail.customCount;
+                this.updateBadgeCount(count);
+            }
 
             // 2. Live Update Open Modal (Resolves "stale list" issue)
             const modal = document.getElementById(IDS.NOTIFICATION_MODAL);
@@ -80,6 +92,13 @@ export class NotificationUI {
             return; // Stop processing
         }
 
+        // REDESIGNED ICON DISMISSAL: If showBadges is false, hide the entire kangaroo.
+        if (!showBadges) {
+            if (container) container.classList.add(CSS_CLASSES.HIDDEN);
+            bell.classList.add(CSS_CLASSES.HIDDEN);
+            return;
+        }
+
         // --- DISMISSAL LOGIC: "If volatility 52 week and personal alert are turned off The kangaroo icon should dismiss itself" ---
         let allDisabled = false;
         if (notificationStore) {
@@ -97,7 +116,6 @@ export class NotificationUI {
         }
 
         // KANGAROO VISIBILITY FIX: Always show the button/container (unless locked or all disabled)
-        // Only toggle the BADGE (Red Dot) visibility.
         if (container) container.classList.remove(CSS_CLASSES.HIDDEN);
         bell.classList.remove(CSS_CLASSES.HIDDEN);
 
@@ -158,9 +176,22 @@ export class NotificationUI {
 
         console.log(`[NotificationUI] showModal() triggered. Tab: ${activeTabId} Source: ${this._currentSource}`);
 
-        // --- DUPLICATE PROTECTION ---
-        if (document.getElementById(IDS.NOTIFICATION_MODAL)) {
-            console.log('[NotificationUI] Modal already open. Ignoring.');
+        // --- DUPLICATE PROTECTION & SURFACING ---
+        let modal = document.getElementById(IDS.NOTIFICATION_MODAL);
+
+        // STACK MANAGEMENT: Hide Settings Modal if open (Mimic Overlay)
+        const settingsModal = document.getElementById(IDS.SETTINGS_MODAL);
+        this._settingsRestorable = false; // Reset state
+        if (settingsModal && !settingsModal.classList.contains(CSS_CLASSES.HIDDEN)) {
+            console.log('[NotificationUI] Hiding Settings Modal temporarily for focus.');
+            settingsModal.classList.add(CSS_CLASSES.HIDDEN);
+            this._settingsRestorable = true;
+        }
+
+        if (modal) {
+            console.log('[NotificationUI] Modal already open. Surfacing to top.');
+            document.body.appendChild(modal);
+            modal.style.zIndex = '2147483647';
             return;
         }
 
@@ -170,7 +201,8 @@ export class NotificationUI {
 
             // 2. Render Modal
             console.log('[NotificationUI] Rendering modal DOM...');
-            const modal = this._renderModal();
+            modal = this._renderModal();
+            modal.style.zIndex = '2147483647'; // Force Max
             document.body.appendChild(modal);
 
             // 3. Bind Events
@@ -284,6 +316,19 @@ export class NotificationUI {
 
     static _close(modal) {
         modal.classList.add(CSS_CLASSES.HIDDEN);
+
+        // RESTORE SETTINGS MODAL IF HIDDEN
+        if (this._settingsRestorable) {
+            const settingsModal = document.getElementById(IDS.SETTINGS_MODAL);
+            if (settingsModal) {
+                console.log('[NotificationUI] Restoring Settings Modal visibility.');
+                settingsModal.classList.remove(CSS_CLASSES.HIDDEN);
+                // Reset Z-Index just in case we messed with it previously
+                settingsModal.style.zIndex = '';
+            }
+            this._settingsRestorable = false;
+        }
+
         setTimeout(() => modal.remove(), 300);
         if (modal._navActive) {
             modal._navActive = false;
@@ -460,13 +505,17 @@ export class NotificationUI {
             });
         };
 
-        const finalMoversUp = filterHiddenSectors(filterDashboardCodes(globalData.movers?.up));
-        const finalMoversDown = filterHiddenSectors(filterDashboardCodes(globalData.movers?.down));
-        const finalHiloHigh = filterHiddenSectors(filterDashboardCodes(globalData.hilo?.high));
-        const finalHiloLow = filterHiddenSectors(filterDashboardCodes(globalData.hilo?.low));
-
         const rules = notificationStore.getScannerRules() || { up: {}, down: {} };
         const minPrice = rules.up?.minPrice || rules.down?.minPrice || 0.05; // Base default
+
+        const globalMoversUp = filterHiddenSectors(filterDashboardCodes(globalData.movers?.up));
+        const globalMoversDown = filterHiddenSectors(filterDashboardCodes(globalData.movers?.down));
+
+        // Use Enrichment to Filter Strictly
+        const finalMoversUp = this._enrichAndFilter(globalMoversUp, rules.up || {}, 'up');
+        const finalMoversDown = this._enrichAndFilter(globalMoversDown, rules.down || {}, 'down');
+        const finalHiloHigh = filterHiddenSectors(filterDashboardCodes(globalData.hilo?.high));
+        const finalHiloLow = filterHiddenSectors(filterDashboardCodes(globalData.hilo?.low));
 
         // Wait, 'minPrice' above is LOCAL logic fallback? 
         // No, I'll use proper Coalescing.
@@ -525,13 +574,13 @@ export class NotificationUI {
             return 0;
         });
 
-        // Structure Definitions - REORDERED
+        // Structure Definitions - REORDERED & SPLIT
         const sections = [
-            { id: 'custom', title: 'Watchlist', subtitle: '<span style="color: var(--color-accent);">Personal / Targets</span>', items: sortedLocal, type: 'custom', color: 'neutral' },
-            { id: 'hilo-high', title: '52-Week Highs', subtitle: hiloStrHigh, items: finalHiloHigh, type: 'hilo-up', color: 'green' },
-            { id: 'hilo-low', title: '52-Week Lows', subtitle: hiloStrLow, items: finalHiloLow, type: 'hilo-down', color: 'red' },
-            { id: 'gainers', title: 'Volatility Gainers', subtitle: upStr, items: finalMoversUp, type: 'up', color: 'green' },
-            { id: 'losers', title: 'Volatility Losers', subtitle: downStr, items: finalMoversDown, type: 'down', color: 'red' }
+            { id: 'custom', title: 'Custom Movers', subtitle: '<span style="color: var(--color-accent);">Watchlist prices and Market filters</span>', items: sortedLocal, type: 'custom', color: 'neutral' },
+            { id: 'high', title: '52 Week High', subtitle: hiloStrHigh, items: finalHiloHigh, type: 'hilo', color: 'green' },
+            { id: 'low', title: '52 Week Low', subtitle: hiloStrLow, items: finalHiloLow, type: 'hilo', color: 'red' },
+            { id: 'gainers', title: 'Market Gainers', subtitle: upStr, items: finalMoversUp, type: 'movers', color: 'green' },
+            { id: 'losers', title: 'Market Losers', subtitle: downStr, items: finalMoversDown, type: 'movers', color: 'red' }
         ];
 
         // --- DEBUG LOGGING: RENDER COUNT ---
@@ -743,7 +792,8 @@ export class NotificationUI {
         if (section.items.length === 0) {
             let hint = 'No alerts currently match your criteria.';
             if (section.id === 'custom') hint = 'No personal or target alerts have been hit today. Add targets in the "Add Share" modal.';
-            if (section.id === 'gainers' || section.id === 'losers') hint = 'Volatility movers are filtered by your Dollar and Percentage thresholds in Settings.';
+            if (section.id === 'movers') hint = 'Market movers are filtered by your Dollar and Percentage thresholds in Settings.';
+            if (section.id === 'hilo') hint = '52 week movers are filtered by your Min Price threshold in Settings.';
 
             body.innerHTML = `
                 <div style="text-align:center; color:var(--text-muted); padding:1.5rem 1rem; font-size:0.8rem;">
@@ -777,7 +827,7 @@ export class NotificationUI {
 
             const isHiLo = intent === 'hilo' || intent.includes('hilo') || alertType.includes('hilo');
             const isMover = intent === 'mover' || intent === 'up' || intent === 'down' ||
-                alertType === 'gainers' || alertType === 'losers' || alertType === 'up' || alertType === 'down';
+                alertType === 'gainers' || alertType === 'losers' || alertType === 'up' || alertType === 'down' || alertType === 'movers';
 
             // 1. PRICE TARGET (Priority 1: User set targets)
             if (intent === 'target' || intent === 'target-hit') {
@@ -1102,6 +1152,59 @@ export class NotificationUI {
         `;
     }
 
+    // --- HELPER: ENRICH & FILTER MOVERS ---
+    static _enrichAndFilter(list, rules, direction) {
+        if (!list || list.length === 0) return [];
+
+        const enrichedList = list.map(item => {
+            const clone = { ...item };
+            const code = clone.code || clone.shareName || clone.symbol;
+
+            // 1. JIT Enrichment from Live Prices
+            if (code && AppState.livePrices && AppState.livePrices.has(code)) {
+                const live = AppState.livePrices.get(code);
+
+                // Prioritize 'dayChangePercent' (Standard) or 'pct'
+                const lPct = Number(live.dayChangePercent || live.changeInPercent || live.pct || 0);
+                const lDol = Number(live.change || live.c || 0);
+
+                if (Math.abs(lPct) > 0 || Math.abs(lDol) > 0) {
+                    clone.pct = lPct;
+                    clone.change = lDol;
+                    // Also update price if available
+                    const lPrice = Number(live.live || live.price || live.last || 0);
+                    if (lPrice > 0) clone.live = lPrice;
+                }
+            }
+            return clone;
+        });
+
+        const limitPct = rules.percentThreshold || 0;
+        const limitDol = rules.dollarThreshold || 0;
+
+        return enrichedList.filter(item => {
+            const pct = Number(item.pct || 0);
+            const dol = Number(item.change || 0);
+
+            // 2. Strict Direction Check
+            if (direction === 'up' && pct <= 0) return false;
+            if (direction === 'down' && pct >= 0) return false;
+
+            // 3. Threshold Check
+            // If NO thresholds set, allow all in that direction (unless User implies "None" means Off, but typical UI implies "Show All")
+            // However, user complaint suggests thresholds ARE set but ignored.
+            if (limitPct === 0 && limitDol === 0) return true; // Show all if no limits
+
+            const absPct = Math.abs(pct);
+            const absDol = Math.abs(dol);
+
+            const metPct = (limitPct > 0 && absPct >= limitPct);
+            const metDol = (limitDol > 0 && absDol >= limitDol);
+
+            return metPct || metDol;
+        });
+    }
+
     static async renderFloatingBell() {
         if (document.getElementById('floating-bell-container')) return;
 
@@ -1117,7 +1220,7 @@ export class NotificationUI {
 
         // Initial InnerHTML with Badge (to ensure it exists for updateBadgeCount immediately)
         bell.innerHTML = `
-            <div class="bell-icon-wrapper"><i class="fas fa-bell" style="font-size: 2.5rem;"></i></div>
+            <div class="bell-icon-wrapper"><i class="fas ${UI_ICONS.ALERTS}" style="font-size: 2.5rem;"></i></div>
             <span class="notification-badge ${CSS_CLASSES.HIDDEN}">0</span>
             <div class="dismiss-overlay ${CSS_CLASSES.HIDDEN}">
                 <i class="fas fa-times"></i>

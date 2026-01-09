@@ -44,8 +44,9 @@ export const AppState = {
                 return { isPinEnabled: false, isBiometricEnabled: false, hashedPin: null, requireLockOnResume: true };
             }
         })(),
+        badgeScope: localStorage.getItem(STORAGE_KEYS.BADGE_SCOPE) || 'all',
         scanner: {  // NEW: Global Scanner Settings
-            activeFilters: [] // Array of selected Industry strings
+            activeFilters: null // null means No Filter (Show All). [] means Filter to None.
         },
         dashboardOrder: (() => {
             try {

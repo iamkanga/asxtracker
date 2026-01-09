@@ -44,7 +44,8 @@ export const STORAGE_KEYS = {
     DASHBOARD_HIDDEN: 'ASX_NEXT_dashboardHidden',
     FAVORITE_LINKS: 'ASX_NEXT_favoriteLinks',
     DAILY_EMAIL: 'ASX_NEXT_dailyEmail',
-    EMAIL_RECIPIENTS: 'ASX_NEXT_emailRecipients'
+    EMAIL_RECIPIENTS: 'ASX_NEXT_emailRecipients',
+    BADGE_SCOPE: 'ASX_NEXT_badgeScope'
 };
 
 export const EVENTS = {
@@ -665,6 +666,7 @@ export const CSS_CLASSES = {
     SHARE_DETAIL_SECTIONS: 'share-detail-sections',
     DETAIL_ROW: 'detail-row',
     DETAIL_LABEL: 'detail-label',
+    SETTINGS_INPUT_ALIGNED: 'settings-input-aligned',
     DETAIL_VALUE: 'detail-value',
     INVESTMENT_CARD: 'investment-card',
     PRICE_PREVIEW: 'price-preview',
@@ -1048,7 +1050,20 @@ export const CSS_CLASSES = {
     FILTER_HEADER: 'filter-header',
     CLICKABLE_INDUSTRY_ROW: 'clickable-industry-row',
     SECTOR_TOGGLE: 'sector-toggle',
-    PILL_SELECTOR_EMAIL: 'pill-selector-email'
+    PILL_SELECTOR_EMAIL: 'pill-selector-email',
+
+    // Contemporary Summary UI
+    SUMMARY_BOARD: 'summary-board',
+    SUMMARY_TILE: 'summary-tile',
+    SUMMARY_TILE_HEADER: 'summary-tile-header',
+    SUMMARY_TILE_BODY: 'summary-tile-body',
+    SUMMARY_TILE_ICON: 'summary-tile-icon',
+    SUMMARY_TILE_VALUE: 'summary-tile-value',
+    SUMMARY_TILE_LABEL: 'summary-tile-label',
+    SUMMARY_STATUS_INDICATOR: 'summary-status-indicator',
+    STATUS_ON: 'status-on',
+    STATUS_OFF: 'status-off',
+    SUMMARY_TAG: 'summary-tag'
 };
 
 export const ANIMATIONS = {
@@ -1123,6 +1138,9 @@ export const IDS = {
     ASX_TOGGLE: 'asxCodeButtonsToggle',
     ASX_CONTAINER: 'asx-code-buttons-container',
     SUMMARY_DETAIL_MODAL: 'summary-detail-modal',
+    SUMMARY_DETAIL_MODAL: 'summary-detail-modal',
+    NOTIFICATION_MODAL: 'notification-modal',
+    SETTINGS_MODAL: 'settings-modal',
     MAIN_CONTENT: 'main-content',
     VIEW_TOGGLE_BTN: 'viewToggleBtn',
     SORT_PICKER_BTN: 'sortPickerBtn',
@@ -1134,6 +1152,15 @@ export const IDS = {
     SORT_DIR_ASC: 'sortDirAsc',
     SORT_DIR_DESC: 'sortDirDesc',
     CATEGORY_LABEL_TEXT: 'category-label-text',
+
+    // Filter Summary Extended IDs
+    SUMMARY_CUSTOM_MOVERS: 'summary-custom-movers',
+    SUMMARY_52WK_MOVERS: 'summary-52wk-movers',
+    SUMMARY_MARKET_MOVERS: 'summary-market-movers',
+    SUMMARY_APP_BADGES: 'summary-app-badges',
+    SUMMARY_DAILY_EMAIL: 'summary-daily-email',
+    SUMMARY_PORTFOLIO_OVERRIDE: 'summary-portfolio-override',
+    SUMMARY_SECTOR_COUNT: 'summary-sector-count',
     CATEGORY_OPTIONS: 'category-options',
     ASSET_NAME: 'asset-name',
     ASSET_BALANCE: 'asset-balance',
@@ -1141,6 +1168,17 @@ export const IDS = {
     MODAL_SUBTITLE: 'modalSubtitle',
     RENAME_WATCHLIST_BTN: 'rename-watchlist-btn',
     CURRENT_WATCHLIST_NAME: 'current-watchlist-name',
+    SETTINGS_SAVE_BTN: 'settingsSaveBtn',
+
+    // Settings / Preferences IDs
+    PREF_GLOBAL_MIN_PRICE: 'global-minPrice',
+    PREF_HILO_MIN_PRICE: 'hilo-minPrice',
+    PREF_UP_PERCENT: 'up-percentVal',
+    PREF_UP_DOLLAR: 'up-dollarVal',
+    PREF_DOWN_PERCENT: 'down-percentVal',
+    PREF_DOWN_DOLLAR: 'down-dollarVal',
+    PREF_EXCLUDE_PORTFOLIO: 'toggle-pref-excludePortfolio',
+    PREF_BADGE_SCOPE: 'toggle-pref-badgeScope',
 
     // Watchlist Mode Selection
     WATCHLIST_MODE_CONTAINER: 'watchlist-mode-container',
@@ -1251,7 +1289,11 @@ export const IDS = {
 
     // Settings Specific IDs
     PREF_EMAIL_ADDR: 'pref-emailAddr',
+    PREF_EMAIL_ADDR: 'pref-emailAddr',
     TOGGLE_DAILY_EMAIL: 'toggle-pref-dailyEmail',
+    PREF_BADGE_SCOPE: 'pref-badgeScope',
+    PREF_EXCLUDE_PORTFOLIO: 'toggle-pref-excludePortfolio',
+    SUMMARY_PORTFOLIO_OVERRIDE: 'summary-portfolio-override',
 
     // Favorite Links
     BTN_FAVORITE_LINKS: 'btn-favorite-links',

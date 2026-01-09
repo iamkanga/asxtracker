@@ -235,7 +235,7 @@ export class ViewRenderer {
                 const colorClass = isSell ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE;
 
                 targetHtml = `
-                    <span class="${CSS_CLASSES.FONT_SIZE_0_7_REM} ${CSS_CLASSES.WHITESPACE_NOWRAP}">
+                    <span class="${CSS_CLASSES.WHITESPACE_NOWRAP}">
                         ${label} <i class="fas ${iconClass} ${colorClass} ${CSS_CLASSES.MX_TINY}"></i> ${formatCurrency(item.targetPrice)}
                     </span>
                 `;

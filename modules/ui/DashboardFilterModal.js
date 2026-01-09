@@ -107,54 +107,6 @@ export class DashboardFilterModal {
                     color: white !important;
                 }
 
-                /* --- SQUARE RADIO/CHECKBOX STYLES --- */
-                .square-radio-wrapper {
-                    position: relative;
-                    width: 20px;
-                    height: 20px;
-                    cursor: pointer;
-                    flex-shrink: 0;
-                }
-                .square-radio-wrapper input {
-                    opacity: 0;
-                    position: absolute;
-                    width: 100%;
-                    height: 100%;
-                    cursor: pointer;
-                    z-index: 2;
-                    margin: 0;
-                }
-                .square-radio-visual {
-                    position: absolute;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                    border: 2px solid var(--border-color);
-                    background: transparent;
-                    border-radius: 3px;
-                    transition: all 0.2s;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                }
-                .square-radio-wrapper input:checked + .square-radio-visual {
-                    border-color: var(--color-accent);
-                    background: rgba(var(--color-accent-rgb), 0.1);
-                }
-                .square-radio-visual::after {
-                    content: '';
-                    width: 10px;
-                    height: 10px;
-                    background: var(--color-accent);
-                    border-radius: 1px;
-                    transform: scale(0);
-                    transition: transform 0.2s;
-                }
-                .square-radio-wrapper input:checked + .square-radio-visual::after {
-                    transform: scale(1);
-                }
-
                 /* --- ROW STYLES --- */
                 .dashboard-filter-row {
                     display: flex;

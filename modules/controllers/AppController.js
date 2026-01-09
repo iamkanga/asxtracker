@@ -18,7 +18,7 @@ import { NotificationUI } from '../ui/NotificationUI.js';
 import { NotificationStore } from '../state/NotificationStore.js';
 import { BriefingUI } from '../ui/BriefingUI.js';
 import { SnapshotUI } from '../ui/SnapshotUI.js'; // Added
-import { SettingsUI } from '../ui/SettingsUI.js?v=2';
+import { SettingsUI } from '../ui/SettingsUI.js?v=54';
 import { FavoriteLinksUI } from '../ui/FavoriteLinksUI.js';
 import { notificationStore } from '../state/NotificationStore.js';
 import { DashboardViewRenderer } from '../ui/DashboardViewRenderer.js?v=5';
