@@ -22,6 +22,19 @@ export const WATCHLIST_MODES = {
     HIDE: 'hide'
 };
 
+export const VIEW_MODES = {
+    TABLE: 'TABLE',
+    COMPACT: 'COMPACT',
+    SNAPSHOT: 'SNAPSHOT'
+};
+
+export const WATCHLIST_NAMES = {
+    ALL_SHARES: 'All Shares',
+    PORTFOLIO: 'Portfolio',
+    DASHBOARD: 'Dashboard',
+    CASH: 'Cash & Assets'
+};
+
 export const STORAGE_KEYS = {
     WATCHLIST_ID: 'ASX_NEXT_lastWatchlistId',
     SORT: 'ASX_NEXT_sortConfig',
@@ -606,6 +619,8 @@ export const CSS_CLASSES = {
     // Button States
     DISABLED: 'disabled',
     GHOSTED: 'ghosted',
+    DRAGGING: 'dragging',
+    APP_BADGE_HIDDEN: 'app-badge-hidden',
 
     // ASX Dropdown
     ASX_DROPDOWN_EMPTY: 'asx-dropdown-empty',
@@ -1020,6 +1035,7 @@ export const CSS_CLASSES = {
     SPLASH_LOGO: 'splash-logo',
     SPLASH_SYSTEM: 'splash-system',
     SPLASH_IS_EXITING: 'is-exiting',
+    SPLASH_IS_ACTIVE: 'is-active',
     SPLASH_ENTER: 'enter',
     SPLASH_LOOP: 'loop',
     SPLASH_EXIT: 'exit',

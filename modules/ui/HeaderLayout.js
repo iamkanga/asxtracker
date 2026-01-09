@@ -683,7 +683,7 @@ export class HeaderLayout {
             if (totalCount > 0 && showBadges) {
                 sidebarBadge.innerText = `All ${totalCount > 99 ? '99+' : totalCount}`;
                 sidebarBadge.classList.remove(CSS_CLASSES.HIDDEN);
-                sidebarBadge.classList.remove('app-badge-hidden');
+                sidebarBadge.classList.remove(CSS_CLASSES.APP_BADGE_HIDDEN);
             } else {
                 sidebarBadge.classList.add(CSS_CLASSES.HIDDEN);
             }

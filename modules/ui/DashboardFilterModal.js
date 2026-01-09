@@ -283,13 +283,13 @@ export class DashboardFilterModal {
             const selectedCount = activeCount;
 
             // Reset
-            allBtn.classList.remove('active');
-            noneBtn.classList.remove('active');
+            allBtn.classList.remove(CSS_CLASSES.ACTIVE);
+            noneBtn.classList.remove(CSS_CLASSES.ACTIVE);
 
             if (selectedCount === totalItems && totalItems > 0) {
-                allBtn.classList.add('active');
+                allBtn.classList.add(CSS_CLASSES.ACTIVE);
             } else if (selectedCount === 0) {
-                noneBtn.classList.add('active');
+                noneBtn.classList.add(CSS_CLASSES.ACTIVE);
             }
         };
 
@@ -324,7 +324,7 @@ export class DashboardFilterModal {
                 e.dataTransfer.effectAllowed = 'move';
                 e.dataTransfer.setData('text/plain', row.dataset.code);
                 row.style.opacity = '0.5';
-                row.classList.add('dragging');
+                row.classList.add(CSS_CLASSES.DRAGGING);
             }
         });
 
@@ -332,7 +332,7 @@ export class DashboardFilterModal {
             const row = e.target.closest('.dashboard-filter-row');
             if (row) {
                 row.style.opacity = '1';
-                row.classList.remove('dragging');
+                row.classList.remove(CSS_CLASSES.DRAGGING);
                 draggedItem = null;
                 updateState(); // Save the new order!
             }
@@ -341,7 +341,7 @@ export class DashboardFilterModal {
         listContainer.addEventListener('dragover', (e) => {
             e.preventDefault(); // Necessary to allow dropping
             const afterElement = getDragAfterElement(listContainer, e.clientY);
-            const draggable = document.querySelector('.dragging');
+            const draggable = document.querySelector(`.${CSS_CLASSES.DRAGGING}`);
             if (draggable) {
                 if (afterElement == null) {
                     listContainer.appendChild(draggable);
@@ -353,7 +353,7 @@ export class DashboardFilterModal {
 
         // Helper to find the element we are hovering over
         function getDragAfterElement(container, y) {
-            const draggableElements = [...container.querySelectorAll('.dashboard-filter-row:not(.dragging)')];
+            const draggableElements = [...container.querySelectorAll(`.dashboard-filter-row:not(.${CSS_CLASSES.DRAGGING})`)];
 
             return draggableElements.reduce((closest, child) => {
                 const box = child.getBoundingClientRect();

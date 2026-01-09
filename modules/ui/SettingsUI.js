@@ -380,7 +380,10 @@ export class SettingsUI {
             <!-- 1. Custom Movers (Personal Alerts) -->
             <!-- 1. Badge Count Scope (Moved to Top) -->
             <div class="${CSS_CLASSES.DETAIL_ROW}" style="justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <span class="${CSS_CLASSES.DETAIL_LABEL}" style="color: white; font-weight: 700; font-size: 0.82rem;">Badge Count</span>
+                <div style="display: flex; flex-direction: column; gap: 0;">
+                    <span class="${CSS_CLASSES.DETAIL_LABEL}" style="color: white; font-weight: 700; font-size: 0.82rem;">Badge Count</span>
+                    <div style="font-size: 0.65rem; opacity: 0.5; color: var(--text-muted); margin-bottom: 2px; margin-top: -1px;">Main icon displays your selection</div>
+                </div>
                 <div class="pill-container large-pill badge-scope-selector" style="width: 100px;">
                     <span class="pill-segment-badge-scope" data-value="custom" style="font-size: 0.65rem;">Custom</span>
                     <span class="pill-segment-badge-scope" data-value="all" style="font-size: 0.65rem;">All</span>
@@ -390,7 +393,10 @@ export class SettingsUI {
 
             <!-- 2. Home Screen Alert Icon (Icon Visibility) -->
             <div class="${CSS_CLASSES.DETAIL_ROW}" style="justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <span class="${CSS_CLASSES.DETAIL_LABEL}" style="color: white; font-weight: 700; font-size: 0.82rem;">Home Screen Alert Icon</span>
+                <div style="display: flex; flex-direction: column; gap: 0;">
+                    <span class="${CSS_CLASSES.DETAIL_LABEL}" style="color: white; font-weight: 700; font-size: 0.82rem;">Home Screen Alert Icon</span>
+                    <div style="font-size: 0.65rem; opacity: 0.5; color: var(--text-muted); margin-bottom: 2px; margin-top: -1px;">Controls display of home screen notifications icon</div>
+                </div>
                 <div class="pill-container large-pill pill-selector-badges" style="width: 100px;">
                     <span class="pill-segment-badge" data-value="true">On</span>
                     <span class="pill-segment-badge" data-value="false">Off</span>

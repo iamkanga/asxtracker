@@ -798,8 +798,8 @@ export class AppController {
             // 3. Show Splash Screen with Logout Feedback
             if (splashScreen) {
                 splashScreen.classList.remove(CSS_CLASSES.HIDDEN);
-                splashScreen.classList.remove('is-exiting');
-                splashScreen.classList.add('is-active');
+                splashScreen.classList.remove(CSS_CLASSES.SPLASH_IS_EXITING);
+                splashScreen.classList.add(CSS_CLASSES.SPLASH_IS_ACTIVE);
             }
 
             const logoutBtn = document.getElementById(IDS.LOGOUT_BTN);

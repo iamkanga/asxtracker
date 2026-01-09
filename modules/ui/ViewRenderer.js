@@ -7,7 +7,7 @@
 
 import { formatCurrency, formatPercent, formatFriendlyDate } from '../utils/formatters.js';
 import { AppState } from '../state/AppState.js';
-import { SORT_OPTIONS, UI_ICONS, USER_MESSAGES, RESEARCH_LINKS_TEMPLATE, CSS_CLASSES, IDS, EVENTS, SUMMARY_TYPES, STORAGE_KEYS, PORTFOLIO_ID, KANGAROO_ICON_SRC } from '../utils/AppConstants.js?v=10';
+import { SORT_OPTIONS, UI_ICONS, USER_MESSAGES, RESEARCH_LINKS_TEMPLATE, CSS_CLASSES, IDS, EVENTS, SUMMARY_TYPES, STORAGE_KEYS, PORTFOLIO_ID, KANGAROO_ICON_SRC, VIEW_MODES } from '../utils/AppConstants.js?v=10';
 import { SnapshotUI } from './SnapshotUI.js';
 import { LinkHelper } from '../utils/LinkHelper.js';
 
@@ -51,20 +51,20 @@ export class ViewRenderer {
         // User Logic: if (currentWatchlistName === 'Portfolio') { renderSummary(); }
         // Refinement V3: ALWAYS show summary if in Portfolio Context, regardless of mode.
         // Portfolio forces its own Grid layout, so strict mode checks (TABLE/COMPACT) are counter-productive here.
-        if (summaryMetrics && (AppState.watchlist.id === PORTFOLIO_ID || AppState.isPortfolioVisible) && mode === 'TABLE') {
+        if (summaryMetrics && (AppState.watchlist.id === PORTFOLIO_ID || AppState.isPortfolioVisible) && mode === VIEW_MODES.TABLE) {
             this.renderSummary(summaryMetrics);
         }
 
         switch (mode) {
-            case 'TABLE':
+            case VIEW_MODES.TABLE:
                 this.container.classList.add(CSS_CLASSES.VIEW_TABLE);
                 this.renderTable(data);
                 break;
-            case 'COMPACT':
+            case VIEW_MODES.COMPACT:
                 this.container.classList.add(CSS_CLASSES.VIEW_COMPACT);
                 this.renderGrid(data, 'compact');
                 break;
-            case 'SNAPSHOT':
+            case VIEW_MODES.SNAPSHOT:
                 this.container.classList.add(CSS_CLASSES.VIEW_SNAPSHOT);
                 this.renderGrid(data, 'snapshot');
                 break;

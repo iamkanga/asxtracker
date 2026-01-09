@@ -3,9 +3,7 @@
  * Handles the Watchlist Dropdown, Title updating, and Watchlist management UI interactions.
  */
 import { AppState } from '../state/AppState.js';
-// AppService removed for modularity
-// AppService removed for modularity
-import { IDS, CSS_CLASSES, EVENTS, WATCHLIST_ICON_POOL, ALL_SHARES_ID, CASH_WATCHLIST_ID, DASHBOARD_WATCHLIST_ID, PORTFOLIO_ID, UI_ICONS, USER_MESSAGES, STORAGE_KEYS, WATCHLIST_MODES, SORT_OPTIONS } from '../utils/AppConstants.js';
+import { IDS, CSS_CLASSES, EVENTS, WATCHLIST_ICON_POOL, ALL_SHARES_ID, CASH_WATCHLIST_ID, DASHBOARD_WATCHLIST_ID, PORTFOLIO_ID, UI_ICONS, USER_MESSAGES, STORAGE_KEYS, WATCHLIST_MODES, SORT_OPTIONS, WATCHLIST_NAMES } from '../utils/AppConstants.js';
 import { WatchlistPickerModal } from './WatchlistPickerModal.js';
 import { ToastManager } from './ToastManager.js';
 import { SnapshotUI } from './SnapshotUI.js';
@@ -187,13 +185,13 @@ export class WatchlistUI {
                 if (customNames[currentWatchlistId]) {
                     oldName = customNames[currentWatchlistId];
                 } else if (currentWatchlistId === ALL_SHARES_ID) {
-                    oldName = 'All Shares';
+                    oldName = WATCHLIST_NAMES.ALL_SHARES;
                 } else if (currentWatchlistId === PORTFOLIO_ID) {
-                    oldName = 'Portfolio';
+                    oldName = WATCHLIST_NAMES.PORTFOLIO;
                 } else if (currentWatchlistId === CASH_WATCHLIST_ID) {
-                    oldName = 'Cash & Assets';
+                    oldName = WATCHLIST_NAMES.CASH;
                 } else if (currentWatchlistId === DASHBOARD_WATCHLIST_ID) {
-                    oldName = 'Dashboard';
+                    oldName = WATCHLIST_NAMES.DASHBOARD;
                 } else {
                     const currentList = (AppState.data.watchlists || []).find(w => w.id === currentWatchlistId);
                     oldName = currentList ? currentList.name : 'Watchlist';
@@ -228,14 +226,14 @@ export class WatchlistUI {
             baseTitle = customNames[currentId];
         } else {
             if (AppState.watchlist.type === 'cash') {
-                baseTitle = 'Cash & Assets';
+                baseTitle = WATCHLIST_NAMES.CASH;
             } else if (AppState.watchlist.id === DASHBOARD_WATCHLIST_ID) {
-                baseTitle = 'Dashboard';
+                baseTitle = WATCHLIST_NAMES.DASHBOARD;
             } else {
                 if (AppState.watchlist.id === ALL_SHARES_ID) {
-                    baseTitle = 'All Shares';
+                    baseTitle = WATCHLIST_NAMES.ALL_SHARES;
                 } else if (!AppState.watchlist.id || AppState.watchlist.id === PORTFOLIO_ID) {
-                    baseTitle = 'Portfolio';
+                    baseTitle = WATCHLIST_NAMES.PORTFOLIO;
                 } else {
                     const list = (AppState.data.watchlists || []).find(w => w.id === AppState.watchlist.id);
                     baseTitle = list ? list.name : 'Watchlist';
@@ -310,10 +308,10 @@ export class WatchlistUI {
 
         // 2. Prepare List Data
         let watchlistItems = [
-            { id: ALL_SHARES_ID, name: 'All Shares', icon: UI_ICONS.GLOBE, isSystem: true },
-            { id: PORTFOLIO_ID, name: 'Portfolio', icon: UI_ICONS.BRIEFCASE, isSystem: true },
-            { id: DASHBOARD_WATCHLIST_ID, name: 'Dashboard', icon: 'fa-chart-pie', isSystem: true },
-            { id: CASH_WATCHLIST_ID, name: 'Cash & Assets', icon: UI_ICONS.WALLET, isSystem: true },
+            { id: ALL_SHARES_ID, name: WATCHLIST_NAMES.ALL_SHARES, icon: UI_ICONS.GLOBE, isSystem: true },
+            { id: PORTFOLIO_ID, name: WATCHLIST_NAMES.PORTFOLIO, icon: UI_ICONS.BRIEFCASE, isSystem: true },
+            { id: DASHBOARD_WATCHLIST_ID, name: WATCHLIST_NAMES.DASHBOARD, icon: 'fa-chart-pie', isSystem: true },
+            { id: CASH_WATCHLIST_ID, name: WATCHLIST_NAMES.CASH, icon: UI_ICONS.WALLET, isSystem: true },
         ];
 
         const userWatchlists = AppState.data.watchlists || [];
