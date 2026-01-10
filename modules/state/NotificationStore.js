@@ -286,7 +286,7 @@ export class NotificationStore {
                 rules.excludePortfolio = AppState.preferences.excludePortfolio;
             }
 
-            if (AppState.preferences.scanner && AppState.preferences.scanner.activeFilters) {
+            if (AppState.preferences.scanner && AppState.preferences.scanner.activeFilters !== undefined) {
                 rules.activeFilters = AppState.preferences.scanner.activeFilters;
             }
             return rules;
@@ -992,13 +992,13 @@ export class NotificationStore {
                 ...(rules.up || {}),
                 minPrice: rules.minPrice,
                 activeFilters: resolveFilters(userFilters),
-                excludePortfolio: overrideOn
+                excludePortfolio: false // GLOBAL MOVER RULES: Always respect filters (ignore watchlist override)
             };
             const downRules = {
                 ...(rules.down || {}),
                 minPrice: rules.minPrice,
                 activeFilters: resolveFilters(userFilters),
-                excludePortfolio: overrideOn
+                excludePortfolio: false // GLOBAL MOVER RULES: Always respect filters (ignore watchlist override)
             };
 
             movers.up = this.filterHits(mergedUp, upRules, strictMode);
@@ -1040,7 +1040,7 @@ export class NotificationStore {
             dollarThreshold: 0,
             minPrice: rules.hiloMinPrice ?? 0, // Default to 0 (None) to ensure alerts show
             activeFilters: resolveFiltersHilo(userFiltersHilo),
-            excludePortfolio: rules.excludePortfolio !== false,
+            excludePortfolio: false, // GLOBAL HILO RULES: Always respect filters (ignore watchlist override)
             isHilo: true
         };
 
