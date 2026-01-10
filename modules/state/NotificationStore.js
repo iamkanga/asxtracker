@@ -333,6 +333,14 @@ export class NotificationStore {
         // If Min Price (Limit) is OFF -> filter out
         if (!hasMinPrice) return [];
 
+        // OPTIMIZATION: Pre-calculate Muted Set for O(1) lookup
+        const mutedCodes = new Set();
+        if (AppState.data && AppState.data.shares) {
+            AppState.data.shares.forEach(s => {
+                if (s.muted) mutedCodes.add((s.shareName || '').toUpperCase());
+            });
+        }
+
         return hits.filter(hit => {
             // CONSTANTS & BYPASS LOGIC (Moved to Top for Reference Safety)
             const activeFilters = rules.activeFilters || [];
@@ -376,16 +384,10 @@ export class NotificationStore {
                 }
             }
 
-            // 2c. MUTE FILTER (New Feature)
+            // 2c. MUTE FILTER (New Feature) - OPTIMIZED O(1)
             // Check if user has muted this stock in their portfolio
-            if (AppState.data && AppState.data.shares) {
-                const stockCode = (hit.code || hit.shareName || '').toUpperCase();
-                // Find ANY record of this stock that is muted
-                const isMuted = AppState.data.shares.some(s =>
-                    s.shareName === stockCode && s.muted === true
-                );
-                if (isMuted) return false;
-            }
+            const isMuted = mutedCodes.has((hit.code || hit.shareName || '').toUpperCase());
+            if (isMuted) return false;
 
             // 2d. SCANNER INDUSTRY FILTER (User Request)
             // Block alerts from industries NOT in the activeFilters whitelist.
@@ -565,6 +567,14 @@ export class NotificationStore {
         // Merge Hits: Append Client Targets to Unique Server Hits
         const rawHits = [...uniqueServerHits, ...clientTargets];
 
+        // OPTIMIZATION: Pre-calculate Muted Set for O(1) lookup
+        const mutedCodes = new Set();
+        if (AppState.data && AppState.data.shares) {
+            AppState.data.shares.forEach(s => {
+                if (s.muted) mutedCodes.add((s.shareName || '').toUpperCase());
+            });
+        }
+
         // --- MOVER LOGIC CONTINUE ---
         const myHits = rawHits.filter(hit => {
             const match = String(hit.userId) === String(this.userId);
@@ -595,15 +605,9 @@ export class NotificationStore {
                 }
             }
 
-            // --- MUTE FILTER (Custom Triggers Early Exit) ---
+            // --- MUTE FILTER (Custom Triggers Early Exit) - OPTIMIZED O(1) ---
             const code = hit.code || hit.shareName || hit.symbol;
-            if (code && AppState.data && AppState.data.shares) {
-                // Find ANY record of this stock that is muted
-                const isMuted = AppState.data.shares.some(s =>
-                    s.shareName === code && s.muted === true
-                );
-                if (isMuted) return false;
-            }
+            if (code && mutedCodes.has(code.toUpperCase())) return false;
 
             // DEBUG: Watchlist Override / Threshold Trace
             const debugRules = this.getScannerRules() || {};
@@ -612,7 +616,7 @@ export class NotificationStore {
             const debugHitPrice = Number(hit.price || hit.last || 0);
 
             // if (code === 'BHP' || code === 'CBA' || price < 1.0) { // Filter noise
-            console.log(`[NotificationStore] Filtering ${code} | Price: $${debugHitPrice} | Override: ${debugOverride} | MinPrice: $${debugMinPrice}`);
+            // console.log(`[NotificationStore] Filtering ${code} | Price: $${debugHitPrice} | Override: ${debugOverride} | MinPrice: $${debugMinPrice}`);
             // }
 
             // --- EXCLUDE DASHBOARD SYMBOLS ---
@@ -730,7 +734,7 @@ export class NotificationStore {
                 // "Ignore stocks below..." rule.
                 const minPrice = rules.minPrice || 0;
                 if (!overrideOn && minPrice > 0 && price < minPrice) {
-                    console.log(`[NotificationStore] Dropping Watchlist Mover ${code}: Price $${price} < Min $${minPrice}`);
+                    // console.log(`[NotificationStore] Dropping Watchlist Mover ${code}: Price $${price} < Min $${minPrice}`);
                     return false;
                 }
 
@@ -738,7 +742,7 @@ export class NotificationStore {
                 const metPct = (thresholdPct > 0 && pct >= thresholdPct);
                 const metDol = (thresholdDol > 0 && dol >= thresholdDol);
                 if (!metPct && !metDol) {
-                    console.log(`[NotificationStore] Dropping Watchlist Mover ${code}: Pct ${pct}% < ${thresholdPct}%, Dol $${dol} < $${thresholdDol}`);
+                    // console.log(`[NotificationStore] Dropping Watchlist Mover ${code}: Pct ${pct}% < ${thresholdPct}%, Dol $${dol} < $${thresholdDol}`);
                     return false;
                 }
             }
@@ -758,12 +762,13 @@ export class NotificationStore {
 
         // Duplicate check set
         const consolidated = new Map();
-        const mutedCodes = new Set();
-        if (AppState.data && AppState.data.shares) {
-            AppState.data.shares.forEach(s => {
-                if (s.muted) mutedCodes.add(s.shareName);
-            });
-        }
+        // REMOVED DUPLICATE: mutedCodes is already defined at top of function.
+        // const mutedCodes = new Set();
+        // if (AppState.data && AppState.data.shares) {
+        //    AppState.data.shares.forEach(s => {
+        //        if (s.muted) mutedCodes.add(s.shareName);
+        //    });
+        // }
 
         // Helper to merge or add - UPDATED WITH MUTE FILTER
         const addOrMerge = (hit) => {

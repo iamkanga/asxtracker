@@ -430,9 +430,11 @@ export class NotificationUI {
                 console.log(`[NotificationUI] Kangaroo Toggle: ${this._bellManuallyHidden ? 'HIDDEN' : 'VISIBLE'}`);
 
                 // 2. Perform Standard Dismissal Logic (if hidden)
-                if (this._bellManuallyHidden && notificationStore) {
-                    notificationStore.markAsViewed('custom');
-                }
+                // USER REQUEST: Do NOT clear the badge count when hiding the icon.
+                // The badge count should persist so it is visible if/when the icon is re-enabled.
+                // if (this._bellManuallyHidden && notificationStore) {
+                //    notificationStore.markAsViewed('custom');
+                // }
 
                 // 3. Immedate Refresh of the FAB (Kangaroo)
                 if (notificationStore) {

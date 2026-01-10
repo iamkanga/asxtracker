@@ -342,8 +342,16 @@ export class SettingsUI {
                         </div>
                     </div>
                     <div class="summary-grid-paired" style="margin-top: 8px; grid-template-columns: 1fr 1fr;">
-                        <!-- Sectors & Override -->
-                        <div class="${CSS_CLASSES.SUMMARY_TILE}" style="align-items: center; grid-column: span 2;">
+                        <!-- Watchlist Override (New) -->
+                        <div class="${CSS_CLASSES.SUMMARY_TILE}" style="align-items: center;">
+                            <div class="${CSS_CLASSES.SUMMARY_TILE_HEADER}" style="justify-content: center;"><span class="${CSS_CLASSES.SUMMARY_TILE_LABEL}">Watchlist Override</span></div>
+                            <div class="${CSS_CLASSES.SUMMARY_TILE_BODY}" style="justify-content: center;">
+                                <span class="${CSS_CLASSES.SUMMARY_TILE_VALUE}" id="sum-val-override">...</span>
+                            </div>
+                        </div>
+
+                        <!-- Sectors (Modified) -->
+                        <div class="${CSS_CLASSES.SUMMARY_TILE}" style="align-items: center;">
                             <div class="${CSS_CLASSES.SUMMARY_TILE_HEADER}" style="justify-content: center;"><span class="${CSS_CLASSES.SUMMARY_TILE_LABEL}">Industry Sectors</span></div>
                             <div class="${CSS_CLASSES.SUMMARY_TILE_BODY}" style="justify-content: center; flex-direction: column;">
                                 <span class="${CSS_CLASSES.SUMMARY_TILE_VALUE}" id="summary-sectors-text" style="font-size: 0.8rem;">Loading...</span>
@@ -763,7 +771,24 @@ export class SettingsUI {
                 valEl.style.opacity = isOn ? '1' : '0.5';
             }
             if (indEl) {
-                indEl.classList.toggle(CSS_CLASSES.STATUS_ON, isOn);
+                // USER REQUEST: Fix "Squares" issue. Remove inline bg color.
+                // Use 'always-on' class which (per CSS) adds opacity 1 and drop-shadow.
+                // Inactive = opacity 0.2 (Ghosted).
+
+                if (isOn) {
+                    indEl.style.opacity = '1';
+                    indEl.classList.add('always-on');
+                    // Ensure legacy classes don't override
+                    indEl.classList.remove(CSS_CLASSES.STATUS_OFF);
+                } else {
+                    indEl.style.opacity = '0.2'; // Ghosted
+                    indEl.classList.remove('always-on');
+                    indEl.classList.add(CSS_CLASSES.STATUS_OFF);
+                }
+
+                // Clean up any inline background color I previously added
+                indEl.style.backgroundColor = '';
+                indEl.style.boxShadow = '';
             }
         };
 
@@ -830,6 +855,15 @@ export class SettingsUI {
 
         // 3. Scanner Depth (Bottom Row)
         updateTile(IDS.SUMMARY_PORTFOLIO_OVERRIDE, 'ind-override', isExclude, isExclude ? 'On' : 'Off');
+
+        // NEW: Update Summary Board Override Text
+        const sumOverrideEl = modal.querySelector('#sum-val-override');
+        if (sumOverrideEl) {
+            sumOverrideEl.textContent = isExclude ? 'On' : 'Off';
+            sumOverrideEl.style.color = isExclude ? 'var(--color-positive)' : 'var(--text-muted)';
+            sumOverrideEl.style.fontWeight = isExclude ? 'bold' : 'normal';
+        }
+
         const overrideEl = modal.querySelector(`#${IDS.SUMMARY_PORTFOLIO_OVERRIDE}`);
         if (overrideEl) {
             overrideEl.style.color = isExclude ? 'var(--color-positive)' : 'var(--color-negative)';
