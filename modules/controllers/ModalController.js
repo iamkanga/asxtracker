@@ -176,7 +176,7 @@ export class ModalController {
                             // We use the full formData to create the definitive "Shared" document.
                             const priceData = AppState.livePrices?.get(lookupKey);
                             const entryPrice = priceData ? (parseFloat(priceData.live) || 0) : 0;
-                            const entryDate = new Date().toISOString();
+                            const purchaseDate = new Date().toISOString();
 
                             const dataToAdd = {
                                 ...formData,
@@ -185,7 +185,8 @@ export class ModalController {
                                 shareName: lookupKey,
                                 watchlistId: persistenceId, // Set primary context
                                 enteredPrice: entryPrice,
-                                entryDate: entryDate
+                                purchaseDate: purchaseDate,
+                                entryDate: purchaseDate // Legacy fallback
                             };
                             delete dataToAdd.watchlists;
 

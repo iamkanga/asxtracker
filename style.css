@@ -8411,7 +8411,7 @@ body.dark-theme .calc-result-card {
 .sort-picker-row {
     display: grid;
     /* Match Watchlist Picker exactly: 1fr 150px 1fr */
-    grid-template-columns: 1fr 150px 1fr !important;
+    grid-template-columns: 1.5fr 80px 1fr !important;
     align-items: center !important;
     padding: 2px 20px !important;
     /* Extremely high density */
@@ -8634,7 +8634,7 @@ body.dark-theme .calc-result-card {
 .edit-mode .watchlist-item,
 .watchlist-edit-headers {
     display: grid;
-    grid-template-columns: 1fr 150px 1fr !important;
+    grid-template-columns: 1.5fr 80px 1fr !important;
     align-items: center;
     padding-left: 20px;
     padding-right: 20px;

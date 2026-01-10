@@ -10,7 +10,8 @@ export const DASHBOARD_WATCHLIST_ID = 'DASHBOARD';
 export const DASHBOARD_SYMBOLS = [];
 export const DASHBOARD_LINKS = {
     'NICKEL': 'https://au.finance.yahoo.com/quote/NICKEL=F',
-    'TIO=F': 'https://www.marketindex.com.au/commodities'
+    'TIO=F': 'https://www.marketindex.com.au/commodities',
+    'YAP=F': 'https://au.investing.com/indices/australia-200-futures'
 };
 export const PORTFOLIO_ID = 'portfolio';
 export const SEARCH_WATCHLIST_ID = 'search';
@@ -153,7 +154,8 @@ export const SORT_OPTIONS = {
         { label: 'Daily Change', field: 'dayChangePercent', direction: 'desc', icon: 'fa-percent' },
         { label: 'Daily P/L', field: 'dayChangeValue', direction: 'desc', icon: 'fa-dollar-sign' },
         { label: 'Current Value', field: 'value', direction: 'desc', icon: 'fa-wallet' },
-        { label: 'Capital Gain', field: 'capitalGain', direction: 'desc', icon: 'fa-chart-pie' }
+        { label: 'Capital Gain', field: 'capitalGain', direction: 'desc', icon: 'fa-chart-pie' },
+        { label: 'Last Purchase', field: 'purchaseDate', direction: 'desc', icon: 'fa-calendar' }
     ],
     CASH: [ // Cash View Only
         { label: 'Category', field: 'category', direction: 'asc', icon: 'fa-layer-group' },

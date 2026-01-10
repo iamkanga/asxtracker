@@ -18,7 +18,7 @@ import { NotificationUI } from '../ui/NotificationUI.js';
 import { NotificationStore } from '../state/NotificationStore.js';
 import { BriefingUI } from '../ui/BriefingUI.js';
 import { SnapshotUI } from '../ui/SnapshotUI.js'; // Added
-import { SettingsUI } from '../ui/SettingsUI.js?v=54';
+import { SettingsUI } from '../ui/SettingsUI.js?v=55';
 import { FavoriteLinksUI } from '../ui/FavoriteLinksUI.js';
 import { notificationStore } from '../state/NotificationStore.js';
 import { DashboardViewRenderer } from '../ui/DashboardViewRenderer.js?v=16';
@@ -2519,7 +2519,8 @@ export class AppController {
         data.shares.forEach(s => {
             const price = s.currentPrice || s.enteredPrice || 0;
             const value = (s.portfolioShares || 0) * price;
-            csvContent += `Share,${s.shareName},${s.portfolioShares},${price},${value},${s.entryDate}\n`;
+            const dateStr = s.purchaseDate || s.entryDate || '';
+            csvContent += `Share,${s.shareName},${s.portfolioShares},${price},${value},${dateStr}\n`;
         });
 
         // Add Cash

@@ -188,7 +188,7 @@ export class DashboardViewRenderer {
             'INX': 'S&P 500', '.DJI': 'Dow Jones', '.IXIC': 'Nasdaq',
             'AUDUSD': 'AUD/USD', 'AUDTHB': 'AUD/THB', 'USDTHB': 'USD/THB',
             'BTCUSD': 'Bitcoin', 'GCW00': 'Gold', 'SIW00': 'Silver', 'BZW00': 'Brent Oil',
-            'NICKEL': 'Nickel', 'TIO=F': 'Iron Ore (62%)'
+            'NICKEL': 'Nickel', 'TIO=F': 'Iron Ore (62%)', 'YAP=F': 'ASX SPI 200'
         };
 
         const code = lookupCode;

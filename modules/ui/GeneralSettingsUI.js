@@ -9,6 +9,8 @@ import { AppState } from '../state/AppState.js';
 import { ToastManager } from './ToastManager.js';
 import { navManager } from '../utils/NavigationManager.js';
 import { SecurityUI } from './SecurityUI.js';
+import { userStore } from '../data/DataService.js';
+import { SyncManager } from '../controllers/SyncManager.js';
 
 export class GeneralSettingsUI {
 
@@ -78,6 +80,28 @@ export class GeneralSettingsUI {
                                 <div class="${CSS_CLASSES.TEXT_SM} ${CSS_CLASSES.TEXT_MUTED}">Export records to file</div>
                             </div>
                             <i class="fas fa-chevron-right ${CSS_CLASSES.TEXT_MUTED}" style="transition: transform 0.3s ease;"></i>
+                        </div>
+
+                         <!-- 3. PORTFOLIO SYNC -->
+                        <div class="${CSS_CLASSES.SETTINGS_SECTION}" style="margin-top: 25px; border-top: 1px solid var(--border-color); padding-top: 25px;">
+                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                                <i class="fas fa-sync-alt" style="color: var(--color-accent); font-size: 1rem;"></i>
+                                <h4 class="${CSS_CLASSES.SIDEBAR_SECTION_TITLE}" style="margin-bottom: 0; color: var(--text-muted); font-size: 0.75rem; letter-spacing: 1px;">Portfolio Sync</h4>
+                            </div>
+                            
+                            <div class="${CSS_CLASSES.SETTING_ROW}" style="flex-direction: column; gap: 8px; align-items: flex-start; padding: 10px 0;">
+                                <div class="${CSS_CLASSES.FONT_BOLD}" style="font-size: 0.95rem;">Import from Sharesight</div>
+                                <div class="${CSS_CLASSES.TEXT_SM} ${CSS_CLASSES.TEXT_MUTED}" style="line-height: 1.4; margin-bottom: 10px;">
+                                    Upload your "All Trades Report" CSV to update unit counts and purchase dates for your current items.
+                                </div>
+                                
+                                <div style="display: flex; gap: 10px; width: 100%;">
+                                    <button id="gen-sync-upload" class="standard-btn" style="flex: 1; background: var(--bg-tertiary); border: 1px solid var(--border-color); color: white; padding: 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; font-weight: 600; transition: all 0.2s;">
+                                        <i class="fas fa-file-csv" style="font-size: 1.1rem;"></i> Select CSV
+                                    </button>
+                                    <input type="file" id="gen-input-sync-csv" accept=".csv,.tsv,text/csv,text/tab-separated-values" style="display: none;">
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Expanded Download Options (Color Coded to Coffee/Accent) -->
@@ -274,8 +298,123 @@ export class GeneralSettingsUI {
             document.dispatchEvent(new CustomEvent(EVENTS.REQUEST_DELETE_DATA));
         });
 
+        // --- SYNC ---
+        const syncBtn = modal.querySelector('#gen-sync-upload');
+        const syncFileInput = modal.querySelector('#gen-input-sync-csv');
 
+        if (syncBtn && syncFileInput) {
+            syncBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('[GeneralSettingsUI] Triggering CSV picker...');
+                syncFileInput.click();
+            });
 
+            syncFileInput.addEventListener('change', async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                console.log('[GeneralSettingsUI] CSV Selected:', file.name);
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const text = event.target.result;
+                    this._showSyncSimulation(text);
+                    // Reset input so same file can be selected again
+                    syncFileInput.value = '';
+                };
+                reader.readAsText(file);
+            });
+        }
+    }
+
+    static _showSyncSimulation(csvText) {
+        const { matches, ignored } = SyncManager.simulateSync(csvText);
+
+        const simulationModal = document.createElement('div');
+        simulationModal.className = `${CSS_CLASSES.MODAL} ${CSS_CLASSES.SHOW}`;
+        simulationModal.style.zIndex = '3000'; // Above the general settings modal
+
+        const matchRows = matches.map(m => `
+            <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                <span style="font-weight: 700; color: var(--color-accent);">${m.code}</span>
+                <span style="font-size: 0.8rem; color: var(--text-muted);">${m.dateStr} (${m.type})</span>
+            </div>
+        `).join('');
+
+        simulationModal.innerHTML = `
+            <div class="${CSS_CLASSES.MODAL_OVERLAY}" style="background: rgba(0,0,0,0.8);"></div>
+            <div class="${CSS_CLASSES.MODAL_CONTENT}" style="max-width: 420px; padding: 25px; border-radius: 12px; background: var(--bg-primary); border: 1px solid var(--border-color);">
+                <h3 style="margin-top: 0; color: white; display: flex; align-items: center; gap: 10px;">
+                    <i class="fas fa-glasses" style="color: var(--color-accent);"></i> Sync Preview
+                </h3>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 20px; line-height: 1.5;">
+                    Matched <strong>${matches.length}</strong> items in your watchlist. 
+                    Ignored ${ignored.length} codes not currently tracked.
+                </p>
+                
+                <div style="max-height: 250px; overflow-y: auto; margin-bottom: 25px; padding-right: 8px;">
+                    ${matches.length > 0 ? matchRows : '<p style="text-align: center; color: var(--text-muted); padding: 20px;">No matches found.</p>'}
+                </div>
+
+                <div style="display: flex; gap: 12px;">
+                    <button id="btn-sim-cancel" class="standard-btn" style="flex: 1; background: var(--bg-secondary); border: 1px solid var(--border-color); color: white; padding: 12px; border-radius: 6px; cursor: pointer; font-weight: 600;">Cancel</button>
+                    ${matches.length > 0 ? `<button id="btn-sim-commit" class="standard-btn" style="flex: 1; background: var(--color-accent); border: none; color: white; padding: 12px; border-radius: 6px; cursor: pointer; font-weight: bold;">Commit Changes</button>` : ''}
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(simulationModal);
+
+        simulationModal.querySelector('#btn-sim-cancel').addEventListener('click', () => {
+            simulationModal.remove();
+        });
+
+        const commitBtn = simulationModal.querySelector('#btn-sim-commit');
+        if (commitBtn) {
+            commitBtn.addEventListener('click', () => {
+                this._commitSync(matches);
+                simulationModal.remove();
+            });
+        }
+    }
+
+    static async _commitSync(matches) {
+        if (!AppState.user) return;
+
+        ToastManager.show(`Syncing ${matches.length} items...`, 'info');
+        console.log('[GeneralSettingsUI] Committing sync matches:', matches);
+
+        try {
+            const userId = AppState.user.uid;
+
+            // Iterate through matches and update each record
+            const promises = matches.map(match => {
+                const qty = parseFloat(match.quantity);
+                if (isNaN(qty) || qty < 0) {
+                    console.warn('[GeneralSettingsUI] Skipping invalid quantity match:', match);
+                    return null;
+                }
+
+                const updateData = {
+                    portfolioShares: qty.toString()
+                };
+
+                // Only update price and date if they are present (Trades Mode)
+                if (!match.isHoldingsOnly) {
+                    updateData.portfolioAvgPrice = match.costBase > 0 ? match.costBase.toString() : match.price.toString();
+                    updateData.purchaseDate = match.date.toISOString().split('T')[0];
+                }
+
+                return userStore.updateShare(userId, match.shareId, updateData);
+            }).filter(p => p !== null);
+
+            await Promise.all(promises);
+
+            ToastManager.show(`Successfully updated ${matches.length} holdings.`, 'success');
+        } catch (error) {
+            console.error('[GeneralSettingsUI] Sync commit failed:', error);
+            ToastManager.show('Sync failed. Check console for details.', 'error');
+        }
     }
 
     static _close(modal) {
@@ -300,7 +439,7 @@ export class GeneralSettingsUI {
                 s.enteredPrice || 0,
                 s.portfolioShares || 0,
                 s.brokerage || 0,
-                s.entryDate || ''
+                s.purchaseDate || s.entryDate || ''
             ].join(',');
         });
         return [headers.join(','), ...rows].join('\n');

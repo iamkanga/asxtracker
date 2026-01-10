@@ -848,8 +848,8 @@ export class ViewRenderer {
                                     <span class="${CSS_CLASSES.DETAIL_VALUE}">${formatCurrency(stock.enteredPrice || 0)}</span>
                                 </div>
                                 <div class="${CSS_CLASSES.DETAIL_ROW}">
-                                    <span class="${CSS_CLASSES.DETAIL_LABEL}">Entry Date</span>
-                                    <span class="${CSS_CLASSES.DETAIL_VALUE}">${formatFriendlyDate(stock.entryDate)}</span>
+                                    <span class="${CSS_CLASSES.DETAIL_LABEL}">Last Purchase</span>
+                                    <span class="${CSS_CLASSES.DETAIL_VALUE}">${formatFriendlyDate(stock.purchaseDate || stock.entryDate)}</span>
                                 </div>
                             </div>
 

@@ -136,6 +136,43 @@ export class ShareFormUI {
     }
 
     /**
+     * Normalizes a date string to YYYY-MM-DD for input type="date".
+     * Handles DD/MM/YYYY, ISO strings, and timestamp formats.
+     */
+    static _normalizeDateForInput(dateStr) {
+        if (!dateStr) return '';
+        console.log('[ShareFormUI] Normalizing date:', dateStr);
+
+        // 1. Check for standard ISO / YYYY-MM-DD
+        if (typeof dateStr === 'string' && /^\d{4}-\d{2}-\d{2}/.test(dateStr)) {
+            return dateStr.substring(0, 10);
+        }
+
+        // 2. Handle DD/MM/YYYY
+        if (typeof dateStr === 'string') {
+            const parts = dateStr.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+            if (parts) {
+                const d = parts[1].padStart(2, '0');
+                const m = parts[2].padStart(2, '0');
+                const y = parts[3];
+                return `${y}-${m}-${d}`;
+            }
+        }
+
+        // 3. Fallback to JS Date parsing
+        try {
+            const d = new Date(dateStr);
+            if (!isNaN(d.getTime())) {
+                return d.toISOString().split('T')[0];
+            }
+        } catch (e) {
+            console.warn('[ShareFormUI] Date normalization failed for:', dateStr);
+        }
+
+        return '';
+    }
+
+    /**
      * Validates the form state and updates UI (Save Button & Banner).
      */
     static _validateForm(modal, shareData = null) {
@@ -325,12 +362,13 @@ export class ShareFormUI {
                                     <input type="number" id="${IDS.PORTFOLIO_AVG_PRICE}" step="0.01" class="${CSS_CLASSES.FORM_CONTROL}" placeholder="0.00" value="${shareData?.portfolioAvgPrice || ''}">
                                 </div>
                                 <div class="${CSS_CLASSES.FORM_GROUP}">
-                                    <label for="${IDS.PURCHASE_DATE}">Last Purchase Date</label>
-                                    <input type="${shareData?.purchaseDate ? 'date' : 'text'}" 
+                                    <label for="${IDS.PURCHASE_DATE}">Last Purchase</label>
+                                    <input type="${shareData?.purchaseDate || shareData?.entryDate ? 'date' : 'text'}" 
                                            id="${IDS.PURCHASE_DATE}" 
                                            class="${CSS_CLASSES.FORM_CONTROL}" 
+                                           style="pointer-events: auto !important; position: relative; z-index: 10;"
                                            placeholder="e.g. 24/12/2025"
-                                           value="${shareData?.purchaseDate ? shareData.purchaseDate.substring(0, 10) : ''}"
+                                           value="${this._normalizeDateForInput(shareData?.purchaseDate || shareData?.entryDate)}"
                                            onfocus="(this.type='date')"
                                            onblur="if(!this.value)this.type='text'">
                                 </div>
@@ -810,6 +848,7 @@ export class ShareFormUI {
             portfolioShares: getNum(IDS.PORTFOLIO_SHARES),
             portfolioAvgPrice: getNum(IDS.PORTFOLIO_AVG_PRICE),
             purchaseDate: getVal(IDS.PURCHASE_DATE) || '',
+            entryDate: getVal(IDS.PURCHASE_DATE) || '', // Keep for legacy compatibility
             dividendAmount: getNum(IDS.DIVIDEND_AMOUNT),
             frankingCredits: getNum(IDS.FRANKING_CREDITS),
             unfrankedYield: getNum(IDS.UNFRANKED_YIELD),

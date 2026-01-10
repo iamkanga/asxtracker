@@ -236,6 +236,7 @@ export class SettingsUI {
     }
 
     static _buildStructure(container, modal) {
+        console.log('[SettingsUI] Building Settings Structure (v55)...');
         // Change Modal Title to "Notification Settings"
         const modalTitle = modal.querySelector(`.${CSS_CLASSES.MODAL_TITLE}`);
         if (modalTitle) {
@@ -255,6 +256,7 @@ export class SettingsUI {
             explainer.textContent = 'Set thresholds and sectors for the entire ASX';
             titleGroup.appendChild(explainer);
         }
+
 
         const summaryCard = document.createElement('div');
         summaryCard.className = CSS_CLASSES.DETAIL_CARD;
@@ -459,6 +461,9 @@ export class SettingsUI {
             </div>
         `;
         container.appendChild(notifCard);
+
+
+        // MOVED TO TOP
 
 
         // --- 3. COMBINED THRESHOLD & SECTOR SELECTOR ---
@@ -1420,5 +1425,6 @@ export class SettingsUI {
                 triggerUpdate('immediate', 'Sectors updated'); // Immediate Save on sector check
             }
         });
+
     }
 }
