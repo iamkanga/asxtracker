@@ -369,17 +369,23 @@ export class WatchlistUI {
             let innerHTML = '';
 
             if (this.isEditMode) {
-                // --- COL 1: HIDE / TITLE ---
+                // --- COL 1: HIDE + DELETE (Custom) ---
                 // Visuals: If hidden -> Coffee Color, Strikethrough, Tick Icon
                 const titleStyleClass = isHidden ? 'watchlist-item-hidden' : '';
-                // Fix: Manually ensure color coffee for tick
-                const hiddenTick = isHidden ? `<i class="fas fa-check" style="margin-left: 8px; font-size: 0.8em; color: var(--color-accent);"></i>` : '';
+                const hiddenTick = isHidden ? `<i class="fas fa-check ${CSS_CLASSES.HIDDEN_TICK_ICON}"></i>` : '';
+
+                let actionIcon = '';
+                // Only show trash can for non-system lists
+                if (!it.isSystem) {
+                    actionIcon = `<i class="fas ${UI_ICONS.TRASH} ${CSS_CLASSES.DELETE_WATCHLIST_BTN}" title="Delete Watchlist"></i>`;
+                }
 
                 innerHTML += `
                     <div class="watchlist-col-hide ${titleStyleClass}">
                         <i class="fas ${it.icon}" style="width: 20px; margin-right: 8px;"></i>
                         <span class="watchlist-name-span">${it.name}</span>
                         ${hiddenTick}
+                        ${actionIcon}
                     </div>
                 `;
 
@@ -418,9 +424,20 @@ export class WatchlistUI {
             // --- EVENT HANDLERS ---
 
             if (this.isEditMode) {
-                // Column 1: Hide Toggle
+                // Column 1: Hide Toggle OR Delete
                 div.querySelector('.watchlist-col-hide').addEventListener('click', (e) => {
                     e.stopPropagation();
+
+                    // Check if Delete Button was clicked
+                    if (e.target.classList.contains('delete-watchlist-btn')) {
+                        console.log('Requesting Delete Watchlist:', it.id);
+                        const event = new CustomEvent(EVENTS.REQUEST_DELETE_WATCHLIST, {
+                            detail: { id: it.id }
+                        });
+                        document.dispatchEvent(event);
+                        return;
+                    }
+
                     const stringId = String(it.id);
                     if (AppState.hiddenWatchlists.has(stringId)) {
                         AppState.hiddenWatchlists.delete(stringId);

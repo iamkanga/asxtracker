@@ -1270,8 +1270,8 @@ input:checked+.slider:before {
     /* Allow line to overflow if needed */
 }
 
-/* Slash Line */
-.dismiss-icon-wrapper::after {
+/* Slash Line - Only visible when .is-slashed class is present */
+.dismiss-icon-wrapper.is-slashed::after {
     content: '';
     position: absolute;
     top: 50%;

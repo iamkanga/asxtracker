@@ -180,6 +180,9 @@ export class ModalController {
 
                             const dataToAdd = {
                                 ...formData,
+                                // ENSURE SCHEMA COMPATIBILITY for Multi-Add Scenario
+                                code: lookupKey,
+                                shareName: lookupKey,
                                 watchlistId: persistenceId, // Set primary context
                                 enteredPrice: entryPrice,
                                 entryDate: entryDate

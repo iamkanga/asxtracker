@@ -153,70 +153,19 @@ export class NotificationStore {
      * Public API to force re-calculation of badges (e.g. after Muting)
      */
     recalculateBadges() {
-        this._notifyDataChange();
+        this._notifyCountChange();
     }
 
-    getBadgeCounts() {
-        if (!this.userId) return { total: 0, custom: 0 };
-
-        const thresholds = {
-            total: this.lastViewed.total || 0,
-            custom: this.lastViewed.custom || 0
-        };
-
-        const local = this.getLocalAlerts();
-        const myHits = local.fresh || [];
-
-        const global = this.getGlobalAlerts();
-        const globalHits = [
-            ...(global.movers?.up || []),
-            ...(global.movers?.down || []),
-            ...(global.hilo?.high || []),
-            ...(global.hilo?.low || [])
-        ];
-
-        const allVisibleHits = [...myHits, ...globalHits];
-
-        // 1. Calculate DEDUPLICATED counts
-        let totalCount = 0;
-        let customCount = 0;
-        const seenCodesTotal = new Set();
-        const seenCodesCustom = new Set();
-
-        const parseTime = (timeVal) => {
-            if (timeVal && typeof timeVal === 'object' && timeVal.toMillis) return timeVal.toMillis();
-            if (timeVal && typeof timeVal === 'object' && timeVal.seconds) return timeVal.seconds * 1000;
-            if (timeVal) return new Date(timeVal).getTime();
-            return 0;
-        };
-
-        // --- CALC CUSTOM COUNT (Kangaroo) ---
-        myHits.forEach(hit => {
-            const code = hit.code || hit.shareCode || hit.symbol;
-            if (!code || seenCodesCustom.has(code)) return;
-            seenCodesCustom.add(code);
-
-            const hitTime = parseTime(hit.t || hit.timestamp || hit.createdAt);
-            const isNew = hitTime > 0 && hitTime > thresholds.custom;
-            if (isNew) customCount++;
-        });
-
-        // --- CALC TOTAL COUNT (Sidebar) ---
-        allVisibleHits.forEach(hit => {
-            const code = hit.code || hit.shareCode || hit.symbol;
-            if (!code || seenCodesTotal.has(code)) return;
-            seenCodesTotal.add(code);
-
-            const hitTime = parseTime(hit.t || hit.timestamp || hit.createdAt);
-            const isNew = hitTime > 0 && hitTime > thresholds.total;
-            if (isNew) {
-                totalCount++;
-            }
-        });
-
-        // console.log(`[NotificationStore] Counts Calculated -> Total: ${totalCount}, Custom: ${customCount}`);
-        return { total: totalCount, custom: customCount };
+    /**
+     * Public API to update the store with fresh prices from background refresh.
+     * @param {Map} prices 
+     */
+    updateLivePrices(prices) {
+        // AppState.livePrices is already updated by AppController before calling this.
+        // We just need to trigger a recalculation/notification.
+        this._notifyCountChange();
     }
+
 
     /**
      * Fetches the 3 central daily documents: Custom Hits, Movers, HiLo.
@@ -377,7 +326,7 @@ export class NotificationStore {
         // For Limit Containers (Min Price): 0 = On (Show All).
         const hasTPct = rules.isHilo ? (tPct !== null) : (tPct !== null && tPct !== 0);
         const hasTDol = rules.isHilo ? (tDol !== null) : (tDol !== null && tDol !== 0);
-        const hasMinPrice = (minPrice !== null);
+        const hasMinPrice = (minPrice !== null || rules.isHilo); // Hilo can have null/zero min price
 
         // If both thresholds are OFF -> filter out this category
         if (!hasTPct && !hasTDol) return [];
@@ -1084,7 +1033,7 @@ export class NotificationStore {
         const hiloRules = {
             percentThreshold: 0,
             dollarThreshold: 0,
-            minPrice: rules.hiloMinPrice, // No default 0
+            minPrice: rules.hiloMinPrice ?? 0, // Default to 0 (None) to ensure alerts show
             activeFilters: resolveFiltersHilo(userFiltersHilo),
             excludePortfolio: rules.excludePortfolio !== false,
             isHilo: true
@@ -1559,7 +1508,7 @@ export class NotificationStore {
 
                     // 2. 52-WEEK HIGH/LOW (Implicit Watchlist Alerts)
                     // FIX: Respect Global Toggle AND Min Price.
-                    const hiloLimit = rules.hiloMinPrice || 0;
+                    const hiloLimit = rules.hiloMinPrice ?? 0;
 
                     // OVERRIDE LOGIC: If Override is ON, we bypass the Min Price check (`hiloLimit`).
                     // We still respect the Global Feature Toggle (`hiloEnabled`).
@@ -1568,12 +1517,8 @@ export class NotificationStore {
                     const featureEnabled = rules.hiloEnabled !== false;
 
                     // Condition: Feature ON AND (Price >= Limit OR Override ON)
-                    // Note: If hiloLimit is 0/null and Override is OFF, effectively everything passes or fails depending on interpretation? 
-                    // Standard logic: If Limit > 0, strict. If Limit is 0, allow all? OR block all?
-                    // Previous logic: hiloLimit > 0 was required. 
-                    // New Logic: If Override is ON, we allow REGARDLESS of hiloLimit value.
-
-                    const passesThreshold = (hiloLimit > 0 && price >= hiloLimit);
+                    // New Logic: If hiloLimit is 0 (None), we allow all.
+                    const passesThreshold = (hiloLimit === 0 || price >= hiloLimit);
                     const shouldProcess = featureEnabled && (passesThreshold || overrideActive);
 
                     if (shouldProcess) {

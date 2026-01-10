@@ -44,6 +44,42 @@ const DAILY_MOVERS_HITS_DOC_SEGMENTS = ['artifacts', APP_ID, 'alerts', 'GLOBAL_M
 // Full path: /artifacts/{APP_ID}/alerts/CUSTOM_TRIGGER_HITS
 const DAILY_CUSTOM_HITS_DOC_SEGMENTS = ['artifacts', APP_ID, 'alerts', 'CUSTOM_TRIGGER_HITS'];
 
+// ======================== TRADING CALENDAR ========================
+// Simple hardcoded holidays for ASX (User to update annually)
+// Format: 'YYYY-MM-DD'
+const ASX_HOLIDAYS_2025 = new Set([
+  '2025-01-01', // New Year's Day
+  '2025-01-27', // Australia Day (Observed)
+  '2025-04-18', // Good Friday
+  '2025-04-21', // Easter Monday
+  '2025-04-25', // Anzac Day
+  '2025-06-09', // King's Birthday
+  '2025-12-25', // Christmas Day
+  '2025-12-26'  // Boxing Day
+]);
+// Add 2026 if needed...
+
+/** Check if today (Sydney time) is a trading day (Mon-Fri, non-holiday). */
+function isTradingDay_(dateObj) {
+  const d = dateObj || new Date();
+  const dayStr = Utilities.formatDate(d, ASX_TIME_ZONE, 'yyyy-MM-dd');
+  const dayOfWeek = Utilities.formatDate(d, ASX_TIME_ZONE, 'u'); // 1=Mon, 7=Sun
+  
+  // 1. Weekend Check (6=Sat, 7=Sun)
+  if (dayOfWeek === '6' || dayOfWeek === '7') {
+    Logger.log('[isTradingDay] Skipping: Weekend (' + dayStr + ')');
+    return false;
+  }
+  
+  // 2. Holiday Check
+  if (ASX_HOLIDAYS_2025.has(dayStr)) {
+    Logger.log('[isTradingDay] Skipping: Public Holiday (' + dayStr + ')');
+    return false;
+  }
+  
+  return true;
+}
+
 // ===============================================================
 // ============= GENERIC FIRESTORE COMMIT UTILITIES ==============
 // ===============================================================
@@ -1577,6 +1613,42 @@ function doPost(e) {
 
 // (Legacy checkMarketAlerts removed)
 
+/**
+ * MASTER DAILY PREP FUNCTION
+ * Runs at 6:00 AM Sydney.
+ * 1. Checks if today is a Trading Day.
+ * 2. If YES: Executes Daily Reset (clears hits) AND Capture Close (zeros price change).
+ * 3. If NO: Does nothing (preserves weekend/holiday stats).
+ */
+function runDailyMorningPrep() {
+  const now = new Date();
+  console.log(`[DailyPrep] Starting Morning Prep for ${now}...`);
+  
+  if (!isTradingDay_(now)) {
+    console.log('[DailyPrep] Non-trading day. Skipping Reset & Capture.');
+    return;
+  }
+  
+  // 1. Reset Daily Hit Counters (Firestore)
+  console.log('[DailyPrep] Executing Daily Reset...');
+  try {
+    dailyResetTrigger(); 
+  } catch (e) {
+    console.error('[DailyPrep] Reset Failed:', e);
+  }
+  
+  // 2. Capture Previous Close (Zero the Day Change)
+  // We call the logic directly here
+  console.log('[DailyPrep] Capturing New Start Price (Zeroing Day Change)...');
+  try {
+    captureDailyClosePrice();
+  } catch (e) {
+    console.error('[DailyPrep] Capture Failed:', e);
+  }
+  
+  console.log('[DailyPrep] Complete. Ready for Market Open.');
+}
+
 function captureDailyClosePrice() {
   const now = new Date();
   console.log(`[${now}] Capturing daily closing prices...`);
@@ -1888,8 +1960,9 @@ function createTriggers() {
   }
 
   // --- 1) Essential Daily Triggers (Now Idempotent) ---
-  _ensureTimeTrigger_('captureDailyClosePrice', b => b.everyDays(1).atHour(16).nearMinute(5));
-  _ensureTimeTrigger_('dailyResetTrigger', b => b.everyDays(1).atHour(3).nearMinute(0));
+  // "Morning Prep" - Runs at 6:00 AM Sydney (2:00 AM Thailand).
+  // Checks for trading day, then Resets Stats AND Captures Close (Zeros the day).
+  _ensureTimeTrigger_('runDailyMorningPrep', b => b.everyDays(1).atHour(6).nearMinute(0));
 
   // --- 2) Fix Issue #2: Ensure Global Movers recurring trigger is active (idempotent) ---
   _ensureTimeTrigger_('runGlobalMoversScan', b => b.everyMinutes(10));

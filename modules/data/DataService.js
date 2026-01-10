@@ -54,7 +54,7 @@ export class DataService {
 
                 if (!response.ok) {
                     console.error(`DataService Fetch Error: ${response.status} ${response.statusText}`);
-                    return new Map();
+                    return { prices: new Map(), dashboard: [] };
                 }
 
                 const json = await response.json();
@@ -237,19 +237,23 @@ export class DataService {
         }
 
         if (!Array.isArray(items)) {
-            console.warn("DataService: Unexpected API response format", apiResponse);
+            console.warn("DataService: Unexpected API response format (missing prices array)", apiResponse);
             return { prices: normalizedPrices, dashboard: dashboardData };
+        }
+
+        if (items.length === 0 && dashboardData.length === 0) {
+            console.warn("DataService: API returned completely empty data payload. This may indicate a temporary backend error.");
         }
 
         // FULL NORMALIZATION: Both 'prices' and 'dashboard' should be in the Map
         const allItems = [...items, ...dashboardData];
 
         allItems.forEach(item => {
-            // Keys based on user provided reference: ASXCode, LivePrice, PrevClose
-            if (!item.ASXCode) return;
+            // ROBUST KEY LOOKUP: Support both ASXCode (API Standard) and code (Normalized)
+            const code = String(item.ASXCode || item.code || '').trim().toUpperCase();
 
-            // STRICT NORMALIZATION: Trim and Uppercase to match main.js lookup
-            const code = String(item.ASXCode).trim().toUpperCase();
+            // Skip invalid entries after normalization
+            if (!code || code === 'UNDEFINED') return;
 
             // DIAGNOSTIC (One-Time): Check for Day High/Low keys AND VALUES
             // if (code === 'ANZ' || code === 'WOW') {
@@ -263,8 +267,8 @@ export class DataService {
             // Skip invalid entries after normalization
             if (!code) return;
 
-            const live = parseFloat(item.LivePrice);
-            const prevClose = parseFloat(item.PrevClose);
+            const live = parseFloat(item.LivePrice || item.live || 0);
+            const prevClose = parseFloat(item.PrevClose || item.prevClose || 0);
 
             // Ensure numbers are valid
             const isLiveValid = !isNaN(live);

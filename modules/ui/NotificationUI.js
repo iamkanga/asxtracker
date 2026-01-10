@@ -14,7 +14,7 @@ import { BriefingUI } from './BriefingUI.js';
 export class NotificationUI {
 
     static _currentSource = 'total';
-    static _bellManuallyHidden = false; // Track manual dismissal
+    static _bellManuallyHidden = (localStorage.getItem('ASX_NEXT_bellHidden') === 'true'); // Persist dismissal state
     static _prevCount = 0; // Track previous count for change detection
     static _openLock = false; // Debounce lock for modal opening
     static _settingsRestorable = false; // Track if we hid settings
@@ -123,7 +123,13 @@ export class NotificationUI {
             return;
         }
 
-        // KANGAROO VISIBILITY FIX: Always show the button/container (unless locked or all disabled)
+        // KANGAROO VISIBILITY FIX: Always show the button/container (unless locked, manually hidden, or all disabled)
+        if (this._bellManuallyHidden) {
+            if (container) container.classList.add(CSS_CLASSES.HIDDEN);
+            bell.classList.add(CSS_CLASSES.HIDDEN);
+            return;
+        }
+
         if (container) container.classList.remove(CSS_CLASSES.HIDDEN);
         bell.classList.remove(CSS_CLASSES.HIDDEN);
 
@@ -415,25 +421,28 @@ export class NotificationUI {
             });
         }
 
-        // Mark as Read Button (Now Dismiss Badge)
+        // Mark as Read Button (Now Toggle Kangaroo / Dismiss Badge)
         const markReadBtn = modal.querySelector('#notif-mark-read-btn');
         if (markReadBtn) {
             markReadBtn.addEventListener('click', () => {
-                if (notificationStore) {
-                    console.log(`[NotificationUI] Dismiss Badge clicked. Source: ${this._currentSource}`);
+                // 1. Toggle Global Visibility
+                this._bellManuallyHidden = !this._bellManuallyHidden;
+                console.log(`[NotificationUI] Kangaroo Toggle: ${this._bellManuallyHidden ? 'HIDDEN' : 'VISIBLE'}`);
+
+                // 2. Perform Standard Dismissal Logic (if hidden)
+                if (this._bellManuallyHidden && notificationStore) {
                     notificationStore.markAsViewed('custom');
-
-                    // FORCE UPDATE: Immediately hide the ENTIRE Desktop Icon (Kangaroo FAB)
-                    const floatingBell = document.getElementById('floating-bell');
-                    const bellContainer = document.getElementById('floating-bell-container');
-
-                    if (floatingBell) floatingBell.classList.add(CSS_CLASSES.HIDDEN);
-                    if (bellContainer) bellContainer.classList.add(CSS_CLASSES.HIDDEN);
-
-                    // Visual feedback
-                    markReadBtn.style.opacity = '0.5';
-                    markReadBtn.disabled = true;
                 }
+
+                // 3. Immedate Refresh of the FAB (Kangaroo)
+                if (notificationStore) {
+                    const counts = notificationStore.getBadgeCounts();
+                    this.updateBadgeCount(counts.custom);
+                }
+
+                // 4. Update Button Visuals (Ghosting) and Persist
+                localStorage.setItem('ASX_NEXT_bellHidden', this._bellManuallyHidden ? 'true' : 'false');
+                this._updateDismissState(modal);
             });
         }
 
@@ -501,8 +510,7 @@ export class NotificationUI {
 
         // 0. Update Dismiss Button State (Live)
         if (notificationStore) {
-            const counts = notificationStore.getBadgeCounts();
-            NotificationUI._updateDismissState(modal, counts.custom);
+            NotificationUI._updateDismissState(modal);
         }
 
         // 1. Fetch Data
@@ -655,8 +663,8 @@ export class NotificationUI {
         // Structure Definitions - REORDERED & SPLIT
         const sections = [
             { id: 'custom', title: 'Custom', chipLabel: 'Watcher', headerTitle: customTitleHeader, subtitle: '<span style="color: var(--color-accent);">Watchlist prices and Market filters</span>', items: sortedLocal, type: 'custom', color: 'neutral' },
-            { id: 'high', title: '52 Week High', chipLabel: '52w High', subtitle: hiloStrHigh, items: finalHiloHigh, type: 'hilo', color: 'green' },
-            { id: 'low', title: '52 Week Low', chipLabel: '52w Low', subtitle: hiloStrLow, items: finalHiloLow, type: 'hilo', color: 'red' },
+            { id: 'hilo-high', title: '52 Week High', chipLabel: '52w High', subtitle: hiloStrHigh, items: finalHiloHigh, type: 'hilo-up', color: 'green' },
+            { id: 'hilo-low', title: '52 Week Low', chipLabel: '52w Low', subtitle: hiloStrLow, items: finalHiloLow, type: 'hilo-down', color: 'red' },
             { id: 'gainers', title: 'Market Gainers', chipLabel: 'Gainers', subtitle: upStr, items: finalMoversUp, type: 'gainers', color: 'green' },
             { id: 'losers', title: 'Market Losers', chipLabel: 'Losers', subtitle: downStr, items: finalMoversDown, type: 'losers', color: 'red' }
         ];
@@ -836,8 +844,8 @@ export class NotificationUI {
         if (section.items.length === 0) {
             let hint = 'No alerts currently match your criteria.';
             if (section.id === 'custom') hint = 'No personal or target alerts have been hit today. Add targets in the "Add Share" modal.';
-            if (section.id === 'movers') hint = 'Market movers are filtered by your Dollar and Percentage thresholds in Settings.';
-            if (section.id === 'hilo') hint = '52 week movers are filtered by your Min Price threshold in Settings.';
+            if (section.id === 'gainers' || section.id === 'losers') hint = 'Market movers are filtered by your Dollar and Percentage thresholds in Settings.';
+            if (section.id === 'hilo-high' || section.id === 'hilo-low') hint = '52 week movers are filtered by your Min Price threshold in Settings.';
 
             body.innerHTML = `
                 <div style="text-align:center; color:var(--text-muted); padding:1.5rem 1rem; font-size:0.8rem;">
@@ -1123,8 +1131,8 @@ export class NotificationUI {
         }
 
         // Force Direction based on Type (Override for Hi/Lo/Gainer/Loser)
-        if (type === 'hilo-up' || type === 'up') changePct = Math.abs(changePct); // Force Positive
-        if (type === 'hilo-down' || type === 'down') changePct = -Math.abs(changePct); // Force Negative if not already
+        if (type === 'hilo-up' || type === 'up' || type === 'gainers') changePct = Math.abs(changePct); // Force Positive
+        if (type === 'hilo-down' || type === 'down' || type === 'losers') changePct = -Math.abs(changePct); // Force Negative if not already
 
         let changeClass = changePct >= 0 ? CSS_CLASSES.POSITIVE : CSS_CLASSES.NEGATIVE;
 
@@ -1366,12 +1374,13 @@ export class NotificationUI {
             }));
         });
 
-        // Dismiss Logic
+        // Dismiss Logic (Desktop View)
         dismissOverlay.addEventListener('click', (e) => {
             e.stopPropagation(); // Prevent modal open
-            bell.classList.add(CSS_CLASSES.HIDDEN); // Hide the BELL itself
-            NotificationUI._bellManuallyHidden = true; // Use class ref since we are in static method context but standard func
-            // Also save preference? For now just hide session-based.
+            this._bellManuallyHidden = true; // Toggle state
+            localStorage.setItem('ASX_NEXT_bellHidden', 'true'); // Persist
+
+            this.updateBadgeCount(this._prevCount); // Refresh visibility immediately
         });
 
         // Initialize Badge
@@ -1379,25 +1388,34 @@ export class NotificationUI {
     }
 
     /**
-     * Updates the Dismiss Button state based on count.
-     * Ghosted if 0, Active if > 0.
+     * Updates the Dismiss Button state (Toggle).
+     * Slashed if Kangaroo is Visible (Click to cut).
+     * No Slash if Kangaroo is Hidden (Click to show).
      */
-    static _updateDismissState(modal, customCount) {
+    static _updateDismissState(modal) {
         const dismissBtn = modal.querySelector('#notif-mark-read-btn');
         if (!dismissBtn) return;
 
-        // Count must be > 0 to dismiss
-        const canDismiss = (customCount > 0);
+        const wrapper = dismissBtn.querySelector('.dismiss-icon-wrapper');
+        if (!wrapper) return;
 
-        if (canDismiss) {
-            dismissBtn.style.opacity = '1';
-            dismissBtn.disabled = false;
-            dismissBtn.style.cursor = 'pointer';
+        // Inverted Logic:
+        // Visible (!Hidden) -> Slashed
+        // Hidden (true) -> No Slash
+        if (this._bellManuallyHidden) {
+            wrapper.classList.remove('is-slashed');
+            dismissBtn.title = "Show Desktop Icon";
         } else {
-            dismissBtn.style.opacity = '0.5';
-            dismissBtn.disabled = true;
-            dismissBtn.style.cursor = 'default';
+            wrapper.classList.add('is-slashed');
+            dismissBtn.title = "Hide Desktop Icon";
         }
+
+        // Remove ghosting - keep full strength
+        dismissBtn.style.opacity = '1';
+
+        // Never disable, so it remains a clickable toggle
+        dismissBtn.disabled = false;
+        dismissBtn.style.cursor = 'pointer';
     }
 
     /**

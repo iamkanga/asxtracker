@@ -457,6 +457,11 @@ export const CSS_CLASSES = {
     POSITIVE: 'positive',
     NEGATIVE: 'negative',
     NEUTRAL: 'neutral',
+    PORTFOLIO_GRID: 'portfolio-grid',
+    DESKTOP_ONLY: 'desktop-only',
+    WHITESPACE_NOWRAP: 'whitespace-nowrap',
+    MX_TINY: 'mx-tiny',
+    MT_NEG_2PX: 'mt-neg-2px',
 
     // Notification & Settings
     BADGE: 'notification-badge',
@@ -488,6 +493,10 @@ export const CSS_CLASSES = {
     TEXT_COFFEE: 'text-coffee',
     TEXT_SHIMMER: 'text-shimmer',
     TEXT_LEFT: 'text-left',
+    TEXT_MUTED_LIGHT: 'text-muted-light',
+    JUSTIFY_CENTER: 'justify-center',
+    OPACITY_100: 'opacity-100',
+    OPACITY_70: 'opacity-70',
     FLEX_1: 'flex-1',
     MODAL_TITLE_AUTO: 'modal-title-auto',
     STAR_GAP_ML: 'star-gap-ml',
@@ -515,6 +524,8 @@ export const CSS_CLASSES = {
     COMMENT_INPUT: 'comment-input',
     DELETE_COMMENT_BTN: 'delete-comment-btn',
     BTN_TEXT_SMALL: 'btn-text-small',
+    DELETE_WATCHLIST_BTN: 'delete-watchlist-btn',
+    HIDDEN_TICK_ICON: 'hidden-tick-icon',
 
     // Modals
     MODAL: 'modal',
@@ -1022,8 +1033,12 @@ export const CSS_CLASSES = {
     DASHBOARD_ROW_POSITIVE: 'positive',
     DASHBOARD_ROW_NEGATIVE: 'negative',
     VIEW_MODE_COMPACT: 'view-mode-compact',
+    VIEW_MODE_COMPACT: 'view-mode-compact',
     VIEW_MODE_SNAPSHOT: 'view-mode-snapshot',
     VIEW_MODE_TABLE: 'view-mode-table',
+    VIEW_TABLE: 'view-table',
+    VIEW_COMPACT: 'view-compact',
+    VIEW_SNAPSHOT: 'view-snapshot',
 
     // Modal Reorder
     MODAL_REORDER_TITLE: 'modal-reorder-title',

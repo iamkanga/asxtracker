@@ -299,28 +299,14 @@ export class AppService {
 
         console.log(`[AppService] deleteShareRecord called for ShareID: ${shareId}, Context: ${watchlistId || 'PORTFOLIO/GLOBAL'}`);
 
-        // UNIFIED DELETION PROTOCOL (Cascade Delete):
-        // 1. Identify the Code (Symbol) of the share being deleted.
-        const targetShare = AppState.data.shares.find(s => s.id === shareId);
+        // UNIFIED DELETION PROTOCOL (Clean Delete):
+        // Previously, this function hunted down "siblings" (shares with same code in other lists) and deleted them too.
+        // This was causing data loss when deleting a watchlist or removing a duplicate.
+        // V3 Fix: Delete ONLY the specific document ID requested.
 
-        let sharesToDelete = [];
-        if (targetShare) {
-            console.log(`[AppService] Identified Symbol: ${targetShare.shareName}. Scanning for siblings...`);
-            // Find ALL shares with this code (siblings created due to legacy/buggy logic)
-            sharesToDelete = AppState.data.shares.filter(s => s.shareName === targetShare.shareName);
-        } else {
-            console.warn(`[AppService] Target share ${shareId} not in cache. Proceeding with Single Delete (Ghost Mode).`);
-            sharesToDelete = [{ id: shareId }];
-        }
+        await userStore.deleteDocument(user.uid, 'shares', shareId);
 
-        console.log(`[AppService] Cascade Delete: Removing ${sharesToDelete.length} documents.`);
-
-        // 2. Execute Batch Deletion
-        for (const share of sharesToDelete) {
-            console.log(`[AppService] Deleting Sibling/Target: ${share.id} (${share.shareName || 'Ghost'})`);
-            // We use 'shares' collection for all share documents
-            await userStore.deleteDocument(user.uid, 'shares', share.id);
-        }
+        console.log(`[AppService] Deleted share document: ${shareId}`);
     }
 
     /**

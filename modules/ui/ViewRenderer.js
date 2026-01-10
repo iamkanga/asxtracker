@@ -7,7 +7,7 @@
 
 import { formatCurrency, formatPercent, formatFriendlyDate } from '../utils/formatters.js';
 import { AppState } from '../state/AppState.js';
-import { SORT_OPTIONS, UI_ICONS, USER_MESSAGES, RESEARCH_LINKS_TEMPLATE, CSS_CLASSES, IDS, EVENTS, SUMMARY_TYPES, STORAGE_KEYS, PORTFOLIO_ID, KANGAROO_ICON_SRC, VIEW_MODES } from '../utils/AppConstants.js?v=10';
+import { SORT_OPTIONS, UI_ICONS, USER_MESSAGES, RESEARCH_LINKS_TEMPLATE, CSS_CLASSES, IDS, EVENTS, SUMMARY_TYPES, STORAGE_KEYS, PORTFOLIO_ID, KANGAROO_ICON_SRC, VIEW_MODES, FALLBACK_SECTOR_MAP } from '../utils/AppConstants.js?v=10';
 import { SnapshotUI } from './SnapshotUI.js';
 import { LinkHelper } from '../utils/LinkHelper.js';
 
@@ -16,6 +16,7 @@ import { navManager } from '../utils/NavigationManager.js';
 export class ViewRenderer {
     constructor() {
         this.cardsContainerClass = CSS_CLASSES.MOBILE_CONTAINER;
+        this.fallbackContainerClass = CSS_CLASSES.FALLBACK_CONTAINER;
 
         // Cached DOM Elements
         this.container = document.getElementById(IDS.CONTENT_CONTAINER);
@@ -28,6 +29,7 @@ export class ViewRenderer {
      * @param {Array} data - Array of share/asset objects.
      */
     render(data, summaryMetrics = null) {
+        console.log(`[DEBUG] ViewRenderer.render: Received ${data?.length || 0} items. ViewMode: ${AppState.viewMode}`);
         const viewMode = AppState.viewMode;
         const watchlistType = AppState.watchlist.type;
         const mode = viewMode.toUpperCase();
@@ -42,10 +44,23 @@ export class ViewRenderer {
                 this.viewControls.classList.remove(CSS_CLASSES.HIDDEN);
             }
         }
+        // 1b. DOM Stability Guard
+        if (!this.container || !document.body.contains(this.container)) {
+            console.warn('[DEBUG] ViewRenderer: Container lost or disconnected. Re-searching.');
+            this.container = document.getElementById(IDS.CONTENT_CONTAINER);
+        }
+
+        if (!this.container) {
+            console.error('[DEBUG] ViewRenderer: CRITICAL - container not found in DOM!');
+            return;
+        }
 
         // 2. Clear Container
         this.container.innerHTML = '';
-        this.container.classList.remove(CSS_CLASSES.VIEW_TABLE, CSS_CLASSES.VIEW_COMPACT, CSS_CLASSES.VIEW_SNAPSHOT);
+        // Resetting class names more aggressively to ensure only relevant ones are applied
+        this.container.className = '';
+        this.container.id = IDS.CONTENT_CONTAINER; // Ensure ID is always correct
+        // this.container.classList.add(CSS_CLASSES.CONTENT_CONTAINER); // Removed: CSS_CLASSES.CONTENT_CONTAINER is undefined
 
         // 2a. Render Summary (ONLY for Portfolio)
         // User Logic: if (currentWatchlistName === 'Portfolio') { renderSummary(); }
@@ -104,6 +119,7 @@ export class ViewRenderer {
     }
 
     renderTable(data) {
+        console.log(`[DEBUG] ViewRenderer.renderTable: Rendering ${data.length} items. Portfolio View: ${AppState.watchlist.id === PORTFOLIO_ID || AppState.isPortfolioVisible}`);
         if (!data || data.length === 0) {
             this.container.innerHTML = `<div class="${CSS_CLASSES.EMPTY_STATE}">No shares in this watchlist.</div>`;
             return;
@@ -119,12 +135,15 @@ export class ViewRenderer {
             gridContainer.classList.add(this.cardsContainerClass); // 'mobile-share-cards'
             gridContainer.classList.add(CSS_CLASSES.PORTFOLIO_GRID); // Registry-compliant class
 
-            gridContainer.innerHTML = data.map(item => this.createCardHTML(item, 'portfolio')).join('');
+            const html = data.map(item => this.createCardHTML(item, 'portfolio')).join('');
+            gridContainer.innerHTML = html;
             this.container.appendChild(gridContainer);
+            console.log(`[DEBUG] ViewRenderer: Injected Portfolio Grid. HTML Length: ${html.length}`);
         } else {
             // 2. Standard Table (Desktop View)
             const table = document.createElement('table');
             table.className = CSS_CLASSES.TABLE;
+            // table.style.display = 'table'; // REMOVED: This overrides CSS media queries and forces table on mobile.
 
             // Check for Generic Watchlist (Not Portfolio/Cash/All Shares usually treated as generic)
             // But user said "Watchlists". Usually 'ALL' is a watchlist too.
@@ -137,7 +156,7 @@ export class ViewRenderer {
                 <th>Notes</th>
             ` : '';
 
-            table.innerHTML = `
+            const tableHtml = `
                 <thead>
                     <tr>
                         <th data-sort-field="code">Code</th>
@@ -150,7 +169,9 @@ export class ViewRenderer {
                     ${data.map(item => this.createRowHTML(item, isGenericWatchlist)).join('')}
                 </tbody>
             `;
+            table.innerHTML = tableHtml;
             this.container.appendChild(table);
+            console.log(`[DEBUG] ViewRenderer: Injected Table. HTML Length: ${tableHtml.length}`);
 
             // 3. Render Fallback Cards (Mobile Card Design for non-portfolio watchlists)
             // ... (keep fallback container logic)
@@ -203,6 +224,7 @@ export class ViewRenderer {
 
 
     createRowHTML(item, isGenericWatchlist = false) {
+        if (!item.code) console.warn('[DEBUG] createRowHTML: item has no code!', item);
         const price = item.currentPrice || 0;
         const changePercent = item.dayChangePercent || 0;
 
@@ -282,6 +304,7 @@ export class ViewRenderer {
     }
 
     createCardHTML(item, type = PORTFOLIO_ID) {
+        if (!item.code) console.warn('[DEBUG] createCardHTML: item has no code!', item);
         const price = item.currentPrice || 0;
         const changePercent = item.dayChangePercent || 0;
 
@@ -576,6 +599,9 @@ export class ViewRenderer {
         const changeStr = isPos ? `+ ${formatCurrency(change)}` : formatCurrency(change);
         const pctStr = formatPercent(stock.pctChange || stock.dayChangePercent);
 
+        // Resolve Sector
+        const sectorName = stock.sector || FALLBACK_SECTOR_MAP[stock.code] || '';
+
         const colorClass = isPos ? CSS_CLASSES.PREVIEW_CHANGE_POS : (isNeg ? CSS_CLASSES.PREVIEW_CHANGE_NEG : CSS_CLASSES.NEUTRAL);
 
         const modal = document.createElement('div');
@@ -631,7 +657,10 @@ export class ViewRenderer {
                                 <div class="${CSS_CLASSES.DETAIL_CARD_HEADER}">
                                     <h3 class="${CSS_CLASSES.DETAIL_LABEL} ${CSS_CLASSES.W_FULL} ${CSS_CLASSES.TEXT_LEFT} ${CSS_CLASSES.START_CENTER_ROW}">
                                         <div class="${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.ALIGN_CENTER} ${CSS_CLASSES.JUSTIFY_BETWEEN} ${CSS_CLASSES.W_FULL}">
-                                            <span>Investment</span>
+                                            <div class="${CSS_CLASSES.FLEX_COLUMN} ${CSS_CLASSES.ALIGN_START}">
+                                                <span>Investment</span>
+                                                ${sectorName ? `<span class="${CSS_CLASSES.TEXT_SM} ${CSS_CLASSES.TEXT_MUTED} ${CSS_CLASSES.GHOSTED} ${CSS_CLASSES.ITALIC} ${CSS_CLASSES.FONT_NORMAL} ${CSS_CLASSES.MT_NEG_2PX}">${sectorName}</span>` : ''}
+                                            </div>
                                             <div class="kangaroo-wrapper ${stock.muted ? 'is-muted' : ''}"
                                                  title="${stock.muted ? 'Unmute Share' : 'Mute Share'}"
                                                  onclick="event.stopPropagation(); this.classList.toggle('is-muted'); document.dispatchEvent(new CustomEvent('${EVENTS.TOGGLE_SHARE_MUTE}', { detail: { id: '${stock.id}' } }))">
@@ -644,7 +673,7 @@ export class ViewRenderer {
                                 <div class="${CSS_CLASSES.PRICE_PREVIEW} ${CSS_CLASSES.W_FULL} ${CSS_CLASSES.BORDER_NONE} ${CSS_CLASSES.BG_TRANSPARENT} ${CSS_CLASSES.GAP_SMALL} ${CSS_CLASSES.MB_0} ${CSS_CLASSES.FLEX_COLUMN}">
                                     <div class="${CSS_CLASSES.PREVIEW_ROW_MAIN} ${CSS_CLASSES.MB_TINY}">
                                         <span class="${CSS_CLASSES.PREVIEW_PRICE} ${CSS_CLASSES.PREVIEW_PRICE_LARGE}">${formatCurrency(stock.live || currentPrice)}</span>
-                                        <span class="${CSS_CLASSES.PREVIEW_CHANGE} ${CSS_CLASSES.PREVIEW_CHANGE_LARGE} ${isPos ? CSS_CLASSES.PREVIEW_CHANGE_POS : CSS_CLASSES.PREVIEW_CHANGE_NEG}">
+                                        <span class="${CSS_CLASSES.PREVIEW_CHANGE} ${isPos ? CSS_CLASSES.PREVIEW_CHANGE_POS : CSS_CLASSES.PREVIEW_CHANGE_NEG}">
                                             ${changeStr} (${pctStr})
                                         </span>
                                     </div>
@@ -672,11 +701,15 @@ export class ViewRenderer {
                                             <span class="${CSS_CLASSES.STAT_VAL} ${CSS_CLASSES.TEXT_MD}">${safeVal(stock.pe, (v) => v.toFixed(2))}</span>
                                         </div>
                                     </div>
-                                    ${watchlistsText ? `
-                                            <div class="${CSS_CLASSES.WATCHLIST_MEMBERSHIP} ${CSS_CLASSES.GHOSTED} ${CSS_CLASSES.TEXT_SM} ${CSS_CLASSES.TEXT_MUTED} ${CSS_CLASSES.OPACITY_70} ${CSS_CLASSES.ITALIC} ${CSS_CLASSES.PT_TINY} ${CSS_CLASSES.MT_AUTO} ${CSS_CLASSES.W_FULL} ${CSS_CLASSES.TEXT_LEFT}">
-                                                ${watchlistsText}
-                                            </div>
-                                        ` : ''}
+                                    </div>
+                                    <div class="${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.JUSTIFY_BETWEEN} ${CSS_CLASSES.ALIGN_END} ${CSS_CLASSES.MT_AUTO} ${CSS_CLASSES.W_FULL} ${CSS_CLASSES.PT_TINY}">
+                                        <div class="${CSS_CLASSES.WATCHLIST_MEMBERSHIP} ${CSS_CLASSES.GHOSTED} ${CSS_CLASSES.TEXT_SM} ${CSS_CLASSES.TEXT_MUTED} ${CSS_CLASSES.OPACITY_70} ${CSS_CLASSES.ITALIC} ${CSS_CLASSES.TEXT_LEFT}">
+                                            ${watchlistsText}
+                                        </div>
+                                        <a href="https://portfolio.sharesight.com/" target="_blank" class="${CSS_CLASSES.ICON_BTN_GHOST}" title="Open in Sharesight" style="font-size: 1.1rem;">
+                                            <i class="fas fa-chart-pie ${CSS_CLASSES.TEXT_COFFEE}" style="opacity: 1;"></i>
+                                        </a>
+                                    </div>
                                 </div>
                             </div>
 

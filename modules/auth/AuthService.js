@@ -13,7 +13,7 @@ import {
     setPersistence,
     browserLocalPersistence
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { initializeFirestore } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Firebase Configuration
 const firebaseConfig = {
@@ -35,7 +35,10 @@ let persistencePromise;
 try {
     app = initializeApp(firebaseConfig);
     auth = getAuth(app);
-    dbInstance = getFirestore(app);
+    // V70: Switch to Long Polling to resolve Channel 400/404 errors in flaky environments
+    dbInstance = initializeFirestore(app, {
+        experimentalForceLongPolling: true
+    });
 
     // Set persistence to LOCAL (users stay logged in across restarts)
     persistencePromise = setPersistence(auth, browserLocalPersistence)

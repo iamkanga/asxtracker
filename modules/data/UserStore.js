@@ -324,8 +324,12 @@ export class UserStore {
                     lastLogin: serverTimestamp()
                 });
             } else {
-                // Update last login
-                await updateDoc(userRef, { lastLogin: serverTimestamp() });
+                // Update last login (Non-blocking race avoidance)
+                try {
+                    await updateDoc(userRef, { lastLogin: serverTimestamp() });
+                } catch (err) {
+                    console.log('[UserStore] Provision update skipped (possibly conflict or offline):', err.message);
+                }
             }
         } catch (e) {
             console.error("UserStore: Provisioning failed", e);
@@ -379,6 +383,13 @@ export class UserStore {
         // - Custom watchlists showing nothing (was checking non-existent single 'watchlistId' prop)
 
         return shares.filter(s => {
+            // SPECIAL CASE: Portfolio view includes any share with owned units (shares > 0)
+            if (watchlistId === PORTFOLIO_ID) {
+                const units = parseFloat(s.portfolioShares) || 0;
+                if (units > 0) return true;
+                // Continue to check if it's explicitly in the 'portfolio' watchlist too
+            }
+
             // Robustness: Handle array (standard), single string (legacy), or missing
             if (Array.isArray(s.watchlistIds)) {
                 return s.watchlistIds.includes(watchlistId);
@@ -403,6 +414,7 @@ export class UserStore {
         // Re-use addShare but include watchlistId
         return this.addShare(userId, {
             code: symbol,
+            shareName: symbol, // Critical Fix: Save shareName to prevent "undefined" in legacy UI
             watchlistId: watchlistId,
             purchasePrice: price,
             purchaseDate: timestamp,

@@ -70,9 +70,13 @@ export function processShares(allShares, watchlistId, livePrices, sortConfig, hi
         const lookupKey = String(share.shareName).trim().toUpperCase();
         let priceData = livePrices.get(lookupKey);
 
-        // Fallback: Try appending .AX if not found and not already suffixed (Common for ASX stocks)
+        // Fallback: Try appending .AX if not found
         if (!priceData && !lookupKey.includes('.')) {
             priceData = livePrices.get(lookupKey + '.AX');
+        }
+        // Fallback: Try stripping .AX if not found
+        if (!priceData && lookupKey.endsWith('.AX')) {
+            priceData = livePrices.get(lookupKey.replace('.AX', ''));
         }
 
         const currentPrice = priceData ? (parseFloat(priceData.live) || 0) : (parseFloat(share.enteredPrice) || 0);
@@ -108,7 +112,11 @@ export function processShares(allShares, watchlistId, livePrices, sortConfig, hi
 
         return {
             ...share,
-            code: share.shareName,
+            // Robust Link: Usage of 'shareName' (Legacy) vs 'code' (New Schema)
+            // We ensure we have a valid code string for display/logic
+            code: share.shareName || share.code,
+            // We also ensure shareName is backfilled if missing, to satisfy legacy consumers downstream
+            shareName: share.shareName || share.code,
             currentPrice: currentPrice,
             dayChangePercent: dayChangePercent,
             dayChangeValue: dayChangeValue, // Total value change for portfolio
@@ -120,10 +128,18 @@ export function processShares(allShares, watchlistId, livePrices, sortConfig, hi
             enteredPrice: enteredPrice,
             capitalGain: capitalGain,
             capitalGainPercent: capitalGainPercent,
+            capitalGain: capitalGain,
+            capitalGainPercent: capitalGainPercent,
             comments: normalizeComments(share.comments),
-            isHidden: hiddenAssets.has(String(share.id))
+            isHidden: hiddenAssets.has(String(share.id)),
+            sector: priceData ? priceData.sector : (share.sector || ''),
+            industry: priceData ? priceData.industry : (share.industry || '')
         };
     });
+
+    // DEBUG: Log match rate
+    const liveCount = mergedData.filter(m => m.currentPrice > 0).length;
+    console.log(`[DEBUG] DataProcessor.processShares: Matched ${liveCount}/${mergedData.length} items with live prices.`);
 
     // 3. Calculate Totals (ONLY for Portfolio view, usually skip hidden)
     // We pass mergedData but we want the summary to exclude hidden shares.
@@ -400,7 +416,9 @@ export function getSingleShareData(code, allShares, livePrices, userWatchlists =
         pe: priceData ? priceData.pe : 0,
         live: priceData ? priceData.live : currentPrice,
         change: priceData ? priceData.change : 0,
-        pctChange: priceData ? priceData.pctChange : dayChangePercent
+        pctChange: priceData ? priceData.pctChange : dayChangePercent,
+        sector: priceData ? priceData.sector : (primaryShare.sector || ''),
+        industry: priceData ? priceData.industry : (primaryShare.industry || '')
     };
 }
 
