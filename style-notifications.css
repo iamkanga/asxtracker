@@ -284,10 +284,10 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 4px;
-    padding: 16px 8px;
+    gap: 2px;
+    padding: 10px 6px;
+    /* Reduced vertical padding */
     background: var(--bg-secondary, #1a1a1a);
-    /* Tile background */
     border: none;
     color: var(--text-muted);
     cursor: pointer;
@@ -301,7 +301,8 @@
 }
 
 .filter-chip.active {
-    background: rgba(164, 148, 148, 0.1);
+    background: rgba(164, 148, 148, 0.12);
+    /* Slightly darker focus */
     color: var(--color-accent);
 }
 
@@ -318,11 +319,15 @@
 
 /* Tile Metrics */
 .chip-label {
-    font-size: 0.65rem;
+    font-size: 0.62rem;
+    /* Slightly smaller for elegance */
     font-weight: 800;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 0.5px;
+    /* Reduced from 1px to fit 'Dashboard' */
     opacity: 0.8;
+    white-space: nowrap;
+    /* Force one line */
 }
 
 .chip-badge {
@@ -417,17 +422,11 @@
 
 .filter-chip[data-target="open-all"] {
     border-color: var(--accent-color);
-    /* Restore Border Color */
-    background-color: transparent !important;
-    color: var(--text-muted);
 }
 
 .filter-chip[data-target="open-all"].active,
 .filter-chip[data-target="open-all"]:hover {
     color: var(--text-color);
-    background: transparent !important;
-    border: 1px solid transparent;
-    border-left: 2px solid var(--accent-color) !important;
 }
 
 /* Custom Triggers (Coffee Accent) */
@@ -1258,7 +1257,7 @@ input:checked+.slider:before {
 /* --- Media Queries --- */
 @media (max-width: 480px) {
     .filter-chips-container {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(3, 1fr);
     }
 }
 
@@ -1286,4 +1285,96 @@ input:checked+.slider:before {
     /* Cutout effect against icon */
     box-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
     z-index: 10;
+}
+
+/* --- System Status Bar (Unified Reference V3 - Dashboard Card Style) --- */
+.system-status-bar {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 4px;
+    /* Reduced from 10px */
+    padding: 8px 14px;
+    /* Reduced from 12px 16px */
+    background: rgba(44, 44, 44, 0.4);
+    border: 1px solid var(--border-color);
+    margin: 4px 10px;
+    /* Reduced margin */
+    border-radius: 4px;
+    font-size: 0.65rem;
+    /* Reduced from 0.72rem */
+    cursor: pointer;
+    min-height: 48px;
+    /* Reduced from 60px */
+    transition: all 0.2s ease;
+}
+
+.system-status-bar:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: var(--color-accent);
+}
+
+/* Title Row (Override Status) */
+.status-title-row {
+    font-size: 0.75rem;
+    /* Reduced from 0.82rem */
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    /* Reduced from 1.2px */
+    text-align: center;
+    width: 100%;
+}
+
+/* Monitors Row (Settings) */
+.status-monitors-row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    /* Reduced gap */
+    width: 100%;
+    flex-wrap: wrap;
+}
+
+.status-item {
+    font-size: 0.62rem;
+    /* Reduced from 0.7rem */
+    font-weight: 600;
+    color: var(--text-muted);
+    letter-spacing: 0.4px;
+    transition: color 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    /* Reduced gap */
+    text-transform: uppercase;
+}
+
+.status-item.active {
+    color: var(--color-accent);
+    /* Coffee Color for Active Monitors */
+}
+
+/* Strikethrough for disabled items */
+.status-item.disabled {
+    color: var(--text-muted);
+    opacity: 0.35;
+    text-decoration: line-through;
+}
+
+/* Specific Style for Override Title - STRICT Red/Green */
+.status-override-on {
+    color: var(--color-positive) !important;
+    /* STRICT GREEN */
+    text-shadow: 0 0 12px rgba(6, 255, 79, 0.25);
+    /* Stronger Glow */
+}
+
+.status-override-off {
+    color: var(--color-negative) !important;
+    /* STRICT RED */
+    text-shadow: 0 0 12px rgba(255, 49, 49, 0.25);
+    /* Stronger Glow */
 }

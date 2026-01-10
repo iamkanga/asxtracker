@@ -6,7 +6,7 @@
 
 import { notificationStore } from '../state/NotificationStore.js';
 import { AppState } from '../state/AppState.js';
-import { CSS_CLASSES, IDS, UI_ICONS, EVENTS } from '../utils/AppConstants.js';
+import { CSS_CLASSES, IDS, UI_ICONS, EVENTS, SECTOR_INDUSTRY_MAP } from '../utils/AppConstants.js';
 import { navManager } from '../utils/NavigationManager.js';
 import { formatCurrency, formatPercent } from '../utils/formatters.js';
 import { BriefingUI } from './BriefingUI.js';
@@ -26,7 +26,7 @@ export class NotificationUI {
         document.addEventListener(EVENTS.NOTIFICATION_UPDATE, (e) => {
             // 1. Update Badge (Floating Bell)
             // PRIORITY: Use explicit scope from event detail if provided (instant refresh), fallback to AppState
-            const scope = e.detail?.scope || AppState?.preferences?.badgeScope || 'custom';
+            const scope = e.detail?.scope || AppState?.preferences?.badgeScope || 'all';
 
             // If forced, fetch fresh counts from store immediately
             if (e.detail?.forceBadgeUpdate && notificationStore) {
@@ -345,10 +345,10 @@ export class NotificationUI {
                         <!-- Dynamic Chips -->
                     </div>
 
-                    <!-- Status Bar: Shows only disabled monitors (hidden if all ON) -->
-                    <div id="notif-status-bar" class="notif-status-bar hidden" title="Tap to open settings">
-                        <span class="status-bar-prefix">Disabled:</span>
-                        <span id="notif-status-pills" class="status-bar-pills"></span>
+                    <!-- System Status Bar (Unified Reference V2 - Stacked) -->
+                    <div id="system-status-bar" class="system-status-bar" title="Tap to open settings">
+                        <div id="status-title-row" class="status-title-row"></div>
+                        <div id="status-monitors-row" class="status-monitors-row"></div>
                     </div>
                 </div>
 
@@ -439,7 +439,10 @@ export class NotificationUI {
                 // 3. Immedate Refresh of the FAB (Kangaroo)
                 if (notificationStore) {
                     const counts = notificationStore.getBadgeCounts();
-                    this.updateBadgeCount(counts.custom);
+                    // FIX: Respect current badge scope preference instead of hardcoded 'custom'
+                    const scope = AppState?.preferences?.badgeScope || 'all';
+                    const count = (scope === 'all') ? counts.total : counts.custom;
+                    this.updateBadgeCount(count);
                 }
 
                 // 4. Update Button Visuals (Ghosting) and Persist
@@ -643,28 +646,40 @@ export class NotificationUI {
 
         // --- OVERRIDE INDICATOR --- 
         // User Request: "Next custom title in the notifications I would like to have some sort of display letting the user if the watch list override is on or off"
-        const excludePortfolio = AppState.preferences?.excludePortfolio ?? true;
-        const overrideLabel = excludePortfolio
-            ? `<span style="font-size: 0.65rem; color: var(--color-accent); font-weight: normal; margin-left: 8px; opacity: 0.8; letter-spacing: 0.5px;">OVERRIDE ON</span>`
-            : `<span style="font-size: 0.65rem; color: var(--text-muted); font-weight: normal; margin-left: 8px; opacity: 0.5; letter-spacing: 0.5px;">OVERRIDE OFF</span>`;
+        // REMOVED OVERRIDE LABEL (Moved to System Status Bar)
+        // const overrideLabel = ...
 
 
 
         const customTitleChip = 'Custom Movers';
-        const customTitleHeader = `Custom Movers${overrideLabel}`;
+        const customTitleHeader = `Custom Movers`;
 
-        // SURFACING: Sort Target Hits (Coffee) FIRST in Custom Section
+        // SURFACING: Reorder Custom Section per USER Request
+        // Order: 1. Targets, 2. 52w Highs, 3. 52w Lows, 4. Gainers, 5. Losers
         const sortedLocal = [...localAlerts].sort((a, b) => {
-            const isTargetA = a.intent === 'target' || a.intent === 'target-hit';
-            const isTargetB = b.intent === 'target' || b.intent === 'target-hit';
-            if (isTargetA && !isTargetB) return -1;
-            if (!isTargetA && isTargetB) return 1;
-            return 0;
+            const getRank = (item) => {
+                const intent = (item.intent || '').toLowerCase();
+                const pct = Number(item.pct || item.changeInPercent || 0);
+                const isDown = (item.direction || '').toLowerCase() === 'down' || pct < 0;
+
+                if (intent.includes('target')) return 1;
+                if (intent === 'high' || (intent === 'hilo' && !isDown)) return 2;
+                if (intent === 'low' || (intent === 'hilo' && isDown)) return 3;
+                if (!isDown) return 4; // Gainers
+                return 5; // Losers
+            };
+
+            const rankA = getRank(a);
+            const rankB = getRank(b);
+
+            if (rankA !== rankB) return rankA - rankB;
+            // Secondary Sort: Magnitude (Largest move first) within its rank
+            return Math.abs(Number(b.pct || 0)) - Math.abs(Number(a.pct || 0));
         });
 
         // Structure Definitions - REORDERED & SPLIT
         const sections = [
-            { id: 'custom', title: 'Custom', chipLabel: 'Watcher', headerTitle: customTitleHeader, subtitle: '<span style="color: var(--color-accent);">Watchlist prices and Market filters</span>', items: sortedLocal, type: 'custom', color: 'neutral' },
+            { id: 'custom', title: 'Custom', chipLabel: 'Custom', headerTitle: customTitleHeader, subtitle: '<span style="color: var(--color-accent);">Watchlist prices and Market filters</span>', items: sortedLocal, type: 'custom', color: 'neutral' },
             { id: 'hilo-high', title: '52 Week High', chipLabel: '52w High', subtitle: hiloStrHigh, items: finalHiloHigh, type: 'hilo-up', color: 'green' },
             { id: 'hilo-low', title: '52 Week Low', chipLabel: '52w Low', subtitle: hiloStrLow, items: finalHiloLow, type: 'hilo-down', color: 'red' },
             { id: 'gainers', title: 'Market Gainers', chipLabel: 'Gainers', subtitle: upStr, items: finalMoversUp, type: 'gainers', color: 'green' },
@@ -677,18 +692,24 @@ export class NotificationUI {
         // console.log(`[NotificationUI] Rendered Item Count: ${totalRendered}`);
 
         // Render Summary Dashboard (V3 Grid)
-        // 1. "Dashboard" Tile (Master View)
+        // 1. "Dashboard" Tile (Master View) - First in Row 1
         const openAllChip = document.createElement('div');
-        openAllChip.className = `${CSS_CLASSES.FILTER_CHIP} chip-neutral active`;
+        openAllChip.className = `${CSS_CLASSES.FILTER_CHIP} chip-neutral active`; // Starts active (All Open)
         openAllChip.dataset.target = 'open-all';
         openAllChip.innerHTML = `
             <span class="chip-badge">${totalRendered}</span>
-            <span class="chip-label">Dashboard</span>
+            <span class="chip-label">Dashboard Close</span>
         `;
         chips.appendChild(openAllChip);
 
-        sections.forEach(sec => {
-            // Summary Tile
+        // Define Specific Chip Order (Row 1 then Row 2)
+        // Order: Dashboard (above), HI, Gainers, Watcher, LO, Losers
+        const chipOrder = ['hilo-high', 'gainers', 'custom', 'hilo-low', 'losers'];
+
+        chipOrder.forEach(targetId => {
+            const sec = sections.find(s => s.id === targetId);
+            if (!sec) return;
+
             const chip = document.createElement('div');
             const chipClass = `chip-${sec.color || 'neutral'}`;
 
@@ -699,8 +720,11 @@ export class NotificationUI {
                 <span class="chip-label">${sec.chipLabel || sec.title}</span>
             `;
             chips.appendChild(chip);
+        });
 
-            // Accordion (Always Added to List Body)
+        // 2. Render Accordions (Always Added to List Body)
+        // Preserve original logical order in list (Custom first)
+        sections.forEach(sec => {
             const accordion = this._renderAccordion(sec, rules);
             list.appendChild(accordion);
         });
@@ -714,33 +738,78 @@ export class NotificationUI {
         const sections = modal.querySelectorAll(`.${CSS_CLASSES.ACCORDION_SECTION}`);
         const listBody = modal.querySelector('#notificationList');
 
+        // HELPER: Toggle a specific section
+        const toggleSection = (id, forceExpand = null) => {
+            const sec = modal.querySelector(`#section-${id}`);
+            if (!sec) return;
+            const isExpanded = forceExpand !== null ? forceExpand : !sec.classList.contains(CSS_CLASSES.EXPANDED);
+
+            if (isExpanded) {
+                sec.classList.add(CSS_CLASSES.EXPANDED);
+                sec.style.display = 'block';
+            } else {
+                sec.classList.remove(CSS_CLASSES.EXPANDED);
+                // We keep it 'block' but the CSS height/overflow handles the collapse
+            }
+            syncDashboardLabel();
+        };
+
+        // HELPER: Sync the Dashboard chip label
+        const syncDashboardLabel = () => {
+            const dashboardChip = modal.querySelector('.filter-chip[data-target="open-all"]');
+            if (!dashboardChip) return;
+            const labelEl = dashboardChip.querySelector('.chip-label');
+            if (!labelEl) return;
+
+            const allExpanded = Array.from(sections).every(s => s.classList.contains(CSS_CLASSES.EXPANDED));
+            labelEl.textContent = allExpanded ? 'Dashboard Close' : 'Dashboard Open';
+        };
+
+        // HELPER: Close all sections
+        const closeAll = () => {
+            sections.forEach(s => {
+                s.classList.remove(CSS_CLASSES.EXPANDED);
+            });
+            syncDashboardLabel();
+        };
+
+        // HELPER: Open all sections
+        const openAll = () => {
+            sections.forEach(s => {
+                s.classList.add(CSS_CLASSES.EXPANDED);
+                s.style.display = 'block';
+            });
+            syncDashboardLabel();
+        };
+
         // INITIAL STATE: Expand All by Default (Transparency)
-        sections.forEach(s => {
-            s.style.display = 'block';
-            s.classList.add(CSS_CLASSES.EXPANDED);
-        });
+        openAll();
 
         // Navigation Sync: Update Active Tile based on scroll position
         if (listBody) {
             listBody.addEventListener('scroll', () => {
-                let currentId = 'open-all';
-                const scrollPos = listBody.scrollTop + 50; // Offset for better triggering
+                const anyExpanded = Array.from(sections).some(s => s.classList.contains(CSS_CLASSES.EXPANDED));
+                let currentId = anyExpanded ? 'open-all' : null;
+                const scrollPos = listBody.scrollTop + 50;
 
-                sections.forEach(sec => {
-                    if (sec.offsetTop <= scrollPos) {
-                        currentId = sec.id.replace('section-', '');
-                    }
-                });
+                if (anyExpanded) {
+                    sections.forEach(sec => {
+                        if (sec.classList.contains(CSS_CLASSES.EXPANDED) && sec.offsetTop <= scrollPos) {
+                            currentId = sec.id.replace('section-', '');
+                        }
+                    });
+                }
 
                 // Update Tile Highlights
                 chips.forEach(c => {
-                    if (c.dataset.target === currentId) c.classList.add(CSS_CLASSES.ACTIVE);
+                    const isMatched = (c.dataset.target === currentId);
+                    if (isMatched) c.classList.add(CSS_CLASSES.ACTIVE);
                     else c.classList.remove(CSS_CLASSES.ACTIVE);
                 });
             }, { passive: true });
         }
 
-        // Tile Events (Anchor Navigation)
+        // Tile Events (Filter / Anchor Navigation)
         chips.forEach(chip => {
             chip.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -748,8 +817,29 @@ export class NotificationUI {
                 const list = modal.querySelector('#notificationList');
 
                 if (targetId === 'open-all') {
-                    if (list) list.scrollTo({ top: 0, behavior: 'smooth' });
+                    // TOGGLE LOGIC: If all are expanded -> Close All. Otherwise -> Open All.
+                    const allExpanded = Array.from(sections).every(s => s.classList.contains(CSS_CLASSES.EXPANDED));
+
+                    // Clear EVERY chip highlight first (Single Selection)
+                    chips.forEach(c => c.classList.remove(CSS_CLASSES.ACTIVE));
+
+                    if (allExpanded) {
+                        closeAll();
+                        // Remains black (deselected)
+                    } else {
+                        openAll();
+                        chip.classList.add(CSS_CLASSES.ACTIVE); // Highlight Grey
+                        if (list) list.scrollTo({ top: 0, behavior: 'smooth' });
+                    }
                 } else {
+                    // USER REQUIREMENT: Focus on specific category
+                    closeAll(); // Collapse others for focused view
+                    toggleSection(targetId, true); // Ensure target is open
+
+                    // Update Highlights: Clear all, set this one
+                    chips.forEach(c => c.classList.remove(CSS_CLASSES.ACTIVE));
+                    chip.classList.add(CSS_CLASSES.ACTIVE);
+
                     const sec = modal.querySelector(`#section-${targetId}`);
                     if (sec && list) {
                         list.scrollTo({ top: sec.offsetTop, behavior: 'smooth' });
@@ -767,21 +857,10 @@ export class NotificationUI {
                 const section = header.closest(`.${CSS_CLASSES.ACCORDION_SECTION}`);
                 if (!section) return;
                 const targetId = section.id.replace('section-', '');
-                const list = modal.querySelector('#notificationList');
 
-                if (section.classList.contains(CSS_CLASSES.EXPANDED)) {
-                    toggleSection(targetId, false);
-                } else {
-                    closeAll();
-                    toggleSection(targetId, true);
-
-                    // Unified Scroll Logic
-                    if (section && list) {
-                        setTimeout(() => {
-                            list.scrollTo({ top: section.offsetTop, behavior: 'smooth' });
-                        }, 350);
-                    }
-                }
+                // Toggle this section
+                const isCurrentlyExpanded = section.classList.contains(CSS_CLASSES.EXPANDED);
+                toggleSection(targetId, !isCurrentlyExpanded);
             });
         });
 
@@ -844,14 +923,13 @@ export class NotificationUI {
         body.className = CSS_CLASSES.ACCORDION_BODY;
 
         if (section.items.length === 0) {
-            let hint = 'No alerts currently match your criteria.';
-            if (section.id === 'custom') hint = 'No personal or target alerts have been hit today. Add targets in the "Add Share" modal.';
-            if (section.id === 'gainers' || section.id === 'losers') hint = 'Market movers are filtered by your Dollar and Percentage thresholds in Settings.';
-            if (section.id === 'hilo-high' || section.id === 'hilo-low') hint = '52 week movers are filtered by your Min Price threshold in Settings.';
+            let hint = 'No alerts found.';
+            if (section.id === 'custom') hint = 'No custom hits. Add targets in "Add Share".';
+            if (section.id === 'gainers' || section.id === 'losers') hint = 'Filtered by your Threshold settings.';
+            if (section.id === 'hilo-high' || section.id === 'hilo-low') hint = 'Filtered by your Min Price setting.';
 
             body.innerHTML = `
-                <div style="text-align:center; color:var(--text-muted); padding:1.5rem 1rem; font-size:0.8rem;">
-                    <i class="fas fa-info-circle" style="display:block; font-size:1.2rem; margin-bottom:8px; opacity:0.5;"></i>
+                <div style="text-align:center; color:var(--text-muted); padding:0.5rem 1rem; font-size:0.75rem;">
                     ${hint}
                 </div>`;
         } else {
@@ -1421,57 +1499,65 @@ export class NotificationUI {
     }
 
     /**
-     * Updates the status bar to show disabled monitors.
-     * Hidden if all monitors are ON.
+     * Updates the status bar to show Unified System State (V3 Dashboard Card).
+     * Row 1: Override Status Title (STRICT Red/Green).
+     * Row 2: Monitor Settings.
      */
     static _updateStatusBar(modal) {
-        const statusBar = modal.querySelector('#notif-status-bar');
-        const pillsContainer = modal.querySelector('#notif-status-pills');
-        if (!statusBar || !pillsContainer) return;
+        const statusBar = modal.querySelector('#system-status-bar');
+        const titleRow = modal.querySelector('#status-title-row');
+        const monitorsRow = modal.querySelector('#status-monitors-row');
+
+        if (!statusBar || !titleRow || !monitorsRow) return;
 
         // Get current settings via Store (Handles Fallbacks)
-        const rules = notificationStore.getScannerRules() || {};
+        const rules = (notificationStore && typeof notificationStore.getScannerRules === 'function')
+            ? notificationStore.getScannerRules()
+            : (AppState.preferences?.scannerRules || {});
+
         const prefs = AppState.preferences || {};
 
-        // Check which monitors are OFF
-        const disabled = [];
+        // 1. TOP ROW: Override Status (Title)
+        // User Requirement: Use Red/Green for Override Status
+        // Logic: ExcludePortfolio = true means Override is ON (Bypassing filters)
+        const overrideOn = rules.excludePortfolio !== false;
 
-        // Check explicit false (undefined = enabled default)
-        if (rules.hiloEnabled === false) disabled.push('52w');
-        if (rules.moversEnabled === false) disabled.push('Movers');
-        if (rules.personalEnabled === false) disabled.push('Personal');
+        titleRow.innerHTML = overrideOn
+            ? `<span class="status-override-on">WATCHLIST OVERRIDE: ON</span>`
+            : `<span class="status-override-off">WATCHLIST OVERRIDE: OFF</span>`;
 
-        // AppState typically has these, but fall back safely
-        if (prefs.showBadges === false) disabled.push('Icon');
-        if (prefs.dailyEmail === false) disabled.push('Email');
+        // 2. BOTTOM ROW: Monitor Settings
+        // Define Monitors with their specific "Active" logic
+        const totalIndustries = Object.values(SECTOR_INDUSTRY_MAP).flat().length;
+        const rawFilters = prefs.scanner?.activeFilters;
+        const isAll = (rawFilters === null); // Specific 'ALL' state
 
-        // Watchlist Override (Exclude Portfolio)
-        // If OFF (False) -> Strict filtering (Silent Warning).
-        if (rules.excludePortfolio === false) disabled.push('Override');
+        const activeFilters = (rawFilters || []).map(f => f.toUpperCase());
+        const activeCount = isAll ? totalIndustries : activeFilters.length;
+        const inactiveCount = totalIndustries - activeCount;
 
-        console.log('[NotificationUI] Status Bar Check:', {
-            activeRules: rules,
-            disabledList: disabled
-        });
+        const monitors = [
+            { label: 'Movers', active: rules.moversEnabled !== false },
+            { label: '52w', active: rules.hiloEnabled !== false },
+            { label: 'Personal', active: rules.personalEnabled !== false },
+            { label: 'Email', active: prefs.dailyEmail === true },
+            {
+                label: `Sectors: ${activeCount} / ${inactiveCount}`,
+                active: true // Always highlighted per USER request
+            }
+        ];
 
-        // Show/hide the bar
-        if (disabled.length === 0) {
-            statusBar.classList.add(CSS_CLASSES.HIDDEN);
-            statusBar.style.display = 'none';
-        } else {
-            statusBar.classList.remove(CSS_CLASSES.HIDDEN);
-            statusBar.style.display = 'flex';
+        const monitorsHtml = monitors.map(m => {
+            const cls = m.active ? 'status-item active' : 'status-item disabled';
+            return `<span class="${cls}">${m.label}</span>`;
+        }).join('');
 
-            // Render pills
-            pillsContainer.innerHTML = disabled.map(label =>
-                `<span class="status-bar-pill">${label}</span>`
-            ).join('');
-        }
+        monitorsRow.innerHTML = monitorsHtml;
 
         // Add click handler to open settings
-        statusBar.onclick = () => {
+        statusBar.onclick = (e) => {
+            e.stopPropagation();
             document.dispatchEvent(new CustomEvent(EVENTS.OPEN_SETTINGS));
         };
     }
-
 }

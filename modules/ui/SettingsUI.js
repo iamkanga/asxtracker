@@ -686,7 +686,7 @@ export class SettingsUI {
      * Harvests the CURRENT DOM state of all settings inputs.
      * Used for real-time summary updates and before saving.
      */
-    static _harvestState(modal) {
+    static _harvestState(modal, skipSectors = false) {
         const getNum = (id) => {
             const el = modal.querySelector(`#${id}`);
             if (!el || el.value === '') return null;
@@ -711,12 +711,18 @@ export class SettingsUI {
         });
 
         const activeFilters = [];
-        modal.querySelectorAll('.sector-toggle').forEach(cb => {
-            if (cb.checked) {
-                const ind = cb.dataset.industry;
-                if (ind) activeFilters.push(ind.toUpperCase()); // NORMALIZATION
-            }
-        });
+        if (!skipSectors) {
+            modal.querySelectorAll('.sector-toggle').forEach(cb => {
+                if (cb.checked) {
+                    const ind = cb.dataset.industry;
+                    if (ind) activeFilters.push(ind.toUpperCase()); // NORMALIZATION
+                }
+            });
+        } else {
+            // If skipping, use the current AppState filters as the placeholder to avoid overwriting with empty
+            const current = AppState.preferences?.scanner?.activeFilters || [];
+            current.forEach(f => activeFilters.push(f.toUpperCase()));
+        }
 
         return {
             showBadges: getCheck('toggle-pref-showBadges'),
@@ -1175,7 +1181,7 @@ export class SettingsUI {
             if (context) pendingContext = context;
             clearTimeout(updateTimer);
             updateTimer = setTimeout(() => {
-                const currentState = this._harvestState(modal);
+                const currentState = this._harvestState(modal, shouldSave === 'fast');
                 this._updateValues(modal, currentState, true); // Update Summary UI, SKIP Inputs (Prevent typing glitch)
 
                 // If requested, trigger the actual persistence
@@ -1295,9 +1301,9 @@ export class SettingsUI {
                         } else {
                             hiddenInput.value = String(val);
                         }
-                        // Update UI Active State
+                        // Update UI Active State (IMMEDIATE FEEDBACK)
                         Array.from(container.children).forEach(p => p.classList.toggle('active', p === pill));
-                        triggerUpdate('immediate', contextMsg); // Immediate Save
+                        triggerUpdate('fast', contextMsg); // Fast Save (Skip heavy sector sweep)
                     }
                 }
                 return;
