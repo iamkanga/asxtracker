@@ -295,7 +295,7 @@ export class SettingsUI {
                         <!-- 4. Movers -->
                         <div class="${CSS_CLASSES.SUMMARY_TILE} thin">
                             <div class="${CSS_CLASSES.SUMMARY_TILE_HEADER}">
-                                <span class="${CSS_CLASSES.SUMMARY_TILE_LABEL}">Movers</span>
+                                <span class="${CSS_CLASSES.SUMMARY_TILE_LABEL}">Market Movers</span>
                             </div>
                             <div id="ind-movers" class="${CSS_CLASSES.SUMMARY_STATUS_INDICATOR} kangaroo large"></div>
                         </div>
@@ -322,7 +322,7 @@ export class SettingsUI {
                     <div class="summary-grid-paired">
                         <!-- Movers & 52w Limit -->
                         <div class="${CSS_CLASSES.SUMMARY_TILE}" style="align-items: center;">
-                            <div class="${CSS_CLASSES.SUMMARY_TILE_HEADER}" style="justify-content: center;"><span class="${CSS_CLASSES.SUMMARY_TILE_LABEL}">Movers Limit $</span></div>
+                            <div class="${CSS_CLASSES.SUMMARY_TILE_HEADER}" style="justify-content: center;"><span class="${CSS_CLASSES.SUMMARY_TILE_LABEL}">Market Movers Limit $</span></div>
                             <div class="${CSS_CLASSES.SUMMARY_TILE_BODY}" style="justify-content: center;"><span class="${CSS_CLASSES.SUMMARY_TILE_VALUE}" id="sum-val-vol">None</span></div>
                         </div>
                         <div class="${CSS_CLASSES.SUMMARY_TILE}" style="align-items: center;">
@@ -494,7 +494,7 @@ export class SettingsUI {
 
                 <!-- Range Headers (Volatility | 52 Wk H/L) -->
                 <div class="${CSS_CLASSES.DETAIL_ROW}" style="margin-top: 0; margin-bottom: 2px;">
-                    <div class="${CSS_CLASSES.DETAIL_LABEL} ${CSS_CLASSES.TEXT_XXS}" style="flex: 1; text-align: center;">Movers</div>
+                    <div class="${CSS_CLASSES.DETAIL_LABEL} ${CSS_CLASSES.TEXT_XXS}" style="flex: 1; text-align: center;">Market Movers</div>
                     <div class="${CSS_CLASSES.DETAIL_LABEL} ${CSS_CLASSES.TEXT_XXS}" style="flex: 1; text-align: center; padding-left: 10px;">52 Wk H/L</div>
                 </div>
 
@@ -518,7 +518,7 @@ export class SettingsUI {
                 <div style="margin-bottom: 20px; margin-top: 24px; margin-left: -16px; display: flex; flex-direction: column; gap: 0;">
                     <div style="display: flex; align-items: center; gap: 4px;">
                         <i class="fas fa-chart-line" style="color: var(--color-accent); font-size: 0.9em;"></i>
-                        <span class="${CSS_CLASSES.DETAIL_LABEL}" style="font-size: 0.82rem; font-weight: 700; color: white; line-height: 1.1;">Movers</span>
+                        <span class="${CSS_CLASSES.DETAIL_LABEL}" style="font-size: 0.82rem; font-weight: 700; color: white; line-height: 1.1;">Market Movers</span>
                     </div>
                     <div style="font-size: 0.65rem; opacity: 0.5; color: var(--text-muted); margin-bottom: 2px; margin-top: -1px;">Triggers when either set limit is met or exceeded</div>
                 </div>

@@ -156,7 +156,19 @@ export class FavoriteLinksUI {
             // Return a deep copy of defaults to ensure we don't mutate the constant
             return JSON.parse(JSON.stringify(this.DEFAULTS));
         }
-        return [...links]; // Return copy of state
+
+        // SANITIZATION (Fix for duplicates with no icons):
+        // Enforce that 'Sharesight' and 'AFR' only appear if they match the official URL.
+        const defaultSharesight = this.DEFAULTS.find(d => d.name === 'Sharesight').url;
+        const defaultAFR = this.DEFAULTS.find(d => d.name === 'AFR').url;
+
+        const sanitized = links.filter(link => {
+            if (link.name === 'Sharesight' && link.url !== defaultSharesight) return false;
+            if (link.name === 'AFR' && link.url !== defaultAFR) return false;
+            return true;
+        });
+
+        return [...sanitized]; // Return copy of state
     }
 
     static _renderContent(modal) {
