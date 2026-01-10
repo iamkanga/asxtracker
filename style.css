@@ -4547,50 +4547,108 @@ h1.modal-title,
 }
 
 .cash-card {
-    background: var(--card-bg);
-    padding: 16px;
-    border-radius: 0;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-    display: flex;
-    justify-content: space-between;
+    background: #252525;
+    padding: 12px 16px;
+    padding-left: 16px;
+    /* Space for the ::before strip handled below */
+    border-radius: 0 4px 4px 0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto auto;
+    gap: 2px 12px;
     align-items: center;
     cursor: pointer;
-    border: 1px solid var(--border-color);
-    transition: transform 0.1s, box-shadow 0.1s;
+    border: none;
+    border-right: 4px solid transparent;
+    /* Match balance alignment if needed */
+    transition: transform 0.1s, background-color 0.1s;
     position: relative;
     overflow: hidden;
+    margin-bottom: 8px;
 }
 
 .cash-card:hover {
+    background-color: #2a2a2a;
     transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    border-color: var(--primary-color);
 }
 
-/* Multi-Column Vertical Stacking & Eye Hiding */
-.cash-view-two-column .cash-card,
-.cash-view-three-column .cash-card {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
+/* STRICT SQUARE STRIP (Fixes Mitering Issue) */
+.cash-card::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 6px;
+    /* Increased to 6px as per user preference in earlier turns */
+    background-color: var(--sidebar-color, transparent);
+    z-index: 1;
 }
 
-.cash-view-two-column .cash-card-left,
-.cash-view-three-column .cash-card-left {
-    width: 100%;
+/* Grid Cell Assignments */
+.cash-grid-category {
+    grid-column: 1;
+    grid-row: 1;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-.cash-view-two-column .cash-card-right,
-.cash-view-three-column .cash-card-right {
-    width: 100%;
-    align-items: flex-start;
-    flex-direction: row;
-    justify-content: space-between;
+.cash-grid-name {
+    grid-column: 1;
+    grid-row: 2;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cash-grid-balance {
+    grid-column: 2;
+    grid-row: 1;
+    text-align: right;
+    font-size: 1.1rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.cash-grid-actions {
+    grid-column: 2;
+    grid-row: 2;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.cash-comment-indicator {
+    color: var(--color-accent);
+    font-size: 0.85rem;
+    opacity: 0.8;
+}
+
+.cash-eye-btn {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    opacity: 0.6;
+    transition: opacity 0.2s;
+}
+
+.cash-eye-btn:hover {
+    opacity: 1;
+    color: var(--text-color);
 }
 
 /* Hide Eye Icon in 2/3 Columns */
-.cash-view-two-column .cash-eye-icon,
-.cash-view-three-column .cash-eye-icon {
+.cash-view-two-column .cash-eye-btn,
+.cash-view-three-column .cash-eye-btn {
     display: none !important;
 }
 
@@ -4604,46 +4662,10 @@ h1.modal-title,
 }
 
 /* Asset Category Specific Side Borders (Solid Stripe) */
-.cash-border-cash {
-    box-shadow: inset 6px 0 0 0 var(--asset-cash), 0 2px 4px rgba(0, 0, 0, 0.05);
-}
-
-.cash-border-cash_in_bank {
-    box-shadow: inset 6px 0 0 0 var(--asset-cash-in-bank), 0 2px 4px rgba(0, 0, 0, 0.05);
-}
-
-.cash-border-term_deposit {
-    box-shadow: inset 6px 0 0 0 var(--asset-term-deposit), 0 2px 4px rgba(0, 0, 0, 0.05);
-}
-
-.cash-border-property {
-    box-shadow: inset 6px 0 0 0 var(--asset-property), 0 2px 4px rgba(0, 0, 0, 0.05);
-}
-
-.cash-border-crypto {
-    box-shadow: inset 6px 0 0 0 var(--asset-crypto), 0 2px 4px rgba(0, 0, 0, 0.05);
-}
-
-.cash-border-shares {
-    box-shadow: inset 6px 0 0 0 var(--asset-shares), 0 2px 4px rgba(0, 0, 0, 0.05);
-}
-
-.cash-border-super {
-    box-shadow: inset 6px 0 0 0 var(--asset-super), 0 2px 4px rgba(0, 0, 0, 0.05);
-}
-
-.cash-border-personal {
-    box-shadow: inset 6px 0 0 0 var(--asset-personal), 0 2px 4px rgba(0, 0, 0, 0.05);
-}
-
-.cash-border-other {
-    box-shadow: inset 6px 0 0 0 var(--asset-other), 0 2px 4px rgba(0, 0, 0, 0.05);
-}
-
-/* Ensure borders look right and don't overlap layout */
-.cash-card[class*="cash-border-"] {
+/* Ensure borders looks right and don't overlap layout */
+.cash-card {
     padding-left: 20px;
-    /* Extra padding to clear the 6px stripe */
+    /* Consistently apply padding for the sidebar strip */
 }
 
 .cash-total-header {
@@ -4679,66 +4701,22 @@ h1.modal-title,
 
 /* NOTE: Duplicate .cash-card rules consolidated into single definition above */
 
-.cash-card-left {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 12px;
-    min-width: 0;
-    flex: 1;
-}
-
-.cash-card-right {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 15px;
-    min-width: fit-content;
-    flex-shrink: 0;
-}
-
-.cash-category-label {
-    font-size: 0.75rem;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.cash-name-label {
-    font-weight: 700;
-    color: var(--text-color);
-    font-size: 1rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.cash-balance {
-    font-weight: 700;
-    font-size: 1.1rem;
-    white-space: nowrap;
-}
-
-/* Single View Specific - Increased Sizing */
-.cash-view-single .cash-category-label {
+/* Consolidating typography for grids */
+.cash-view-single .cash-grid-category {
     font-size: 0.85rem;
-    /* Increased from 0.75rem */
 }
 
-.cash-view-single .cash-name-label {
+.cash-view-single .cash-grid-name {
     font-size: 1.1rem;
-    /* Increased from 1rem */
 }
 
-.cash-eye-icon {
-    display: flex;
-    align-items: flex-start;
-    justify-content: flex-end;
+.cash-view-single .cash-grid-balance {
+    font-size: 1.2rem;
 }
+
+/* Handled via .cash-grid-balance above */
+
+/* Legacy cash-eye-icon wrapper removed in favor of grid alignment */
 
 /* Eye Icon Ghost Style */
 .icon-btn-ghost {
@@ -5855,7 +5833,8 @@ body.dark-theme .sort-picker-row.active {
     pointer-events: none;
 }
 
-.ghosted .cash-eye-icon {
+.ghosted .cash-eye-btn,
+.ghosted .cash-grid-actions {
     pointer-events: auto;
 }
 
@@ -7492,56 +7471,50 @@ body.dark-theme .calc-result-card {
     /* Cash View Responsive Scaling */
     .cash-card {
         padding: 10px 12px;
-        gap: 8px;
+        gap: 2px 8px;
     }
 
-    .cash-category-label {
-        font-size: 0.6rem !important;
+    .cash-grid-category {
+        font-size: 0.65rem !important;
     }
 
-    .cash-name-label {
-        font-size: 0.85rem !important;
-    }
-
-    .cash-balance {
+    .cash-grid-name {
         font-size: 0.95rem !important;
     }
 
-    .cash-view-single .cash-category-label {
+    .cash-grid-balance {
+        font-size: 1rem !important;
+    }
+
+    .cash-view-single .cash-grid-category {
         font-size: 0.75rem !important;
     }
 
-    .cash-view-single .cash-name-label {
+    .cash-view-single .cash-grid-name {
         font-size: 1.0rem !important;
     }
 
-    .cash-view-two-column .cash-card {
+    .cash-view-single .cash-grid-balance {
+        font-size: 1.1rem !important;
+    }
+
+    .cash-view-two-column .cash-card,
+    .cash-view-three-column .cash-card {
         padding: 8px 10px;
     }
 
-    .cash-view-two-column .cash-name-label {
+    .cash-view-two-column .cash-grid-name,
+    .cash-view-three-column .cash-grid-name {
         font-size: 0.9rem !important;
     }
 
-    .cash-view-two-column .cash-balance {
-        font-size: 1.0rem !important;
+    .cash-view-two-column .cash-grid-balance,
+    .cash-view-three-column .cash-grid-balance {
+        font-size: 0.95rem !important;
     }
 
-    .cash-view-three-column .cash-card {
-        padding: 6px 8px;
-        gap: 4px;
-    }
-
-    .cash-view-three-column .cash-name-label {
-        font-size: 0.7rem !important;
-    }
-
-    .cash-view-three-column .cash-balance {
-        font-size: 0.7rem !important;
-    }
-
-    .cash-view-three-column .cash-eye-icon {
-        font-size: 0.8rem !important;
+    .cash-view-three-column .cash-eye-btn {
+        display: none !important;
     }
 
     /* Gutter Standardization: All containers zero side padding to use #content-container gutter */

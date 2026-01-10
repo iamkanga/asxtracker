@@ -675,12 +675,7 @@ export const CSS_CLASSES = {
     DISCOVERY_ITEM: 'discovery-result-item',
 
     // Cash View Card Structure
-    CASH_CARD_LEFT: 'cash-card-left',
-    CASH_CARD_RIGHT: 'cash-card-right',
-    CASH_LABEL: 'cash-category-label',
-    CASH_NAME: 'cash-name-label',
-    CASH_BALANCE: 'cash-balance',
-    CASH_EYE_ICON: 'cash-eye-icon',
+    CASH_EYE_BTN: 'cash-eye-btn',
 
     // Utility Buttons
     ICON_BTN_GHOST: 'icon-btn-ghost',

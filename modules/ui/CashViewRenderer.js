@@ -99,18 +99,29 @@ export class CashViewRenderer {
         card.className = CSS_CLASSES.CASH_CARD; // 'cash-card'
 
         // Apply Side Border based on Category
+        // Apply Sidebar Variable based on Category
         if (asset.category) {
             const userCat = AppState.preferences.userCategories?.find(c => c.id === asset.category);
             if (userCat && userCat.color) {
-                // Dynamic Color for User Categories - Use physical border for alignment
-                card.style.borderLeft = `6px solid ${userCat.color}`;
-                card.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.05)'; // Maintain base shadow
+                card.style.setProperty('--sidebar-color', userCat.color);
             } else {
-                // Standard CSS-based classes
-                card.classList.add(`${CSS_CLASSES.CASH_BORDER_PREFIX}${asset.category}`);
+                // Map standard categories to their CSS variables
+                const standardColors = {
+                    'cash': 'var(--asset-cash)',
+                    'cash_in_bank': 'var(--asset-cash-in-bank)',
+                    'term_deposit': 'var(--asset-term-deposit)',
+                    'property': 'var(--asset-property)',
+                    'crypto': 'var(--asset-crypto)',
+                    'shares': 'var(--asset-shares)',
+                    'super': 'var(--asset-super)',
+                    'personal': 'var(--asset-personal)',
+                    'other': 'var(--asset-other)'
+                };
+                const colorVar = standardColors[asset.category] || 'var(--asset-other)';
+                card.style.setProperty('--sidebar-color', colorVar);
             }
         } else {
-            card.classList.add(`${CSS_CLASSES.CASH_BORDER_PREFIX}other`);
+            card.style.setProperty('--sidebar-color', 'var(--asset-other)');
         }
 
         // Handle Ghosting
@@ -121,38 +132,28 @@ export class CashViewRenderer {
             card.style.opacity = '1';
         }
 
-        // --- LEFT COLUMN ---
-        const leftCol = document.createElement('div');
-        leftCol.className = CSS_CLASSES.CASH_CARD_LEFT;
-
-        const catEl = document.createElement('div');
-        catEl.className = CSS_CLASSES.CASH_LABEL;
-
+        // --- CONTENT GRID ---
+        const hasComments = Array.isArray(asset.comments) && asset.comments.length > 0;
         const catObj = [...CASH_CATEGORIES, ...(AppState.preferences.userCategories || [])]
             .find(c => c.id === asset.category);
-        catEl.textContent = (catObj ? catObj.label : (asset.category || 'Cash').replace(/^user_/i, '').replace(/_/g, ' ')).toUpperCase();
 
-        const nameEl = document.createElement('div');
-        nameEl.className = CSS_CLASSES.CASH_NAME;
-        nameEl.textContent = asset.name;
+        card.innerHTML = `
+            <div class="cash-grid-category">${(catObj ? catObj.label : (asset.category || 'Cash').replace(/^user_/i, '').replace(/_/g, ' ')).toUpperCase()}</div>
+            <div class="cash-grid-name">${asset.name}</div>
+            <div class="cash-grid-balance ${asset.balance > 0 ? CSS_CLASSES.CASH_VALUE_POSITIVE : asset.balance < 0 ? CSS_CLASSES.CASH_VALUE_NEGATIVE : ''}" 
+                 style="${asset.balance === 0 ? 'color: var(--color-accent);' : ''}">
+                ${formatCurrency(asset.balance)}
+            </div>
+            <div class="cash-grid-actions">
+                ${hasComments ? `<i class="fas ${UI_ICONS.COMMENTS} cash-comment-indicator" title="Comments available"></i>` : ''}
+                <button class="${CSS_CLASSES.ICON_BTN_GHOST} ${CSS_CLASSES.CASH_EYE_BTN}" title="${asset.isHidden ? "Show Asset" : "Hide Asset"}">
+                    <i class="fas ${asset.isHidden ? UI_ICONS.EYE_SLASH : UI_ICONS.EYE}"></i>
+                </button>
+            </div>
+        `;
 
-        leftCol.appendChild(catEl);
-        leftCol.appendChild(nameEl);
-
-        // --- RIGHT COLUMN ---
-        const rightCol = document.createElement('div');
-        rightCol.className = CSS_CLASSES.CASH_CARD_RIGHT;
-
-        // Eye Icon (Top)
-        const eyeWrapper = document.createElement('div');
-        eyeWrapper.className = CSS_CLASSES.CASH_EYE_ICON;
-
-        const eyeBtn = document.createElement('button');
-        eyeBtn.className = CSS_CLASSES.ICON_BTN_GHOST;
-        eyeBtn.innerHTML = `<i class="fas ${asset.isHidden ? UI_ICONS.EYE_SLASH : UI_ICONS.EYE}"></i>`;
-        eyeBtn.title = asset.isHidden ? "Show Asset" : "Hide Asset";
-
-        eyeBtn.addEventListener('click', (e) => {
+        // Eye Button Event
+        card.querySelector(`.${CSS_CLASSES.CASH_EYE_BTN}`).addEventListener('click', (e) => {
             e.stopPropagation();
             const event = new CustomEvent(EVENTS.CASH_ASSET_TOGGLE_VISIBILITY, {
                 detail: { assetId: asset.id },
@@ -160,30 +161,6 @@ export class CashViewRenderer {
             });
             this.container.dispatchEvent(event);
         });
-
-        eyeWrapper.appendChild(eyeBtn);
-
-        // Balance (Bottom)
-        const balanceEl = document.createElement('div');
-        balanceEl.className = CSS_CLASSES.CASH_BALANCE;
-        balanceEl.textContent = formatCurrency(asset.balance);
-
-        // Add semantic color
-        if (asset.balance > 0) {
-            balanceEl.classList.add(CSS_CLASSES.CASH_VALUE_POSITIVE);
-        } else if (asset.balance < 0) {
-            balanceEl.classList.add(CSS_CLASSES.CASH_VALUE_NEGATIVE);
-        } else {
-            // Neutral - Coffee Color
-            balanceEl.style.color = 'var(--color-accent)';
-        }
-
-        rightCol.appendChild(balanceEl);
-        rightCol.appendChild(eyeWrapper);
-
-        // Assemble
-        card.appendChild(leftCol);
-        card.appendChild(rightCol);
 
         // Card Interaction
         card.addEventListener('click', () => {
