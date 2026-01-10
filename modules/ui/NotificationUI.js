@@ -694,11 +694,11 @@ export class NotificationUI {
         // Render Summary Dashboard (V3 Grid)
         // 1. "Dashboard" Tile (Master View) - First in Row 1
         const openAllChip = document.createElement('div');
-        openAllChip.className = `${CSS_CLASSES.FILTER_CHIP} chip-neutral active`; // Starts active (All Open)
+        openAllChip.className = `${CSS_CLASSES.FILTER_CHIP} chip-neutral`; // Default to closed (inactive)
         openAllChip.dataset.target = 'open-all';
         openAllChip.innerHTML = `
             <span class="chip-badge">${totalRendered}</span>
-            <span class="chip-label">Dashboard Close</span>
+            <span class="chip-label">Dashboard Open</span>
         `;
         chips.appendChild(openAllChip);
 
@@ -782,8 +782,8 @@ export class NotificationUI {
             syncDashboardLabel();
         };
 
-        // INITIAL STATE: Expand All by Default (Transparency)
-        openAll();
+        // INITIAL STATE: Collapse All by Default (Cleaner View)
+        closeAll();
 
         // Navigation Sync: Update Active Tile based on scroll position
         if (listBody) {
