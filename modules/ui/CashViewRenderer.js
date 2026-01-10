@@ -3,7 +3,7 @@
  * Responsible for rendering the Cash & Assets view HTML.
  * Strictly checks for CSS classes from AppConstants.
  */
-import { CASH_CATEGORIES, CSS_CLASSES, UI_ICONS, EVENTS } from '../utils/AppConstants.js';
+import { CASH_CATEGORIES, CSS_CLASSES, UI_ICONS, EVENTS, ASSET_CUSTOM_COLORS } from '../utils/AppConstants.js';
 import { formatCurrency } from '../utils/formatters.js';
 import { AppState } from '../state/AppState.js';
 
@@ -103,9 +103,9 @@ export class CashViewRenderer {
         if (asset.category) {
             const userCat = AppState.preferences.userCategories?.find(c => c.id === asset.category);
             if (userCat && userCat.color) {
-                card.style.setProperty('--sidebar-color', userCat.color);
+                card.style.borderLeftColor = userCat.color;
             } else {
-                // Map standard categories to their CSS variables
+                // Map standard categories to their CSS variables (resolved to values if possible, or kept as vars)
                 const standardColors = {
                     'cash': 'var(--asset-cash)',
                     'cash_in_bank': 'var(--asset-cash-in-bank)',
@@ -117,11 +117,29 @@ export class CashViewRenderer {
                     'personal': 'var(--asset-personal)',
                     'other': 'var(--asset-other)'
                 };
-                const colorVar = standardColors[asset.category] || 'var(--asset-other)';
-                card.style.setProperty('--sidebar-color', colorVar);
+                const defaultVar = standardColors[asset.category] || 'var(--asset-other)';
+
+                // Prioritize: 
+                // 1. Explicit Asset Color (Specific override)
+                // 2. User Category Preference (Global theme override)
+                // 3. Name-based Hashing (Only for 'other')
+                // 4. Default CSS Var
+
+                const userCat = AppState.preferences.userCategories?.find(c => c.id === asset.category);
+                const themeColor = userCat?.color;
+
+                if (asset.color) {
+                    card.style.borderLeftColor = asset.color;
+                } else if (themeColor) {
+                    card.style.borderLeftColor = themeColor;
+                } else if (asset.category === 'other' && asset.name) {
+                    card.style.borderLeftColor = this._getColorForString(asset.name);
+                } else {
+                    card.style.borderLeftColor = defaultVar;
+                }
             }
         } else {
-            card.style.setProperty('--sidebar-color', 'var(--asset-other)');
+            card.style.borderLeftColor = 'var(--asset-other)';
         }
 
         // Handle Ghosting
@@ -139,7 +157,10 @@ export class CashViewRenderer {
 
         card.innerHTML = `
             <div class="cash-grid-category">${(catObj ? catObj.label : (asset.category || 'Cash').replace(/^user_/i, '').replace(/_/g, ' ')).toUpperCase()}</div>
-            <div class="cash-grid-name">${asset.name}</div>
+            <div class="cash-grid-name">
+                ${asset.name}
+                ${asset.category === 'other' ? `<span style="font-size: 9px; color: #aaa; margin-left: 5px;">[${asset.color || 'NO-CLR'}]</span>` : ''}
+            </div>
             <div class="cash-grid-balance ${asset.balance > 0 ? CSS_CLASSES.CASH_VALUE_POSITIVE : asset.balance < 0 ? CSS_CLASSES.CASH_VALUE_NEGATIVE : ''}" 
                  style="${asset.balance === 0 ? 'color: var(--color-accent);' : ''}">
                 ${formatCurrency(asset.balance)}
@@ -151,6 +172,11 @@ export class CashViewRenderer {
                 </button>
             </div>
         `;
+
+        // DEBUG LOGGING
+        if (asset.category === 'other') {
+            console.log(`[CashViewRenderer] Rendering 'Other': ${asset.name}, Color: ${asset.color}, Border: ${card.style.borderLeftColor}`);
+        }
 
         // Eye Button Event
         card.querySelector(`.${CSS_CLASSES.CASH_EYE_BTN}`).addEventListener('click', (e) => {
@@ -172,5 +198,25 @@ export class CashViewRenderer {
         });
 
         return card;
+    }
+
+    /**
+     * Generates a consistent color for a string from the custom color pool.
+     * @param {String} str 
+     * @returns {String} Hex Color
+     */
+    _getColorForString(str) {
+        if (!str) return ASSET_CUSTOM_COLORS[0];
+
+        const seed = AppState.preferences?.colorSeed || 0;
+
+        let hash = seed; // Start hash with seed to shift the output
+        for (let i = 0; i < str.length; i++) {
+            hash = str.charCodeAt(i) + ((hash << 5) - hash);
+        }
+
+        const index = Math.abs(hash) % ASSET_CUSTOM_COLORS.length;
+        const c = ASSET_CUSTOM_COLORS[index];
+        return c;
     }
 }

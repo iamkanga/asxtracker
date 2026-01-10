@@ -307,16 +307,18 @@ export class AppController {
                 // }
                 await this.appService.saveUserPreferences(freshPrefs);
 
-                // NOTIFY APPS SCRIPT (Issue #EmailNotifications):
-                // Trigger a sync of user settings to the central globalSettings doc.
                 if (AppState.user) {
                     await this.dataService.syncUserSettings(AppState.user.uid);
                 }
             } catch (err) {
                 console.warn('Sync failed:', err);
             } finally {
-                // Important: Clear the timer reference so the Guard allows cloud updates again
-                this._syncTimeout = null;
+                // CLEARANCE DELAY (Directive 024):
+                // Give Firestore time to emit the final 'consistent' snapshot 
+                // before we allow inbound cloud updates to overwrite our state.
+                setTimeout(() => {
+                    this._syncTimeout = null;
+                }, 1000);
             }
         }, 250); // 250ms debounce
     }
@@ -602,6 +604,16 @@ export class AppController {
                         needsRender = true;
                     }
 
+                    if (prefs.colorSeed !== undefined && prefs.colorSeed !== null) {
+                        const newSeed = parseInt(prefs.colorSeed);
+                        if (!isNaN(newSeed) && newSeed !== AppState.preferences.colorSeed) {
+                            // console.log('[AppController] AppsState Color Seed updated via Cloud Sync:', newSeed);
+                            AppState.preferences.colorSeed = newSeed;
+                            localStorage.setItem('ASX_NEXT_colorSeed', newSeed);
+                            needsRender = true;
+                        }
+                    }
+
                     // 1. Sync Watchlist ID (if different and valid)
                     if (prefs.lastWatchlistId && prefs.lastWatchlistId !== AppState.watchlist.id) {
                         if (AppState.watchlist.id === 'portfolio' && prefs.lastWatchlistId !== 'portfolio') {
@@ -752,8 +764,8 @@ export class AppController {
 
                         // Union of Local and Remote (Remote wins conflicts, but Local new items are kept)
                         const mergedMap = new Map();
-                        localCats.forEach(c => mergedMap.set(c.id, c));
                         remoteCats.forEach(c => mergedMap.set(c.id, c));
+                        localCats.forEach(c => mergedMap.set(c.id, c));
 
                         const mergedList = Array.from(mergedMap.values());
 
@@ -1930,7 +1942,6 @@ export class AppController {
                     this.handleSwitchWatchlist(newId, false);
                     ToastManager.success(`Watchlist "${name}" created.`);
                 }
-
             } catch (err) {
                 console.error('Failed to create watchlist:', err);
                 ToastManager.error('Failed to create watchlist: ' + err.message);

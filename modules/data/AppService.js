@@ -53,10 +53,12 @@ export class AppService {
         try {
             if (targetId) {
                 // UPDATE
+                console.log(`[AppService DEBUG] UPDATE: ${targetId} -> Color: ${formData.color}`);
                 await userStore.updateDocument(user.uid, 'cashCategories', targetId, formData);
                 if (!isSilent) ToastManager.success(`${formData.name} updated.`);
             } else {
                 // ADD
+                console.log(`[AppService DEBUG] ADD -> Color: ${formData.color}`);
                 await userStore.addDocument(user.uid, 'cashCategories', formData);
                 if (!isSilent) ToastManager.success(`${formData.name} added.`);
             }

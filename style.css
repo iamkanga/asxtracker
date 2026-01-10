@@ -4549,8 +4549,7 @@ h1.modal-title,
 .cash-card {
     background: #252525;
     padding: 12px 16px;
-    padding-left: 16px;
-    /* Space for the ::before strip handled below */
+    /* padding-left: 16px; Removed - Border handles visual spacing now */
     border-radius: 0 4px 4px 0;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     display: grid;
@@ -4560,6 +4559,11 @@ h1.modal-title,
     align-items: center;
     cursor: pointer;
     border: none;
+
+    /* NEW: Direct Sidebar Implementation */
+    border-left: 6px solid #424242;
+    /* Default Fallback Color */
+
     border-right: 4px solid transparent;
     /* Match balance alignment if needed */
     transition: transform 0.1s, background-color 0.1s;
@@ -4573,7 +4577,10 @@ h1.modal-title,
     transform: translateY(-1px);
 }
 
-/* STRICT SQUARE STRIP (Fixes Mitering Issue) */
+/* DEPRECATED: ::before strip removed in favor of direct border-left.
+   This ensures inline JS styles on the parent element work immediately.
+*/
+/*
 .cash-card::before {
     content: '';
     position: absolute;
@@ -4581,10 +4588,10 @@ h1.modal-title,
     top: 0;
     bottom: 0;
     width: 6px;
-    /* Increased to 6px as per user preference in earlier turns */
-    background-color: var(--sidebar-color, transparent);
+    background-color: var(--sidebar-color, #424242);
     z-index: 1;
 }
+*/
 
 /* Grid Cell Assignments */
 .cash-grid-category {

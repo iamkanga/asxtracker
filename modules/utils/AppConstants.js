@@ -15,6 +15,17 @@ export const DASHBOARD_LINKS = {
 export const PORTFOLIO_ID = 'portfolio';
 export const SEARCH_WATCHLIST_ID = 'search';
 
+export const ASSET_CUSTOM_COLORS = [
+    '#F44336', '#E91E63', '#9C27B0', '#673AB7', '#3F51B5',
+    '#2196F3', '#03A9F4', '#00BCD4', '#009688', '#4CAF50',
+    '#8BC34A', '#CDDC39', '#FFEB3B', '#FFC107', '#FF9800',
+    '#FF5722', '#795548', '#9E9E9E', '#607D8B', '#FF3D00',
+    '#FF4081', '#E040FB', '#7C4DFF', '#536DFE', '#448AFF',
+    '#40C4FF', '#18FFFF', '#64FFDA', '#69F0AE', '#B2FF59',
+    '#EEFF41', '#FFFF00', '#FFD740', '#FFAB40', '#FF6E40',
+    '#E91E63', '#6200EA', '#00E5FF', '#00E676'
+];
+
 export const WATCHLIST_MODES = {
     DEFAULT: 'default',
     REARRANGE: 'rearrange',

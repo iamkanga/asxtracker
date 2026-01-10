@@ -115,6 +115,10 @@ export const AppState = {
                 return [];
             }
         })(),
+        colorSeed: (() => {
+            const stored = localStorage.getItem('ASX_NEXT_colorSeed');
+            return stored ? parseInt(stored) : 0;
+        })(),
         dailyEmail: localStorage.getItem(STORAGE_KEYS.DAILY_EMAIL) === 'true',
         alertEmailRecipients: localStorage.getItem(STORAGE_KEYS.EMAIL_RECIPIENTS) || ''
     },
@@ -250,6 +254,7 @@ export const AppState = {
                     return out;
                 })(),
                 favoriteLinks: this.preferences.favoriteLinks || [],
+                colorSeed: this.preferences.colorSeed || 0,
                 dailyEmail: this.preferences.dailyEmail || false,
                 alertEmailRecipients: this.preferences.alertEmailRecipients || ''
             };
@@ -396,12 +401,41 @@ export const AppState = {
     saveUserCategory(categoryObj) {
         if (!categoryObj.id || !categoryObj.label) return;
 
-        // Prevent duplicates
-        const exists = this.preferences.userCategories.find(c => c.id === categoryObj.id);
-        if (exists) return;
+        // IMMUTABLE UPDATE (Ensures JSON comparison in UserStore detects change)
+        const cats = [...(this.preferences.userCategories || [])];
+        const index = cats.findIndex(c => c.id === categoryObj.id);
 
-        this.preferences.userCategories.push(categoryObj);
+        if (index !== -1) {
+            cats[index] = { ...categoryObj };
+            console.log(`[AppState] Updated existing category: ${categoryObj.id}, Color: ${categoryObj.color}`);
+        } else {
+            cats.push(categoryObj);
+            console.log(`[AppState] Added new category: ${categoryObj.id}, Color: ${categoryObj.color}`);
+        }
+
+        this.preferences.userCategories = cats;
+        localStorage.setItem(STORAGE_KEYS.USER_CATEGORIES, JSON.stringify(cats));
+        this._triggerSync();
+    },
+
+    deleteUserCategory(categoryId) {
+        const index = this.preferences.userCategories.findIndex(c => c.id === categoryId);
+        if (index === -1) return;
+
+        this.preferences.userCategories.splice(index, 1);
         localStorage.setItem(STORAGE_KEYS.USER_CATEGORIES, JSON.stringify(this.preferences.userCategories));
+        this._triggerSync();
+    },
+
+    clearAllUserCategories() {
+        this.preferences.userCategories = [];
+        localStorage.setItem(STORAGE_KEYS.USER_CATEGORIES, JSON.stringify([]));
+        this._triggerSync();
+    },
+
+    shuffleAssetColors() {
+        this.preferences.colorSeed = (this.preferences.colorSeed || 0) + 1;
+        localStorage.setItem('ASX_NEXT_colorSeed', this.preferences.colorSeed);
         this._triggerSync();
     },
 

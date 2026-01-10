@@ -75,7 +75,11 @@ export class UserStore {
         this.unsubscribeCash = onSnapshot(query(cashRef), (snapshot) => {
             const cash = [];
             snapshot.forEach((doc) => {
-                cash.push({ id: doc.id, ...doc.data() });
+                const d = doc.data();
+                if (d.category === 'other') {
+                    console.log(`[UserStore INBOUND] Cash Asset: ${d.name}, Color Field: ${d.color}`);
+                }
+                cash.push({ id: doc.id, ...d });
             });
             AppState.data.cash = cash;
             notify();
@@ -515,6 +519,13 @@ export class UserStore {
             }
 
             console.log('UserStore: Saving preferences to Firestore...', data);
+
+            // Debug check for the specific failure point
+            if (data.userCategories) {
+                console.log(`[UserStore DEBUG] Categories being saved: ${data.userCategories.length}. Colors:`,
+                    data.userCategories.map(c => `${c.label}: ${c.color}`).join(', '));
+            }
+
             await setDoc(docRef, {
                 ...data,
                 updatedAt: serverTimestamp()
