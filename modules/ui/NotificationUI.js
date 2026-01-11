@@ -351,7 +351,7 @@ export class NotificationUI {
                     <h2 class="${CSS_CLASSES.MODAL_TITLE}">Notifications</h2>
                     <div style="margin-left: auto; display: flex; gap: 15px; align-items: center;">
                         <button id="btn-daily-briefing" title="Market Pulse" style="background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem;">
-                            <i class="fas fa-mug-hot"></i>
+                            <i class="fas fa-coffee"></i>
                         </button>
                         <button id="notif-settings-btn" title="Volatility Settings" style="background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem;">
                             <i class="fas ${UI_ICONS.PEN}"></i>

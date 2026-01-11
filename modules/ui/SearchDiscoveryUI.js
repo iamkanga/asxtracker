@@ -233,14 +233,14 @@ export class SearchDiscoveryUI {
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem;">
                     <div style="flex: 1;">
                         <div style="display: flex; flex-direction: column; gap: 4px;">
-                            <h2 style="font-size: 2.5rem; font-weight: 800; margin: 0; line-height: 1; letter-spacing: -1px; color: var(--text-color);">${stock.code}</h2>
-                            <span style="font-size: 1.1rem; color: var(--text-muted); font-weight: 500; opacity: 0.9;">${stock.name}</span>
+                            <h2 style="font-size: 1.8rem; font-weight: 800; margin: 0; line-height: 1; letter-spacing: -0.5px; color: var(--text-color);">${stock.code}</h2>
+                            <span style="font-size: 0.95rem; color: var(--text-muted); font-weight: 500; opacity: 0.9;">${stock.name}</span>
                         </div>
                         ${renderBadges(stock)}
                     </div>
                     <div style="text-align: right;">
-                        <div style="font-size: 2.2rem; font-weight: 800; line-height: 1; color: var(--text-color);">${formatCurrency(stock.live)}</div>
-                        <div class="${stock.change >= 0 ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}" style="font-size: 1.1rem; font-weight: 600; margin-top: 8px;">
+                        <div style="font-size: 1.6rem; font-weight: 800; line-height: 1; color: var(--text-color);">${formatCurrency(stock.live)}</div>
+                        <div class="${stock.change >= 0 ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}" style="font-size: 0.9rem; font-weight: 600; margin-top: 8px;">
                             ${stock.change >= 0 ? '+' : ''}${formatCurrency(stock.change)} (${formatPercent(stock.pctChange)})
                         </div>
                     </div>
@@ -249,16 +249,16 @@ export class SearchDiscoveryUI {
                 <!-- Detailed Stats Grid -->
                 <div class="${CSS_CLASSES.STATS_GRID}" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 1.5rem; padding-top: 1.2rem; border-top: 1px solid var(--border-color);">
                     <div class="${CSS_CLASSES.STAT_ITEM}" style="align-items: flex-start;">
-                        <span class="${CSS_CLASSES.STAT_LABEL}" style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px;">52W Low</span>
-                        <span class="${CSS_CLASSES.STAT_VALUE}" style="font-size: 1.05rem; font-weight: 700;">${safeVal(stock.low, formatCurrency)}</span>
+                        <span class="${CSS_CLASSES.STAT_LABEL}" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px;">52W Low</span>
+                        <span class="${CSS_CLASSES.STAT_VALUE}" style="font-size: 0.9rem; font-weight: 700;">${safeVal(stock.low, formatCurrency)}</span>
                     </div>
                     <div class="${CSS_CLASSES.STAT_ITEM}" style="align-items: flex-start;">
-                        <span class="${CSS_CLASSES.STAT_LABEL}" style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px;">52W High</span>
-                        <span class="${CSS_CLASSES.STAT_VALUE}" style="font-size: 1.05rem; font-weight: 700;">${safeVal(stock.high, formatCurrency)}</span>
+                        <span class="${CSS_CLASSES.STAT_LABEL}" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px;">52W High</span>
+                        <span class="${CSS_CLASSES.STAT_VALUE}" style="font-size: 0.9rem; font-weight: 700;">${safeVal(stock.high, formatCurrency)}</span>
                     </div>
                     <div class="${CSS_CLASSES.STAT_ITEM}" style="align-items: flex-start;">
-                        <span class="${CSS_CLASSES.STAT_LABEL}" style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px;">P/E Ratio</span>
-                        <span class="${CSS_CLASSES.STAT_VALUE}" style="font-size: 1.05rem; font-weight: 700;">${safeVal(stock.pe, (v) => v.toFixed(2))}</span>
+                        <span class="${CSS_CLASSES.STAT_LABEL}" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px;">P/E Ratio</span>
+                        <span class="${CSS_CLASSES.STAT_VALUE}" style="font-size: 0.9rem; font-weight: 700;">${safeVal(stock.pe, (v) => v.toFixed(2))}</span>
                     </div>
                 </div>
             </div>
