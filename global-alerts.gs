@@ -227,8 +227,8 @@ function runGlobal52WeekScan() {
       if (appliedMinPrice && live < appliedMinPrice) { skippedBelowPrice++; return; }
       if (appliedMinMarketCap && mcap != null && mcap < appliedMinMarketCap) { skippedBelowMcap++; return; }
       afterFilter++;
-      const reachedLow = (!isNaN(stock.low52) && stock.low52 != null && live <= stock.low52);
-      const reachedHigh = (!isNaN(stock.high52) && stock.high52 != null && live >= stock.high52);
+      const reachedLow = (!isNaN(stock.low52) && stock.low52 != null && stock.low52 > 0 && live <= stock.low52);
+      const reachedHigh = (!isNaN(stock.high52) && stock.high52 != null && stock.high52 > 0 && live >= stock.high52);
       if (reachedLow || reachedHigh) {
         // Normalize object shape for frontend cards
         const o = {
@@ -379,10 +379,6 @@ function fetchAllAsxData_(spreadsheet) {
       if (v > 0) low52 = v;
     }
 
-    // Proxy Fallback: If 52-week data from Google is missing/zero but we have a live price,
-    // default to the Current Live Price to prevent UI gaps (zero cost solution).
-    if ((isNaN(high52) || high52 === 0) && live != null && live > 0) high52 = live;
-    if ((isNaN(low52) || low52 === 0) && live != null && live > 0) low52 = live;
 
     return {
       code: r[map['ASX Code']],
@@ -1971,7 +1967,7 @@ function createTriggers() {
   // Run sporadically to patching broken Google Finance data without hitting quotas.
   // 30 minutes is a good balance for "Pro" users; 60 for free tiers. 
   // Yahoo Finance is used here (robust but should be used politely).
-  _ensureTimeTrigger_('repairBrokenPrices', b => b.everyMinutes(30));
+  _ensureTimeTrigger_('repairBrokenPrices', b => b.everyHours(1));
   // Ensure a recurring trigger exists for the correct function name
   _ensureTimeTrigger_('runGlobal52WeekScan', b => b.everyMinutes(30));
 
@@ -2325,25 +2321,34 @@ function repairSheet_(sheetName) {
   }
 
   const problems = [];
+  // Read formulas to protect them
+  const formulas = sheet.getDataRange().getFormulas();
+
   // Skip header, start at row 2
   for (let i = 1; i < data.length; i++) {
     const codeRaw = data[i][codeIdx];
     // For Dashboard, we always update everything (it's a feed). 
     // For Prices, we only check for broken/missing values.
     const priceVal = (priceIdx !== -1) ? data[i][priceIdx] : null;
+
+    // PROTECTION: Check if target cell has a formula
+    let hasFormula = false;
+    if (priceIdx !== -1 && formulas[i] && formulas[i][priceIdx] && formulas[i][priceIdx].toString().startsWith('=')) {
+      hasFormula = true;
+    }
     
     // Definition of 'Needs Update':
-    // Dashboard: Always update (ensure freshness). 
+    // Dashboard: Always update UNLESS it has a formula.
     // Prices: Only if broken (0, blank, error).
     let needsUpdate = false;
     
     if (policy === 'DIRECT_OVERWRITE') {
-       needsUpdate = true; // Always fetch fresh for dashboard
+       needsUpdate = !hasFormula; // Always fetch fresh for dashboard, respecting formulas
     } else {
        // Safe Mode: Check if primary is broken
        const isExplicitError = (typeof priceVal === 'string' && (priceVal.includes('INVALID') || priceVal.includes('DELISTED') || priceVal.includes('ERROR')));
        const isPriceBroken = !isExplicitError && (priceVal === 0 || priceVal === '' || isNaN(priceVal) || (typeof priceVal === 'string')); 
-       needsUpdate = isPriceBroken;
+       needsUpdate = isPriceBroken && !hasFormula;
     }
     
     if (codeRaw && needsUpdate) {
