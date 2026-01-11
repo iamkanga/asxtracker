@@ -277,7 +277,9 @@
 .segmented-button {
     background: transparent;
     color: var(--text-muted, #aaa);
-    border: 1px solid transparent;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
     border-radius: 6px;
     padding: 8px;
     flex: 1;
