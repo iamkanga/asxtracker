@@ -71,6 +71,13 @@ export class BriefingUI {
                     <div class="briefing-date">${dateStr}</div>
                 </div>
 
+                <!-- NEW SHORTCUT: Market Pulse (Understated) -->
+                <div class="briefing-sub-shortcut" id="briefing-pulse-shortcut" style="text-align: left; padding: 0 0 10px 24px; margin-top: -5px; cursor: pointer; display: flex; align-items: center; justify-content: flex-start; gap: 6px;">
+                    <span style="font-size: 0.8rem; color: var(--color-accent); opacity: 0.8; letter-spacing: 0.5px; font-weight: 500;">
+                         Market Pulse <i class="fas fa-chevron-right" style="font-size: 0.7em;"></i>
+                    </span>
+                </div>
+
                 <div class="briefing-scroll-body">
                     
                     <!-- 2. Hero Section: Portfolio + Pulse Partner -->
@@ -469,6 +476,15 @@ export class BriefingUI {
             footer.addEventListener('click', () => {
                 // User Request: Footer clicks through to NOTIFICATIONS container
                 NotificationUI.show();
+            });
+        }
+
+        // NEW: Shortcut Click
+        const shortcut = modal.querySelector('#briefing-pulse-shortcut');
+        if (shortcut) {
+            shortcut.addEventListener('click', () => {
+                console.log('[BriefingUI] Shortcut clicked. Opening SnapshotUI (Market Pulse).');
+                SnapshotUI.show();
             });
         }
 

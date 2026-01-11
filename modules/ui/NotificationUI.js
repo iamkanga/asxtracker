@@ -64,8 +64,8 @@ export class NotificationUI {
             setTimeout(() => this._openLock = false, 500);
 
             const source = (e.detail && e.detail.source) ? e.detail.source : 'total';
-            // Default tab depends on source? No, let showModal decide valid tab (default 'custom').
-            this.showModal('custom', source);
+            const tab = (e.detail && e.detail.tab) ? e.detail.tab : 'custom';
+            this.showModal(tab, source);
         });
 
         // LOGIC HARDENING: Listen for ready event to auto-refresh loading modal
@@ -156,6 +156,7 @@ export class NotificationUI {
     static async showModal(activeTabId = 'custom', source = 'total', targetSectionId = null) {
         this._currentSource = source || 'total';
         this._targetSection = targetSectionId; // Store for deep linking
+        this._activeTab = activeTabId; // Store for initial rendering logic
 
         // SECURITY: Prevent notifications from overriding Lock Screen
         if (AppState.isLocked) {
@@ -350,7 +351,7 @@ export class NotificationUI {
                     <h2 class="${CSS_CLASSES.MODAL_TITLE}">Notifications</h2>
                     <div style="margin-left: auto; display: flex; gap: 15px; align-items: center;">
                         <button id="btn-daily-briefing" title="Market Pulse" style="background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem;">
-                            <i class="fas fa-heartbeat"></i>
+                            <i class="fas fa-mug-hot"></i>
                         </button>
                         <button id="notif-settings-btn" title="Volatility Settings" style="background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem;">
                             <i class="fas ${UI_ICONS.PEN}"></i>
@@ -750,7 +751,7 @@ export class NotificationUI {
 
         // Define Specific Chip Order (Row 1 then Row 2)
         // Standard Notification Categories
-        const chipOrder = ['custom', 'gainers', 'losers', 'hilo-high', 'hilo-low'];
+        const chipOrder = ['hilo-high', 'gainers', 'custom', 'hilo-low', 'losers'];
 
         chipOrder.forEach(targetId => {
             const section = sections.find(s => s.id === targetId);
@@ -772,13 +773,7 @@ export class NotificationUI {
                 `;
 
                 // Quick Filter / Scroll logic
-                chip.onclick = (e) => {
-                    e.stopPropagation();
-                    // Scroll to section or Filter?
-                    // Existing logic (implied): scroll or filter.
-                    // For now, let's assume it filters.
-                    this._filterToSection(modal, section.id);
-                };
+
 
                 chips.appendChild(chip);
             }
@@ -786,12 +781,10 @@ export class NotificationUI {
 
 
         // 2. Render Accordions
-        // FILTER: Only show the Active HiLo section
-        const activeHiloId = NotificationUI._hiloMode === 'high' ? 'hilo-high' : 'hilo-low';
 
         sections.forEach(sec => {
-            // Hide the INACTIVE HiLo section
-            if (sec.id.startsWith('hilo-') && sec.id !== activeHiloId) return;
+            // Render ALL sections (Removed HiLo hiding logic)
+
 
             const accordion = this._renderAccordion(sec, rules);
             list.appendChild(accordion);
@@ -799,6 +792,20 @@ export class NotificationUI {
 
         // Re-bind events because we replaced innerHTML
         this._bindAccordionEvents(modal);
+
+        // LOGIC: Handle 'Global' Tab Request (Shortcuts)
+        // If activeTab is 'global', we want to show the Market Pulse container (Gainers)
+        if (this._activeTab === 'global') {
+            const targetChip = chips.querySelector('.filter-chip[data-target="gainers"]');
+            if (targetChip) {
+                // Short timeout to ensure DOM is painted and listeners active
+                setTimeout(() => {
+                    targetChip.click();
+                    console.log('[NotificationUI] Auto-switched to Gainers (Global Mode)');
+                }, 50);
+            }
+            this._activeTab = null; // Clear to prevent sticky state
+        }
     }
 
     static _bindAccordionEvents(modal) {
@@ -900,24 +907,38 @@ export class NotificationUI {
                         if (list) list.scrollTo({ top: 0, behavior: 'smooth' });
                     }
                 } else {
-                    // USER REQUIREMENT: Focus on specific category
-                    closeAll(); // Collapse others for focused view
-                    toggleSection(targetId, true); // Ensure target is open
+                    // USER REQUIREMENT: Focus on specific category with Toggle capability
 
-                    // Update Highlights: Clear all, set this one
-                    chips.forEach(c => c.classList.remove(CSS_CLASSES.ACTIVE));
-                    chip.classList.add(CSS_CLASSES.ACTIVE);
+                    // CHECK: Is this chip ALREADY active?
+                    const isAlreadyActive = chip.classList.contains(CSS_CLASSES.ACTIVE);
 
-                    const sec = modal.querySelector(`#section-${targetId}`);
-                    if (sec) {
-                        // 1. Immediate Attempt (Best Effort)
-                        sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    // 1. Close All (Collapse everything)
+                    closeAll();
 
-                        // 2. Delayed Attempt (After 0.3s CSS Transition completes)
-                        // Wait 350ms to be safe.
-                        setTimeout(() => {
+                    // 2. Only Open if it wasn't already active (Toggle)
+                    if (!isAlreadyActive) {
+                        toggleSection(targetId, true); // Ensure target is open
+                        chip.classList.add(CSS_CLASSES.ACTIVE);
+
+                        const sec = modal.querySelector(`#section-${targetId}`);
+                        if (sec) {
+                            // 1. Immediate Attempt (Best Effort)
                             sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                        }, 350);
+
+                            // 2. Delayed Attempt (After 0.3s CSS Transition completes)
+                            setTimeout(() => {
+                                sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            }, 350);
+                        }
+                    } else {
+                        // Was active, now closed via closeAll(). 
+                        // Remove highlight (already done by closeAll -> actually we need to ensure chips are cleared).
+                        // closeAll() does NOT clear chip highlights in existing code? 
+                        // Let's check helper. 
+                        // closeAll helper (Line 837) only removes EXPANDED class from sections.
+
+                        // We must clear chip highlights here too.
+                        chips.forEach(c => c.classList.remove(CSS_CLASSES.ACTIVE));
                     }
                 }
             });
