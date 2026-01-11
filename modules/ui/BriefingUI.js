@@ -72,9 +72,9 @@ export class BriefingUI {
                 </div>
 
                 <!-- NEW SHORTCUT: Market Pulse (Understated) -->
-                <div class="briefing-sub-shortcut" id="briefing-pulse-shortcut" style="text-align: left; padding: 0 0 10px 24px; margin-top: -5px; cursor: pointer; display: flex; align-items: center; justify-content: flex-start; gap: 6px;">
-                    <span style="font-size: 0.8rem; color: var(--color-accent); opacity: 0.8; letter-spacing: 0.5px; font-weight: 500;">
-                         Market Pulse <i class="fas fa-chevron-right" style="font-size: 0.7em;"></i>
+                <div class="briefing-sub-shortcut" id="briefing-pulse-shortcut" style="text-align: left; padding: 0 0 4px 24px; margin-top: -5px; cursor: pointer; display: flex; align-items: center; justify-content: flex-start; gap: 6px;">
+                    <span style="font-size: 0.8rem; color: var(--color-accent); letter-spacing: 0.5px; font-weight: 500; display: flex; align-items: center; gap: 6px;">
+                         <i class="fas fa-heartbeat"></i> Market Pulse <i class="fas fa-chevron-right" style="font-size: 0.7em;"></i>
                     </span>
                 </div>
 
@@ -211,7 +211,7 @@ export class BriefingUI {
             };
 
             heroCard.innerHTML = `
-                <div class="hero-header-row">
+                <div class="hero-header-row" style="display: flex; justify-content: space-between; align-items: flex-end;">
                     <div class="hero-label">My Portfolio</div>
                     <div class="hero-brand">ASX TRACKER</div>
                 </div>
@@ -354,18 +354,31 @@ export class BriefingUI {
                 }));
             };
 
-            // MINIMAL STATS DISPLAY (No backgrounds/borders per user request)
+            // FORCE OVERRIDE CSS PADDING (Fix for v314 height issue)
+            footer.style.padding = '0';
+            footer.style.paddingTop = '2px'; // Tiny breathing room
+            footer.style.paddingBottom = '4px'; // Tiny breathing room
+
+            // Custom Count
+            const customCount = (notificationStore.getLocalAlerts().fresh || []).length;
+
+            // UPDATED FOOTER LAYOUT (V3): Aggressive Vertical Compression (~20% reduction)
             footer.innerHTML = `
-                <div class="pulse-minimal-row">
-                    <span class="pulse-sentiment" style="color: ${sentimentColor}">${iconHtml} ${sentiment}</span>
-                    <span class="pulse-divider">•</span>
-                    <span class="pulse-stat"><span class="color-positive">${upCount}</span> Gainers</span>
-                    <span class="pulse-divider">•</span>
-                    <span class="pulse-stat"><span class="color-negative">${downCount}</span> Losers</span>
-                    <span class="pulse-divider">•</span>
-                    <span class="pulse-stat"><span class="color-positive">${hiCount}</span> Highs</span>
-                    <span class="pulse-divider">•</span>
-                    <span class="pulse-stat"><span class="color-negative">${loCount}</span> Lows</span>
+                <div style="text-align: center; padding: 0 0 4px 0;">
+                    <div style="font-size: 0.95rem; font-weight: 800; color: ${sentimentColor}; margin-bottom: 0px; letter-spacing: -0.3px; line-height: 1.2;">
+                        ${iconHtml} Market is ${sentiment}
+                    </div>
+                    <div class="pulse-minimal-row" style="justify-content: center; opacity: 0.9; font-size: 0.8rem; flex-wrap: wrap; gap: 2px;">
+                         <span class="pulse-stat" style="font-weight: 600; color: var(--color-accent);">${customCount} Custom</span>
+                         <span class="pulse-divider" style="opacity: 0.3;">|</span>
+                         <span class="pulse-stat"><span class="color-positive">${upCount}</span> Gainers</span>
+                         <span class="pulse-divider" style="opacity: 0.3;">•</span>
+                         <span class="pulse-stat"><span class="color-negative">${downCount}</span> Losers</span>
+                         <span class="pulse-divider" style="opacity: 0.3;">•</span>
+                         <span class="pulse-stat"><span class="color-positive">${hiCount}</span> Highs</span>
+                         <span class="pulse-divider" style="opacity: 0.3;">•</span>
+                         <span class="pulse-stat"><span class="color-negative">${loCount}</span> Lows</span>
+                    </div>
                 </div>
             `;
         }
