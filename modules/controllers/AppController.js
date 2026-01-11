@@ -147,6 +147,37 @@ export class AppController {
         });
         document.addEventListener(EVENTS.SHOW_DAILY_BRIEFING, () => BriefingUI.show());
 
+        // CUSTOM NAVIGATION EVENTS (Briefing / External)
+        document.addEventListener('open-portfolio-view', () => {
+            // console.log('[AppController] Navigation request: Portfolio View');
+            // Check if we are in Dashboard view or Watchlist view?
+            // Force switch to 'portfolio' watchlist
+            if (this.watchlistUI) {
+                this.handleSwitchWatchlist('portfolio');
+            }
+            // Ensure sidebar/header reflects this (handled by state change)
+        });
+
+        document.addEventListener(EVENTS.OPEN_NOTIFICATIONS, (e) => {
+            // Notification Center Open Request
+            // Supports Deep Linking: detail.section (e.g., 'gainers', 'hilo-high')
+            const { tab, source, section } = e.detail || {};
+            // Default to 'custom' tab, 'total' source if not specified.
+            NotificationUI.showModal(tab || 'custom', source || 'total', section);
+        });
+
+        document.addEventListener('open-market-pulse', () => {
+            // Open Snapshot / Market Pulse UI
+            // Assuming SnapshotUI is available globally or imported. 
+            // If not, we might fail. But WatchlistUI imported it. 
+            // Let's safe guard or ensure import.
+            // Actually, AppController might not import it. 
+            // Let's dynamically import to be safe if simpler.
+            import('../ui/SnapshotUI.js').then(({ SnapshotUI }) => {
+                SnapshotUI.show();
+            });
+        });
+
         // Mute Toggle Listener
         document.addEventListener(EVENTS.TOGGLE_SHARE_MUTE, async (e) => {
             if (!AppState.user) return;

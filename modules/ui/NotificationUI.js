@@ -152,8 +152,9 @@ export class NotificationUI {
         }
     }
 
-    static async showModal(activeTabId = 'custom', source = 'total') {
+    static async showModal(activeTabId = 'custom', source = 'total', targetSectionId = null) {
         this._currentSource = source || 'total';
+        this._targetSection = targetSectionId; // Store for deep linking
 
         // SECURITY: Prevent notifications from overriding Lock Screen
         if (AppState.isLocked) {
@@ -171,6 +172,10 @@ export class NotificationUI {
             requestAnimationFrame(() => {
                 loadingModal.classList.remove(CSS_CLASSES.HIDDEN);
             });
+            // Push State for loading modal
+            navManager.pushState(() => {
+                this._close(loadingModal);
+            });
             return;
         }
 
@@ -184,7 +189,7 @@ export class NotificationUI {
             }
         }
 
-        console.log(`[NotificationUI] showModal() triggered. Tab: ${activeTabId} Source: ${this._currentSource}`);
+        console.log(`[NotificationUI] showModal() triggered. Tab: ${activeTabId} Source: ${this._currentSource} Target: ${targetSectionId}`);
 
         // --- DUPLICATE PROTECTION & SURFACING ---
         let modal = document.getElementById(IDS.NOTIFICATION_MODAL);
@@ -198,38 +203,62 @@ export class NotificationUI {
             this._settingsRestorable = true;
         }
 
-        if (modal) {
-            console.log('[NotificationUI] Modal already open. Surfacing to top.');
-            document.body.appendChild(modal);
-            modal.style.zIndex = '2147483647';
-            return;
+        // STACK MANAGEMENT: Persist Daily Briefing (Do not close permanently)
+        const briefingModal = document.getElementById(IDS.DAILY_BRIEFING_MODAL);
+        this._briefingRestorable = false;
+        if (briefingModal && !briefingModal.classList.contains(CSS_CLASSES.HIDDEN)) {
+            console.log('[NotificationUI] Hiding Briefing Modal temporarily.');
+            briefingModal.classList.add(CSS_CLASSES.HIDDEN);
+            this._briefingRestorable = true;
         }
+
+        if (modal) {
+            // If already open, just ensure it's visible and update list if needed
+            modal.classList.remove(CSS_CLASSES.HIDDEN);
+            this._updateList(modal);
+        } else {
+            // Render Fresh
+            modal = this._renderModal();
+            document.body.appendChild(modal);
+            this._bindEvents(modal); // Bind general events
+            // _updateList is called inside _renderModal usually, but let's be sure
+            this._updateList(modal);
+
+            requestAnimationFrame(() => {
+                modal.classList.remove(CSS_CLASSES.HIDDEN);
+            });
+        }
+
+        // Push State
+        navManager.pushState(() => {
+            this._close(modal);
+        });
 
         try {
             // 1. Auto-clear disabled. User must manually clear or it stays.
             // notificationStore.markAsViewed(); 
 
             // 2. Render Modal
-            console.log('[NotificationUI] Rendering modal DOM...');
-            modal = this._renderModal();
-            modal.style.zIndex = '2147483647'; // Force Max
-            document.body.appendChild(modal);
+            // This part is now handled by the if/else block above.
+            // console.log('[NotificationUI] Rendering modal DOM...');
+            // modal = this._renderModal();
+            // modal.style.zIndex = '2147483647'; // Force Max
+            // document.body.appendChild(modal);
 
             // 3. Bind Events
-            this._bindEvents(modal);
+            // This part is now handled by the if/else block above.
+            // this._bindEvents(modal);
 
             // 4. Initial Render of List
-            console.log('[NotificationUI] Updating notification list content...');
-            this._updateList(modal);
+            // This part is now handled by the if/else block above.
+            // console.log('[NotificationUI] Updating notification list content...');
+            // this._updateList(modal);
 
             // 4b. Update Status Bar (shows disabled monitors)
             this._updateStatusBar(modal);
 
             // 5. Show with animation
-            requestAnimationFrame(() => {
-                modal.classList.remove(CSS_CLASSES.HIDDEN);
-                console.log('[NotificationUI] Modal visibility class removed.');
-            });
+            // 5. Show with animation
 
             // 6. Inject Dismiss Icon (Kangaroo)
             try {
@@ -374,6 +403,17 @@ export class NotificationUI {
     static _close(modal) {
         modal.classList.add(CSS_CLASSES.HIDDEN);
 
+        // RESTORE DAILY BRIEFING IF HIDDEN
+        if (this._briefingRestorable) {
+            const briefingModal = document.getElementById(IDS.DAILY_BRIEFING_MODAL);
+            if (briefingModal) {
+                console.log('[NotificationUI] Restoring Briefing Modal. Bringing to front.');
+                briefingModal.classList.remove(CSS_CLASSES.HIDDEN);
+                briefingModal.style.zIndex = '1001'; // Ensure it pops over standard layers
+                document.body.appendChild(briefingModal);
+            }
+            this._briefingRestorable = false;
+        }
         // RESTORE SETTINGS MODAL IF HIDDEN
         if (this._settingsRestorable) {
             const settingsModal = document.getElementById(IDS.SETTINGS_MODAL);

@@ -14,6 +14,15 @@ export class SnapshotUI {
     static show() {
         if (document.getElementById('snapshot-modal-container')) return;
 
+        // BRIEFING PERSISTENCE: Hide Daily Briefing temporarily
+        const briefingModal = document.getElementById(IDS.DAILY_BRIEFING_MODAL);
+        this._briefingRestorable = false;
+        if (briefingModal && !briefingModal.classList.contains(CSS_CLASSES.HIDDEN)) {
+            console.log('[SnapshotUI] Hiding Briefing Modal temporarily.');
+            briefingModal.classList.add(CSS_CLASSES.HIDDEN);
+            this._briefingRestorable = true;
+        }
+
         const modal = this._renderModal();
         document.body.appendChild(modal);
 
@@ -38,6 +47,34 @@ export class SnapshotUI {
             modal.classList.remove(CSS_CLASSES.HIDDEN);
             modal.classList.add(CSS_CLASSES.SHOW);
         });
+    }
+
+    // ... _renderModal and _bindEvents unchanged ...
+
+    static _close(modal) {
+        modal.classList.remove(CSS_CLASSES.SHOW);
+        modal.classList.add(CSS_CLASSES.HIDDEN);
+
+        // Restore Daily Briefing if it was covered
+        if (this._briefingRestorable) {
+            const briefingModal = document.getElementById(IDS.DAILY_BRIEFING_MODAL);
+            if (briefingModal) {
+                console.log('[SnapshotUI] Restoring Briefing Modal. Bringing to front.');
+                briefingModal.classList.remove(CSS_CLASSES.HIDDEN);
+                briefingModal.style.zIndex = '1001'; // Ensure it pops over standard layers
+                document.body.appendChild(briefingModal);
+            }
+            this._briefingRestorable = false;
+        }
+
+        setTimeout(() => {
+            if (modal.parentElement) modal.remove();
+        }, 300);
+
+        if (modal._navActive) {
+            modal._navActive = false;
+            navManager.popStateSilently();
+        }
     }
 
     static _renderModal() {
