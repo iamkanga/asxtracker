@@ -12,12 +12,13 @@ import { formatCurrency, formatPercent } from '../utils/formatters.js';
 import { SnapshotUI } from './SnapshotUI.js';
 
 // --- BriefingUI.js ---
-// Version Tracer: v307 (Daisy Chain Cache Nuke)
-console.log('%c[BriefingUI] Loaded v307 - Partner Card Update Applied', 'background: #000; color: #00ff00; font-size: 14px; font-weight: bold;');
+// Version Tracer: v310 (Alert Probe)
+console.log('%c[BriefingUI] Loaded v310', 'background: #000; color: #00ff00');
 
 export class BriefingUI {
 
     static show() {
+        alert('UPDATE VERIFIED: v310');
         const existingInfo = document.getElementById(IDS.DAILY_BRIEFING_MODAL);
         if (existingInfo) {
             if (existingInfo.classList.contains(CSS_CLASSES.HIDDEN)) {
