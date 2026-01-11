@@ -822,7 +822,8 @@ export class SettingsUI {
 
         const rawFilters = prefs.scanner?.activeFilters;
         const allIndustries = Object.values(SECTOR_INDUSTRY_MAP).flat().map(f => f.toUpperCase());
-        const activeFilters = (rawFilters === null) ? allIndustries : (rawFilters || []).map(f => f.toUpperCase());
+        // FIX: Default to ALL if null OR undefined. Previously undefined defaulted to [] (None).
+        const activeFilters = (rawFilters === null || rawFilters === undefined) ? allIndustries : (rawFilters || []).map(f => f.toUpperCase());
 
         // Helper to safely update text and indicators
         const updateTile = (id, indicatorId, isOn, val) => {

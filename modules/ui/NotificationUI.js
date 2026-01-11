@@ -14,7 +14,7 @@ import { BriefingUI } from './BriefingUI.js';
 export class NotificationUI {
 
     static _currentSource = 'total';
-    static _bellManuallyHidden = (localStorage.getItem('ASX_NEXT_bellHidden') === 'true'); // Persist dismissal state
+    // static _bellManuallyHidden removed (Now uses AppState.preferences.showBadges)
     static _prevCount = 0; // Track previous count for change detection
     static _openLock = false; // Debounce lock for modal opening
     static _settingsRestorable = false; // Track if we hid settings
@@ -123,12 +123,8 @@ export class NotificationUI {
             return;
         }
 
-        // KANGAROO VISIBILITY FIX: Always show the button/container (unless locked, manually hidden, or all disabled)
-        if (this._bellManuallyHidden) {
-            if (container) container.classList.add(CSS_CLASSES.HIDDEN);
-            bell.classList.add(CSS_CLASSES.HIDDEN);
-            return;
-        }
+        // KANGAROO VISIBILITY FIX: Always show the button/container (unless locked or all disabled)
+        // (Local override logic removed in favor of global 'showBadges' sync)
 
         if (container) container.classList.remove(CSS_CLASSES.HIDDEN);
         bell.classList.remove(CSS_CLASSES.HIDDEN);
@@ -427,29 +423,37 @@ export class NotificationUI {
         // Mark as Read Button (Now Toggle Kangaroo / Dismiss Badge)
         const markReadBtn = modal.querySelector('#notif-mark-read-btn');
         if (markReadBtn) {
-            markReadBtn.addEventListener('click', () => {
-                // 1. Toggle Global Visibility
-                this._bellManuallyHidden = !this._bellManuallyHidden;
-                console.log(`[NotificationUI] Kangaroo Toggle: ${this._bellManuallyHidden ? 'HIDDEN' : 'VISIBLE'}`);
+            markReadBtn.addEventListener('click', async () => {
+                // 1. Get Current State (Global Preference)
+                const currentState = AppState.preferences.showBadges !== false;
+                const newState = !currentState;
 
-                // 2. Perform Standard Dismissal Logic (if hidden)
-                // USER REQUEST: Do NOT clear the badge count when hiding the icon.
-                // The badge count should persist so it is visible if/when the icon is re-enabled.
-                // if (this._bellManuallyHidden && notificationStore) {
-                //    notificationStore.markAsViewed('custom');
-                // }
+                console.log(`[NotificationUI] Kangaroo Toggle: Switching 'showBadges' to ${newState}`);
 
-                // 3. Immedate Refresh of the FAB (Kangaroo)
+                // 2. Update Local State Immediately (Reactivity)
+                AppState.preferences.showBadges = newState;
+
+                // 3. Persist to Cloud via DataService (Dynamic Import)
+                try {
+                    const { userStore } = await import('../data/DataService.js');
+                    if (AppState.user?.uid) {
+                        await userStore.savePreferences(AppState.user.uid, { showBadges: newState });
+                        localStorage.removeItem('ASX_NEXT_bellHidden'); // Cleanup legacy
+                    }
+                } catch (err) {
+                    console.error('[NotificationUI] Failed to save preference:', err);
+                }
+
+                // 4. Trigger Visual Update
                 if (notificationStore) {
                     const counts = notificationStore.getBadgeCounts();
-                    // FIX: Respect current badge scope preference instead of hardcoded 'custom'
+                    // FIX: Respect current badge scope preference
                     const scope = AppState?.preferences?.badgeScope || 'all';
                     const count = (scope === 'all') ? counts.total : counts.custom;
                     this.updateBadgeCount(count);
                 }
 
-                // 4. Update Button Visuals (Ghosting) and Persist
-                localStorage.setItem('ASX_NEXT_bellHidden', this._bellManuallyHidden ? 'true' : 'false');
+                // 5. Update Dismiss Button Visuals (Sync)
                 this._updateDismissState(modal);
             });
         }
@@ -844,8 +848,15 @@ export class NotificationUI {
                     chip.classList.add(CSS_CLASSES.ACTIVE);
 
                     const sec = modal.querySelector(`#section-${targetId}`);
-                    if (sec && list) {
-                        list.scrollTo({ top: sec.offsetTop, behavior: 'smooth' });
+                    if (sec) {
+                        // 1. Immediate Attempt (Best Effort)
+                        sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+                        // 2. Delayed Attempt (After 0.3s CSS Transition completes)
+                        // Wait 350ms to be safe.
+                        setTimeout(() => {
+                            sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }, 350);
                     }
                 }
             });
@@ -1485,7 +1496,11 @@ export class NotificationUI {
         // Inverted Logic:
         // Visible (!Hidden) -> Slashed
         // Hidden (true) -> No Slash
-        if (this._bellManuallyHidden) {
+
+        // Fix: Use global preference as source of truth
+        const isHidden = (AppState.preferences.showBadges === false);
+
+        if (isHidden) {
             wrapper.classList.remove('is-slashed');
             dismissBtn.title = "Show Desktop Icon";
         } else {
