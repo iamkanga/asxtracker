@@ -30,14 +30,8 @@ export class SnapshotUI {
         this._currentSort = AppState.preferences.snapshotSort || 'desc';
 
         // Update Buttons UI based on preference
-        const sortBtns = modal.querySelectorAll(`.${CSS_CLASSES.SEGMENTED_BUTTON}`);
-        sortBtns.forEach(btn => {
-            if (btn.dataset.sort === this._currentSort) {
-                btn.classList.add(CSS_CLASSES.ACTIVE);
-            } else {
-                btn.classList.remove(CSS_CLASSES.ACTIVE);
-            }
-        });
+        // Update Buttons UI based on preference
+        // (Handled by _bindEvents init now)
 
         this._updateGrid(modal);
 
@@ -98,11 +92,12 @@ export class SnapshotUI {
                 
                 <div class="snapshot-controls" style="padding: 10px 15px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: center;">
                     <div class="${CSS_CLASSES.SEGMENTED_CONTROL}" style="width: 100%; max-width: 300px;">
-                        <button class="${CSS_CLASSES.SEGMENTED_BUTTON}" data-sort="desc">
-                            <i class="fas fa-caret-up" style="margin-right: 5px; color: var(--color-positive);"></i> High to Low
-                        </button>
-                        <button class="${CSS_CLASSES.SEGMENTED_BUTTON}" data-sort="asc">
-                            <i class="fas fa-caret-down" style="margin-right: 5px; color: var(--color-negative);"></i> Low to High
+                        <button type="button" class="${CSS_CLASSES.SEGMENTED_BUTTON} w-full" id="snapshot-toggle-btn">
+                            <div class="${CSS_CLASSES.W_FULL} ${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.ALIGN_CENTER}" style="justify-content: center;">
+                                <i class="fas fa-sort" id="snapshot-toggle-icon" style="margin-right: 15px;"></i>
+                                <span class="${CSS_CLASSES.FONT_BOLD}" id="snapshot-toggle-text">High to Low</span>
+                                <i class="fas fa-sort" id="snapshot-toggle-icon-2" style="margin-left: 15px;"></i>
+                            </div>
                         </button>
                     </div>
                 </div>
@@ -132,24 +127,47 @@ export class SnapshotUI {
     static _bindEvents(modal) {
         const closeBtn = modal.querySelector(`.${CSS_CLASSES.MODAL_CLOSE_BTN}`);
         const overlay = modal.querySelector(`.${CSS_CLASSES.MODAL_OVERLAY}`);
-        const sortBtns = modal.querySelectorAll(`.${CSS_CLASSES.SEGMENTED_BUTTON}`);
+        const toggleBtn = modal.querySelector('#snapshot-toggle-btn');
+        const updateToggleUI = () => {
+            const isDesc = this._currentSort === 'desc';
+            const icon = modal.querySelectorAll('.fas.fa-sort, .fas.fa-caret-up, .fas.fa-caret-down');
+            const text = modal.querySelector('#snapshot-toggle-text');
 
-        const closeHandler = () => this._close(modal);
-        if (closeBtn) closeBtn.addEventListener('click', closeHandler);
-        if (overlay) overlay.addEventListener('click', closeHandler);
+            // Logic: If currently Descending (High -> Low), Button should say 'Low to High' (Target) 
+            // OR should it say Current State? 
+            // User requested: "One disappears and displays the other". Usually implies displaying the TARGET.
+            // Let's stick to the Notifications Pattern: Display the TARGET state.
 
-        sortBtns.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                // Update UI state
-                sortBtns.forEach(b => b.classList.remove(CSS_CLASSES.ACTIVE));
-                btn.classList.add(CSS_CLASSES.ACTIVE);
+            // If current is DESC (High to Low) -> Show "Low to High" option.
+            const targetSort = isDesc ? 'asc' : 'desc';
+            const label = isDesc ? 'Low to High' : 'High to Low';
+            const iconClass = isDesc ? 'fa-caret-down' : 'fa-caret-up';
+            const color = isDesc ? 'var(--color-negative)' : 'var(--color-positive)';
 
-                // Update Logic
-                this._currentSort = btn.dataset.sort;
+            if (text) text.textContent = label;
+            icon.forEach(i => {
+                i.className = `fas ${iconClass}`;
+                i.style.color = color;
+                i.style.marginRight = '15px'; // Reset styles just in case
+                if (i.id.includes('2')) i.style.marginRight = '0'; // Right icon
+                if (i.id.includes('2')) i.style.marginLeft = '15px';
+            });
+        };
+
+        if (toggleBtn) {
+            // Init UI
+            updateToggleUI();
+
+            toggleBtn.addEventListener('click', (e) => {
+                // Toggle Sort
+                this._currentSort = (this._currentSort === 'desc') ? 'asc' : 'desc';
                 AppState.saveSnapshotSort(this._currentSort);
+
+                // Update UI & Grid
+                updateToggleUI();
                 this._updateGrid(modal);
             });
-        });
+        }
 
         // Delegate Card Clicks
         modal.addEventListener('click', (e) => {
