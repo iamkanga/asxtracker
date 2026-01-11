@@ -263,6 +263,29 @@
     box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
 }
 
+/* Sort Toggle (Segmented Button Style) */
+.sort-direction-toggle .segmented-control {
+    background: var(--bg-subtle, #333);
+    border-radius: 8px;
+    padding: 3px;
+    display: flex;
+}
+
+.sort-direction-toggle .segmented-btn {
+    background: var(--card-bg, #222);
+    color: var(--text-color, #fff);
+    border: 1px solid var(--border-color, #444);
+    border-radius: 6px;
+    padding: 8px;
+    width: 100%;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.sort-direction-toggle .segmented-btn:hover {
+    background: var(--bg-hover, #444);
+}
+
 /* Toggle Chip (Text Only) */
 .chip-toggle-text {
     background: transparent !important;
