@@ -95,8 +95,26 @@ export class SnapshotUI {
                     </button>
                 </div>
                 
+                <!-- NUCLEAR STYLES for Toggle -->
+                <style>
+                    #snapshot-toggle-btn {
+                        border: none !important;
+                        outline: none !important;
+                        box-shadow: none !important;
+                        background: transparent !important;
+                    }
+                    #snapshot-toggle-btn:focus, #snapshot-toggle-btn:active {
+                        border: none !important;
+                        outline: none !important;
+                    }
+                    .snapshot-controls {
+                        border: none !important;
+                        box-shadow: none !important;
+                    }
+                </style>
+
                 <div class="snapshot-controls" style="padding: 10px 15px; border-bottom: none !important; display: flex; justify-content: center;">
-                    <div class="${CSS_CLASSES.SEGMENTED_CONTROL}" style="width: 100%; max-width: 300px;">
+                    <div class="${CSS_CLASSES.SEGMENTED_CONTROL}" style="width: 100%; max-width: 300px; border: none !important; background: transparent !important; box-shadow: none !important;">
                         <button type="button" class="${CSS_CLASSES.SEGMENTED_BUTTON} w-full" id="snapshot-toggle-btn">
                             <div class="${CSS_CLASSES.W_FULL} ${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.ALIGN_CENTER}" style="justify-content: center;">
                                 <i class="fas fa-sort" id="snapshot-toggle-icon" style="margin-right: 15px;"></i>
@@ -133,6 +151,11 @@ export class SnapshotUI {
         const closeBtn = modal.querySelector(`.${CSS_CLASSES.MODAL_CLOSE_BTN}`);
         const overlay = modal.querySelector(`.${CSS_CLASSES.MODAL_OVERLAY}`);
         const toggleBtn = modal.querySelector('#snapshot-toggle-btn');
+
+        const closeHandler = () => this._close(modal);
+        if (closeBtn) closeBtn.addEventListener('click', closeHandler);
+        if (overlay) overlay.addEventListener('click', closeHandler);
+
         const updateToggleUI = () => {
             const isDesc = this._currentSort === 'desc';
             const icon = modal.querySelectorAll('.fas.fa-sort, .fas.fa-caret-up, .fas.fa-caret-down');
@@ -158,10 +181,6 @@ export class SnapshotUI {
                 if (i.id.includes('2')) i.style.marginLeft = '15px';
             });
         };
-
-        const closeHandler = () => this._close(modal);
-        if (closeBtn) closeBtn.addEventListener('click', closeHandler);
-        if (overlay) overlay.addEventListener('click', closeHandler);
 
         if (toggleBtn) {
             // Init UI
