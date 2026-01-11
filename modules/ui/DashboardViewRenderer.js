@@ -255,7 +255,7 @@ export class DashboardViewRenderer {
                     <div class="${CSS_CLASSES.DASHBOARD_CELL_LEFT} vertical-stack">
                         <div class="${CSS_CLASSES.DASHBOARD_ITEM_NAME}" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
                             <span>${name}</span>
-                            <div class="analog-clock-hook" data-open="${isOpen}" style="width:14px; height:14px; opacity:0.8;"></div>
+                            ${viewMode !== 'SNAPSHOT' ? `<div class="analog-clock-hook" data-open="${isOpen}" style="width:14px; height:14px; opacity:0.8;"></div>` : ''}
                         </div>
                         <div class="${CSS_CLASSES.DASHBOARD_ITEM_PRICE}">${formattedValue}</div>
                         <div class="${CSS_CLASSES.DASHBOARD_ITEM_CHANGE} ${isPositive ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}">

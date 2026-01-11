@@ -89,7 +89,7 @@ export class SnapshotUI {
                     }
                 </style>
 
-                <div class="snapshot-controls" style="padding: 10px 15px; border-bottom: none !important; display: flex; justify-content: center;">
+                <div class="snapshot-controls" style="padding: 5px 15px; border-bottom: none !important; display: flex; justify-content: center;">
                     <div class="${CSS_CLASSES.SEGMENTED_CONTROL}" style="width: 100%; max-width: 300px; border: none !important; background: transparent !important; box-shadow: none !important;">
                         <button type="button" class="${CSS_CLASSES.SEGMENTED_BUTTON} w-full" id="snapshot-toggle-btn">
                             <div class="${CSS_CLASSES.W_FULL} ${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.ALIGN_CENTER}" style="justify-content: center;">

@@ -582,7 +582,7 @@
 }
 
 .accordion-header {
-    padding: 14px 16px;
+    padding: 8px 16px;
     display: flex;
     justify-content: space-between;
     align-items: baseline;
