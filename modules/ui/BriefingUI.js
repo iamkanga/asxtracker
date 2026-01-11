@@ -77,26 +77,22 @@ export class BriefingUI {
                     <div class="briefing-section">
                         <div class="briefing-hero-row" style="display: flex; gap: 16px; align-items: stretch; flex-wrap: wrap;">
                             
-                            <!-- Portfolio Hero -->
-                            <div class="briefing-hero-card" id="briefing-portfolio-hero" style="flex: 2; min-width: 250px;">
+                            <!-- Portfolio Hero Card -->
+                            <div class="briefing-hero-card clickable-hero" data-context="portfolio" style="border: 1px solid rgba(255, 255, 255, 0.1);">
                                 <div class="hero-label">My Portfolio</div>
-                                <div class="hero-main-stat skeleton-text">Computing...</div>
-                                <div class="hero-sub-stat skeleton-text">...</div>
-                            </div>
+                                <div class="hero-value-large skeleton-text" id="briefing-portfolio-val" style="margin: 10px 0 5px 0;">...</div>
+                                <div class="hero-sub-stat skeleton-text" id="briefing-portfolio-change" style="margin-bottom: 15px;">...</div>
 
-                            <!-- Market Pulse Partner Card -->
-                            <div class="briefing-hero-card clickable-hero" id="briefing-pulse-card" style="flex: 1; min-width: 140px; display: flex !important; flex-direction: column; justify-content: space-between; position: relative; background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%); border: 1px solid rgba(255, 255, 255, 0.1);">
-                                <div class="hero-label">Market Pulse</div>
-                                <div style="display: flex; align-items: center; justify-content: center; flex: 1; margin: 15px 0;">
-                                    <i class="fas fa-heartbeat" style="font-size: 2.8rem; color: var(--color-accent); filter: drop-shadow(0 0 10px rgba(183,149,11,0.6)); animation: pulseSlow 2s infinite;"></i>
+                                <!-- Integrated Market Pulse Trigger -->
+                                <div id="briefing-pulse-trigger" style="display: flex; align-items: center; justify-content: center; padding: 8px 0; border-top: 1px solid rgba(255,255,255,0.1); width: 100%; margin-top: auto; cursor: pointer; color: var(--text-muted); transition: all 0.2s ease;">
+                                    <i class="fas fa-heartbeat" style="color: var(--color-accent); margin-right: 8px; animation: pulseSlow 3s infinite;"></i>
+                                    <span style="font-size: 0.8rem; font-weight: 600; letter-spacing: 0.5px;">MARKET PULSE</span>
+                                    <i class="fas fa-chevron-right" style="font-size: 0.7rem; margin-left: 8px; opacity: 0.5;"></i>
                                 </div>
-                                <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
-                                    <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Status</span>
-                                    <span style="font-size: 0.8rem; color: var(--color-positive); font-weight: 700;">Live</span>
-                                </div>
-                                <!-- Background Decoration -->
-                                <div style="position: absolute; top: -15px; right: -15px; width: 70px; height: 70px; background: var(--color-accent); opacity: 0.08; border-radius: 50%; filter: blur(25px); pointer-events: none;"></div>
                             </div>
+                            
+                            <!-- Spacer (Since we removed the 2nd card) -->
+                            <!-- Or allow it to take full width? Flexbox will handle it. -->
 
                         </div>
                     </div>
@@ -306,7 +302,7 @@ export class BriefingUI {
             }
         }
 
-        // --- 4. Market Pulse (Footer) ---
+        // --- 4. Market Pulse (Footer & Trigger) ---
         // Proxy using NotificationStore Global data
         const globalMovers = notificationStore.getGlobalAlerts(false) || { movers: { up: [], down: [] }, hilo: { high: [], low: [] } };
         const upCount = (globalMovers.movers?.up || []).length;
@@ -315,43 +311,56 @@ export class BriefingUI {
         const hiCount = (globalMovers.hilo?.high || []).length;
         const loCount = (globalMovers.hilo?.low || []).length;
 
-        let sentiment = 'Neutral';
-        let sentimentIcon = '<i class="fas fa-minus"></i>';
+        const totalSignals = upCount + downCount + hiCount + loCount;
 
-        if (upCount > downCount * 1.2) { sentiment = 'Bullish'; sentimentIcon = '<i class="fas fa-arrow-trend-up"></i>'; }
-        else if (downCount > upCount * 1.2) { sentiment = 'Bearish'; sentimentIcon = '<i class="fas fa-arrow-trend-down"></i>'; }
+        // Sentiment Logic (Optional: Could update the trigger icon color?)
+        let sentimentColor = 'var(--text-muted)';
+        if (upCount > downCount * 1.5) sentimentColor = 'var(--color-positive)';
+        else if (downCount > upCount * 1.5) sentimentColor = 'var(--color-negative)';
 
-        // --- 2b. Clean Up Pulse Card (Removed per user request) ---
-        // LOGIC FIX v311: We do NOT remove the Partner Card anymore!
-        // We want it there!
+        // Update Trigger Visuals (Optional)
+        const pulseTrigger = modal.querySelector('#briefing-pulse-trigger');
+        if (pulseTrigger) {
+            // Bind Click (if not already bound by _bindEvents - wait, dynamic content?)
+            // This is static content now in _renderModal, so _bindEvents should handle it.
+            // But we can update the icon color here based on sentiment.
+            const icon = pulseTrigger.querySelector('.fa-heartbeat');
+            if (icon) icon.style.color = sentimentColor;
 
+            pulseTrigger.onclick = (e) => {
+                e.stopPropagation(); // Prevent Portfolio Card click
+                SnapshotUI.show();
+            };
+        }
+
+        // --- 2b. Footer Stats Display ---
         const footer = modal.querySelector('#briefing-market-pulse');
         if (footer) {
-            // Make Footer Container General Click
+            // Keep existing footer logic...
             footer.classList.add('clickable-footer');
             footer.title = "View Market Notifications";
 
-            // General Click (Opens Notification Center)
             footer.onclick = (e) => {
                 const targetSec = e.target.closest('[data-section]')?.dataset.section;
-                console.log(`[BriefingUI] Stats Footer click. Target Section: ${targetSec || 'General'}`);
-
-                // Dispatch Event (NotificationUI handles Briefing Hiding)
                 document.dispatchEvent(new CustomEvent(EVENTS.OPEN_NOTIFICATIONS, {
                     detail: {
-                        tab: 'global', // Force global tab since these are market stats
+                        tab: 'global',
                         source: 'briefing',
-                        section: targetSec || null // Deep link or default
+                        section: targetSec || null
                     }
                 }));
             };
 
-            // STRICT STATS DISPLAY + SENTIMENT
-            // STRICT STATS DISPLAY + SENTIMENT
+            // STRICT STATS DISPLAY (Simplified)
+            let iconHtml = '<i class="fas fa-balance-scale"></i>';
+            let sentiment = 'Neutral';
+            if (upCount > downCount * 1.5) { sentiment = 'Bullish'; iconHtml = '<i class="fas fa-arrow-trend-up"></i>'; }
+            else if (downCount > upCount * 1.5) { sentiment = 'Bearish'; iconHtml = '<i class="fas fa-arrow-trend-down"></i>'; }
+
             footer.innerHTML = `
                 <div class="pulse-stacked-container">
                     <div class="pulse-title-row">
-                        ${sentimentIcon} <span style="margin-left:6px">Market ${sentiment}</span>
+                        ${iconHtml} <span style="margin-left:6px">Market ${sentiment}</span>
                     </div>
                     <div class="pulse-stats-grid">
                         <div class="pulse-stat-item hover-highlight" data-section="gainers">
