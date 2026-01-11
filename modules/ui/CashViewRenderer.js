@@ -54,8 +54,22 @@ export class CashViewRenderer {
                     </div>
                 `;
             } else {
-                // STATE: Loaded and genuinely empty
-                listContainer.innerHTML = `<p class="${CSS_CLASSES.TEXT_NEUTRAL} ${CSS_CLASSES.TEXT_CENTER} ${CSS_CLASSES.P_3}">No cash assets found.</p>`;
+                // STATE: Loaded and genuinely empty (Premium Design)
+                listContainer.innerHTML = `
+                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 50vh; text-align: center; padding: 20px;">
+                    <div style="width: 80px; height: 80px; background: rgba(255,255,255,0.03); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 24px;">
+                        <i class="fas ${UI_ICONS.WALLET}" style="font-size: 28px; color: var(--text-muted); opacity: 0.5;"></i>
+                    </div>
+                    <h2 class="${CSS_CLASSES.DISPLAY_TITLE}" style="font-size: 1.5rem; margin-bottom: 12px; color: var(--text-shimmer);">No Cash Assets</h2>
+                    <p style="color: var(--text-muted); font-size: 1rem; max-width: 300px; line-height: 1.5; margin-bottom: 32px;">
+                        Track your bank accounts, property, crypto, and other assets here.
+                    </p>
+                    <div style="display: flex; align-items: center; gap: 12px; padding: 12px 24px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 30px; font-size: 0.9rem; color: var(--color-accent); font-weight: 600;">
+                        <i class="fas fa-arrow-left"></i>
+                        <span>Open Sidebar to Add Asset</span>
+                    </div>
+                </div>
+                `;
             }
         } else {
             assets.forEach(asset => {

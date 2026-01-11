@@ -406,8 +406,9 @@ export class AppService {
             const watchlistId = await userStore.addWatchlist(userId, 'My Watch List');
             // console.log(`[AppService] Watchlist created with ID: ${watchlistId}`);
 
-            // 2. Add 5 specific Australian top shares
-            const defaultStocks = ['BHP', 'TLS', 'CBA', 'QBE', 'VAS'];
+            // 2. Add 5 specific Australian top shares (Request: BHP, VAS, QAN, CBA, TLS)
+            const defaultStocks = ['BHP', 'VAS', 'QAN', 'CBA', 'TLS'];
+            console.log('[AppService] Seeding stocks (Active V5):', defaultStocks); // DEBUG: Prove version
             const now = new Date().toISOString();
 
             for (const symbol of defaultStocks) {
@@ -427,7 +428,7 @@ export class AppService {
             // console.log(`[AppService] Finalizing preferences (onboarded=true)...`);
             await userStore.savePreferences(userId, {
                 carouselSelections: defaultCarousel,
-                lastWatchlistId: watchlistId || 'portfolio',
+                lastWatchlistId: 'ALL', // Default to All Shares on first load
                 onboarded: true,
                 // NEW USER DEFAULTS (Requested Jan 2026)
                 excludePortfolio: true, // Watchlist Override: ON

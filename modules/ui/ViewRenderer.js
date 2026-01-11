@@ -121,7 +121,21 @@ export class ViewRenderer {
 
     renderTable(data) {
         if (!data || data.length === 0) {
-            this.container.innerHTML = `<div class="${CSS_CLASSES.EMPTY_STATE}">No shares in this watchlist.</div>`;
+            this.container.innerHTML = `
+                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 60vh; text-align: center; padding: 20px;">
+                    <div style="width: 80px; height: 80px; background: rgba(255,255,255,0.03); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 24px;">
+                        <i class="fas ${UI_ICONS.CHART_LINE}" style="font-size: 32px; color: var(--text-muted); opacity: 0.5;"></i>
+                    </div>
+                    <h2 class="${CSS_CLASSES.DISPLAY_TITLE}" style="font-size: 1.5rem; margin-bottom: 12px; color: var(--text-shimmer);">Watchlist Empty</h2>
+                    <p style="color: var(--text-muted); font-size: 1rem; max-width: 300px; line-height: 1.5; margin-bottom: 32px;">
+                        This watchlist is waiting for its first share.
+                    </p>
+                    <div style="display: flex; align-items: center; gap: 12px; padding: 12px 24px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 30px; font-size: 0.9rem; color: var(--color-accent); font-weight: 600;">
+                        <i class="fas fa-arrow-left"></i>
+                        <span>Open Sidebar to Add Share</span>
+                    </div>
+                </div>
+            `;
             return;
         }
 
@@ -182,7 +196,21 @@ export class ViewRenderer {
 
     renderGrid(data, type) {
         if (!data || data.length === 0) {
-            this.container.innerHTML = `<div class="${CSS_CLASSES.EMPTY_STATE}">No shares in this watchlist.</div>`;
+            this.container.innerHTML = `
+                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 60vh; text-align: center; padding: 20px;">
+                    <div style="width: 80px; height: 80px; background: rgba(255,255,255,0.03); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 24px;">
+                        <i class="fas ${UI_ICONS.CHART_LINE}" style="font-size: 32px; color: var(--text-muted); opacity: 0.5;"></i>
+                    </div>
+                    <h2 class="${CSS_CLASSES.DISPLAY_TITLE}" style="font-size: 1.5rem; margin-bottom: 12px; color: var(--text-shimmer);">Watchlist Empty</h2>
+                    <p style="color: var(--text-muted); font-size: 1rem; max-width: 300px; line-height: 1.5; margin-bottom: 32px;">
+                        This watchlist is waiting for its first share.
+                    </p>
+                    <div style="display: flex; align-items: center; gap: 12px; padding: 12px 24px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 30px; font-size: 0.9rem; color: var(--color-accent); font-weight: 600;">
+                        <i class="fas fa-arrow-left"></i>
+                        <span>Open Sidebar to Add Share</span>
+                    </div>
+                </div>
+            `;
             return;
         }
 
@@ -2176,9 +2204,9 @@ export class ViewRenderer {
         overlay.style.zIndex = '99999';
 
         overlay.innerHTML = `
-            < div style = "font-size: 3rem; color: var(--color-accent); margin-bottom: 20px;" >
+            <div style="font-size: 3rem; color: var(--color-accent); margin-bottom: 20px;">
                 <i class="fas ${UI_ICONS.SPINNER}"></i>
-            </div >
+            </div>
             <div class="${CSS_CLASSES.TEXT_XL} ${CSS_CLASSES.FONT_BOLD}">${title}</div>
             <div class="${CSS_CLASSES.TEXT_MUTED}" style="margin-top: 10px;">${subtitle}</div>
         `;

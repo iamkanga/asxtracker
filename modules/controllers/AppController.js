@@ -89,6 +89,16 @@ export class AppController {
         if (this._initialized) return;
         this._initialized = true;
 
+        // CRITICAL DEPLOYMENT FIX: Force Unregister Service Worker to fix stale cache issues (User reported stuck on old version)
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function (registrations) {
+                for (let registration of registrations) {
+                    console.log('[AppController] Force Unregistering Service Worker:', registration);
+                    registration.unregister();
+                }
+            });
+        }
+
         // Initialize Navigation Manager (Back Button Support)
         navManager.init();
 
@@ -482,6 +492,9 @@ export class AppController {
                             if (AppState.user && !this._onboardingTriggered && !AppState.preferences.onboarded) {
                                 this._onboardingTriggered = true;
                                 this.appService.createDefaultOnboardingData(AppState.user.uid);
+                                // FORCE SWITCH: Align local state with the cloud preference we just wrote ('ALL')
+                                // This prevents race conditions where local 'portfolio' state overwrites cloud 'ALL'.
+                                this.handleSwitchWatchlist('ALL');
                                 return; // Wait for the next sync refire
                             }
                         } else {
@@ -1950,6 +1963,8 @@ export class AppController {
                 console.warn('CREATE: Missing name or user not logged in');
                 return;
             }
+
+
 
             try {
                 console.log('AppController: Creating watchlist:', name);
