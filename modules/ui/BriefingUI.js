@@ -18,7 +18,6 @@ console.log('%c[BriefingUI] Loaded v310', 'background: #000; color: #00ff00');
 export class BriefingUI {
 
     static show() {
-        alert('UPDATE VERIFIED: v310');
         const existingInfo = document.getElementById(IDS.DAILY_BRIEFING_MODAL);
         if (existingInfo) {
             if (existingInfo.classList.contains(CSS_CLASSES.HIDDEN)) {
@@ -323,9 +322,8 @@ export class BriefingUI {
         else if (downCount > upCount * 1.2) { sentiment = 'Bearish'; sentimentIcon = '<i class="fas fa-arrow-trend-down"></i>'; }
 
         // --- 2b. Clean Up Pulse Card (Removed per user request) ---
-        // We previously added #briefing-pulse-card logic here. Removing it.
-        const pulseCard = modal.querySelector('#briefing-pulse-card');
-        if (pulseCard) pulseCard.remove(); // Remove safely if it exists from previous render
+        // LOGIC FIX v311: We do NOT remove the Partner Card anymore!
+        // We want it there!
 
         const footer = modal.querySelector('#briefing-market-pulse');
         if (footer) {
