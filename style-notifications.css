@@ -271,7 +271,7 @@
     display: flex;
 }
 
-.sort-direction-toggle .segmented-btn {
+.sort-direction-toggle .segmented-button {
     background: var(--card-bg, #222);
     color: var(--text-color, #fff);
     border: 1px solid var(--border-color, #444);
@@ -282,7 +282,7 @@
     transition: background 0.2s;
 }
 
-.sort-direction-toggle .segmented-btn:hover {
+.sort-direction-toggle .segmented-button:hover {
     background: var(--bg-hover, #444);
 }
 
