@@ -9,7 +9,7 @@ import { AppState } from '../state/AppState.js';
 import { CSS_CLASSES, IDS, UI_ICONS, EVENTS, SECTOR_INDUSTRY_MAP } from '../utils/AppConstants.js';
 import { navManager } from '../utils/NavigationManager.js';
 import { formatCurrency, formatPercent } from '../utils/formatters.js';
-import { BriefingUI } from './BriefingUI.js';
+import { BriefingUI } from './BriefingUI.js?v=307';
 
 export class NotificationUI {
 
@@ -754,26 +754,51 @@ export class NotificationUI {
 
         chipOrder.forEach(targetId => {
             if (targetId === 'hilo-toggle') {
-                // Special Toggle Chip
+                // Special Toggle Chip (Segmented Button Style)
                 const isHigh = NotificationUI._hiloMode === 'high';
-                const chip = document.createElement('div');
-                chip.className = `${CSS_CLASSES.FILTER_CHIP} chip-toggle-text`;
-                const chevronLeft = '<i class="fas fa-chevron-left toggle-chevron"></i>';
-                const chevronRight = '<i class="fas fa-chevron-right toggle-chevron"></i>';
-                const label = isHigh ? '52W HIGH' : '52W LOW';
-                const colorClass = isHigh ? 'color-positive' : 'color-negative';
 
-                chip.innerHTML = `
-                    ${chevronLeft}
-                    <span class="${colorClass}" style="font-weight: 800; font-size: 0.8rem;">${label}</span>
-                    ${chevronRight}
+                // TARGET State Logic (Matches Sort Picker)
+                // If viewing Highs, we are in "High to Low" mode equivalent (Descending values).
+                // The button must offer the SWITCH to "Low to High" (Ascending/Lows).
+
+                // ViewRenderer Logic Reference:
+                // if activeIsHighToLow -> Label="Low to High", Icon=Down, Color=Negative
+                // else -> Label="High to Low", Icon=Up, Color=Positive
+
+                const targetLabel = isHigh ? 'Low to High' : 'High to Low';
+                // Icon Logic: Sort Picker uses Down for "Low to High" option (meaning 'Switch to Ascending' where small is top?)
+                // Actually ViewRenderer says: if activeDir (HighToLow) -> Label "Low to High", Icon DOWN.
+                // Let's match that exactly.
+                const targetIcon = isHigh ? 'fa-caret-down' : 'fa-caret-up';
+                const targetColor = isHigh ? CSS_CLASSES.TEXT_NEGATIVE : CSS_CLASSES.TEXT_POSITIVE;
+
+                const wrapper = document.createElement('div');
+                wrapper.className = 'sort-direction-toggle';
+                wrapper.style.width = '100%';
+                wrapper.style.maxWidth = '300px';
+                wrapper.style.margin = '0 auto 10px auto';
+
+                wrapper.innerHTML = `
+                    <div class="${CSS_CLASSES.SEGMENTED_CONTROL}">
+                        <button class="${CSS_CLASSES.SEGMENTED_BUTTON} w-full" id="hilo-toggle-btn">
+                            <div class="${CSS_CLASSES.W_FULL} ${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.ALIGN_CENTER}" style="justify-content: center;">
+                                <i class="fas ${targetIcon} ${targetColor}" style="margin-right: 15px;"></i>
+                                <span class="${CSS_CLASSES.FONT_BOLD}">${targetLabel}</span>
+                                <i class="fas ${targetIcon} ${targetColor}" style="margin-left: 15px;"></i>
+                            </div>
+                        </button>
+                    </div>
                 `;
-                chip.onclick = () => {
+
+                // Bind Click
+                const btn = wrapper.querySelector('#hilo-toggle-btn');
+                btn.onclick = (e) => {
+                    e.stopPropagation();
                     NotificationUI._hiloMode = isHigh ? 'low' : 'high';
-                    console.log(`[NotificationUI] Toggled HiLo Mode to: ${NotificationUI._hiloMode}`);
-                    this._updateList(modal); // Re-render
+                    this._updateList(modal);
                 };
-                chips.appendChild(chip);
+
+                chips.appendChild(wrapper);
                 return;
             }
 

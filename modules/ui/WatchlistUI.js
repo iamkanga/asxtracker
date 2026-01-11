@@ -31,17 +31,6 @@ export class WatchlistUI {
                 const modal = document.getElementById(IDS.WATCHLIST_PICKER_MODAL);
 
                 // Bind Close Buttons
-                const closeBtns = modal.querySelectorAll(`.${CSS_CLASSES.MODAL_CLOSE_BTN}[data-dismiss="modal"]`);
-                closeBtns.forEach(btn => btn.addEventListener('click', () => this.closeModal()));
-
-                // Bind Market Pulse Button
-                const marketPulseBtn = document.getElementById('marketPulseBtn');
-                if (marketPulseBtn) {
-                    marketPulseBtn.addEventListener('click', () => {
-                        SnapshotUI.show();
-                    });
-                }
-
                 // Allow clicking outside to close
                 modal.addEventListener('click', (e) => {
                     if (e.target === modal || e.target.classList.contains(CSS_CLASSES.MODAL_OVERLAY)) {

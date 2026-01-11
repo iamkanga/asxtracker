@@ -9,6 +9,11 @@ import { AppState } from '../state/AppState.js';
 import { CSS_CLASSES, IDS, UI_ICONS, EVENTS } from '../utils/AppConstants.js';
 import { navManager } from '../utils/NavigationManager.js';
 import { formatCurrency, formatPercent } from '../utils/formatters.js';
+import { SnapshotUI } from './SnapshotUI.js';
+
+// --- BriefingUI.js ---
+// Version Tracer: v307 (Daisy Chain Cache Nuke)
+console.log('%c[BriefingUI] Loaded v307 - Partner Card Update Applied', 'background: #000; color: #00ff00; font-size: 14px; font-weight: bold;');
 
 export class BriefingUI {
 
@@ -55,9 +60,12 @@ export class BriefingUI {
                     <!-- Title Row: Greeting + Close Button (Perfectly Aligned) -->
                     <div class="briefing-title-row">
                         <h1>Good Morning</h1>
-                        <button class="${CSS_CLASSES.MODAL_CLOSE_BTN} briefing-close-btn" title="Close">
-                            <i class="fas ${UI_ICONS.CLOSE}"></i>
-                        </button>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <!-- Pulse Button Removed (Now a Partner Card) -->
+                            <button class="${CSS_CLASSES.MODAL_CLOSE_BTN} briefing-close-btn" title="Close">
+                                <i class="fas ${UI_ICONS.CLOSE}"></i>
+                            </button>
+                        </div>
                     </div>
                     <!-- Date Row (Below) -->
                     <div class="briefing-date">${dateStr}</div>
@@ -65,12 +73,31 @@ export class BriefingUI {
 
                 <div class="briefing-scroll-body">
                     
-                    <!-- 2. Hero: Portfolio Snapshot -->
+                    <!-- 2. Hero Section: Portfolio + Pulse Partner -->
                     <div class="briefing-section">
-                        <div class="briefing-hero-card" id="briefing-portfolio-hero">
-                            <div class="hero-label">My Portfolio</div>
-                            <div class="hero-main-stat skeleton-text">Computing...</div>
-                            <div class="hero-sub-stat skeleton-text">...</div>
+                        <div class="briefing-hero-row" style="display: flex; gap: 16px; align-items: stretch; flex-wrap: wrap;">
+                            
+                            <!-- Portfolio Hero -->
+                            <div class="briefing-hero-card" id="briefing-portfolio-hero" style="flex: 2; min-width: 250px;">
+                                <div class="hero-label">My Portfolio</div>
+                                <div class="hero-main-stat skeleton-text">Computing...</div>
+                                <div class="hero-sub-stat skeleton-text">...</div>
+                            </div>
+
+                            <!-- Market Pulse Partner Card -->
+                            <div class="briefing-hero-card clickable-hero" id="briefing-pulse-card" style="flex: 1; min-width: 140px; display: flex !important; flex-direction: column; justify-content: space-between; position: relative; background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%); border: 1px solid rgba(255, 255, 255, 0.1);">
+                                <div class="hero-label">Market Pulse</div>
+                                <div style="display: flex; align-items: center; justify-content: center; flex: 1; margin: 15px 0;">
+                                    <i class="fas fa-heartbeat" style="font-size: 2.8rem; color: var(--color-accent); filter: drop-shadow(0 0 10px rgba(183,149,11,0.6)); animation: pulseSlow 2s infinite;"></i>
+                                </div>
+                                <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                                    <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Status</span>
+                                    <span style="font-size: 0.8rem; color: var(--color-positive); font-weight: 700;">Live</span>
+                                </div>
+                                <!-- Background Decoration -->
+                                <div style="position: absolute; top: -15px; right: -15px; width: 70px; height: 70px; background: var(--color-accent); opacity: 0.08; border-radius: 50%; filter: blur(25px); pointer-events: none;"></div>
+                            </div>
+
                         </div>
                     </div>
 
@@ -98,8 +125,8 @@ export class BriefingUI {
 
                 </div>
 
-                <!-- NEW: Pulse Card Container -->
-                <div id="briefing-pulse-card" class="briefing-pulse-container"></div>
+                <!-- Pulse Card Container (Cleaned up) -->
+                <div class="briefing-pulse-spacer" style="margin-bottom: 10px;"></div>
 
                 <!-- 5. Footer: Stats -->
                 <div class="briefing-footer-pulse" id="briefing-market-pulse">
@@ -413,8 +440,18 @@ export class BriefingUI {
         const closeBtn = modal.querySelector(`.${CSS_CLASSES.MODAL_CLOSE_BTN}`);
         const overlay = modal.querySelector(`.${CSS_CLASSES.MODAL_OVERLAY}`);
         const closeHandler = () => this._close(modal);
-        if (closeBtn) closeBtn.addEventListener('click', closeHandler);
-        if (overlay) overlay.addEventListener('click', closeHandler);
+        if (closeBtn) closeBtn.addEventListener('click', () => this._close(modal));
+        if (overlay) overlay.addEventListener('click', () => this._close(modal));
+
+        const pulseCard = modal.querySelector('#briefing-pulse-card');
+        if (pulseCard) {
+            pulseCard.addEventListener('click', () => {
+                SnapshotUI.show();
+                // Optional: Close Briefing? 
+                // this._close(modal); 
+                // Keeping it open might be better for "Back" flow, or matching current behavior.
+            });
+        }
 
         // Items events are inline onclick dispatching custom event to decouple
         // But we need to ensure the modal closes when navigating
