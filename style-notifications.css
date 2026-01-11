@@ -265,12 +265,13 @@
 
 /* Segmented Button Component (Global) */
 .segmented-control {
-    background: var(--bg-subtle, #333);
-    border-radius: 8px;
-    padding: 3px;
+    background: transparent;
+    border-radius: 0;
+    padding: 0;
     display: flex;
     gap: 4px;
     /* Tiny gap */
+    box-shadow: none;
 }
 
 .segmented-button {
@@ -291,18 +292,16 @@
 }
 
 .segmented-button:hover {
-    background: rgba(255, 255, 255, 0.05);
+    background: transparent;
+    opacity: 0.8;
     color: var(--text-color, #fff);
 }
 
 .segmented-button.active {
-    background: var(--card-bg, #222);
-    /* Or Accent? Let's use Card BG with Border to pop */
-    background: var(--color-accent, #cba629);
-    /* Active = Coffee */
-    color: #000;
-    /* Contrast text on coffee */
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    background: transparent;
+    color: var(--color-accent, #cba629);
+    /* Just color change */
+    box-shadow: none;
 }
 
 /* Specific Tweak for Sort Toggle Wrapper if needed */
