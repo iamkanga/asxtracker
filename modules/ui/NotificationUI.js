@@ -18,6 +18,7 @@ export class NotificationUI {
     static _prevCount = 0; // Track previous count for change detection
     static _openLock = false; // Debounce lock for modal opening
     static _settingsRestorable = false; // Track if we hid settings
+    static _hiloMode = 'high'; // Default toggle state for Market Pulse
 
     static init() {
         this.renderFloatingBell();
@@ -348,8 +349,8 @@ export class NotificationUI {
                 <div class="${CSS_CLASSES.MODAL_HEADER}">
                     <h2 class="${CSS_CLASSES.MODAL_TITLE}">Notifications</h2>
                     <div style="margin-left: auto; display: flex; gap: 15px; align-items: center;">
-                        <button id="btn-daily-briefing" title="Daily Briefing" style="background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem;">
-                            <i class="fas fa-coffee"></i>
+                        <button id="btn-daily-briefing" title="Market Pulse" style="background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem;">
+                            <i class="fas fa-heartbeat"></i>
                         </button>
                         <button id="notif-settings-btn" title="Volatility Settings" style="background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem;">
                             <i class="fas ${UI_ICONS.PEN}"></i>
@@ -748,10 +749,34 @@ export class NotificationUI {
         chips.appendChild(openAllChip);
 
         // Define Specific Chip Order (Row 1 then Row 2)
-        // Order: Dashboard (above), HI, Gainers, Watcher, LO, Losers
-        const chipOrder = ['hilo-high', 'gainers', 'custom', 'hilo-low', 'losers'];
+        // Order: Dashboard (above), HiLo Toggle, Gainers, Watcher, Losers
+        const chipOrder = ['hilo-toggle', 'gainers', 'custom', 'losers'];
 
         chipOrder.forEach(targetId => {
+            if (targetId === 'hilo-toggle') {
+                // Special Toggle Chip
+                const isHigh = NotificationUI._hiloMode === 'high';
+                const chip = document.createElement('div');
+                chip.className = `${CSS_CLASSES.FILTER_CHIP} chip-toggle-text`;
+                const chevronLeft = '<i class="fas fa-chevron-left toggle-chevron"></i>';
+                const chevronRight = '<i class="fas fa-chevron-right toggle-chevron"></i>';
+                const label = isHigh ? '52W HIGH' : '52W LOW';
+                const colorClass = isHigh ? 'color-positive' : 'color-negative';
+
+                chip.innerHTML = `
+                    ${chevronLeft}
+                    <span class="${colorClass}" style="font-weight: 800; font-size: 0.8rem;">${label}</span>
+                    ${chevronRight}
+                `;
+                chip.onclick = () => {
+                    NotificationUI._hiloMode = isHigh ? 'low' : 'high';
+                    console.log(`[NotificationUI] Toggled HiLo Mode to: ${NotificationUI._hiloMode}`);
+                    this._updateList(modal); // Re-render
+                };
+                chips.appendChild(chip);
+                return;
+            }
+
             const sec = sections.find(s => s.id === targetId);
             if (!sec) return;
 
@@ -767,9 +792,14 @@ export class NotificationUI {
             chips.appendChild(chip);
         });
 
-        // 2. Render Accordions (Always Added to List Body)
-        // Preserve original logical order in list (Custom first)
+        // 2. Render Accordions
+        // FILTER: Only show the Active HiLo section
+        const activeHiloId = NotificationUI._hiloMode === 'high' ? 'hilo-high' : 'hilo-low';
+
         sections.forEach(sec => {
+            // Hide the INACTIVE HiLo section
+            if (sec.id.startsWith('hilo-') && sec.id !== activeHiloId) return;
+
             const accordion = this._renderAccordion(sec, rules);
             list.appendChild(accordion);
         });

@@ -86,7 +86,7 @@ export class SnapshotUI {
                 <div class="${CSS_CLASSES.MODAL_HEADER}">
                     <div style="display: flex; flex-direction: column; justify-content: center;">
                         <h2 class="${CSS_CLASSES.MODAL_TITLE}" style="margin-bottom: 0;">
-                            <i class="fas fa-bolt" style="color: var(--color-accent); margin-right: 8px;"></i>
+                            <i class="fas fa-heartbeat" style="color: var(--color-accent); margin-right: 8px;"></i>
                             Market Pulse
                         </h2>
                         <span style="font-size: 0.7rem; color: var(--text-muted); margin-left: 26px; font-weight: normal; margin-top: 2px;">All shares all watch lists daily change</span>

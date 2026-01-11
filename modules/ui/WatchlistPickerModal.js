@@ -14,7 +14,7 @@ export class WatchlistPickerModal {
                         </svg>
                     </h2>
                     <button id="marketPulseBtn" class="${CSS_CLASSES.MODAL_CLOSE_BTN}" style="margin-right: 30px;" title="Market Pulse">
-                        <i class="fas fa-bolt" style="color: var(--color-accent);"></i>
+                        <i class="fas fa-heartbeat" style="color: var(--color-accent);"></i>
                     </button>
                     <button class="${CSS_CLASSES.MODAL_CLOSE_BTN}" data-dismiss="modal">
                         <i class="fas ${UI_ICONS.CLOSE}"></i>

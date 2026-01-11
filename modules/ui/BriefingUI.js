@@ -51,16 +51,16 @@ export class BriefingUI {
             <div class="${CSS_CLASSES.MODAL_OVERLAY}"></div>
             <div class="${CSS_CLASSES.MODAL_CONTENT} briefing-modal-content">
                 
-                <!-- Close Button (Absolute Top Right) -->
-                <button class="${CSS_CLASSES.MODAL_CLOSE_BTN} briefing-close-btn" title="Close">
-                    <i class="fas ${UI_ICONS.CLOSE}"></i>
-                </button>
-
-                <!-- 1. Header: Greeting -->
                 <div class="briefing-header">
-                    <div class="briefing-greeting">
+                    <!-- Title Row: Greeting + Close Button (Perfectly Aligned) -->
+                    <div class="briefing-title-row">
                         <h1>Good Morning</h1>
+                        <button class="${CSS_CLASSES.MODAL_CLOSE_BTN} briefing-close-btn" title="Close">
+                            <i class="fas ${UI_ICONS.CLOSE}"></i>
+                        </button>
                     </div>
+                    <!-- Date Row (Below) -->
+                    <div class="briefing-date">${dateStr}</div>
                 </div>
 
                 <div class="briefing-scroll-body">
