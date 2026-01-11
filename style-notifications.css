@@ -263,27 +263,51 @@
     box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
 }
 
-/* Sort Toggle (Segmented Button Style) */
-.sort-direction-toggle .segmented-control {
+/* Segmented Button Component (Global) */
+.segmented-control {
     background: var(--bg-subtle, #333);
     border-radius: 8px;
     padding: 3px;
     display: flex;
+    gap: 4px;
+    /* Tiny gap */
 }
 
-.sort-direction-toggle .segmented-button {
-    background: var(--card-bg, #222);
-    color: var(--text-color, #fff);
-    border: 1px solid var(--border-color, #444);
+.segmented-button {
+    background: transparent;
+    color: var(--text-muted, #aaa);
+    border: 1px solid transparent;
     border-radius: 6px;
     padding: 8px;
-    width: 100%;
+    flex: 1;
+    /* Distribute evenly */
     cursor: pointer;
-    transition: background 0.2s;
+    transition: all 0.2s;
+    font-weight: 600;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-.sort-direction-toggle .segmented-button:hover {
-    background: var(--bg-hover, #444);
+.segmented-button:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-color, #fff);
+}
+
+.segmented-button.active {
+    background: var(--card-bg, #222);
+    /* Or Accent? Let's use Card BG with Border to pop */
+    background: var(--color-accent, #cba629);
+    /* Active = Coffee */
+    color: #000;
+    /* Contrast text on coffee */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Specific Tweak for Sort Toggle Wrapper if needed */
+.sort-direction-toggle {
+    margin: 0 auto 10px auto;
 }
 
 /* Toggle Chip (Text Only) */
