@@ -77,22 +77,12 @@ export class BriefingUI {
                     <div class="briefing-section">
                         <div class="briefing-hero-row" style="display: flex; gap: 16px; align-items: stretch; flex-wrap: wrap;">
                             
-                            <!-- Portfolio Hero Card -->
-                            <div class="briefing-hero-card clickable-hero" data-context="portfolio" style="border: 1px solid rgba(255, 255, 255, 0.1);">
+                            <!-- Portfolio Hero -->
+                            <div class="briefing-hero-card" id="briefing-portfolio-hero" style="flex: 2; min-width: 250px;">
                                 <div class="hero-label">My Portfolio</div>
-                                <div class="hero-value-large skeleton-text" id="briefing-portfolio-val" style="margin: 10px 0 5px 0;">...</div>
-                                <div class="hero-sub-stat skeleton-text" id="briefing-portfolio-change" style="margin-bottom: 15px;">...</div>
-
-                                <!-- Integrated Market Pulse Trigger -->
-                                <div id="briefing-pulse-trigger" style="display: flex; align-items: center; justify-content: center; padding: 8px 0; border-top: 1px solid rgba(255,255,255,0.1); width: 100%; margin-top: auto; cursor: pointer; color: var(--text-muted); transition: all 0.2s ease;">
-                                    <i class="fas fa-heartbeat" style="color: var(--color-accent); margin-right: 8px; animation: pulseSlow 3s infinite;"></i>
-                                    <span style="font-size: 0.8rem; font-weight: 600; letter-spacing: 0.5px;">MARKET PULSE</span>
-                                    <i class="fas fa-chevron-right" style="font-size: 0.7rem; margin-left: 8px; opacity: 0.5;"></i>
-                                </div>
+                                <div class="hero-main-stat skeleton-text">Computing...</div>
+                                <div class="hero-sub-stat skeleton-text">...</div>
                             </div>
-                            
-                            <!-- Spacer (Since we removed the 2nd card) -->
-                            <!-- Or allow it to take full width? Flexbox will handle it. -->
 
                         </div>
                     </div>
@@ -115,17 +105,14 @@ export class BriefingUI {
                     
                     <!-- 4. Top Market Movers (Global) -->
                     <div class="briefing-section">
-                         <div class="briefing-section-title clickable-header" id="market-pulse-header">Market Pulse Top 3 <i class="fas fa-chevron-right" style="font-size: 0.7em; opacity: 0.5;"></i></div>
-                         <div class="briefing-market-list" id="briefing-market-list"></div>
+                         <div class="briefing-section-title clickable-header" id="market-pulse-header">Market Pulse <i class="fas fa-chevron-right" style="font-size: 0.7em; opacity: 0.5;"></i></div>
+                         <div class="briefing-watchlist-grid" id="briefing-market-grid"></div>
                     </div>
 
                 </div>
 
-                <!-- Pulse Card Container (Cleaned up) -->
-                <div class="briefing-pulse-spacer" style="margin-bottom: 10px;"></div>
-
-                <!-- 5. Footer: Stats -->
-                <div class="briefing-footer-pulse" id="briefing-market-pulse">
+                <!-- 5. Footer: Market Pulse Link (Minimal Design) -->
+                <div class="briefing-footer-pulse minimal" id="briefing-market-pulse">
                     <span class="pulse-item"><i class="fas fa-circle-notch fa-spin"></i> Reading Market...</span>
                 </div>
             </div>
@@ -302,7 +289,7 @@ export class BriefingUI {
             }
         }
 
-        // --- 4. Market Pulse (Footer & Trigger) ---
+        // --- 4. Market Pulse (Footer & Hero Card) ---
         // Proxy using NotificationStore Global data
         const globalMovers = notificationStore.getGlobalAlerts(false) || { movers: { up: [], down: [] }, hilo: { high: [], low: [] } };
         const upCount = (globalMovers.movers?.up || []).length;
@@ -313,86 +300,96 @@ export class BriefingUI {
 
         const totalSignals = upCount + downCount + hiCount + loCount;
 
-        // Sentiment Logic (Optional: Could update the trigger icon color?)
-        let sentimentColor = 'var(--text-muted)';
-        if (upCount > downCount * 1.5) sentimentColor = 'var(--color-positive)';
-        else if (downCount > upCount * 1.5) sentimentColor = 'var(--color-negative)';
+        // Sentiment Logic
+        let sentiment = 'Neutral';
+        let sentimentColor = 'var(--text-muted)'; // Default Gray/Gold
+        let gradientBg = 'linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(203, 166, 41, 0.15) 100%)'; // Default
+        let iconHtml = '<i class="fas fa-balance-scale"></i>';
 
-        // Update Trigger Visuals (Optional)
-        const pulseTrigger = modal.querySelector('#briefing-pulse-trigger');
-        if (pulseTrigger) {
-            // Bind Click (if not already bound by _bindEvents - wait, dynamic content?)
-            // This is static content now in _renderModal, so _bindEvents should handle it.
-            // But we can update the icon color here based on sentiment.
-            const icon = pulseTrigger.querySelector('.fa-heartbeat');
-            if (icon) icon.style.color = sentimentColor;
+        const bullRatio = upCount / (downCount || 1);
 
-            pulseTrigger.onclick = (e) => {
-                e.stopPropagation(); // Prevent Portfolio Card click
-                SnapshotUI.show();
-            };
+        if (upCount > downCount * 1.5) {
+            sentiment = 'Bullish';
+            sentimentColor = 'var(--color-positive)';
+            gradientBg = 'linear-gradient(135deg, rgba(30,30,30,1) 0%, rgba(0, 50, 0, 0.4) 100%)'; // Dark Green fade
+            iconHtml = '<i class="fas fa-arrow-trend-up"></i>';
+        } else if (downCount > upCount * 1.5) {
+            sentiment = 'Bearish';
+            sentimentColor = 'var(--color-negative)';
+            gradientBg = 'linear-gradient(135deg, rgba(30,30,30,1) 0%, rgba(50, 0, 0, 0.4) 100%)'; // Dark Red fade
+            iconHtml = '<i class="fas fa-arrow-trend-down"></i>';
         }
 
-        // --- 2b. Footer Stats Display ---
+        // REMOVED: Hero Card update (User requested minimal footer-only design)
+
+        // --- 2b. Clean Up Pulse Card (Removed per user request) ---
+        // LOGIC FIX v311: We do NOT remove the Partner Card anymore!
+        // We want it there!
+
         const footer = modal.querySelector('#briefing-market-pulse');
         if (footer) {
-            // Keep existing footer logic...
+            // Make Footer Container General Click
             footer.classList.add('clickable-footer');
             footer.title = "View Market Notifications";
 
+            // General Click (Opens Notification Center)
             footer.onclick = (e) => {
                 const targetSec = e.target.closest('[data-section]')?.dataset.section;
+                console.log(`[BriefingUI] Stats Footer click. Target Section: ${targetSec || 'General'}`);
+
+                // Dispatch Event (NotificationUI handles Briefing Hiding)
                 document.dispatchEvent(new CustomEvent(EVENTS.OPEN_NOTIFICATIONS, {
                     detail: {
-                        tab: 'global',
+                        tab: 'global', // Force global tab since these are market stats
                         source: 'briefing',
-                        section: targetSec || null
+                        section: targetSec || null // Deep link or default
                     }
                 }));
             };
 
-            // STRICT STATS DISPLAY (Simplified)
-            let iconHtml = '<i class="fas fa-balance-scale"></i>';
-            let sentiment = 'Neutral';
-            if (upCount > downCount * 1.5) { sentiment = 'Bullish'; iconHtml = '<i class="fas fa-arrow-trend-up"></i>'; }
-            else if (downCount > upCount * 1.5) { sentiment = 'Bearish'; iconHtml = '<i class="fas fa-arrow-trend-down"></i>'; }
-
+            // MINIMAL STATS DISPLAY (No backgrounds/borders per user request)
             footer.innerHTML = `
-                <div class="pulse-stacked-container">
-                    <div class="pulse-title-row">
-                        ${iconHtml} <span style="margin-left:6px">Market ${sentiment}</span>
-                    </div>
-                    <div class="pulse-stats-grid">
-                        <div class="pulse-stat-item hover-highlight" data-section="gainers">
-                            <span class="p-val color-positive">${upCount}</span>
-                            <span class="p-lbl">Gainers</span>
-                        </div>
-                        <div class="pulse-stat-item hover-highlight" data-section="losers">
-                            <span class="p-val color-negative">${downCount}</span>
-                            <span class="p-lbl">Losers</span>
-                        </div>
-                        <div class="pulse-stat-item hover-highlight" data-section="hilo-high">
-                            <span class="p-val color-positive">${hiCount}</span>
-                            <span class="p-lbl">Highs</span>
-                        </div>
-                        <div class="pulse-stat-item hover-highlight" data-section="hilo-low">
-                            <span class="p-val color-negative">${loCount}</span>
-                            <span class="p-lbl">Lows</span>
-                        </div>
-                    </div>
+                <div class="pulse-minimal-row">
+                    <span class="pulse-sentiment" style="color: ${sentimentColor}">${iconHtml} ${sentiment}</span>
+                    <span class="pulse-divider">•</span>
+                    <span class="pulse-stat"><span class="color-positive">${upCount}</span> Gainers</span>
+                    <span class="pulse-divider">•</span>
+                    <span class="pulse-stat"><span class="color-negative">${downCount}</span> Losers</span>
+                    <span class="pulse-divider">•</span>
+                    <span class="pulse-stat"><span class="color-positive">${hiCount}</span> Highs</span>
+                    <span class="pulse-divider">•</span>
+                    <span class="pulse-stat"><span class="color-negative">${loCount}</span> Lows</span>
                 </div>
             `;
         }
 
         // --- 4. Market Pulse Top 3 ---
-        const allGlobal = [...(globalMovers.movers?.up || []), ...(globalMovers.movers?.down || [])];
-        // Sort by magnitude
-        allGlobal.sort((a, b) => Math.abs(b.pctChange || 0) - Math.abs(a.pctChange || 0));
-        const top3Global = allGlobal.slice(0, 3);
+        // MERGE Global (Server) and Local (Watchlist Generated) Alerts
+        const localAlerts = notificationStore.getLocalAlerts().fresh || [];
+        const localMovers = localAlerts.filter(i =>
+            i.intent === 'mover' || i.intent === 'hilo' || i.type === 'up' || i.type === 'down'
+        );
 
-        const marketList = modal.querySelector('#briefing-market-list');
-        if (marketList) {
-            marketList.innerHTML = top3Global.map(item => this._renderCompactRow(item)).join('');
+        const allGlobal = [
+            ...(globalMovers.movers?.up || []),
+            ...(globalMovers.movers?.down || []),
+            ...localMovers
+        ];
+
+        // Deduplicate by Code (prefer Global/Server if duplicate?)
+        const uniqueMap = new Map();
+        allGlobal.forEach(item => {
+            if (item.code) uniqueMap.set(item.code, item);
+        });
+        const uniqueList = Array.from(uniqueMap.values());
+
+        // Sort by magnitude
+        uniqueList.sort((a, b) => Math.abs(b.pctChange || b.pct || 0) - Math.abs(a.pctChange || a.pct || 0));
+        const top3Global = uniqueList.slice(0, 3);
+
+        const marketGrid = modal.querySelector('#briefing-market-grid');
+        if (marketGrid) {
+            marketGrid.innerHTML = top3Global.map(item => this._renderHighlightCard(item)).join('');
 
             // Re-bind Header Click (Dynamic Title Update)
             // We use the ID now for safety.
@@ -407,20 +404,34 @@ export class BriefingUI {
     }
 
     static _renderHighlightCard(item) {
-        const isUp = item.pctChange >= 0;
+        const isUp = (item.pctChange || item.pct || 0) >= 0;
         const colorClass = isUp ? 'color-positive' : 'color-negative';
+        const tintClass = isUp ? 'tint-green' : 'tint-red';
         const arrow = isUp ? '<i class="fas fa-caret-up"></i>' : '<i class="fas fa-caret-down"></i>';
+
+        const pctVal = Math.abs(item.pctChange || item.pct || 0).toFixed(2);
+        const dolVal = Math.abs(item.change || item.dol || 0).toFixed(2); // Ensure we have dollar change
 
         // NAVIGATION PERSISTENCE: Event dispatch opens Sidebar. 
         // We do NOT call _close() here.
         return `
-            <div class="highlight-card" onclick="document.dispatchEvent(new CustomEvent('${EVENTS.ASX_CODE_CLICK}', { detail: { code: '${item.code}' } }))">
-                <div class="highlight-header">
-                    <span class="highlight-code">${item.code}</span>
-                    <span class="highlight-price">${formatCurrency(item.live)}</span>
-                </div>
-                <div class="highlight-change ${colorClass}">
-                    ${arrow} ${Math.abs(item.pctChange).toFixed(2)}%
+            <div class="highlight-card ${tintClass}" onclick="document.dispatchEvent(new CustomEvent('${EVENTS.ASX_CODE_CLICK}', { detail: { code: '${item.code}' } }))">
+                <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                    
+                    <!-- LEFT: Code -->
+                    <div class="highlight-code">${item.code}</div>
+
+                    <!-- RIGHT: Price Stack -->
+                    <div style="display: flex; flex-direction: column; align-items: flex-end;">
+                        <span class="highlight-price">${formatCurrency(item.live || item.price)}</span>
+                        
+                        <!-- Change Row: $ then % -->
+                        <div class="highlight-change ${colorClass}" style="display: flex; gap: 6px; align-items: center; margin-top: 2px;">
+                            <span>${isUp ? '+' : '-'}$${dolVal}</span>
+                            <span>${arrow} ${pctVal}%</span>
+                        </div>
+                    </div>
+
                 </div>
             </div>
         `;
@@ -451,13 +462,13 @@ export class BriefingUI {
         if (closeBtn) closeBtn.addEventListener('click', () => this._close(modal));
         if (overlay) overlay.addEventListener('click', () => this._close(modal));
 
-        const pulseCard = modal.querySelector('#briefing-pulse-card');
-        if (pulseCard) {
-            pulseCard.addEventListener('click', () => {
-                SnapshotUI.show();
-                // Optional: Close Briefing? 
-                // this._close(modal); 
-                // Keeping it open might be better for "Back" flow, or matching current behavior.
+        // REMOVED: Hero Card click binding (card was removed per user request)
+        // Footer click binding is now the only Market Pulse entry point
+        const footer = modal.querySelector('#briefing-market-pulse');
+        if (footer) {
+            footer.addEventListener('click', () => {
+                // User Request: Footer clicks through to NOTIFICATIONS container
+                NotificationUI.show();
             });
         }
 

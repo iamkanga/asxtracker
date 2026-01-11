@@ -64,7 +64,7 @@ export class SnapshotUI {
                             <i class="fas fa-heartbeat" style="color: var(--color-accent); margin-right: 8px;"></i>
                             Market Pulse
                         </h2>
-                        <span style="font-size: 0.7rem; color: var(--text-muted); margin-left: 0; font-weight: normal; margin-top: 2px;">All shares all watch lists daily change</span>
+                        <span style="font-size: 0.8rem; color: var(--text-muted); margin-left: 0; font-weight: 400; margin-top: 2px;">All watchlist codes daily change</span>
                     </div>
                     <button class="${CSS_CLASSES.MODAL_CLOSE_BTN}" title="Close">
                         <i class="fas ${UI_ICONS.CLOSE}"></i>

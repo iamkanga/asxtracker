@@ -265,38 +265,51 @@
 
 /* Segmented Button Component (Global) */
 .segmented-control {
-    background: transparent;
-    border-radius: 0;
-    padding: 0;
+    background: var(--bg-tertiary, #2c2c2c);
+    /* Restore dark background */
+    border-radius: 10px;
+    /* Restore pill shape */
+    padding: 4px;
     display: flex;
-    gap: 4px;
-    /* Tiny gap */
-    box-shadow: none;
+    gap: 0;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
+    /* Restore depth */
+    border: 1px solid var(--border-color);
 }
 
 .segmented-button {
     background: transparent;
     color: var(--text-muted, #aaa);
-    border: none !important;
-    outline: none !important;
-    box-shadow: none !important;
-    border-radius: 6px;
-    padding: 8px;
+    border: none;
+    outline: none;
+    box-shadow: none;
+    border-radius: 8px;
+    /* Inner radius */
+    padding: 6px 12px;
     flex: 1;
-    /* Distribute evenly */
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     font-weight: 600;
     font-size: 0.85rem;
     display: flex;
     align-items: center;
     justify-content: center;
+    position: relative;
 }
 
 .segmented-button:hover {
-    background: transparent;
-    opacity: 0.8;
     color: var(--text-color, #fff);
+    background: rgba(255, 255, 255, 0.05);
+    /* Subtle hover */
+}
+
+.segmented-button.active {
+    background: var(--bg-secondary, #3a3a3a);
+    /* Active pill color */
+    color: var(--color-accent);
+    /* Active Text */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    font-weight: 700;
 }
 
 .segmented-button.active {
@@ -2022,33 +2035,58 @@ input:checked+.slider:before {
 
 .highlight-card {
     background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    /* Base Dark */
     border-radius: 8px;
     padding: 12px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
     cursor: pointer;
-    transition: transform 0.2s ease, background 0.2s ease;
+    transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    /* Slight Border */
+    position: relative;
+    overflow: hidden;
 }
 
 .highlight-card:hover {
-    background: rgba(255, 255, 255, 0.06);
     transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.highlight-card.tint-green {
+    background: linear-gradient(135deg, rgba(0, 30, 0, 0.6) 0%, rgba(20, 20, 20, 0.9) 100%);
+    border: 1px solid rgba(0, 255, 0, 0.15);
+}
+
+.highlight-card.tint-red {
+    background: linear-gradient(135deg, rgba(40, 0, 0, 0.5) 0%, rgba(20, 20, 20, 0.9) 100%);
+    border: 1px solid rgba(255, 0, 0, 0.15);
 }
 
 .highlight-header {
     display: flex;
     justify-content: space-between;
-    align-items: baseline;
+    align-items: center;
     margin-bottom: 6px;
+    font-size: 0.9rem;
+    font-weight: 700;
 }
 
+/* Highlight Card Typography */
 .highlight-code {
-    font-weight: 700;
-    font-size: 1rem;
+    font-size: 1.1rem;
+    font-weight: 800;
+    letter-spacing: 0.5px;
     color: var(--text-color);
 }
 
 .highlight-price {
-    font-size: 0.8rem;
+    font-size: 1.3rem;
+    /* Largest */
+    font-weight: 800;
+    /* Equal weight to code */
+    line-height: 1;
     color: var(--text-muted);
 }
 
@@ -2117,6 +2155,58 @@ input:checked+.slider:before {
     text-transform: uppercase;
     letter-spacing: 0.5px;
     font-weight: 600;
+}
+
+/* Minimal Footer Pulse (No Background/Border) */
+.briefing-footer-pulse.minimal {
+    background: transparent;
+    border: none;
+    border-top: none;
+    padding: 16px 12px;
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+}
+
+.briefing-footer-pulse.minimal:hover {
+    opacity: 0.8;
+}
+
+.briefing-footer-pulse.minimal:active {
+    opacity: 0.6;
+}
+
+/* Minimal Pulse Row Layout */
+.pulse-minimal-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+}
+
+.pulse-info-icon {
+    color: var(--color-accent);
+    font-size: 0.9rem;
+    opacity: 0.7;
+    margin-right: 4px;
+}
+
+.pulse-sentiment {
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.pulse-stat {
+    font-weight: 500;
+}
+
+.pulse-divider {
+    opacity: 0.3;
+    font-size: 0.6rem;
 }
 
 .pulse-item {

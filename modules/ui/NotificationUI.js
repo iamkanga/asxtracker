@@ -9,7 +9,7 @@ import { AppState } from '../state/AppState.js';
 import { CSS_CLASSES, IDS, UI_ICONS, EVENTS, SECTOR_INDUSTRY_MAP } from '../utils/AppConstants.js';
 import { navManager } from '../utils/NavigationManager.js';
 import { formatCurrency, formatPercent } from '../utils/formatters.js';
-import { BriefingUI } from './BriefingUI.js?v=313';
+import { BriefingUI } from './BriefingUI.js?v=327';
 
 export class NotificationUI {
 
@@ -749,75 +749,41 @@ export class NotificationUI {
         chips.appendChild(openAllChip);
 
         // Define Specific Chip Order (Row 1 then Row 2)
-        // Order: Dashboard (above), HiLo Toggle, Gainers, Watcher, Losers
-        const chipOrder = ['hilo-toggle', 'gainers', 'custom', 'losers'];
+        // Standard Notification Categories
+        const chipOrder = ['custom', 'gainers', 'losers', 'hilo-high', 'hilo-low'];
 
         chipOrder.forEach(targetId => {
-            if (targetId === 'hilo-toggle') {
-                // Special Toggle Chip (Segmented Button Style)
-                const isHigh = NotificationUI._hiloMode === 'high';
+            const section = sections.find(s => s.id === targetId);
+            // Render Standard Chip
+            if (section) {
+                const itemCount = section.items.length;
+                const chip = document.createElement('div');
+                chip.className = `${CSS_CLASSES.FILTER_CHIP} chip-${section.color}`;
+                chip.dataset.target = section.id;
 
-                // TARGET State Logic (Matches Sort Picker)
-                // If viewing Highs, we are in "High to Low" mode equivalent (Descending values).
-                // The button must offer the SWITCH to "Low to High" (Ascending/Lows).
+                // Active State Check
+                // (Logic to set active class if this section is currently filtered/expanded)
+                // For V3 Summary Grid, chips are 'jump links' or 'toggles'? 
+                // Currently they act as anchors.
 
-                // ViewRenderer Logic Reference:
-                // if activeIsHighToLow -> Label="Low to High", Icon=Down, Color=Negative
-                // else -> Label="High to Low", Icon=Up, Color=Positive
-
-                const targetLabel = isHigh ? 'Low to High' : 'High to Low';
-                // Icon Logic: Sort Picker uses Down for "Low to High" option (meaning 'Switch to Ascending' where small is top?)
-                // Actually ViewRenderer says: if activeDir (HighToLow) -> Label "Low to High", Icon DOWN.
-                // Let's match that exactly.
-                const targetIcon = isHigh ? 'fa-caret-down' : 'fa-caret-up';
-                const targetColor = isHigh ? CSS_CLASSES.TEXT_NEGATIVE : CSS_CLASSES.TEXT_POSITIVE;
-
-                const wrapper = document.createElement('div');
-                wrapper.className = 'sort-direction-toggle';
-                wrapper.style.width = '100%';
-                wrapper.style.maxWidth = '300px';
-                wrapper.style.margin = '0 auto 10px auto';
-
-                wrapper.innerHTML = `
-                    <div class="${CSS_CLASSES.SEGMENTED_CONTROL}">
-                        <button type="button" class="${CSS_CLASSES.SEGMENTED_BUTTON} w-full" id="hilo-toggle-btn">
-                            <div class="${CSS_CLASSES.W_FULL} ${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.ALIGN_CENTER}" style="justify-content: center;">
-                                <i class="fas ${targetIcon} ${targetColor}" style="margin-right: 15px;"></i>
-                                <span class="${CSS_CLASSES.FONT_BOLD}">${targetLabel}</span>
-                                <i class="fas ${targetIcon} ${targetColor}" style="margin-left: 15px;"></i>
-                            </div>
-                        </button>
-                    </div>
+                chip.innerHTML = `
+                    <span class="chip-badge">${itemCount}</span>
+                    <span class="chip-label">${section.chipLabel}</span>
                 `;
 
-                // Bind Click
-                const btn = wrapper.querySelector('#hilo-toggle-btn');
-                btn.onclick = (e) => {
+                // Quick Filter / Scroll logic
+                chip.onclick = (e) => {
                     e.stopPropagation();
-                    console.log(`[NotificationUI] Toggle Clicked. Old Mode: ${NotificationUI._hiloMode}`);
-                    NotificationUI._hiloMode = isHigh ? 'low' : 'high';
-                    console.log(`[NotificationUI] New Mode: ${NotificationUI._hiloMode} -> Updating List`);
-                    this._updateList(modal);
+                    // Scroll to section or Filter?
+                    // Existing logic (implied): scroll or filter.
+                    // For now, let's assume it filters.
+                    this._filterToSection(modal, section.id);
                 };
 
-                chips.appendChild(wrapper);
-                return;
+                chips.appendChild(chip);
             }
-
-            const sec = sections.find(s => s.id === targetId);
-            if (!sec) return;
-
-            const chip = document.createElement('div');
-            const chipClass = `chip-${sec.color || 'neutral'}`;
-
-            chip.className = `${CSS_CLASSES.FILTER_CHIP} ${chipClass}`;
-            chip.dataset.target = sec.id;
-            chip.innerHTML = `
-                <span class="chip-badge">${sec.items.length}</span>
-                <span class="chip-label">${sec.chipLabel || sec.title}</span>
-            `;
-            chips.appendChild(chip);
         });
+
 
         // 2. Render Accordions
         // FILTER: Only show the Active HiLo section
