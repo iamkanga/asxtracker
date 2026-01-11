@@ -89,7 +89,7 @@ export class SnapshotUI {
                     }
                 </style>
 
-                <div class="snapshot-controls" style="padding: 5px 15px; border-bottom: none !important; display: flex; justify-content: center;">
+                <div class="snapshot-controls" style="padding: 0 15px 2px 15px !important; border-bottom: none !important; display: flex; justify-content: center;">
                     <div class="${CSS_CLASSES.SEGMENTED_CONTROL}" style="width: 100%; max-width: 300px; border: none !important; background: transparent !important; box-shadow: none !important;">
                         <button type="button" class="${CSS_CLASSES.SEGMENTED_BUTTON} w-full" id="snapshot-toggle-btn">
                             <div class="${CSS_CLASSES.W_FULL} ${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.ALIGN_CENTER}" style="justify-content: center;">
@@ -101,7 +101,7 @@ export class SnapshotUI {
                     </div>
                 </div>
 
-                <div class="${CSS_CLASSES.MODAL_BODY} ${CSS_CLASSES.SCROLLABLE_BODY}" id="${CSS_CLASSES.SNAPSHOT_GRID}">
+                <div class="${CSS_CLASSES.MODAL_BODY} ${CSS_CLASSES.SCROLLABLE_BODY}" id="${CSS_CLASSES.SNAPSHOT_GRID}" style="padding-top: 0 !important;">
                     <!-- Grid Items Injected Here -->
                 </div>
                 
