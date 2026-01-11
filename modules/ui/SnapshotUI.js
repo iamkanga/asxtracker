@@ -50,12 +50,17 @@ export class SnapshotUI {
         modal.classList.add(CSS_CLASSES.HIDDEN);
 
         // Restore Daily Briefing if it was covered (Check existence)
+        // Restore Daily Briefing if it was covered (Check existence)
+        // FORCE ID CHECK: 'daily-briefing-modal'
         const briefingModal = document.getElementById(IDS.DAILY_BRIEFING_MODAL);
-        if (briefingModal && briefingModal.classList.contains(CSS_CLASSES.HIDDEN)) {
-            console.log('[SnapshotUI] Restoring Briefing Modal (Found in DOM). Bringing to front.');
+
+        // If we hid it, or even if we just want to ensure it comes back if it exists in DOM
+        if (briefingModal) {
+            console.log('[SnapshotUI] Restoring Briefing Modal.');
             briefingModal.classList.remove(CSS_CLASSES.HIDDEN);
-            briefingModal.style.zIndex = '1001'; // Ensure it pops over standard layers
-            briefingModal.style.display = 'flex'; // Force display just in case
+            briefingModal.style.display = 'flex';
+            briefingModal.style.zIndex = '1001';
+            // Re-append to body to ensure it's on top of any other lingering overlays
             document.body.appendChild(briefingModal);
         }
 
@@ -153,6 +158,10 @@ export class SnapshotUI {
                 if (i.id.includes('2')) i.style.marginLeft = '15px';
             });
         };
+
+        const closeHandler = () => this._close(modal);
+        if (closeBtn) closeBtn.addEventListener('click', closeHandler);
+        if (overlay) overlay.addEventListener('click', closeHandler);
 
         if (toggleBtn) {
             // Init UI
