@@ -211,10 +211,21 @@ export class SnapshotUI {
 
         if (data.length === 0) {
             grid.innerHTML = `
-                <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: var(--text-muted);">
-                    <i class="fas fa-chart-line" style="font-size: 2rem; margin-bottom: 15px; opacity: 0.5;"></i>
-                    <p>No shares found in your portfolio.</p>
-                    <p style="font-size: 0.8rem;">Add stocks to your watchlists to see them here.</p>
+                <div style="grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; text-align: center; background: rgba(255,255,255,0.02); border-radius: 12px; border: 1px dashed var(--border-color); margin: 20px;">
+                    <div style="width: 64px; height: 64px; background: var(--bg-secondary); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+                        <i class="fas fa-plus-circle" style="font-size: 24px; color: var(--color-accent);"></i>
+                    </div>
+                    <h3 style="color: white; font-size: 1.1rem; margin-bottom: 10px; font-weight: 600;">Your Watchlist is Empty</h3>
+                    <p style="color: var(--text-muted); font-size: 0.9rem; max-width: 260px; line-height: 1.5; margin-bottom: 25px;">
+                        Start tracking your wealth by adding shares, cash, or other assets to your watchlists.
+                    </p>
+                    <div style="display: flex; align-items: center; gap: 10px; padding: 12px 20px; background: var(--color-accent); color: white; border-radius: 30px; font-size: 0.85rem; font-weight: 700; cursor: default; box-shadow: 0 4px 12px rgba(var(--color-accent-rgb), 0.3);">
+                        <i class="fas fa-arrow-left"></i>
+                        <span>Use the Sidebar to Add Assets</span>
+                    </div>
+                    <p style="margin-top: 20px; font-size: 0.75rem; color: var(--text-muted); opacity: 0.6;">
+                        Tap the menu icon in the top left to get started.
+                    </p>
                 </div>
             `;
             return;

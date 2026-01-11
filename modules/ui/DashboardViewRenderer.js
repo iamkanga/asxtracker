@@ -4,7 +4,7 @@
  * Displays market indices and commodities in a high-density stacked card view.
  */
 import { formatCurrency, formatPercent } from '../utils/formatters.js';
-import { IDS, CSS_CLASSES, DASHBOARD_SYMBOLS, STORAGE_KEYS, DASHBOARD_LINKS, UI_ICONS } from '../utils/AppConstants.js?v=5';
+import { IDS, CSS_CLASSES, DASHBOARD_SYMBOLS, STORAGE_KEYS, DASHBOARD_LINKS, UI_ICONS } from '../utils/AppConstants.js?v=1029';
 import { AppState } from '../state/AppState.js';
 import { DashboardFilterModal } from './DashboardFilterModal.js';
 import { LinkHelper } from '../utils/LinkHelper.js';

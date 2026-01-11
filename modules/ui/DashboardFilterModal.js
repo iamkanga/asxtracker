@@ -42,23 +42,30 @@ export class DashboardFilterModal {
                     </button>
                 </div>
 
-                <!-- TOOLBAR: Pills - Active Count - Reorder Label -->
-                <div style="padding: 15px 20px; display: flex; align-items: center; justify-content: space-between; background: var(--bg-secondary);">
+                <!-- TOOLBAR: Pills - Compact Count -->
+                <div style="padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; background: var(--bg-secondary);">
                     
                     <!-- All/None Pill -->
-                    <div class="pill-container large-pill" style="width: 120px;">
+                    <div class="pill-container large-pill" style="width: 100px;">
                         <div class="pill-segment" id="btn-select-all">All</div>
                         <div class="pill-segment" id="btn-select-none">None</div>
                     </div>
                     
-                    <!-- Center: Active / Inactive Counts -->
-                    <div id="dashboard-count-display" style="display: flex; gap: 15px; font-weight: 700; font-size: 0.9rem;">
-                        <span style="color: var(--color-positive);" id="count-active">0 Active</span>
-                        <span style="color: var(--color-negative);" id="count-inactive">0 Hidden</span>
+                    <!-- Center: Compact Active Count (X/Y ✓) -->
+                    <div id="dashboard-count-display" style="display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 0.9rem; color: var(--text-color);">
+                        <span id="count-active">0</span>/<span id="count-total">0</span>
+                        <i class="fas fa-check" style="color: var(--color-positive); font-size: 0.8rem;"></i>
                     </div>
+                    
+                    <!-- Spacer for balance -->
+                    <div style="width: 100px;"></div>
+                </div>
 
-                    <!-- Right: Reorder Label -->
-                    <span class="${CSS_CLASSES.TEXT_SM} ${CSS_CLASSES.TEXT_MUTED}" style="font-weight: 700; text-transform: uppercase; font-size: 0.75rem;">Reorder</span>
+                <!-- COLUMN HEADERS -->
+                <div style="display: grid; grid-template-columns: 1fr 100px 60px; padding: 10px 15px 6px; background: var(--bg-secondary); border-bottom: 1px solid var(--border-color);">
+                    <span></span>
+                    <span style="text-align: center; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--color-accent);">Hide</span>
+                    <span style="text-align: center; font-size: 0.65rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted); opacity: 0.7;">Reorder</span>
                 </div>
 
                 <!-- LIST BODY -->
@@ -110,11 +117,11 @@ export class DashboardFilterModal {
                 /* --- ROW STYLES --- */
                 .dashboard-filter-row {
                     display: grid;
-                    grid-template-columns: 1fr 80px 40px;
+                    grid-template-columns: 1fr 100px 60px;
                     align-items: center;
                     padding: 8px 15px;
                     background: var(--bg-card);
-                    min-height: 40px;
+                    min-height: 44px;
                 }
                 .df-name-col {
                     display: flex;
@@ -127,18 +134,18 @@ export class DashboardFilterModal {
                 .df-main-text { font-weight: 700; font-size: 0.95rem; }
                 .df-sub-text { font-size: 0.75rem; color: var(--text-muted); }
                 
-                .df-reorder-col {
+                .df-check-col {
                     display: flex;
                     justify-content: center;
                     align-items: center;
                     justify-self: center;
                 }
                 
-                .df-check-col {
+                .df-reorder-col {
                     display: flex;
-                    justify-content: flex-end;
+                    justify-content: center;
                     align-items: center;
-                    justify-self: end;
+                    justify-self: center;
                 }
                 
                 .df-row-hidden .df-main-text {
@@ -244,31 +251,31 @@ export class DashboardFilterModal {
                     <span class="df-sub-text" style="margin-left: 8px; opacity: 0.5;">${code}</span>
                 </div>
 
-                <div class="df-reorder-col">
-                    <div class="df-reorder-handle" title="Drag to reorder" style="cursor: grab; color: var(--text-muted); opacity: 0.7;">
-                        <i class="fas fa-grip-lines"></i>
-                    </div>
-                </div>
-
                 <div class="df-check-col">
                     <div class="square-radio-wrapper">
                         <input type="checkbox" class="df-check" data-code="${code}" ${isChecked ? 'checked' : ''}>
                         <div class="square-radio-visual"></div>
                     </div>
                 </div>
+
+                <div class="df-reorder-col">
+                    <div class="df-reorder-handle" title="Drag to reorder" style="cursor: grab; color: var(--text-muted); opacity: 0.7;">
+                        <i class="fas fa-grip-lines"></i>
+                    </div>
+                </div>
             `;
             listContainer.appendChild(row);
         });
 
-        // Update Header Count
-        const activeCount = displayOrder.length - hiddenSet.size;
-        const inactiveCount = hiddenSet.size;
+        // Update Header Count (Compact X/Y format)
+        const totalCount = displayOrder.length;
+        const activeCount = totalCount - hiddenSet.size;
 
         const activeEl = modal.querySelector('#count-active');
-        const inactiveEl = modal.querySelector('#count-inactive');
+        const totalEl = modal.querySelector('#count-total');
 
-        if (activeEl) activeEl.textContent = `${activeCount} Active`;
-        if (inactiveEl) inactiveEl.textContent = `${inactiveCount} Hidden`;
+        if (activeEl) activeEl.textContent = `${activeCount}`;
+        if (totalEl) totalEl.textContent = `${totalCount}`;
     }
 
     static _bindEvents(modal) {
@@ -297,15 +304,15 @@ export class DashboardFilterModal {
             localStorage.setItem(STORAGE_KEYS.DASHBOARD_HIDDEN, JSON.stringify(newHidden));
             AppState.triggerSync();
 
-            // Update UI Count
+            // Update UI Count (Compact X/Y format)
             const activeCount = newOrder.length - newHidden.length;
-            const inactiveCount = newHidden.length;
+            const totalCount = newOrder.length;
 
             const activeEl = modal.querySelector('#count-active');
-            const inactiveEl = modal.querySelector('#count-inactive');
+            const totalEl = modal.querySelector('#count-total');
 
-            if (activeEl) activeEl.textContent = `${activeCount} Active`;
-            if (inactiveEl) inactiveEl.textContent = `${inactiveCount} Hidden`;
+            if (activeEl) activeEl.textContent = `${activeCount}`;
+            if (totalEl) totalEl.textContent = `${totalCount}`;
 
             // Update Pill State (Highlight Logic)
             const allBtn = modal.querySelector('#btn-select-all');

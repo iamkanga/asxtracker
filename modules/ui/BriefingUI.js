@@ -12,8 +12,6 @@ import { formatCurrency, formatPercent } from '../utils/formatters.js';
 import { SnapshotUI } from './SnapshotUI.js';
 
 // --- BriefingUI.js ---
-// Version Tracer: v313 (Alert Probe)
-console.log('%c[BriefingUI] Loaded v313', 'background: #000; color: #00ff00');
 
 export class BriefingUI {
 

@@ -31,6 +31,14 @@ export class WatchlistUI {
                 const modal = document.getElementById(IDS.WATCHLIST_PICKER_MODAL);
 
                 // Bind Close Buttons
+                const closeBtn = modal.querySelector(`.${CSS_CLASSES.MODAL_CLOSE_BTN}`);
+                if (closeBtn) {
+                    closeBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        this.closeModal();
+                    });
+                }
+
                 // Allow clicking outside to close
                 modal.addEventListener('click', (e) => {
                     if (e.target === modal || e.target.classList.contains(CSS_CLASSES.MODAL_OVERLAY)) {
@@ -286,14 +294,20 @@ export class WatchlistUI {
                 chevron.style.transform = 'rotate(180deg)';
                 chevron.style.opacity = '1';
             }
-            if (headerRow) headerRow.classList.remove(CSS_CLASSES.HIDDEN);
+            if (headerRow) {
+                headerRow.classList.remove(CSS_CLASSES.HIDDEN);
+                headerRow.classList.add('is-active');
+            }
             modal.querySelector(`.${CSS_CLASSES.MODAL_CONTENT}`).classList.add('edit-mode');
         } else {
             if (chevron) {
                 chevron.style.transform = 'rotate(0deg)';
                 chevron.style.opacity = '0.3';
             }
-            if (headerRow) headerRow.classList.add(CSS_CLASSES.HIDDEN);
+            if (headerRow) {
+                headerRow.classList.add(CSS_CLASSES.HIDDEN);
+                headerRow.classList.remove('is-active');
+            }
             modal.querySelector(`.${CSS_CLASSES.MODAL_CONTENT}`).classList.remove('edit-mode');
         }
 
@@ -352,6 +366,9 @@ export class WatchlistUI {
 
             // Base class
             div.className = CSS_CLASSES.WATCHLIST_ITEM;
+            div.style.touchAction = 'none'; // CRITICAL for Windows Hybrid
+            div.dataset.id = it.id; // CRITICAL for Reordering Persistence
+            if (this.isEditMode) div.classList.add('edit-mode');
             if (isActive && !this.isEditMode) div.classList.add(CSS_CLASSES.SELECTED);
 
             // Inner Content
@@ -361,7 +378,8 @@ export class WatchlistUI {
                 // --- COL 1: HIDE + DELETE (Custom) ---
                 // Visuals: If hidden -> Coffee Color, Strikethrough, Tick Icon
                 const titleStyleClass = isHidden ? 'watchlist-item-hidden' : '';
-                const hiddenTick = isHidden ? `<i class="fas fa-check ${CSS_CLASSES.HIDDEN_TICK_ICON}"></i>` : '';
+                // Changed from HIDDEN_TICK_ICON (green) to text-coffee (explicit theme color)
+                const hiddenTick = isHidden ? `<i class="fas fa-check text-coffee" style="margin-left: 8px;"></i>` : '';
 
                 let actionIcon = '';
                 // Only show trash can for non-system lists
@@ -386,11 +404,10 @@ export class WatchlistUI {
                     </div>
                 `;
 
-                // --- COL 3: REORDER ---
+                // --- COL 3: REORDER (DRAG HANDLE) ---
                 innerHTML += `
-                    <div class="watchlist-col-reorder">
-                        <span class="reorder-btn ${index === 0 ? 'disabled' : ''}" data-dir="up"><i class="fas fa-caret-up"></i></span>
-                        <span class="reorder-btn ${index === displayList.length - 1 ? 'disabled' : ''}" data-dir="down"><i class="fas fa-caret-down"></i></span>
+                    <div class="watchlist-col-reorder reorder-handle" title="Drag to reorder">
+                        <i class="fas fa-grip-lines"></i>
                     </div>
                 `;
 
@@ -409,38 +426,89 @@ export class WatchlistUI {
             }
 
             div.innerHTML = innerHTML;
+            if (this.isEditMode) {
+                div.draggable = true;
+                div.setAttribute('draggable', 'true');
+                div.dataset.draggable = "true";
+                div.dataset.id = it.id;
+                div.dataset.index = index;
+            } else {
+                div.setAttribute('draggable', 'false');
+                div.dataset.draggable = "false";
+            }
 
             // --- EVENT HANDLERS ---
 
+            // Event Listeners removed - using Delegation at Container Level
+            listContainer.appendChild(div);
+        });
+
+        if (this.isEditMode) {
+            // NUCLEAR OPTION: Clone container to strip ALL old listeners (including delegations) and re-bind.
+            const newContainer = listContainer.cloneNode(true);
+            listContainer.parentNode.replaceChild(newContainer, listContainer);
+
+            // Bind Events (Drag + Click Delegation)
+            this._bindDragEvents(newContainer);
+            this._bindDelegatedEvents(newContainer);
+        } else {
+            // In Default Mode, we also want to clean up but maybe not strictly necessary?
+            // Let's keep it simple. Standard logic.
+            // Wait, if we switch modes, we might have old listeners?
+            // Safest is to Nuclear Reset here too, OR just rebind click delegation.
+            // We'll trust the render loop replaces content, but listeners on container persist?
+            // Let's do Nuclear Reset ALWAYS to be safe.
+
+            const newContainer = listContainer.cloneNode(true);
+            listContainer.parentNode.replaceChild(newContainer, listContainer);
+            this._bindDelegatedEvents(newContainer);
+        }
+
+    }
+
+    _bindDelegatedEvents(container) {
+        container.addEventListener('click', (e) => {
+            console.log('[WatchlistUI] Click Detected on:', e.target);
+            const row = e.target.closest(`.${CSS_CLASSES.WATCHLIST_ITEM}`);
+            if (!row) {
+                console.log('[WatchlistUI] Click Ignored: No Row');
+                return;
+            }
+            console.log('[WatchlistUI] Row ID:', row.dataset.id);
+
+            // HANDLE EDIT MODE
             if (this.isEditMode) {
-                // Column 1: Hide Toggle OR Delete
-                div.querySelector('.watchlist-col-hide').addEventListener('click', (e) => {
+                // DELETE BUTTON
+                if (e.target.closest(`.${CSS_CLASSES.DELETE_WATCHLIST_BTN}`)) {
                     e.stopPropagation();
+                    const id = row.dataset.id;
+                    console.log('Requesting Delete Watchlist:', id);
+                    const event = new CustomEvent(EVENTS.REQUEST_DELETE_WATCHLIST, {
+                        detail: { id: id }
+                    });
+                    document.dispatchEvent(event);
+                    return;
+                }
 
-                    // Check if Delete Button was clicked
-                    if (e.target.classList.contains('delete-watchlist-btn')) {
-                        console.log('Requesting Delete Watchlist:', it.id);
-                        const event = new CustomEvent(EVENTS.REQUEST_DELETE_WATCHLIST, {
-                            detail: { id: it.id }
-                        });
-                        document.dispatchEvent(event);
-                        return;
-                    }
-
-                    const stringId = String(it.id);
+                // HIDE TOGGLE (Col 1)
+                if (e.target.closest('.watchlist-col-hide')) {
+                    console.log('[WatchlistUI] Hide Toggle Clicked');
+                    e.stopPropagation();
+                    const stringId = String(row.dataset.id);
                     if (AppState.hiddenWatchlists.has(stringId)) {
                         AppState.hiddenWatchlists.delete(stringId);
                     } else {
                         AppState.hiddenWatchlists.add(stringId);
                     }
                     AppState.saveHiddenWatchlists();
-                    this.renderWatchlistDropdown(); // Re-render immediately
-                });
+                    this.renderWatchlistDropdown();
+                    return;
+                }
 
-                // Column 2: Carousel Toggle
-                div.querySelector('.watchlist-col-carousel').addEventListener('click', (e) => {
+                // CAROUSEL TOGGLE (Col 2)
+                if (e.target.closest('.watchlist-col-carousel')) {
                     e.stopPropagation();
-                    const stringId = String(it.id);
+                    const stringId = String(row.dataset.id);
                     if (AppState.carouselSelections.has(stringId)) {
                         AppState.carouselSelections.delete(stringId);
                     } else {
@@ -448,56 +516,100 @@ export class WatchlistUI {
                     }
                     AppState.saveCarouselSelections();
                     this.renderWatchlistDropdown();
-                });
+                    return;
+                }
+            }
+            // HANDLE DEFAULT MODE
+            else {
+                this._handleSwitch(row.dataset.id);
+                this.closeModal();
+            }
+        });
+    }
 
-                // Column 3: Reorder
-                div.querySelectorAll('.reorder-btn').forEach(btn => {
-                    btn.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        if (btn.classList.contains('disabled')) return;
-                        this._handleWatchlistReorder(displayList, index, btn.dataset.dir);
-                    });
-                });
+    _bindDragEvents(container) {
+        this._draggedWatchlistItem = null;
 
-            } else {
-                // Default Mode: Select Watchlist
-                div.addEventListener('click', () => {
-                    this._handleSwitch(it.id);
-                    this.closeModal();
-                });
+        container.addEventListener('dragstart', (e) => {
+            const row = e.target.closest(`.${CSS_CLASSES.WATCHLIST_ITEM}`);
+            if (row) {
+                this._draggedWatchlistItem = row;
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', String(row.dataset.id));
+
+                // Visual feedback
+                setTimeout(() => row.classList.add(CSS_CLASSES.DRAGGING), 0);
+            }
+        });
+
+        container.addEventListener('dragend', (e) => {
+            const row = e.target.closest(`.${CSS_CLASSES.WATCHLIST_ITEM}`);
+            if (row) {
+                row.classList.remove(CSS_CLASSES.DRAGGING);
+                this._draggedWatchlistItem = null;
+                console.log('[WatchlistUI] Drag End - Saving Order');
+                this._saveWatchlistOrder(container); // Pass container explicitly
+            }
+        });
+
+        container.addEventListener('dragover', (e) => {
+            if (!this._draggedWatchlistItem) return;
+            e.preventDefault();
+            if (e.dataTransfer) {
+                e.dataTransfer.dropEffect = 'move';
             }
 
-            listContainer.appendChild(div);
+            const afterElement = this._getDragAfterElement(container, e.clientY);
+            if (afterElement == null) {
+            } else {
+                container.insertBefore(this._draggedWatchlistItem, afterElement);
+            }
         });
     }
 
-    _handleWatchlistReorder(list, index, direction) {
-        const newIndex = direction === 'up' ? index - 1 : index + 1;
-        if (newIndex < 0 || newIndex >= list.length) return;
+    // _bindPointerDragEvents REMOVED - Reverting to Standard Native Drag
 
-        const itemA = list[index];
-        const itemB = list[newIndex];
 
-        let orderList = [...(AppState.preferences.watchlistOrder || [])];
+    _getDragAfterElement(container, y) {
+        const draggableElements = [...container.querySelectorAll(`.${CSS_CLASSES.WATCHLIST_ITEM}:not(.${CSS_CLASSES.DRAGGING})`)];
 
-        // Populate orderList if missing items
-        list.forEach(item => {
-            if (!orderList.includes(item.id)) orderList.push(item.id);
-        });
+        return draggableElements.reduce((closest, child) => {
+            const box = child.getBoundingClientRect();
+            const offset = y - box.top - box.height / 2;
+            if (offset < 0 && offset > closest.offset) {
+                return { offset: offset, element: child };
+            } else {
+                return closest;
+            }
+        }, { offset: Number.NEGATIVE_INFINITY }).element;
+    }
 
-        const idxA = orderList.indexOf(itemA.id);
-        const idxB = orderList.indexOf(itemB.id);
+    _saveWatchlistOrder(optionalContainer) {
+        if (!this.isEditMode) return;
 
-        if (idxA !== -1 && idxB !== -1) {
-            [orderList[idxA], orderList[idxB]] = [orderList[idxB], orderList[idxA]];
+        // Use passed container if available, otherwise fetch
+        const listContainer = optionalContainer || document.getElementById(IDS.WATCHLIST_PICKER_LIST);
+        if (!listContainer) {
+            console.error('[WatchlistUI] Save Failed: Container not found');
+            return;
         }
 
-        AppState.preferences.watchlistOrder = orderList;
-        localStorage.setItem(STORAGE_KEYS.WATCHLIST_ORDER, JSON.stringify(orderList));
+        const rows = Array.from(listContainer.querySelectorAll(`.${CSS_CLASSES.WATCHLIST_ITEM}`));
+        const newOrder = rows.map(r => r.dataset.id).filter(id => id !== undefined);
 
-        if (AppState.triggerSync) AppState.triggerSync();
+        if (newOrder.length === 0) return;
+
+        AppState.preferences.watchlistOrder = newOrder;
+
+        // Trigger outbound sync via AppController's bound callback
+        if (AppState.onPersistenceUpdate) {
+            AppState.onPersistenceUpdate({ watchlistOrder: newOrder });
+        }
+
+        // Re-render to ensure state consistency (icon/names etc)
         this.renderWatchlistDropdown();
     }
+
 
     _handleSwitch(id) {
         const canonicalId = id === PORTFOLIO_ID ? null : id;

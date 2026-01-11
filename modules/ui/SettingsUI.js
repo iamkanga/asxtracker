@@ -264,7 +264,6 @@ export class SettingsUI {
     }
 
     static _buildStructure(container, modal) {
-        console.log('[SettingsUI] Building Settings Structure (v55)...');
         // Change Modal Title to "Notification Settings"
         const modalTitle = modal.querySelector(`.${CSS_CLASSES.MODAL_TITLE}`);
         if (modalTitle) {

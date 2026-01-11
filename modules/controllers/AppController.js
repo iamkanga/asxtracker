@@ -7,13 +7,13 @@
 import { AuthService } from '../auth/AuthService.js';
 import { DataService } from '../data/DataService.js';
 import { AppService } from '../data/AppService.js';
-import { ViewRenderer } from '../ui/ViewRenderer.js?v=16';
+import { ViewRenderer } from '../ui/ViewRenderer.js?v=1029';
 import { AppState } from '../state/AppState.js';
 import { HeaderLayout } from '../ui/HeaderLayout.js';
 import { processShares, getSingleShareData, getASXCodesStatus } from '../data/DataProcessor.js';
 import { WatchlistUI } from '../ui/WatchlistUI.js';
 import { ShareFormUI } from '../ui/ShareFormUI.js';
-import { SearchDiscoveryUI } from '../ui/SearchDiscoveryUI.js?v=16'; // Added
+import { SearchDiscoveryUI } from '../ui/SearchDiscoveryUI.js?v=1029'; // Added
 import { NotificationUI } from '../ui/NotificationUI.js?v=327';
 import { NotificationStore } from '../state/NotificationStore.js';
 import { BriefingUI } from '../ui/BriefingUI.js?v=327';
@@ -21,7 +21,7 @@ import { SnapshotUI } from '../ui/SnapshotUI.js'; // Added
 import { SettingsUI } from '../ui/SettingsUI.js?v=55';
 import { FavoriteLinksUI } from '../ui/FavoriteLinksUI.js';
 import { notificationStore } from '../state/NotificationStore.js';
-import { DashboardViewRenderer } from '../ui/DashboardViewRenderer.js?v=16';
+import { DashboardViewRenderer } from '../ui/DashboardViewRenderer.js?v=1029';
 import { ModalController } from './ModalController.js';
 import { CashController } from './CashController.js';
 import { SecurityController } from './SecurityController.js';
@@ -29,20 +29,7 @@ import { SecurityUI } from '../ui/SecurityUI.js';
 import { GeneralSettingsUI } from '../ui/GeneralSettingsUI.js';
 import CalculatorUI from '../ui/CalculatorUI.js';
 import { AnalogClock } from '../ui/AnalogClock.js';
-import {
-    ALL_SHARES_ID,
-    CASH_WATCHLIST_ID,
-    DASHBOARD_WATCHLIST_ID,
-    DASHBOARD_SYMBOLS,
-    PORTFOLIO_ID,
-    USER_MESSAGES,
-    STORAGE_KEYS,
-    CSS_CLASSES,
-    IDS,
-    EVENTS,
-    SUMMARY_TYPES,
-    SORT_OPTIONS
-} from '../utils/AppConstants.js?v=10';
+import { IDS, CSS_CLASSES, EVENTS, WATCHLIST_ICON_POOL, ALL_SHARES_ID, CASH_WATCHLIST_ID, DASHBOARD_WATCHLIST_ID, PORTFOLIO_ID, UI_ICONS, USER_MESSAGES, STORAGE_KEYS, WATCHLIST_MODES, SORT_OPTIONS, WATCHLIST_NAMES, DASHBOARD_SYMBOLS, DASHBOARD_LINKS } from '../utils/AppConstants.js?v=1029';
 import { ToastManager } from '../ui/ToastManager.js';
 import { navManager } from '../utils/NavigationManager.js';
 // renderSortSelect removed

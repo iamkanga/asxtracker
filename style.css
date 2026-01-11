@@ -2068,9 +2068,10 @@ h1#dynamicWatchlistTitle.active {
     background-color: var(--bg-color);
 }
 
-/* Remove horizontal lines/separators in dropdown lists */
+/* Separators removed globally for professional look */
 .picker-item,
-.watchlist-item {
+.watchlist-item,
+.sort-picker-row {
     border-bottom: none !important;
     border-top: none !important;
 }
@@ -4087,10 +4088,10 @@ h1.modal-title,
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-bottom: 1px solid #444;
+    border-bottom: none;
+    /* Match Watchlist modal */
     padding-bottom: 15px;
     width: 100%;
-    margin-bottom: 0;
 }
 
 .sort-picker-modal .modal-title {
@@ -4108,6 +4109,11 @@ h1.modal-title,
     align-items: center;
     gap: 10px;
 }
+
+.sort-picker-modal .modal-body {
+    padding: 0 !important;
+}
+
 
 .sort-picker-modal .modal-close-btn {
     margin-left: auto;
@@ -4129,21 +4135,7 @@ h1.modal-title,
     gap: 4px;
 }
 
-.sort-picker-row {
-    display: flex;
-    align-items: center;
-    padding: 12px 16px;
-    border-bottom: 1px solid #333;
-    cursor: pointer;
-    transition: background-color 0.2s;
-    background-color: transparent;
-    color: var(--text-color);
-    font-weight: 500;
-}
-
-.sort-picker-row:last-child {
-    border-bottom: none;
-}
+/* Core Sort Picker Row - PURGED FOR CONSOLIDATION below */
 
 /* Legacy Sort Picker Styles Removed for Consolidation */
 
@@ -4178,36 +4170,7 @@ h1.modal-title,
     gap: 4px;
 }
 
-.watchlist-item {
-    display: flex;
-    align-items: center;
-    padding: 12px 20px;
-    border-bottom: 1px solid #333;
-    cursor: pointer;
-    background-color: transparent;
-    color: #fff;
-    font-weight: 500;
-    transition: background-color 0.2s;
-    border-radius: 0;
-}
-
-.watchlist-item:last-child {
-    border-bottom: none;
-}
-
-.watchlist-item:hover {
-    background-color: #333;
-    color: var(--primary-color);
-}
-
-/* Selected/Active Styling */
-.watchlist-item.active,
-.watchlist-item.selected {
-    font-weight: 700;
-    /* Selected/Active Styling (Coffee Color) */
-    color: var(--color-accent) !important;
-    background-color: transparent;
-}
+/* Core Watchlist Item - PURGED FOR CONSOLIDATION below */
 
 .watchlist-item.selected .watchlist-name-span {
     color: var(--color-accent) !important;
@@ -4838,15 +4801,7 @@ input[type="number"] {
 
 /* --- Sort Picker Customization (Feature Extension) --- */
 
-/* Target the rows specifically to remove block background triggers */
-.sort-picker-row {
-    background-color: transparent !important;
-    transition: color 0.2s ease;
-    border: none !important;
-    border-bottom: none !important;
-    padding: 6px 20px;
-    /* Reduced from 12px for compact feel */
-}
+/* Redundant definition purged */
 
 /* Hover & Active: NO BACKGROUND, TEXT COLOR ONLY */
 .sort-picker-row:hover,
@@ -4867,6 +4822,16 @@ input[type="number"] {
 .sort-picker-row.active .sort-selection-tick {
     color: var(--color-accent) !important;
     stroke: var(--color-accent) !important;
+}
+
+.sort-picker-row.dragging {
+    opacity: 0.5;
+    background: rgba(var(--color-accent-rgb), 0.1) !important;
+    cursor: grabbing;
+}
+
+.sort-reorder-handle:active {
+    cursor: grabbing;
 }
 
 
@@ -7045,9 +7010,7 @@ body.dark-theme .calc-result-card {
     color: var(--color-accent) !important;
 }
 
-.sort-picker-row {
-    transition: background-color 0.2s;
-}
+/* Redundant transition purged */
 
 /* --- Sidebar Auth & Navigation Components --- */
 
@@ -8184,141 +8147,27 @@ body.dark-theme .calc-result-card {
 
 /* --- Sort Picker Refactor (Combined Hide/Reorder) --- */
 .sort-header-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 16px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    margin-bottom: 8px;
-}
-
-.sort-header-title {
-    font-size: 0.8rem;
+    color: var(--color-accent) !important;
+    font-size: 0.75rem;
     font-weight: 700;
-    color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    margin-bottom: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .wire-chevron {
     opacity: 0.3 !important;
 }
 
-.sort-picker-row {
-    cursor: default;
-    /* distinguish areas */
-}
-
-/* Name is Togglable (Hide) */
-.sort-picker-label {
-    cursor: pointer;
-    flex-grow: 1;
-    padding: 5px 0;
-}
-
-/* Icon is Selectable */
-.sort-picker-icon {
-    cursor: pointer;
-    padding: 5px;
-}
-
-/* Hidden State */
-.sort-picker-row.hidden-selected .sort-picker-label,
-.sort-picker-row.hidden-selected .hidden-tick-icon {
-    color: var(--color-accent) !important;
-    text-decoration: none !important;
-    opacity: 1 !important;
-}
-
-.hidden-tick-icon {
-    color: var(--color-accent);
-    margin-left: 10px;
-}
-
-
-/* --- Sort Picker Refactor (Combined Hide/Reorder) --- */
-.sort-header-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 16px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    /* Subtle separator */
-    margin-bottom: 8px;
-}
-
-.sort-header-title {
-    font-size: 0.8rem;
-    font-weight: 700;
-    color: var(--text-muted);
-    /* Standard muted header text */
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.wire-chevron {
-    opacity: 0.3 !important;
-}
-
-.sort-picker-row {
-    cursor: default;
-    /* distinguish areas */
-}
-
-/* Name is Togglable (Hide) */
-.sort-picker-label {
-    cursor: pointer;
-    flex-grow: 1;
-    /* Hit target */
-    padding: 5px 0;
-}
-
-/* Icon is Selectable */
-.sort-picker-icon {
-    cursor: pointer;
-}
-
-/* Hidden State Overrides (Coffee + Tick) */
-.sort-picker-row.hidden-selected .sort-picker-label,
-.sort-picker-row.hidden-selected .sort-picker-icon,
-.sort-picker-row.hidden-selected .hidden-tick-icon {
-    color: var(--color-accent) !important;
-    text-decoration: none !important;
-    /* User didnt ask for strikethrough, just Color + Tick */
-    opacity: 1 !important;
-    /* Ensure color is visible */
-}
-
-.hidden-tick-icon {
-    color: var(--color-accent);
-    margin-left: 10px;
-}
-
-.sort-reorder-controls {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-}
-
-
-/* --- SORT PICKER (Combined Mode) --- */
+/* --- Consolidated Sort Picker Grid --- */
 .sort-picker-list {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-}
-
-.sort-picker-row {
-    display: grid !important;
-    grid-template-columns: minmax(0, 1fr) auto auto auto;
-    align-items: center;
-    padding: 8px 16px;
-    /* Reduced vertical padding */
-    background: var(--card-bg);
-    border: 1px solid var(--border-color);
-    border-radius: 0px;
-    /* Modern square look */
-    gap: 12px;
+    padding-top: 10px;
+    /* Match watchlist-picker-list */
+    gap: 4px;
+    /* Match watchlist-picker-list (was 8px) */
 }
 
 .sort-picker-label-group {
@@ -8409,113 +8258,161 @@ body.dark-theme .calc-result-card {
     border-color: transparent;
 }
 
-/* --- Updated Sort Picker Layout (Grid) --- */
+/* 
+   #################################################################
+   # MODAL LIST ITEM ARCHITECTURE (Definitive Spacing & Grid)
+   #################################################################
+*/
 
-#sortEditHeaders,
-.sort-picker-row {
-    display: grid;
-    /* Match Watchlist Picker exactly: 1fr 150px 1fr */
-    grid-template-columns: 1.5fr 80px 1fr !important;
+/* 1. Unified Base Rows (Normal & Edit) */
+.sort-picker-row,
+.watchlist-item,
+.sort-edit-grid-layout,
+.watchlist-edit-headers {
+    display: flex !important;
+    /* Default to flex */
     align-items: center !important;
-    padding: 2px 20px !important;
-    /* Extremely high density */
-    box-sizing: border-box;
-    gap: 0 !important;
+    padding: 10px 20px !important;
+    /* SINGLE SOURCE OF TRUTH */
+    height: 48px !important;
+    /* Professional touch target */
+    width: 100% !important;
+    box-sizing: border-box !important;
+    background-color: transparent !important;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    cursor: pointer;
     border: none !important;
-    border-bottom: none !important;
+    position: relative;
+    justify-content: space-between !important;
+    /* Restore normal mode spacing */
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
 }
 
-/* Sync Header Columns */
-#sortEditHeaders .col-hide,
-.sort-picker-row .sort-picker-row-content {
-    grid-column: 1;
+.sort-picker-row-content {
     display: flex;
-    align-items: baseline;
-    /* Perfect text/icon parity */
-    justify-self: start;
-    min-width: 0;
-    /* Allow truncation in grid */
+    align-items: center;
+    width: 100%;
 }
 
-#sortEditHeaders .col-spacer,
-.sort-picker-row .sort-spacer {
-    grid-column: 2;
+.sort-picker-icon {
+    margin-right: 8px;
+    /* Match Watchlist */
+    display: flex;
+    align-items: center;
 }
 
-#sortEditHeaders .col-reorder,
-.sort-picker-row .sort-selection-tick,
-.sort-picker-row .sort-reorder-controls {
+.sort-icon-slot {
+    width: 20px;
+    /* Match Watchlist */
+    display: flex;
+    justify-content: center;
+    text-align: center;
+}
+
+.reorder-handle {
+    cursor: grab;
+    color: var(--text-muted);
+    padding: 0 10px;
+    pointer-events: auto !important;
+    display: flex;
+    align-items: center;
+    height: 100%;
+}
+
+.reorder-handle:active {
+    cursor: grabbing;
+}
+
+.sort-picker-label {
+    flex: 1;
+    /* Match Watchlist */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* FIX: Ensure .hidden class takes precedence for header rows */
+.sort-edit-grid-layout.hidden,
+.watchlist-edit-headers.hidden {
+    display: none !important;
+}
+
+/* 2. Definitive Edit Mode Grid Override */
+.sort-edit-grid-layout.is-active,
+.watchlist-edit-headers.is-active,
+.watchlist-item.edit-mode,
+.sort-picker-row.sort-edit-grid-layout.is-active {
+    display: grid !important;
+    grid-template-columns: 2fr 80px 80px !important;
+    /* Fixed tight controls */
+    column-gap: 12px !important;
+}
+
+/* 3. Reorder Handles & Interactive Areas */
+.reorder-handle {
     grid-column: 3 !important;
     justify-self: end !important;
     display: flex !important;
     justify-content: flex-end !important;
     align-items: center !important;
-    text-align: right !important;
+    width: 60px !important;
+    height: 100% !important;
+    min-height: 44px !important;
+    cursor: grab !important;
+    pointer-events: auto !important;
 }
 
-/* Row Height & Separator */
-.sort-picker-row {
-    height: 40px;
-    /* Force consistent height */
-    padding-top: 0 !important;
-    padding-bottom: 0 !important;
+.reorder-handle:active {
+    cursor: grabbing !important;
 }
 
+/* State highlights */
+.sort-picker-row:hover,
+.watchlist-item:hover {
+    background-color: rgba(255, 255, 255, 0.05) !important;
+}
 
-/* Header Specifics */
-#watchlistEditHeaders {
+.sort-picker-row.active,
+.watchlist-item.selected,
+.watchlist-item.active {
     color: var(--color-accent) !important;
-    display: grid;
-    grid-template-columns: 1fr 150px 1fr;
-    padding: 2px 20px;
+    font-weight: 600 !important;
 }
 
-.sort-header-row {
-    color: var(--color-accent) !important;
-    /* Unified Coffee Header */
-    font-size: 0.75rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    border: none !important;
-    border-bottom: none !important;
-    margin-bottom: 4px;
-    padding-bottom: 0 !important;
+/* Headers alignment syncing */
+.sort-edit-grid-layout .col-hide,
+.watchlist-edit-headers .col-hide,
+.watchlist-col-hide {
+    justify-self: start !important;
     display: flex;
-    align-items: baseline;
+    align-items: center;
+    width: 100%;
+    /* Ensure content takes full width of grid cell */
 }
 
-
-/* Selected/Active Styling (Coffee Color ONLY) */
-.sort-picker-row.active .sort-picker-label {
-    color: var(--color-accent) !important;
-    text-decoration: none !important;
+.sort-edit-grid-layout .col-global,
+.watchlist-edit-headers .col-carousel,
+.watchlist-col-carousel {
+    justify-self: center !important;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-/* Hidden State Overrides (Coffee + Strikethrough) */
-.sort-item-hidden .sort-picker-label {
-    color: var(--color-accent) !important;
-    text-decoration: line-through !important;
-    opacity: 0.7;
+.sort-edit-grid-layout .col-reorder,
+.watchlist-edit-headers .col-reorder,
+.watchlist-col-reorder {
+    justify-self: end !important;
+    text-align: right;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
 }
 
-.sort-item-hidden .sort-picker-icon,
-.sort-item-hidden .hidden-tick-icon {
-    color: var(--color-accent) !important;
-}
-
-.sort-picker-row.active .sort-picker-icon,
-.sort-picker-row.active .sort-asx-icon,
-.sort-picker-row.active .sort-selection-tick,
-.sort-picker-row.active .sort-selection-tick i {
-    color: var(--color-accent) !important;
-    stroke: var(--color-accent) !important;
-}
-
-.sort-picker-row.active {
-    background-color: transparent !important;
-    font-weight: 700;
-}
+/* Handled in core architecture section */
 
 /* Remove Border/Background from Sort Toggle */
 #sortToggleBtn,
@@ -8535,6 +8432,11 @@ body.dark-theme .calc-result-card {
     padding-bottom: 0 !important;
 }
 
+.sort-direction-toggle.hidden {
+    display: none !important;
+}
+
+
 
 
 /* Wire Chevron */
@@ -8549,11 +8451,17 @@ body.dark-theme .calc-result-card {
 .watchlist-edit-headers {
     display: flex;
     justify-content: space-between;
-    padding: 10px 20px 5px 20px;
     font-size: 0.85em;
     color: var(--color-accent);
     font-weight: 500;
 }
+
+.sort-header-row {
+    font-size: 0.85em;
+    color: var(--color-accent);
+    font-weight: 500;
+}
+
 
 .watchlist-item-hidden .watchlist-name-span {
     color: var(--color-accent) !important;
@@ -8622,72 +8530,7 @@ body.dark-theme .calc-result-card {
 }
 
 
-/* --- Updated Watchlist Picker Layout (Grid) --- */
-
-.watchlist-item {
-    display: grid;
-    /* Default: Maximum space for name, empty carousel col, fixed action col */
-    grid-template-columns: 1fr 0 40px;
-    align-items: center;
-    padding-left: 20px;
-    padding-right: 20px;
-    box-sizing: border-box;
-}
-
-/* Edit Mode: Switch back to 3-column aligned grid */
-.edit-mode .watchlist-item,
-.watchlist-edit-headers {
-    display: grid;
-    grid-template-columns: 1.5fr 80px 1fr !important;
-    align-items: center;
-    padding-left: 20px;
-    padding-right: 20px;
-    box-sizing: border-box;
-}
-
-/* Row Layout Overrides */
-.watchlist-item {
-    padding-top: 12px;
-    padding-bottom: 12px;
-}
-
-/* Column 1: Hide */
-.watchlist-edit-headers .col-hide,
-.watchlist-item .watchlist-col-hide {
-    display: flex;
-    align-items: center;
-    overflow: hidden;
-    grid-column: 1;
-    width: 100%;
-    justify-self: start;
-}
-
-/* Column 2: Carousel */
-.watchlist-edit-headers .col-carousel,
-.watchlist-item .watchlist-col-carousel {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    grid-column: 2;
-    text-align: center;
-    width: 100%;
-    margin: 0;
-    justify-self: center;
-}
-
-/* Column 3: Reorder */
-.watchlist-edit-headers .col-reorder,
-.watchlist-item .watchlist-col-reorder {
-    display: flex;
-    justify-content: flex-end;
-    /* Align buttons to the right edge */
-    align-items: center;
-    gap: 15px;
-    /* Increased gap between up/down arrows */
-    grid-column: 3;
-    width: 100%;
-    justify-self: end;
-}
+/* Redundant blocks purged */
 
 /* --- Improved Square Radio Button --- */
 /* User Req: Outline, Space, Fill. */
@@ -8730,4 +8573,69 @@ body.dark-theme .calc-result-card {
     .desktop-only {
         display: none !important;
     }
+}
+
+/* --- FIX: Sort Order Drag & Drop (v1023) --- */
+.sort-picker-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-color);
+    background-color: var(--bg-card);
+    user-select: none;
+    /* Critical for Drag */
+    position: relative;
+    touch-action: pan-y;
+    /* Allow vertical scroll, disable horizontal (native drag usually works with this or auto) */
+}
+
+.sort-picker-row.dragging {
+    opacity: 0.5;
+    background-color: var(--bg-tertiary);
+    border: 2px dashed var(--color-accent);
+}
+
+.reorder-handle,
+.sort-reorder-handle {
+    cursor: grab;
+    padding: 10px;
+    color: var(--text-muted);
+    z-index: 10;
+    /* Fix Overlay Issue */
+    position: relative;
+    touch-action: none;
+    /* Handle itself should capture touch for drag */
+}
+
+.reorder-handle:active {
+    cursor: grabbing;
+    color: var(--color-accent);
+}
+
+/* Ensure List container doesn't collapse */
+#sort-picker-list {
+    display: flex;
+    flex-direction: column;
+}
+
+/* --- Hidden Sort Option Styling (Edit Mode) --- */
+.sort-picker-row.sort-item-hidden .sort-picker-label,
+.sort-picker-row.sort-item-hidden .sort-picker-icon,
+.sort-picker-row.sort-item-hidden .sort-picker-icon i,
+.sort-picker-row.sort-item-hidden .sort-asx-icon {
+    color: var(--color-accent) !important;
+    text-decoration: line-through;
+    opacity: 0.8;
+}
+
+/* Coffee tick indicator for hidden items */
+.sort-picker-row.sort-item-hidden .sort-picker-row-content::after {
+    content: '\f00c';
+    /* FontAwesome check */
+    font-family: 'Font Awesome 5 Free';
+    font-weight: 900;
+    color: var(--color-accent);
+    margin-left: 8px;
+    font-size: 0.85em;
 }

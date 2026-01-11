@@ -7,7 +7,7 @@
 
 import { formatCurrency, formatPercent, formatFriendlyDate } from '../utils/formatters.js';
 import { AppState } from '../state/AppState.js';
-import { SORT_OPTIONS, UI_ICONS, USER_MESSAGES, RESEARCH_LINKS_TEMPLATE, CSS_CLASSES, IDS, EVENTS, SUMMARY_TYPES, STORAGE_KEYS, PORTFOLIO_ID, KANGAROO_ICON_SRC, VIEW_MODES, FALLBACK_SECTOR_MAP } from '../utils/AppConstants.js?v=10';
+import { SORT_OPTIONS, UI_ICONS, USER_MESSAGES, RESEARCH_LINKS_TEMPLATE, CSS_CLASSES, IDS, EVENTS, SUMMARY_TYPES, STORAGE_KEYS, PORTFOLIO_ID, KANGAROO_ICON_SRC, VIEW_MODES, FALLBACK_SECTOR_MAP } from '../utils/AppConstants.js?v=1029';
 import { SnapshotUI } from './SnapshotUI.js';
 import { LinkHelper } from '../utils/LinkHelper.js';
 
@@ -22,6 +22,10 @@ export class ViewRenderer {
         this.container = document.getElementById(IDS.CONTENT_CONTAINER);
         this.sortReorderMode = false;
         this.viewControls = document.getElementById(IDS.VIEW_CONTROLS);
+
+        // Drag state flags (for Sort Picker modal)
+        this._isDraggingOrCoolingDown = false;
+        this._draggedSortItem = null;
     }
 
     /**
@@ -29,7 +33,6 @@ export class ViewRenderer {
      * @param {Array} data - Array of share/asset objects.
      */
     render(data, summaryMetrics = null) {
-        console.log(`[DEBUG] ViewRenderer.render: Received ${data?.length || 0} items. ViewMode: ${AppState.viewMode}`);
         const viewMode = AppState.viewMode;
         const watchlistType = AppState.watchlist.type;
         const mode = viewMode.toUpperCase();
@@ -46,12 +49,10 @@ export class ViewRenderer {
         }
         // 1b. DOM Stability Guard
         if (!this.container || !document.body.contains(this.container)) {
-            console.warn('[DEBUG] ViewRenderer: Container lost or disconnected. Re-searching.');
             this.container = document.getElementById(IDS.CONTENT_CONTAINER);
         }
 
         if (!this.container) {
-            console.error('[DEBUG] ViewRenderer: CRITICAL - container not found in DOM!');
             return;
         }
 
@@ -119,7 +120,6 @@ export class ViewRenderer {
     }
 
     renderTable(data) {
-        console.log(`[DEBUG] ViewRenderer.renderTable: Rendering ${data.length} items. Portfolio View: ${AppState.watchlist.id === PORTFOLIO_ID || AppState.isPortfolioVisible}`);
         if (!data || data.length === 0) {
             this.container.innerHTML = `<div class="${CSS_CLASSES.EMPTY_STATE}">No shares in this watchlist.</div>`;
             return;
@@ -138,7 +138,6 @@ export class ViewRenderer {
             const html = data.map(item => this.createCardHTML(item, 'portfolio')).join('');
             gridContainer.innerHTML = html;
             this.container.appendChild(gridContainer);
-            console.log(`[DEBUG] ViewRenderer: Injected Portfolio Grid. HTML Length: ${html.length}`);
         } else {
             // 2. Standard Table (Desktop View)
             const table = document.createElement('table');
@@ -171,7 +170,6 @@ export class ViewRenderer {
             `;
             table.innerHTML = tableHtml;
             this.container.appendChild(table);
-            console.log(`[DEBUG] ViewRenderer: Injected Table. HTML Length: ${tableHtml.length}`);
 
             // 3. Render Fallback Cards (Mobile Card Design for non-portfolio watchlists)
             // ... (keep fallback container logic)
@@ -224,7 +222,7 @@ export class ViewRenderer {
 
 
     createRowHTML(item, isGenericWatchlist = false) {
-        if (!item.code) console.warn('[DEBUG] createRowHTML: item has no code!', item);
+        if (!item.code) console.warn('[ViewRenderer] createRowHTML: item has no code!', item);
         const price = item.currentPrice || 0;
         const changePercent = item.dayChangePercent || 0;
 
@@ -304,7 +302,7 @@ export class ViewRenderer {
     }
 
     createCardHTML(item, type = PORTFOLIO_ID) {
-        if (!item.code) console.warn('[DEBUG] createCardHTML: item has no code!', item);
+        if (!item.code) console.warn('[ViewRenderer] createCardHTML: item has no code!', item);
         const price = item.currentPrice || 0;
         const changePercent = item.dayChangePercent || 0;
 
@@ -1162,6 +1160,11 @@ export class ViewRenderer {
         // Capture previous pendingDir ONLY if it's an internal re-render (same onSelect & same watchlist)
         let pendingDir = (!isFreshOpen && !isDifferentWatchlist) ? this._sortContext?.pendingDir : null;
 
+        // CRITICAL: Reset edit mode on fresh open (prevents stale title "Hide / Global / Reorder")
+        if (isFreshOpen || isDifferentWatchlist) {
+            this.isSortEditMode = false;
+        }
+
         // STRICT RULE: If Fresh Open or Watchlist Switch, force reset to Current Sort (Truth)
         // The UI rendering logic will then automatically offer the OPPOSITE of this value.
         if (!pendingDir) {
@@ -1195,12 +1198,20 @@ export class ViewRenderer {
         if (watchlistId === 'CASH') type = 'CASH';
 
         // Resolve Global Sort Order
-        let options = [...(SORT_OPTIONS[type] || SORT_OPTIONS.STOCK)];
-        const savedOrder = AppState.preferences.sortOptionOrder?.[type];
+        let optionsSource = SORT_OPTIONS.STOCK;
+        if (type === 'PORTFOLIO') optionsSource = SORT_OPTIONS.PORTFOLIO;
+        if (type === 'CASH') optionsSource = SORT_OPTIONS.CASH;
+
+        let displayOptions = [...optionsSource];
+
+        // Apply Saved Sort Order
+        // FIX: Keys must match format used in _saveSortOptionOrder: "field-direction" (e.g., "code-asc")
+        const savedOrder = AppState.preferences.sortOptionOrder ? AppState.preferences.sortOptionOrder[type] : null;
         if (savedOrder && Array.isArray(savedOrder)) {
-            options.sort((a, b) => {
-                const keyA = `${a.field}-${a.direction}`;
-                const keyB = `${b.field}-${b.direction}`;
+            displayOptions.sort((a, b) => {
+                // Match the key format used in save: field-direction
+                const keyA = `${a.field}-${a.direction || 'asc'}`;
+                const keyB = `${b.field}-${b.direction || 'asc'}`;
                 const idxA = savedOrder.indexOf(keyA);
                 const idxB = savedOrder.indexOf(keyB);
                 if (idxA === -1 && idxB === -1) return 0;
@@ -1214,21 +1225,19 @@ export class ViewRenderer {
         if (!AppState.hiddenSortOptions[type]) AppState.hiddenSortOptions[type] = new Set();
         const hiddenSet = AppState.hiddenSortOptions[type];
 
-        // Filter Options for Display - SHOW EVERYTHING IN COMBINED MODE
-        let displayOptions = options;
-        // if (this.sortPickerMode !== 'hide') { ... } // Removed Logic
-
-        // 3a. Unified Sort Logic (Deduplicate Fields & Toggle)
-        // Deduplicate Fields (Show one row per field)
+        // 3a. Unified Sort Logic (Deduplicate Fields)
         const seen = new Set();
-        displayOptions = displayOptions.filter(opt => {
+        const filteredOptions = displayOptions.filter(opt => {
             if (seen.has(opt.field)) return false;
             seen.add(opt.field);
             return true;
         });
 
         // 4. Update UI Content (Incremental DOM Update)
-        this._updateSortPickerUI(modal, displayOptions, hiddenSet, currentSort, type);
+        this._updateSortPickerUI(modal, filteredOptions, hiddenSet, currentSort, type);
+
+        // NOTE: Drag events are now bound inside _updateSortPickerUI after the container is cloned.
+        // Removed redundant binding attempt here that was failing due to dragBound guard issues.
 
         // 5. Ensure Visibility
         requestAnimationFrame(() => {
@@ -1250,18 +1259,18 @@ export class ViewRenderer {
      * Singleton Modal Factory with Delegated Listeners
      */
     _getOrCreateSortModal() {
-        let modal = document.getElementById(IDS.SORT_PICKER_MODAL);
+        let modal = document.getElementById('sort-picker-modal');
         if (modal) return modal;
 
         modal = document.createElement('div');
-        modal.id = IDS.SORT_PICKER_MODAL;
+        modal.id = 'sort-picker-modal';
         modal.className = `${CSS_CLASSES.MODAL} ${CSS_CLASSES.HIDDEN}`;
 
         modal.innerHTML = `
             <div class="${CSS_CLASSES.MODAL_OVERLAY}"></div>
-            <div class="${CSS_CLASSES.MODAL_CONTENT}">
+            <div class="${CSS_CLASSES.MODAL_CONTENT} ${CSS_CLASSES.SORT_PICKER_MODAL}">
                 <div class="${CSS_CLASSES.MODAL_HEADER}">
-                    <h2 id="${IDS.SORT_MODAL_TITLE}" class="${CSS_CLASSES.MODAL_TITLE} ${CSS_CLASSES.CLICKABLE}">
+                    <h2 id="sort-modal-title" class="${CSS_CLASSES.MODAL_TITLE} ${CSS_CLASSES.CLICKABLE}">
                         Select Sort Order 
                         <svg class="modal-title-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.3; margin-left: 8px; transition: transform 0.3s ease;">
                             <polyline points="6 9 12 15 18 9"></polyline>
@@ -1273,94 +1282,24 @@ export class ViewRenderer {
                 </div>
 
                 <!-- Sort Direction Toggle (Unified) -->
-                <div id="${IDS.SORT_DIRECTION_TOGGLE}" class="${CSS_CLASSES.SORT_TAGGLE_CONTAINER} sort-direction-toggle">
+                <div id="sort-direction-toggle" class="${CSS_CLASSES.SORT_TAGGLE_CONTAINER} sort-direction-toggle">
                     <div class="${CSS_CLASSES.SEGMENTED_CONTROL}">
-                        <button id="${IDS.SORT_TOGGLE_BTN}" class="${CSS_CLASSES.SEGMENTED_BUTTON} w-full">
+                        <button id="sort-toggle-btn" class="${CSS_CLASSES.SEGMENTED_BUTTON} w-full">
                             <!-- Content populated dynamically -->
                         </button>
                     </div>
                 </div>
 
                 <!-- Combined Reorder/Hide Header -->
-                <!-- Grid Columns: 1fr (Hide) | 60px (Global) | 1fr (Reorder) -->
-                <div id="sortEditHeaders" class="sort-header-row ${CSS_CLASSES.HIDDEN}" style="display: grid; grid-template-columns: 1fr 60px 1fr; align-items: center; padding: 0 16px;">
-                    <span class="col-hide" style="justify-self: start;">Hide</span>
-                    <span class="col-global" style="justify-self: center;">Global</span>
-                    <span class="col-reorder" style="justify-self: end;">Reorder</span>
+                <!-- Grid Columns: Equal 1fr width for perfect alignment -->
+                <div id="sortEditHeaders" class="sort-header-row sort-edit-grid-layout ${CSS_CLASSES.HIDDEN}">
+                    <div class="col-hide">Hide</div>
+                    <div class="col-global">Global</div>
+                    <div class="col-reorder">Reorder</div>
                 </div>
 
-                <div class="${CSS_CLASSES.SORT_PICKER_LIST}" id="${IDS.SORT_PICKER_LIST}"></div>
+                <div class="sort-picker-list" id="sort-picker-list"></div>
             </div>
-            <style>
-                /* Injected Styles for Global/Hide Controls */
-                .sort-global-access-btn {
-                    background: transparent;
-                    border: 1px solid var(--border-color);
-                    border-radius: 4px; /* Standard pill feel */
-                    color: var(--text-muted);
-                    font-size: 0.75rem;
-                    padding: 2px 8px; /* Tighter padding for header */
-                    cursor: pointer;
-                    display: flex;
-                    align-items: center;
-                    gap: 6px;
-                    transition: all 0.2s;
-                }
-                .sort-global-access-btn:hover {
-                    background: var(--bg-tertiary);
-                    color: var(--color-accent);
-                    border-color: var(--color-accent);
-                }
-
-                /* Square Radio/Checkbox Styles (Reused from SettingsUI) */
-                .square-radio-wrapper {
-                    position: relative;
-                    width: 18px;
-                    height: 18px;
-                    cursor: pointer;
-                    flex-shrink: 0;
-                }
-                .square-radio-wrapper input {
-                    opacity: 0;
-                    position: absolute;
-                    width: 100%;
-                    height: 100%;
-                    cursor: pointer;
-                    z-index: 2;
-                    margin: 0;
-                }
-                .square-radio-visual {
-                    position: absolute;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                    border: 2px solid var(--text-muted) !important; /* Heavier Outline ALWAYS */
-                    background: transparent;
-                    border-radius: 0px; /* SHARP SQUARE - User Request "not rounded" */
-                    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                }
-                /* Active State: Border color matches accent, NO background fill (Gap preserved) */
-                .square-radio-wrapper input:checked + .square-radio-visual {
-                    border-color: var(--color-accent) !important;
-                    background-color: transparent; 
-                }
-                /* Inner Square Fill */
-                .square-radio-visual::after {
-                    content: ''; /* Solid Square */
-                    width: 10px;
-                    height: 10px;
-                    background: var(--color-accent);
-                    border-radius: 0px; /* Sharp inner square too */
-                    transform: scale(0);
-                    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-                }
-                .square-radio-wrapper input:checked + .square-radio-visual::after {
-                    transform: scale(1);
-                }
             </style>
         `;
         document.body.appendChild(modal);
@@ -1430,227 +1369,288 @@ export class ViewRenderer {
         modal.querySelector(`.${CSS_CLASSES.MODAL_CLOSE_BTN}`).addEventListener('click', closeHandler);
         modal.querySelector(`.${CSS_CLASSES.MODAL_OVERLAY}`).addEventListener('click', closeHandler);
 
+        // Bind Drag Events (MOVED TO TOGGLE LOGIC)
+
         // Root Delegation (Fixes Stale Context)
-        modal.addEventListener('click', (e) => {
-            const context = this._sortContext || {};
+        if (!modal.dataset.clickBound) {
+            modal.dataset.clickBound = "true";
+            modal.addEventListener('click', (e) => {
+                const context = this._sortContext || {};
 
-            // DIAGNOSTIC CORE: Log details of Sort Picker clicks
-            const targetId = e.target.id;
-            const closestBtn = e.target.closest(`.${CSS_CLASSES.SEGMENTED_BUTTON}`);
-            console.log('[ViewRenderer] Sort Picker Interaction:', {
-                targetId,
-                closestBtnId: closestBtn ? closestBtn.id : 'none',
-                modeReorderId: IDS.SORT_MODE_REORDER,
-                modeHideId: IDS.SORT_MODE_HIDE,
-                currentPickerMode: this.sortPickerMode
-            });
+                // DIAGNOSTIC CORE: Log details of Sort Picker Interaction
+                const targetId = e.target.id;
 
-
-            // Mode Toggle via Title (RESTORED)
-            if (e.target.closest(`#${IDS.SORT_MODAL_TITLE}`)) {
-                // TERMINATION RULE: Switching to Reorder Mode cancels Global Sort
-                if (context.onGlobalCancel) {
-                    context.onGlobalCancel();
+                // --- DRAG COOLDOWN GUARD (TOP LEVEL) ---
+                // If we are dragging or just finished, BLOCK ALL CLICKS immediately.
+                if (this._isDraggingOrCoolingDown) {
+                    console.warn('[ViewRenderer] Click BLOCKED by Drag Cooldown');
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.stopImmediatePropagation();
+                    return;
                 }
 
-                this.isSortEditMode = !this.isSortEditMode;
-                // Default toggle logic:
-                if (this.isSortEditMode) {
-                    this.sortPickerMode = 'reorder';
-                } else {
-                    this.sortPickerMode = 'default';
-                }
-
-
-                // Update Title Text & Style
-                const title = modal.querySelector(`#${IDS.SORT_MODAL_TITLE}`);
-                if (title) {
-                    if (this.isSortEditMode) {
-                        title.firstChild.textContent = 'Hide / Reorder ';
-                        title.classList.add(CSS_CLASSES.TEXT_COFFEE);
-                    } else {
-                        title.firstChild.textContent = 'Select Sort Order ';
-                        title.classList.remove(CSS_CLASSES.TEXT_COFFEE);
+                // Mode Toggle via Title (RESTORED)
+                if (e.target.closest(`#${IDS.SORT_MODAL_TITLE}`)) {
+                    // TERMINATION RULE: Switching to Reorder Mode cancels Global Sort
+                    if (context.onGlobalCancel) {
+                        context.onGlobalCancel();
                     }
-                }
 
-                this.renderSortPickerModal(context.watchlistId, context.currentSort, context.onSelect, context.onHide);
-                return;
-            }
-
-            // Mode Buttons (REMOVED)
-
-            // Direction Toggles (Unified)
-            const toggleBtn = e.target.closest(`#${IDS.SORT_TOGGLE_BTN}`);
-            if (toggleBtn) {
-                const currentDir = this._sortContext.pendingDir || 'desc';
-                const newDir = (currentDir === 'desc') ? 'asc' : 'desc';
-
-                this._sortContext.pendingDir = newDir;
-
-                // Trigger immediate sort if we have a field
-                if (context.currentSort?.field) {
-                    const f = context.currentSort.field;
-                    // Notify Controller (Updates Background List)
-                    context.onSelect({ field: f, direction: newDir }, 'TOGGLE');
-
-                    // Update Modal State (Keep Open)
-                    context.currentSort.direction = newDir;
-                    this.renderSortPickerModal(context.watchlistId, context.currentSort, context.onSelect, context.onHide, context.onGlobalToggle, context.onGlobalCancel);
-                } else {
-                    this.renderSortPickerModal(context.watchlistId, context.currentSort, context.onSelect, context.onHide, context.onGlobalToggle, context.onGlobalCancel);
-                }
-                return;
-            }
+                    this.isSortEditMode = !this.isSortEditMode;
+                    // Default toggle logic:
+                    if (this.isSortEditMode) {
+                        this.sortPickerMode = 'reorder';
+                    } else {
+                        this.sortPickerMode = 'default';
+                    }
 
 
-
-            // Global Selection Radio Interaction (Center Column)
-            // UPDATED: Target the wrapper OR the input (event bubbling)
-            const globalRadioWrapper = e.target.closest('.global-sort-radio-wrapper');
-            if (globalRadioWrapper) {
-                e.preventDefault();
-                e.stopPropagation();
-
-                const row = globalRadioWrapper.closest(`.${CSS_CLASSES.SORT_PICKER_ROW}`);
-                if (!row) return;
-
-                const key = row.dataset.key; // "field-direction"
-                const [field] = key.split('-');
-
-                // Use pending direction or default 'asc'. 
-                // Note: user wants to "force that selection option". 
-                // If the user clicks "Dividend", we should probably use the CURRENT direction of Dividends if active, or default 'desc'?
-                // However, without a toggle visible, we rely on the row's implicit direction?
-                // Actually, the row IS `field-direction`.
-                // So if we have "Target Price-asc" row, we use "asc".
-                // But the sort picker renders BOTH directions? No, it usually renders ONE row per field unless expanded?
-                // Wait, `SORT_OPTIONS` usually has defined directions like "High to Low".
-                // Let's use the direction FROM THE KEY. This is the precise option displayed.
-                const directionFromKey = key.split('-')[1];
-
-                const direction = directionFromKey || this._sortContext.pendingDir || 'asc';
-
-                console.log(`[ViewRenderer] Global Radio Clicked: ${field} (${direction})`);
-
-                // USER FEEDBACK: "It should just highlight the radio button"
-                // Reverting the "Switch to Default" logic so buttons don't disappear.
-                // We stay in Edit Mode, but the UI updates to show the checked state.
-
-                if (context.onGlobalToggle) {
-                    context.onGlobalToggle({ field, direction });
-                    // Stay in Edit Mode.
-
-                    // MANUAL TITLE UPDATE: "Global Sort Active" confirmation
-                    // User Feedback: "when I [select] a global radio button it did not change the global Sort active in the title bar"
-                    const title = document.getElementById(IDS.SORT_MODAL_TITLE);
+                    // Update Title Text & Style
+                    const title = modal.querySelector(`#${IDS.SORT_MODAL_TITLE}`);
                     if (title) {
-                        const chevronHtml = `
+                        if (this.isSortEditMode) {
+                            title.firstChild.textContent = 'Hide / Global / Reorder ';
+                            title.classList.add(CSS_CLASSES.TEXT_COFFEE);
+                        } else {
+                            title.firstChild.textContent = 'Select Sort Order ';
+                            title.classList.remove(CSS_CLASSES.TEXT_COFFEE);
+                        }
+                    }
+
+                    this.renderSortPickerModal(context.watchlistId, context.currentSort, context.onSelect, context.onHide);
+                    return;
+                }
+
+                // Mode Buttons (REMOVED)
+
+                // Direction Toggles (Unified)
+                const toggleBtn = e.target.closest(`#${IDS.SORT_TOGGLE_BTN}`);
+                if (toggleBtn) {
+                    const currentDir = this._sortContext.pendingDir || 'desc';
+                    const newDir = (currentDir === 'desc') ? 'asc' : 'desc';
+
+                    this._sortContext.pendingDir = newDir;
+
+                    // Trigger immediate sort if we have a field
+                    if (context.currentSort?.field) {
+                        const f = context.currentSort.field;
+                        // Notify Controller (Updates Background List)
+                        context.onSelect({ field: f, direction: newDir }, 'TOGGLE');
+
+                        // Update Modal State (Keep Open)
+                        context.currentSort.direction = newDir;
+                        this.renderSortPickerModal(context.watchlistId, context.currentSort, context.onSelect, context.onHide, context.onGlobalToggle, context.onGlobalCancel);
+                    } else {
+                        this.renderSortPickerModal(context.watchlistId, context.currentSort, context.onSelect, context.onHide, context.onGlobalToggle, context.onGlobalCancel);
+                    }
+                    return;
+                }
+
+                // --- DRAG COOLDOWN GUARD MOVED TO TOP ---
+
+                // Global Selection Radio Interaction (Center Column)
+                // TIGHTENED: Only trigger when clicking on the radio VISUAL or INPUT, not the wrapper
+                // This prevents accidental global sort activation when clicking elsewhere on the row
+                const clickedRadioVisual = e.target.closest('.square-radio-visual') ||
+                    e.target.closest('input[name="global-sort-edit-radio"]');
+                const globalRadioWrapper = clickedRadioVisual ? clickedRadioVisual.closest('.global-sort-radio-wrapper') : null;
+
+                if (globalRadioWrapper) {
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    const row = globalRadioWrapper.closest(`.${CSS_CLASSES.SORT_PICKER_ROW}`);
+                    if (!row) return;
+
+                    const key = row.dataset.key; // "field-direction"
+                    const [field] = key.split('-');
+
+                    // Use pending direction or default 'asc'. 
+                    // Note: user wants to "force that selection option". 
+                    // If the user clicks "Dividend", we should probably use the CURRENT direction of Dividends if active, or default 'desc'?
+                    // However, without a toggle visible, we rely on the row's implicit direction?
+                    // Actually, the row IS `field-direction`.
+                    // So if we have "Target Price-asc" row, we use "asc".
+                    // But the sort picker renders BOTH directions? No, it usually renders ONE row per field unless expanded?
+                    // Wait, `SORT_OPTIONS` usually has defined directions like "High to Low".
+                    // Let's use the direction FROM THE KEY. This is the precise option displayed.
+                    const directionFromKey = key.split('-')[1];
+
+                    const direction = directionFromKey || this._sortContext.pendingDir || 'asc';
+
+                    // USER FEEDBACK: "It should just highlight the radio button"
+                    // Reverting the "Switch to Default" logic so buttons don't disappear.
+                    // We stay in Edit Mode, but the UI updates to show the checked state.
+
+                    if (context.onGlobalToggle) {
+                        context.onGlobalToggle({ field, direction });
+                        // Stay in Edit Mode.
+
+                        // MANUAL TITLE UPDATE: "Global Sort Active" confirmation
+                        // User Feedback: "when I [select] a global radio button it did not change the global Sort active in the title bar"
+                        const title = document.getElementById(IDS.SORT_MODAL_TITLE);
+                        if (title) {
+                            const chevronHtml = `
                         <svg class="modal-title-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity: 1; transform: rotate(180deg); margin-left: 8px; transition: transform 0.3s ease;">
                             <polyline points="6 9 12 15 18 9"></polyline>
                         </svg>`;
-                        title.innerHTML = `<i class="fas ${UI_ICONS.GLOBE}"></i> Global Sort Active ${chevronHtml}`;
+                            title.innerHTML = `<i class="fas ${UI_ICONS.GLOBE}"></i> Global Sort Active ${chevronHtml}`;
+                        }
+
+                    } else {
+                        console.error('[ViewRenderer] onGlobalToggle callback missing!');
                     }
-
-                } else {
-                    console.error('[ViewRenderer] onGlobalToggle callback missing!');
-                }
-                return;
-            }
-
-            // --- List Item Delegation ---
-            const row = e.target.closest(`.${CSS_CLASSES.SORT_PICKER_ROW}`);
-            if (!row) return;
-
-            const key = row.dataset.key; // "field-direction"
-
-            // Reorder Action Buttons
-            const actBtn = e.target.closest(`.${CSS_CLASSES.MODAL_REORDER_BTN}`);
-            if (actBtn) {
-                e.preventDefault();
-                e.stopPropagation();
-                if (actBtn.disabled || actBtn.classList.contains(CSS_CLASSES.DISABLED)) return;
-
-                const dir = actBtn.dataset.dir;
-                const index = parseInt(row.dataset.index);
-                const type = row.dataset.type;
-
-                // Logic from previous handleReorder
-                let options = [...(SORT_OPTIONS[type] || SORT_OPTIONS.STOCK)];
-                const savedOrder = AppState.preferences.sortOptionOrder?.[type];
-                if (savedOrder && Array.isArray(savedOrder)) {
-                    options.sort((a, b) => {
-                        const keyA = `${a.field}-${a.direction}`;
-                        const keyB = `${b.field}-${b.direction}`;
-                        return savedOrder.indexOf(keyA) - savedOrder.indexOf(keyB);
-                    });
-                }
-                const hiddenSet = AppState.hiddenSortOptions[type] || new Set();
-
-                // CRITICAL FIX: Display Options must include HIDDEN items now, so we can unhide/reorder them? 
-                // User said: "Normally if a sort order is ticked. That sort will be hidden from the list"
-                // This implies the list IN THE MODAL shows everything? 
-                // "Sort order reorder AND hide function... combine them".
-                // Yes, the modal must show ALL options.
-                // The previous logic filtered them out. We must pass full list to reorder.
-
-                // Use the same filtered/unfiltered list as rendered. 
-                // In Render, we will now SHOW hidden items.
-                const displayOptions = options; // Show ALL in this modal
-
-                this._handleSortReorder(type, displayOptions, index, dir, context.watchlistId, context.currentSort, context.onSelect);
-                return;
-            }
-
-            // Row Interaction (Hide / Select)
-            if (this.sortPickerMode === 'reorder') {
-                // Label Interaction (Hide / Unhide) - User Requirement: "Hide Shares by Tapping Name"
-                // UPDATED: Now supports tapping the Square Checkbox wrapper too.
-                if (e.target.closest(`.${CSS_CLASSES.SORT_PICKER_LABEL}`) || e.target.closest('.sort-hide-checkbox')) {
-                    const type = row.dataset.type;
-                    const stringKey = String(key);
-                    if (!AppState.hiddenSortOptions[type]) AppState.hiddenSortOptions[type] = new Set();
-                    const hiddenSet = AppState.hiddenSortOptions[type];
-
-                    if (hiddenSet.has(stringKey)) hiddenSet.delete(stringKey);
-                    else hiddenSet.add(stringKey);
-
-                    AppState.saveHiddenSortOptions();
-                    if (typeof this._sortContext.onHide === 'function') {
-                        this._sortContext.onHide();
-                    }
-
-                    // Optimistic UI Update (Re-render)
-                    this.renderSortPickerModal(context.watchlistId, context.currentSort, context.onSelect, context.onHide, context.onGlobalToggle, context.onGlobalCancel);
                     return;
                 }
-                // Do not allow "Select" in reorder mode (unless we want to?)
-                // Usually edit mode disables selection.
-                return;
-            }
 
-            // Default Mode: Selection (Clicking Icon or Row Background)
-            // Long Press Guard
-            if (isLongPress) {
-                isLongPress = false;
-                e.preventDefault();
-                e.stopPropagation();
-                return;
-            }
-            // Standard List Selection
-            if (!this.isSortEditMode && !isLongPress) {
-                const [field, direction] = key.split('-');
-                const pendingDir = this._sortContext.pendingDir || 'desc';
+                // --- List Item Delegation ---
+                const row = e.target.closest(`.${CSS_CLASSES.SORT_PICKER_ROW}`);
+                if (!row) return;
 
-                context.onSelect({ field, direction: pendingDir }, 'LIST');
-                this._closeSortPickerInstance();
-            }
-        });
+                // GUARD: Ignore clicks on the Drag Handle or its icon
+                // This prevents "Selection" logic from firing when the user tries to drag.
+                if (e.target.closest('.reorder-handle') || e.target.closest('.sort-reorder-handle')) {
+                    e.stopPropagation(); // KILL the event here.
+                    return;
+                }
+
+                const key = row.dataset.key; // "field-direction"
+
+                // Reorder Arrow Buttons
+                if (e.target.closest('.sort-arrow-up')) {
+                    e.preventDefault(); e.stopPropagation();
+                    const currentRow = row;
+                    const prevRow = row.previousElementSibling;
+                    if (prevRow) {
+                        row.parentNode.insertBefore(currentRow, prevRow);
+                        this._saveSortOptionOrder(row.parentNode);
+                        // No need to full re-render, swap is visual. But to be safe on state:
+                        if (this._sortContext) {
+                            const ctx = this._sortContext;
+                            // Short delay to allow visual update perception? No, instant is better.
+                            // this.renderSortPickerModal(ctx.watchlistId, ctx.currentSort, ctx.onSelect, ctx.onHide, ctx.onGlobalToggle, ctx.onGlobalCancel);
+                        }
+                    }
+                    return;
+                }
+
+                if (e.target.closest('.sort-arrow-down')) {
+                    e.preventDefault(); e.stopPropagation();
+                    const currentRow = row;
+                    const nextRow = row.nextElementSibling;
+                    if (nextRow) {
+                        // unexpected behavior with insertBefore: to move down, we insert before next's next.
+                        row.parentNode.insertBefore(currentRow, nextRow.nextSibling);
+                        this._saveSortOptionOrder(row.parentNode);
+                    }
+                    return;
+                }
+
+                // Reorder Action Buttons (Legacy? No, ActBtn used to be there)
+                const actBtn = e.target.closest(`.${CSS_CLASSES.MODAL_REORDER_BTN}`);
+                if (actBtn) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (actBtn.disabled || actBtn.classList.contains(CSS_CLASSES.DISABLED)) return;
+
+                    const dir = actBtn.dataset.dir;
+                    const index = parseInt(row.dataset.index);
+                    const type = row.dataset.type;
+
+                    // Logic from previous handleReorder
+                    let options = [...(SORT_OPTIONS[type] || SORT_OPTIONS.STOCK)];
+                    const savedOrder = AppState.preferences.sortOptionOrder?.[type];
+                    if (savedOrder && Array.isArray(savedOrder)) {
+                        options.sort((a, b) => {
+                            const keyA = `${a.field}-${a.direction}`;
+                            const keyB = `${b.field}-${b.direction}`;
+                            return savedOrder.indexOf(keyA) - savedOrder.indexOf(keyB);
+                        });
+                    }
+                    const hiddenSet = AppState.hiddenSortOptions[type] || new Set();
+
+                    // CRITICAL FIX: Display Options must include HIDDEN items now, so we can unhide/reorder them? 
+                    // User said: "Normally if a sort order is ticked. That sort will be hidden from the list"
+                    // This implies the list IN THE MODAL shows everything? 
+                    // "Sort order reorder AND hide function... combine them".
+                    // Yes, the modal must show ALL options.
+                    // The previous logic filtered them out. We must pass full list to reorder.
+
+                    // Use the same filtered/unfiltered list as rendered. 
+                    // In Render, we will now SHOW hidden items.
+                    const displayOptions = options; // Show ALL in this modal
+
+                    this._handleSortReorder(type, displayOptions, index, dir, context.watchlistId, context.currentSort, context.onSelect);
+                    return;
+                }
+
+                // Row Interaction (Hide / Select)
+                if (this.sortPickerMode === 'reorder') {
+                    // Label Interaction (Hide / Unhide) - User Requirement: "Hide Shares by Tapping Name"
+                    // UPDATED: Supports tapping Name, Checkbox (wrapper), OR the Visibility Icon itself
+                    if (e.target.closest(`.${CSS_CLASSES.SORT_PICKER_LABEL}`) ||
+                        e.target.closest('.sort-hide-checkbox') ||
+                        e.target.closest('.sort-icon-slot') ||
+                        e.target.closest(`.sort-item-visibility`)) {
+
+                        const row = e.target.closest(`.${CSS_CLASSES.SORT_PICKER_ROW}`);
+                        if (!row) return;
+
+                        const key = row.dataset.key; // "field-direction"
+                        const type = row.dataset.type || 'STOCK';
+                        const stringKey = String(key);
+
+                        if (!AppState.hiddenSortOptions[type]) AppState.hiddenSortOptions[type] = new Set();
+                        const hiddenSet = AppState.hiddenSortOptions[type];
+
+                        if (hiddenSet.has(stringKey)) hiddenSet.delete(stringKey);
+                        else hiddenSet.add(stringKey);
+
+                        AppState.saveHiddenSortOptions();
+                        if (typeof this._sortContext.onHide === 'function') {
+                            this._sortContext.onHide();
+                        }
+
+                        // Optimistic UI Update (Re-render)
+                        this.renderSortPickerModal(context.watchlistId, context.currentSort, context.onSelect, context.onHide, context.onGlobalToggle, context.onGlobalCancel);
+                        return;
+                    }
+                    // Do not allow "Select" in reorder mode (unless we want to?)
+                    // Usually edit mode disables selection.
+                    return;
+                }
+
+                // Default Mode: Selection (Clicking Icon or Row Background)
+                // Long Press Guard
+                if (isLongPress) {
+                    isLongPress = false;
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return;
+                }
+                // Standard List Selection
+                if (!this.isSortEditMode && !isLongPress) {
+                    const [field, direction] = key.split('-');
+                    const pendingDir = this._sortContext.pendingDir || 'desc';
+
+                    context.onSelect({ field, direction: pendingDir }, 'LIST');
+                    this._closeSortPickerInstance();
+                }
+            });
+        } // Close guard
 
         return modal;
     }
 
     _updateSortPickerUI(modal, displayOptions, hiddenSet, currentSort, type) {
+        // CRITICAL GUARD: Block all UI updates while a drag is in progress.
+        // Background processes (live prices, preference syncs) can trigger re-renders mid-drag.
+        // If we rebuild the list from saved order while dragging, items snap back to original positions.
+        if (this._isDraggingOrCoolingDown || this._draggedSortItem) {
+            return;
+        }
+
         // Update Title Style
         const title = modal.querySelector(`#${IDS.SORT_MODAL_TITLE}`);
 
@@ -1660,7 +1660,6 @@ export class ViewRenderer {
             </svg>`;
 
         if (this.isSortEditMode) {
-            // UPDATED: "Hide / Global / Reorder" to match user request "Global in title bar"
             title.innerHTML = `Hide / Global / Reorder ${chevronHtml}`;
             title.classList.add(CSS_CLASSES.TEXT_COFFEE);
         } else {
@@ -1675,17 +1674,13 @@ export class ViewRenderer {
         }
 
         // Show/Hide Header Row (Title Helper)
-        // Show/Hide Header Row (Title Helper)
         const headerRow = modal.querySelector('#sortEditHeaders');
         if (headerRow) {
-            // FORCE VISIBILITY via Inline Style to override any class/specificity issues
-            // Use 'grid' to match the original layout intent
-            headerRow.style.display = this.isSortEditMode ? 'grid' : 'none';
-
-            // Redundant class toggle for completeness/cleanliness
             if (this.isSortEditMode) {
+                headerRow.classList.add('is-active');
                 headerRow.classList.remove(CSS_CLASSES.HIDDEN);
             } else {
+                headerRow.classList.remove('is-active');
                 headerRow.classList.add(CSS_CLASSES.HIDDEN);
             }
         }
@@ -1749,16 +1744,29 @@ export class ViewRenderer {
         }
 
         // Generate and Update List Content
-        const rowsHtml = filteredOptions.map((opt, index) => {
+        // Generate and Update List Content
+        const listContainer = modal.querySelector('#sort-picker-list');
+        listContainer.innerHTML = ''; // Clear existing
+
+        // Toggle Reorder Active Class on List (For CSS specifics if needed)
+        if (this.isSortEditMode) {
+            listContainer.classList.add(CSS_CLASSES.REORDER_ACTIVE);
+        } else {
+            listContainer.classList.remove(CSS_CLASSES.REORDER_ACTIVE);
+        }
+
+        filteredOptions.forEach((opt, index) => {
             const uniqueKey = `${opt.field}-${opt.direction}`;
             let isActive = (currentSort.field === opt.field);
             const isHidden = hiddenSet.has(String(uniqueKey));
 
             // Class Logic
-            let rowClasses = CSS_CLASSES.SORT_PICKER_ROW;
+            // Class Logic
+            let rowClasses = 'sort-picker-row'; // HARDCODED FIX: Bypass missing constant risk
             // In Reorder mode, highlight hidden items
-            if (this.isSortEditMode && isHidden) {
-                rowClasses += ' sort-item-hidden';
+            if (this.isSortEditMode) {
+                rowClasses += ' edit-mode';
+                if (isHidden) rowClasses += ' sort-item-hidden';
             }
             // In Default mode, highlight active item
             if (!this.isSortEditMode && isActive) {
@@ -1789,7 +1797,7 @@ export class ViewRenderer {
             // EDIT MODE: 3-Column Layout
             // Col 1: Hide Checkbox + Info (Handled by startContent + rowContent)
             // Col 2: Global Radio (Center)
-            // Col 3: Reorder Arrows (Right)
+            // Col 3: Reorder (Drag Handle)
 
             if (this.isSortEditMode) {
                 // GLOBAL RADIO (Center Column)
@@ -1797,23 +1805,15 @@ export class ViewRenderer {
                 const isGlobalActive = globalPref && (globalPref.field === opt.field);
 
                 centerControl = `
-                    <div class="global-sort-radio-wrapper square-radio-wrapper" style="margin: 0 auto;">
+                    <div class="global-sort-radio-wrapper square-radio-wrapper" style="justify-self: center;">
                         <input type="radio" name="global-sort-edit-radio" ${isGlobalActive ? 'checked' : ''} style="pointer-events: none;">
                         <div class="square-radio-visual"></div>
                     </div>
                 `;
 
-                // REORDER CONTROLS (Right Column)
                 rightControl = `
-                    <div class="sort-reorder-controls">
-                        <div class="flex-row" style="gap: 15px;">
-                            <button class="${CSS_CLASSES.MODAL_ACTION_BTN} ${CSS_CLASSES.MODAL_REORDER_BTN}" data-dir="up" ${index === 0 ? 'disabled' : ''}>
-                                <i class="fas ${UI_ICONS.CARET_UP}"></i>
-                            </button>
-                            <button class="${CSS_CLASSES.MODAL_ACTION_BTN} ${CSS_CLASSES.MODAL_REORDER_BTN}" data-dir="down" ${index === filteredOptions.length - 1 ? 'disabled' : ''}>
-                                <i class="fas ${UI_ICONS.CARET_DOWN}"></i>
-                            </button>
-                        </div>
+                    <div class="sort-reorder-handle reorder-handle" title="Drag to reorder" style="color: var(--text-muted); opacity: 0.7; touch-action: none;">
+                        <i class="fas fa-grip-lines" style="pointer-events: none;"></i>
                     </div>`;
             }
 
@@ -1830,11 +1830,11 @@ export class ViewRenderer {
             // Left Column is just Label + Icon (Click to Hide)
             // Center Column is Global Radio
 
-            // Override grid template for row if in edit mode to match header
-            // For default mode, use flex layout for better control
-            const rowStyle = this.isSortEditMode
-                ? 'grid-template-columns: 1fr 60px 1fr !important;'
-                : 'display: flex !important; justify-content: space-between !important; align-items: center !important;';
+            // Override grid layout via class
+            // Row style override removed - CSS handles layout via .sort-picker-row class
+            const rowStyle = '';
+
+            const extraClass = this.isSortEditMode ? 'sort-edit-grid-layout is-active' : '';
 
             // HIGHLIGHT LOGIC: If this row is the active global sort, startContent (Label/Icon) should be coffee colored
             // We use the same condition 'isGlobalActive' calculated for the radio button above relative to Scope (Edit Mode)
@@ -1846,65 +1846,161 @@ export class ViewRenderer {
             // Apply coffee color to the TEXT/ICON container if global OR active in default mode
             const contentColorClass = (isRowGlobal || (!this.isSortEditMode && isActive)) ? CSS_CLASSES.TEXT_COFFEE : '';
 
-            return `
-                <div class="${rowClasses}" data-key="${uniqueKey}" data-index="${index}" data-type="${type}" style="${rowStyle}">
-                    <div class="${CSS_CLASSES.SORT_PICKER_ROW_CONTENT} ${contentColorClass}" style="align-items: center; white-space: nowrap;">
-                        <div class="${CSS_CLASSES.SORT_PICKER_ICON}">${iconHtml}</div>
-                        <div class="${CSS_CLASSES.SORT_PICKER_LABEL}">${opt.label}</div>
-                    </div>
-                    
-                    <!-- Center Column (Global Radio or Spacer) - Only in Edit Mode -->
-                    ${this.isSortEditMode ? centerControl : ''}
-                    
-                    <!-- Right Column (Reorder or Tick) -->
-                    ${rightControl}
+            // CONSTRUCT TEMPLATE (Inner HTML Only)
+            const innerHTML = `
+                <div class="${CSS_CLASSES.SORT_PICKER_ROW_CONTENT} ${contentColorClass}" style="align-items: center;">
+                    <div class="${CSS_CLASSES.SORT_PICKER_ICON}">${iconHtml}</div>
+                    <div class="${CSS_CLASSES.SORT_PICKER_LABEL}">${opt.label}</div>
                 </div>
+
+                <!-- Center Column (Global Radio or Spacer) - Only in Edit Mode -->
+                ${this.isSortEditMode ? centerControl : ''}
+
+                <!-- Right Column (Reorder or Tick) -->
+                ${rightControl}
             `;
-        }).join('');
 
-        const listContainer = modal.querySelector(`#${IDS.SORT_PICKER_LIST}`);
-        listContainer.innerHTML = rowsHtml;
+            // CREATE DOM ELEMENT (Robust Approach)
+            const div = document.createElement('div');
+            // Set attributes
+            const activeClass = this.isSortEditMode ? 'is-active' : '';
+            div.className = `${rowClasses} ${extraClass} ${activeClass}`;
+            div.draggable = this.isSortEditMode; // CRITICAL: Enable Native Drag
 
-        // Toggle Reorder Active Class on List (For CSS specifics if needed)
-        if (this.isSortEditMode) {
-            listContainer.classList.add(CSS_CLASSES.REORDER_ACTIVE);
-        } else {
-            listContainer.classList.remove(CSS_CLASSES.REORDER_ACTIVE);
-        }
+
+            // Note: rowClasses already includes SORT_PICKER_ROW
+            div.dataset.key = uniqueKey;
+            div.dataset.index = index;
+            div.dataset.type = modal.dataset.type || 'STOCK'; // Wait, modal doesn't have dataset?
+            // Actually _saveSortOptionOrder uses container.querySelector.dataset.type.
+            // But opt doesn't have type?
+            // The method _updateSortPickerUI has 'type' argument! (Line 1598)
+            // But wait, I need to check if 'type' is available in scope.
+            // Snippet 1193 showed '_updateSortPickerUI(modal, displayOptions, hiddenSet, currentSort, type)'.
+            // Yes, 'type' is In Scope.
+            div.dataset.type = type || 'STOCK';
+
+            // Set Style
+            // div.style = ... (No)
+
+            // SET DRAGGABLE EXPLICITLY
+            if (this.isSortEditMode) {
+                div.draggable = true;
+                div.setAttribute('draggable', 'true'); // For CSS selectors
+                div.dataset.draggable = "true";
+            } else {
+                div.setAttribute('draggable', 'false');
+            }
+
+            div.innerHTML = innerHTML;
+            listContainer.appendChild(div);
+
+        });
+
+        // NUCLEAR OPTION: Clone container to strip ALL old listeners (including click/drag) and re-bind.
+        // This guarantees a clean slate.
+        const newContainer = listContainer.cloneNode(true);
+        listContainer.parentNode.replaceChild(newContainer, listContainer);
+
+        // BINDING STRATEGY: 
+        // 1. Native HTML5 Drag (for Mouse/Desktop Pro users)
+        this._bindSortDragEvents(newContainer);
+
+        // 2. Native HTML5 Drag Only (Restored)
+        // Ensure we only have ONE binding call.
     }
 
-    _handleSortReorder(type, displayList, index, direction, watchlistId, currentSort, onSelect) {
-        const newIndex = direction === 'up' ? index - 1 : index + 1;
-        if (newIndex < 0 || newIndex >= displayList.length) return;
+    // _bindPointerDragLogic REMOVED - Reverting to Standard Native Drag
 
-        const itemA = displayList[index];
-        const itemB = displayList[newIndex];
-        const keyA = `${itemA.field}-${itemA.direction}`;
-        const keyB = `${itemB.field}-${itemB.direction}`;
 
-        // Load Global Order (or Init)
-        let savedOrder = AppState.preferences.sortOptionOrder?.[type];
-        if (!savedOrder || !Array.isArray(savedOrder)) {
-            // Initialize with current full list order if missing
-            const fullOptions = (SORT_OPTIONS[type] || SORT_OPTIONS.STOCK);
-            savedOrder = fullOptions.map(o => `${o.field}-${o.direction}`);
-        }
+    _bindSortDragEvents(container) {
+        // FIX: Removed the dragBound guard entirely.
+        // The "Nuclear Option" (cloneNode) is used in _updateSortPickerUI to get a fresh container,
+        // but cloneNode(true) copies ALL attributes including data-drag-bound="true".
+        // This caused the guard to skip binding, leaving the cloned container with NO drag events.
+        // WatchlistUI and DashboardFilterModal work because they have no such guard.
+        // Since we ALWAYS get a freshly cloned container in edit mode, we can safely bind every time.
 
-        const idxA = savedOrder.indexOf(keyA);
-        const idxB = savedOrder.indexOf(keyB);
+        this._draggedSortItem = null;
 
-        if (idxA !== -1 && idxB !== -1) {
-            savedOrder[idxA] = keyB;
-            savedOrder[idxB] = keyA;
+        // CLONED FROM WATCHLIST UI
+        container.addEventListener('dragstart', (e) => {
+            const row = e.target.closest(`.${CSS_CLASSES.SORT_PICKER_ROW}`);
+            if (row) {
+                // Set Global Drag Flag (for Click Guard)
+                this._isDraggingOrCoolingDown = true;
+                this._draggedSortItem = row;
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', String(row.dataset.key || ''));
+                setTimeout(() => row.classList.add(CSS_CLASSES.DRAGGING), 0);
+            }
+        });
 
-            if (!AppState.preferences.sortOptionOrder) AppState.preferences.sortOptionOrder = {};
-            AppState.preferences.sortOptionOrder[type] = [...savedOrder];
+        container.addEventListener('dragend', (e) => {
+            const row = e.target.closest(`.${CSS_CLASSES.SORT_PICKER_ROW}`);
+            if (row) {
+                row.classList.remove(CSS_CLASSES.DRAGGING);
+                this._draggedSortItem = null;
+                this._saveSortOptionOrder(container); // Pass container explicitly
 
-            // Persist
-            localStorage.setItem(STORAGE_KEYS.SORT_OPTION_ORDER, JSON.stringify(AppState.preferences.sortOptionOrder));
+                // Start Cooldown: Block clicks for 200ms after drop
+                setTimeout(() => {
+                    this._isDraggingOrCoolingDown = false;
+                }, 200);
+            } else {
+                this._isDraggingOrCoolingDown = false; // Safety reset
+            }
+        });
 
-            this.renderSortPickerModal(watchlistId, currentSort, onSelect);
-        }
+        container.addEventListener('dragover', (e) => {
+            if (!this._draggedSortItem) return;
+            e.preventDefault();
+
+            // Explicitly allow drop
+            if (e.dataTransfer) {
+                e.dataTransfer.dropEffect = 'move';
+            }
+
+            const afterElement = this._getSortDragAfterElement(container, e.clientY);
+            if (afterElement == null) {
+                container.appendChild(this._draggedSortItem);
+            } else {
+                container.insertBefore(this._draggedSortItem, afterElement);
+            }
+        });
+    }
+
+
+
+    _getSortDragAfterElement(container, y) {
+        // EXACT CLONE OF WATCHLIST LOGIC (but with Sort classes)
+        const draggableElements = [...container.querySelectorAll(`.sort-picker-row:not(.dragging)`)];
+
+        return draggableElements.reduce((closest, child) => {
+            const box = child.getBoundingClientRect();
+            const offset = y - box.top - box.height / 2;
+            if (offset < 0 && offset > closest.offset) {
+                return { offset: offset, element: child };
+            } else {
+                return closest;
+            }
+        }, { offset: Number.NEGATIVE_INFINITY }).element;
+    }
+
+    _saveSortOptionOrder(container) {
+        const context = this._sortContext || {};
+        const type = container.querySelector(`.sort-picker-row`)?.dataset.type || 'STOCK';
+        const rows = Array.from(container.querySelectorAll(`.sort-picker-row`));
+        const newOrder = rows.map(r => r.dataset.key);
+
+        if (!AppState.preferences.sortOptionOrder) AppState.preferences.sortOptionOrder = {};
+        AppState.preferences.sortOptionOrder[type] = newOrder;
+
+        localStorage.setItem(STORAGE_KEYS.SORT_OPTION_ORDER, JSON.stringify(AppState.preferences.sortOptionOrder));
+
+        if (AppState.triggerSync) AppState.triggerSync();
+        // Since we are update the order on DragEnd, we don't necessarily need to re-render 
+        // because the DOM is already sorted visually by the dragover event.
     }
 
 
@@ -1917,7 +2013,7 @@ export class ViewRenderer {
 
         // Clear and render into container
         if (!data || data.length === 0) {
-            container.innerHTML = `<div class="${CSS_CLASSES.ASX_DROPDOWN_EMPTY}">No Active Shares</div>`;
+            container.innerHTML = `< div class="${CSS_CLASSES.ASX_DROPDOWN_EMPTY}" > No Active Shares</div > `;
             return;
         }
 
@@ -1926,16 +2022,16 @@ export class ViewRenderer {
 
             // NO ARROW - just the code
             return `
-            <button class="${CSS_CLASSES.ASX_DROPDOWN_PILL} status-${status}" data-code="${item.code}">
-                ${item.code}
-            </button>
+                < button class="${CSS_CLASSES.ASX_DROPDOWN_PILL} status-${status}" data - code="${item.code}" >
+                    ${item.code}
+            </button >
             `;
         }).join('');
 
         container.innerHTML = htmlItems;
 
         // Add Click Handlers
-        container.querySelectorAll(`.${CSS_CLASSES.ASX_DROPDOWN_PILL}`).forEach(pill => {
+        container.querySelectorAll(`.${CSS_CLASSES.ASX_DROPDOWN_PILL} `).forEach(pill => {
             pill.addEventListener('click', () => {
                 const code = pill.dataset.code;
                 document.dispatchEvent(new CustomEvent(EVENTS.ASX_CODE_CLICK, { detail: { code } }));
@@ -1953,7 +2049,7 @@ export class ViewRenderer {
             this.sortReorderMode = false;
 
             // Reset Title Text & Style
-            const title = modal.querySelector(`#${IDS.SORT_MODAL_TITLE}`);
+            const title = modal.querySelector(`#${IDS.SORT_MODAL_TITLE} `);
             if (title) {
                 title.firstChild.textContent = 'Select Sort Order ';
                 title.classList.remove(CSS_CLASSES.TEXT_COFFEE);
@@ -1978,7 +2074,7 @@ export class ViewRenderer {
 
         const modal = document.createElement('div');
         modal.id = IDS.SUMMARY_DETAIL_MODAL;
-        modal.className = `${CSS_CLASSES.MODAL} ${CSS_CLASSES.SHOW}`;
+        modal.className = `${CSS_CLASSES.MODAL} ${CSS_CLASSES.SHOW} `;
 
         const rowsHtml = shares.map(share => {
             const val = share[valueField] || 0;
@@ -1999,30 +2095,30 @@ export class ViewRenderer {
                 formattedVal = formatPercent(val);
             }
             return `
-                <div class="${CSS_CLASSES.SUMMARY_DETAIL_ROW}" data-code="${share.code}" data-id="${share.id}">
+            < div class="${CSS_CLASSES.SUMMARY_DETAIL_ROW}" data - code="${share.code}" data - id="${share.id}" >
                     <span class="${CSS_CLASSES.SUMMARY_DETAIL_CODE}">${share.code}</span>
                     <span class="${CSS_CLASSES.SUMMARY_DETAIL_VALUE} ${colorClass}">${formattedVal}</span>
-                </div>
+                </div >
             `;
         }).join('');
 
         modal.innerHTML = `
-            <div class="${CSS_CLASSES.MODAL_OVERLAY}"></div>
-            <div class="${CSS_CLASSES.MODAL_CONTENT} ${CSS_CLASSES.MODAL_CONTENT_MEDIUM}">
-                <div class="${CSS_CLASSES.MODAL_HEADER}">
-                    <h2 class="${CSS_CLASSES.MODAL_TITLE}">${title}</h2>
-                    <div class="${CSS_CLASSES.MODAL_ACTIONS}">
-                        <button class="${CSS_CLASSES.MODAL_CLOSE_BTN} ${CSS_CLASSES.MODAL_ACTION_BTN}" title="Close">
-                            <i class="fas ${UI_ICONS.CLOSE}"></i>
-                        </button>
+            < div class="${CSS_CLASSES.MODAL_OVERLAY}" ></div >
+                <div class="${CSS_CLASSES.MODAL_CONTENT} ${CSS_CLASSES.MODAL_CONTENT_MEDIUM}">
+                    <div class="${CSS_CLASSES.MODAL_HEADER}">
+                        <h2 class="${CSS_CLASSES.MODAL_TITLE}">${title}</h2>
+                        <div class="${CSS_CLASSES.MODAL_ACTIONS}">
+                            <button class="${CSS_CLASSES.MODAL_CLOSE_BTN} ${CSS_CLASSES.MODAL_ACTION_BTN}" title="Close">
+                                <i class="fas ${UI_ICONS.CLOSE}"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="${CSS_CLASSES.MODAL_BODY} ${CSS_CLASSES.SCROLLABLE_BODY}">
+                        <div class="${CSS_CLASSES.SUMMARY_DETAIL_LIST}">
+                            ${rowsHtml || `<div class="${CSS_CLASSES.TEXT_CENTER} ${CSS_CLASSES.TEXT_MUTED}">No shares to display.</div>`}
+                        </div>
                     </div>
                 </div>
-                <div class="${CSS_CLASSES.MODAL_BODY} ${CSS_CLASSES.SCROLLABLE_BODY}">
-                    <div class="${CSS_CLASSES.SUMMARY_DETAIL_LIST}">
-                        ${rowsHtml || `<div class="${CSS_CLASSES.TEXT_CENTER} ${CSS_CLASSES.TEXT_MUTED}">No shares to display.</div>`}
-                    </div>
-                </div>
-            </div>
         `;
 
         document.body.appendChild(modal);
@@ -2048,11 +2144,11 @@ export class ViewRenderer {
             }
         });
 
-        modal.querySelector(`.${CSS_CLASSES.MODAL_CLOSE_BTN}`).addEventListener('click', close);
-        modal.querySelector(`.${CSS_CLASSES.MODAL_OVERLAY}`).addEventListener('click', close);
+        modal.querySelector(`.${CSS_CLASSES.MODAL_CLOSE_BTN} `).addEventListener('click', close);
+        modal.querySelector(`.${CSS_CLASSES.MODAL_OVERLAY} `).addEventListener('click', close);
 
         // Click row to open stock details
-        modal.querySelectorAll(`.${CSS_CLASSES.SUMMARY_DETAIL_ROW}`).forEach(row => {
+        modal.querySelectorAll(`.${CSS_CLASSES.SUMMARY_DETAIL_ROW} `).forEach(row => {
             row.addEventListener('click', () => {
                 const code = row.dataset.code;
                 const id = row.dataset.id;
@@ -2080,9 +2176,9 @@ export class ViewRenderer {
         overlay.style.zIndex = '99999';
 
         overlay.innerHTML = `
-            <div style="font-size: 3rem; color: var(--color-accent); margin-bottom: 20px;">
+            < div style = "font-size: 3rem; color: var(--color-accent); margin-bottom: 20px;" >
                 <i class="fas ${UI_ICONS.SPINNER}"></i>
-            </div>
+            </div >
             <div class="${CSS_CLASSES.TEXT_XL} ${CSS_CLASSES.FONT_BOLD}">${title}</div>
             <div class="${CSS_CLASSES.TEXT_MUTED}" style="margin-top: 10px;">${subtitle}</div>
         `;

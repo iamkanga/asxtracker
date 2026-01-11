@@ -598,7 +598,17 @@ export const CSS_CLASSES = {
     CAROUSEL_NAV_BTN: 'carousel-nav-btn',
     CAROUSEL_SELECTED: 'carousel-selected',
     HIDDEN_SELECTED: 'hidden-selected',
+    DRAGGING: 'dragging',
     RADIO_DOT: 'radio-dot',
+
+    // Sort Picker Specific (FIX: Missing Constants)
+    SORT_PICKER_LIST: 'sort-picker-list',
+    SORT_PICKER_ROW: 'sort-picker-row',
+    SORT_PICKER_ROW_CONTENT: 'sort-picker-row-content',
+    SORT_PICKER_ICON: 'sort-picker-icon',
+    SORT_PICKER_LABEL: 'sort-picker-label',
+    SORT_REORDER_HANDLE: 'sort-reorder-handle',
+    SORT_EDIT_GRID: 'sort-edit-grid-layout',
 
     // Header Layout
     HEADER_INNER: 'header-inner-container',
@@ -643,7 +653,6 @@ export const CSS_CLASSES = {
     // Button States
     DISABLED: 'disabled',
     GHOSTED: 'ghosted',
-    DRAGGING: 'dragging',
     APP_BADGE_HIDDEN: 'app-badge-hidden',
 
     // ASX Dropdown
@@ -1288,7 +1297,7 @@ export const IDS = {
     SORT_MODE_REORDER: 'sort-mode-reorder',
     SORT_MODE_HIDE: 'sort-mode-hide',
     RESEARCH_ADD_BTN: 'researchAddBtn',
-    SORT_PICKER_LIST: 'sortPickerList',
+    SORT_PICKER_LIST: 'sort-picker-list',
     SORT_GLOBAL_BTN: 'sort-global-btn',
 
     // Setup Elements

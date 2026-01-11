@@ -428,7 +428,21 @@ export class AppService {
             await userStore.savePreferences(userId, {
                 carouselSelections: defaultCarousel,
                 lastWatchlistId: watchlistId || 'portfolio',
-                onboarded: true
+                onboarded: true,
+                // NEW USER DEFAULTS (Requested Jan 2026)
+                excludePortfolio: true, // Watchlist Override: ON
+                scanner: {
+                    activeFilters: null // Sectors: ALL
+                },
+                scannerRules: {
+                    up: { percentThreshold: null, dollarThreshold: 0.50 },
+                    down: { percentThreshold: null, dollarThreshold: 0.50 },
+                    minPrice: null,
+                    hiloMinPrice: 0.50, // 52 Week High Low Limit: $0.50
+                    moversEnabled: true,
+                    hiloEnabled: true,
+                    personalEnabled: true
+                }
             });
 
             // console.log(`[AppService] Default data created successfully for ${userId}`);
