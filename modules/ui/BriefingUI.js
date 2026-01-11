@@ -39,7 +39,10 @@ export class BriefingUI {
     static _renderModal() {
         const modal = document.createElement('div');
         modal.id = IDS.DAILY_BRIEFING_MODAL;
-        modal.className = `${CSS_CLASSES.MODAL} ${CSS_CLASSES.HIDDEN}`;
+        // Apply classes AND inline z-index for safety against CSS overrides.
+        modal.className = `${CSS_CLASSES.MODAL} ${CSS_CLASSES.MODAL_FULLSCREEN} ${CSS_CLASSES.HIDDEN} briefing-modal-wrapper`;
+        // Ensure this is higher than standard modals (1000) so it pops.
+        modal.style.zIndex = '1001';
 
         const dateOptions = { weekday: 'long', month: 'long', day: 'numeric' };
         const dateStr = new Date().toLocaleDateString('en-AU', dateOptions);
@@ -68,6 +71,14 @@ export class BriefingUI {
                             <div class="hero-label">My Portfolio</div>
                             <div class="hero-main-stat skeleton-text">Computing...</div>
                             <div class="hero-sub-stat skeleton-text">...</div>
+                        </div>
+                    </div>
+
+                    <!-- NEW: Portfolio Highlights -->
+                    <div class="briefing-section">
+                        <div class="briefing-section-title">Portfolio Highlights</div>
+                        <div class="briefing-watchlist-grid" id="briefing-portfolio-grid">
+                           <!-- Dynamic -->
                         </div>
                     </div>
 
@@ -166,9 +177,17 @@ export class BriefingUI {
             heroCard.className = `briefing-hero-card ${bgClass} clickable-hero`; // Reset classes + add dynamic
             heroCard.onclick = () => {
                 console.log('[BriefingUI] Hero clicked. Opening Portfolio.');
-                // NAVIGATION PERSISTENCE: Do NOT close the modal.
-                // The Sidebar (Portfolio/Stock) will open ON TOP (Z-Index > 1100).
-                // When Sidebar closes, Briefing will still be there.
+                // NAVIGATION PERSISTENCE: Close Briefing before opening Portfolio View
+                // because Portfolio View is the main background, not an overlay.
+                this._close(modal);
+
+                // FIXED: Explicitly Close Notification Modal if it exists underneath
+                const notifModal = document.getElementById(IDS.NOTIFICATION_MODAL);
+                if (notifModal) {
+                    console.log('[BriefingUI] Force-closing underlying Notification Modal.');
+                    notifModal.remove();
+                    // Also maintain Nav Stack integrity if needed, but removal is key for visual cleanup.
+                }
 
                 // Dispatch event to open Watchlist "portfolio"
                 document.dispatchEvent(new CustomEvent('open-portfolio-view'));
@@ -195,7 +214,35 @@ export class BriefingUI {
             `;
         }
 
-        // --- 2. Watchlist Highlights (Top 3 Movers from User's Lists) ---
+        // --- 2. Portfolio Highlights (Top 3 Movers from Portfolio) ---
+        const pfMovers = [];
+        portfolioItems.forEach(s => {
+            const cleanCode = (s.code || s.shareName || '').replace(/\.AX$/i, '').trim().toUpperCase();
+            const data = livePrices.get(cleanCode);
+            if (data) {
+                pfMovers.push({
+                    code: cleanCode,
+                    live: data.live || 0,
+                    change: data.change || 0,
+                    pctChange: data.pctChange || (data.changePercent) || 0,
+                    name: data.name || ''
+                });
+            }
+        });
+        pfMovers.sort((a, b) => Math.abs(b.pctChange) - Math.abs(a.pctChange));
+        const top3Portfolio = pfMovers.slice(0, 3);
+
+        const pfGrid = modal.querySelector('#briefing-portfolio-grid');
+        if (pfGrid) {
+            if (top3Portfolio.length === 0) {
+                pfGrid.innerHTML = '<div class="briefing-empty">No portfolio data yet.</div>';
+            } else {
+                pfGrid.innerHTML = top3Portfolio.map(item => this._renderHighlightCard(item)).join('');
+            }
+        }
+
+
+        // --- 3. Watchlist Highlights (Top 3 Movers from User's Lists) ---
         // Includes Portfolio + ANY other watched item
         const watchedCodes = new Set();
         shares.forEach(s => {
@@ -232,7 +279,7 @@ export class BriefingUI {
             }
         }
 
-        // --- 3. Market Pulse (Footer) ---
+        // --- 4. Market Pulse (Footer) ---
         // Proxy using NotificationStore Global data
         const globalMovers = notificationStore.getGlobalAlerts(false) || { movers: { up: [], down: [] }, hilo: { high: [], low: [] } };
         const upCount = (globalMovers.movers?.up || []).length;
@@ -381,11 +428,14 @@ export class BriefingUI {
         // Let's add a global listener for navigation inside the modal scope?
         // Easiest: The highlight card onClick contains the dispatch.
         // We will add a wrapper listener to close the modal.
-        modal.addEventListener('click', (e) => {
-            if (e.target.closest('.highlight-card') || e.target.closest('.market-row')) {
-                this._close(modal);
-            }
-        });
+        // Global Modal Click (Close on backdrop only? No, strictly explicit close)
+        // We previously closed on content click, but that causes "Flashing" when opening Sidebars.
+        // Now we ONLY close on overlay or close button.
+        // modal.addEventListener('click', (e) => {
+        //    if (e.target.closest('.highlight-card') || e.target.closest('.market-row')) {
+        //        this._close(modal);
+        //    }
+        // });
     }
 
     static _close(modal) {

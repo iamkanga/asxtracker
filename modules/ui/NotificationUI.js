@@ -403,16 +403,14 @@ export class NotificationUI {
     static _close(modal) {
         modal.classList.add(CSS_CLASSES.HIDDEN);
 
-        // RESTORE DAILY BRIEFING IF HIDDEN
-        if (this._briefingRestorable) {
-            const briefingModal = document.getElementById(IDS.DAILY_BRIEFING_MODAL);
-            if (briefingModal) {
-                console.log('[NotificationUI] Restoring Briefing Modal. Bringing to front.');
-                briefingModal.classList.remove(CSS_CLASSES.HIDDEN);
-                briefingModal.style.zIndex = '1001'; // Ensure it pops over standard layers
-                document.body.appendChild(briefingModal);
-            }
-            this._briefingRestorable = false;
+        // RESTORE DAILY BRIEFING IF IT EXISTS (Simplification: If it's in DOM, it should be visible)
+        const briefingModal = document.getElementById(IDS.DAILY_BRIEFING_MODAL);
+        if (briefingModal && briefingModal.classList.contains(CSS_CLASSES.HIDDEN)) {
+            console.log('[NotificationUI] Restoring Briefing Modal (Found in DOM). Bringing to front.');
+            briefingModal.classList.remove(CSS_CLASSES.HIDDEN);
+            briefingModal.style.zIndex = '1001'; // Ensure it pops over standard layers
+            briefingModal.style.display = 'flex'; // Force display just in case
+            document.body.appendChild(briefingModal);
         }
         // RESTORE SETTINGS MODAL IF HIDDEN
         if (this._settingsRestorable) {
@@ -1440,9 +1438,6 @@ export class NotificationUI {
         bell.innerHTML = `
             <div class="bell-icon-wrapper"><i class="fas ${UI_ICONS.ALERTS}" style="font-size: 2.5rem;"></i></div>
             <span class="notification-badge ${CSS_CLASSES.HIDDEN}">0</span>
-            <div class="dismiss-overlay ${CSS_CLASSES.HIDDEN}">
-                <i class="fas fa-times"></i>
-            </div>
         `;
 
         container.appendChild(bell);
@@ -1467,20 +1462,64 @@ export class NotificationUI {
         let isLongPress = false;
 
         // Get references to the new elements
-        const dismissOverlay = bell.querySelector('.dismiss-overlay');
         const btn = bell; // Alias for cleaner event binding code below
 
         const startPress = () => {
             isLongPress = false;
             pressTimer = setTimeout(() => {
                 isLongPress = true;
-                // Show/Hide Close Button on Long Press (Toggle)
-                if (dismissOverlay.classList.contains(CSS_CLASSES.HIDDEN) || getComputedStyle(dismissOverlay).display === 'none') {
-                    dismissOverlay.classList.remove(CSS_CLASSES.HIDDEN);
-                    console.log('[NotificationUI] Kangaroo Toggle: Show X');
-                } else {
-                    dismissOverlay.classList.add(CSS_CLASSES.HIDDEN);
-                    console.log('[NotificationUI] Kangaroo Toggle: Hide X');
+
+                // REDESIGNED BEHAVIOR: Direct Dismiss (Hide App Badge)
+                // "if you long hold it it just dismisses it"
+                console.log('[NotificationUI] Long Press -> Dismissing Floating Bell.');
+
+                // 1. Hide Immediately (Visual Feedback)
+                if (container) container.classList.add(CSS_CLASSES.HIDDEN);
+                bell.classList.add(CSS_CLASSES.HIDDEN);
+
+                // 2. Persist State (Sync with "Show Badges" setting)
+                if (AppState.preferences) {
+                    // Update Local State
+                    AppState.preferences.showBadges = false;
+
+                    // Persist to Cloud/Local Storage
+                    // We need to access AppController or AppService. 
+                    // Since specific service access isn't injected, we'll dispatch an event or use global AppState save if available?
+                    // AppController listens for 'save-scanner-settings' but maybe not general prefs?
+                    // We can use a custom event or check if we can import AppService. 
+                    // Let's use the robust `AppController` instance if accessible or dispatch an update.
+
+                    // Best way: Dispatch a preference update request or save directly if possible.
+                    // Actually, AppController is not globally available as a variable.
+                    // But NotificationUI uses AppState.
+
+                    // Let's trigger a manual save via Event if possible, or just accept that the UI hides until next reload if we don't persist?
+                    // "make sure it coordinates with the icon in the notifications modell and the notification settings pill"
+                    // This implies we MUST persist it so the toggle in settings reflects "Off".
+
+                    // Dispatch Custom Event handled by AppController?
+                    // Or invoke `saveUserPreferences` if we can get an instance.
+                    // Let's try dispatching `EVENTS.SAVE_SCANNER_SETTINGS`? No, that's specific.
+
+                    // Better: AppController listens to `EVENTS.SECURITY_PREFS_CHANGED`? No.
+                    // Let's add a `EVENTS.UPDATE_USER_PREFS` or similar if needed, OR just use localStorage for now and assume sync picks it up?
+                    // Wait! AppState has `saveUserPreferences`? No, AppService does.
+
+                    // Let's instantiate AppService temporarily or use a global reference?
+                    // Actually, let's verify if `AppController` attaches itself to window or AppState?
+                    // AppController constructor: `AppState.securityController = this.securityController;`
+
+                    // Let's look for a "Requests Save" event.
+                    // Found `EVENTS.SAVE_SCANNER_SETTINGS`. Let's see if there is a generic one.
+
+                    // Fallback: Dispatch a new event `request-update-preferences` and add listener in AppController?
+                    // Or simpler: Directly update `AppState.preferences` and call `AppService`? 
+                    // Code below assumes `new AppService().saveUserPreferences(...)`.
+
+                    import('../data/AppService.js').then(({ AppService }) => {
+                        const service = new AppService();
+                        service.saveUserPreferences({ showBadges: false });
+                    });
                 }
 
                 if (navigator.vibrate) navigator.vibrate(50); // Feedback
@@ -1500,21 +1539,11 @@ export class NotificationUI {
                 isLongPress = false;
                 return; // Handled by startPress/Timer
             }
-            if (e.target.closest('.dismiss-overlay')) return;
 
             // Dispatch Event for Controller to handle
             document.dispatchEvent(new CustomEvent(EVENTS.OPEN_NOTIFICATIONS, {
                 detail: { source: 'custom' }
             }));
-        });
-
-        // Dismiss Logic (Desktop View)
-        dismissOverlay.addEventListener('click', (e) => {
-            e.stopPropagation(); // Prevent modal open
-            this._bellManuallyHidden = true; // Toggle state
-            localStorage.setItem('ASX_NEXT_bellHidden', 'true'); // Persist
-
-            this.updateBadgeCount(this._prevCount); // Refresh visibility immediately
         });
 
         // Initialize Badge

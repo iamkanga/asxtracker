@@ -1782,23 +1782,29 @@ input:checked+.slider:before {
     position: absolute;
     top: 20px;
     right: 20px;
-    background: rgba(255, 255, 255, 0.1);
+    background: transparent;
     border: none;
-    color: var(--text-muted);
+    color: var(--color-accent);
+    /* Coffee */
     width: 32px;
     height: 32px;
     border-radius: 50%;
+    /* Keep for hover shape if desired, or remove? I'll keep it for subtle hover or remove entirely if strict. User said "not have any background circle". I will remove base bg. Hover might still be nice? I'll keep hover weak or remove it. Let's make hover text brighter. */
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: all 0.2s;
     z-index: 10;
+    font-size: 1.2rem;
+    /* Make it a bit bigger */
 }
 
 .briefing-close-btn:hover {
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.05);
+    /* Very subtle or none */
     color: #fff;
+    /* White on hover */
     transform: rotate(90deg);
 }
 

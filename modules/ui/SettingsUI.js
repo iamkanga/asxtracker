@@ -711,7 +711,7 @@ export class SettingsUI {
         // Initial Sector Population
         const rawFilters = prefs.scanner?.activeFilters;
         const allIndustries = Object.values(SECTOR_INDUSTRY_MAP).flat().map(f => f.toUpperCase());
-        const activeFilters = (rawFilters === null) ? allIndustries : (rawFilters || []).map(f => f.toUpperCase());
+        const activeFilters = (rawFilters === null || rawFilters === undefined) ? allIndustries : (rawFilters || []).map(f => f.toUpperCase());
         this._renderSectorAccordion(modal, activeFilters);
 
         // Initial Summary Update

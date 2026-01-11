@@ -55,16 +55,14 @@ export class SnapshotUI {
         modal.classList.remove(CSS_CLASSES.SHOW);
         modal.classList.add(CSS_CLASSES.HIDDEN);
 
-        // Restore Daily Briefing if it was covered
-        if (this._briefingRestorable) {
-            const briefingModal = document.getElementById(IDS.DAILY_BRIEFING_MODAL);
-            if (briefingModal) {
-                console.log('[SnapshotUI] Restoring Briefing Modal. Bringing to front.');
-                briefingModal.classList.remove(CSS_CLASSES.HIDDEN);
-                briefingModal.style.zIndex = '1001'; // Ensure it pops over standard layers
-                document.body.appendChild(briefingModal);
-            }
-            this._briefingRestorable = false;
+        // Restore Daily Briefing if it was covered (Check existence)
+        const briefingModal = document.getElementById(IDS.DAILY_BRIEFING_MODAL);
+        if (briefingModal && briefingModal.classList.contains(CSS_CLASSES.HIDDEN)) {
+            console.log('[SnapshotUI] Restoring Briefing Modal (Found in DOM). Bringing to front.');
+            briefingModal.classList.remove(CSS_CLASSES.HIDDEN);
+            briefingModal.style.zIndex = '1001'; // Ensure it pops over standard layers
+            briefingModal.style.display = 'flex'; // Force display just in case
+            document.body.appendChild(briefingModal);
         }
 
         setTimeout(() => {
