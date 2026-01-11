@@ -9,7 +9,7 @@ import { AppState } from '../state/AppState.js';
 import { CSS_CLASSES, IDS, UI_ICONS, EVENTS, SECTOR_INDUSTRY_MAP } from '../utils/AppConstants.js';
 import { navManager } from '../utils/NavigationManager.js';
 import { formatCurrency, formatPercent } from '../utils/formatters.js';
-import { BriefingUI } from './BriefingUI.js?v=310';
+import { BriefingUI } from './BriefingUI.js?v=312';
 
 export class NotificationUI {
 
@@ -780,7 +780,7 @@ export class NotificationUI {
 
                 wrapper.innerHTML = `
                     <div class="${CSS_CLASSES.SEGMENTED_CONTROL}">
-                        <button class="${CSS_CLASSES.SEGMENTED_BUTTON} w-full" id="hilo-toggle-btn">
+                        <button type="button" class="${CSS_CLASSES.SEGMENTED_BUTTON} w-full" id="hilo-toggle-btn">
                             <div class="${CSS_CLASSES.W_FULL} ${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.ALIGN_CENTER}" style="justify-content: center;">
                                 <i class="fas ${targetIcon} ${targetColor}" style="margin-right: 15px;"></i>
                                 <span class="${CSS_CLASSES.FONT_BOLD}">${targetLabel}</span>
@@ -794,7 +794,9 @@ export class NotificationUI {
                 const btn = wrapper.querySelector('#hilo-toggle-btn');
                 btn.onclick = (e) => {
                     e.stopPropagation();
+                    console.log(`[NotificationUI] Toggle Clicked. Old Mode: ${NotificationUI._hiloMode}`);
                     NotificationUI._hiloMode = isHigh ? 'low' : 'high';
+                    console.log(`[NotificationUI] New Mode: ${NotificationUI._hiloMode} -> Updating List`);
                     this._updateList(modal);
                 };
 
