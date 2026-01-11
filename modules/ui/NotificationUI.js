@@ -9,7 +9,7 @@ import { AppState } from '../state/AppState.js';
 import { CSS_CLASSES, IDS, UI_ICONS, EVENTS, SECTOR_INDUSTRY_MAP } from '../utils/AppConstants.js';
 import { navManager } from '../utils/NavigationManager.js';
 import { formatCurrency, formatPercent } from '../utils/formatters.js';
-import { BriefingUI } from './BriefingUI.js?v=312';
+import { BriefingUI } from './BriefingUI.js?v=313';
 
 export class NotificationUI {
 

@@ -4,7 +4,7 @@
  * Bootstraps the AppController.
  */
 
-import { AppController } from './modules/controllers/AppController.js?v=312';
+import { AppController } from './modules/controllers/AppController.js?v=313';
 import { SplashScreen } from './modules/ui/SplashScreen.js';
 
 const app = new AppController();

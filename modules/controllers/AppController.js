@@ -14,9 +14,9 @@ import { processShares, getSingleShareData, getASXCodesStatus } from '../data/Da
 import { WatchlistUI } from '../ui/WatchlistUI.js';
 import { ShareFormUI } from '../ui/ShareFormUI.js';
 import { SearchDiscoveryUI } from '../ui/SearchDiscoveryUI.js?v=16'; // Added
-import { NotificationUI } from '../ui/NotificationUI.js?v=312';
+import { NotificationUI } from '../ui/NotificationUI.js?v=313';
 import { NotificationStore } from '../state/NotificationStore.js';
-import { BriefingUI } from '../ui/BriefingUI.js?v=312';
+import { BriefingUI } from '../ui/BriefingUI.js?v=313';
 import { SnapshotUI } from '../ui/SnapshotUI.js'; // Added
 import { SettingsUI } from '../ui/SettingsUI.js?v=55';
 import { FavoriteLinksUI } from '../ui/FavoriteLinksUI.js';
