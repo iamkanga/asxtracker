@@ -262,7 +262,11 @@ export class NotificationStore {
                     minPrice: (data.minPrice !== undefined && data.minPrice !== null) ? data.minPrice : null,
                     // FIX: Allow 0 (None). Use Nullish Coalescing.
                     hiloMinPrice: (data.hiloMinPrice !== undefined && data.hiloMinPrice !== null) ? data.hiloMinPrice : null,
-                    activeFilters: (data.activeFilters || config.scanner?.activeFilters || []).map(f => f.toUpperCase()),
+                    // FIX: Preserve 'null' for "All Sectors" - null should NOT become empty array
+                    activeFilters: (() => {
+                        const raw = data.activeFilters ?? config.scanner?.activeFilters;
+                        return Array.isArray(raw) ? raw.map(f => f.toUpperCase()) : null;
+                    })(),
                     excludePortfolio: config.excludePortfolio !== false, // Capture Override Toggle
                     hiloEnabled: data.hiloEnabled // Capture 52-Week Toggle
                 };
@@ -350,7 +354,9 @@ export class NotificationStore {
 
         return hits.filter(hit => {
             // CONSTANTS & BYPASS LOGIC (Moved to Top for Reference Safety)
-            const activeFilters = rules.activeFilters || [];
+            // HARDENED: null = "All Sectors" - do NOT convert to empty array
+            const activeFilters = rules.activeFilters; // Can be null (All), [] (None), or [...industries]
+            const isAllSectors = (activeFilters === null || activeFilters === undefined);
             const isLocal = hit._isLocal === true;
             const overrideOn = rules.excludePortfolio !== false;
             const isTarget = (hit.intent === 'target' || hit.intent === 'TARGET');
@@ -400,8 +406,9 @@ export class NotificationStore {
             // Block alerts from industries NOT in the activeFilters whitelist.
             // EXCEPTION 1: Always show if the stock is in the user's watchlist AND override is enabled.
             // EXCEPTION 2: Always show Price Targets (User Intent) regardless of sector.
-            if (!shouldBypass) {
-                // If Whitelist is empty, block everything that isn't bypassed
+            // EXCEPTION 3: If activeFilters is null, ALL sectors are allowed (no filtering).
+            if (!shouldBypass && !isAllSectors) {
+                // If Whitelist is explicitly empty array, block everything that isn't bypassed
                 if (activeFilters.length === 0) return false;
 
                 let ind = (hit.Industry || hit.Sector || hit.industry || hit.sector || '').toUpperCase();
@@ -632,12 +639,15 @@ export class NotificationStore {
             // --- SECTOR FILTER (Enforce if Override is OFF) ---
             const rules = this.getScannerRules() || {};
             const overrideOn = rules.excludePortfolio !== false;
-            const activeFilters = rules.activeFilters || [];
+            // HARDENED: null = "All Sectors" - do NOT convert to empty array
+            const activeFilters = rules.activeFilters; // Can be null (All), [] (None), or [...industries]
+            const isAllSectors = (activeFilters === null || activeFilters === undefined);
             const isTarget = (hit.intent === 'target' || hit.intent === 'TARGET');
 
             // EXCEPTION: Targets are exempt from sector filtering
-            if (!overrideOn && !isTarget) {
-                // If Whitelist is empty, block everything
+            // EXCEPTION: If activeFilters is null, ALL sectors are allowed (no filtering)
+            if (!overrideOn && !isTarget && !isAllSectors) {
+                // If Whitelist is explicitly empty array, block everything
                 if (activeFilters.length === 0) return false;
 
                 let ind = (hit.Industry || hit.Sector || hit.industry || hit.sector || '').toUpperCase();
