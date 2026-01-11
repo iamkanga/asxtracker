@@ -207,49 +207,13 @@ export class SearchDiscoveryUI {
 
             // Industry Badge
             if (industry && industry !== 'Unknown') {
-                badges.push(`<span class="badge-pill" style="background: rgba(128,128,128,0.2); color: var(--text-normal); font-size: 0.7rem; padding: 2px 8px; border-radius: 4px; border: 1px solid var(--border-color);">
-                    <i class="fas fa-layer-group" style="margin-right:4px; font-size:0.6rem;"></i>${industry}
+                badges.push(`<span class="badge-pill" style="background: rgba(128,128,128,0.1); color: var(--text-normal); font-size: 0.75rem; padding: 3px 10px; border-radius: 6px; border: 1px solid var(--border-color);">
+                    <i class="fas fa-layer-group" style="margin-right:6px; font-size:0.7rem; opacity: 0.7;"></i>${industry}
                  </span>`);
             }
 
             if (badges.length === 0) return '';
-            return `<div style="display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap;">${badges.join('')}</div>`;
-        };
-
-        // Helper for Sparkline Logic
-        const renderSparkline = (s) => {
-            // ROBUST DATA EXTRACTION: Check all known variations
-            const low = Number(s.low || s.low52 || s.Low52 || s.low_52 || 0);
-            const high = Number(s.high || s.high52 || s.High52 || s.high_52 || 0);
-            const current = Number(s.live || s.livePrice || s.lastPrice || s.price || 0);
-
-            // DEBUG: Trace Sparkline Data
-            console.log('[Sparkline Debug] FULL OBJECT:', s);
-            console.log(`[Sparkline Debug] ${s.code} Raw Values:`, { high, low, current });
-
-            // Only show if we have valid range data
-            if (high <= 0 || low <= 0 || current <= 0 || high <= low) return '';
-
-            // Calculate Percentage (0-100)
-            const rangePercent = Math.min(Math.max(((current - low) / (high - low)) * 100, 0), 100);
-
-            // Inline styles to ensure visibility (Bypass CSS Cache)
-            const containerStyle = 'width: 100%; margin: 8px 0 12px 0; display: flex; flex-direction: column; gap: 4px;';
-            const groupStyle = 'display: flex; align-items: center; justify-content: space-between; font-size: 0.8rem; color: var(--text-muted);';
-            const railStyle = 'flex: 1; margin: 0 10px; background-color: var(--border-color); height: 4px; border-radius: 2px; position: relative;';
-            const markerStyle = `position: absolute; top: 50%; transform: translate(-50%, -50%); width: 8px; height: 8px; background-color: var(--color-accent); border-radius: 50%; box-shadow: 0 0 0 2px var(--card-bg); left: ${rangePercent}%;`;
-
-            return `
-                <div class="discovery-spark-container" style="${containerStyle}" data-debug-h="${high}" data-debug-l="${low}" data-debug-c="${current}" data-debug-raw-h="${s.high} || ${s.high52}">
-                    <div class="dashboard-range-data-group" style="${groupStyle}">
-                        <span class="range-low">${formatCurrency(low)}</span>
-                        <div class="spark-rail" style="${railStyle}">
-                            <div class="spark-marker" style="${markerStyle}"></div>
-                        </div>
-                        <span class="range-high">${formatCurrency(high)}</span>
-                    </div>
-                </div>
-            `;
+            return `<div style="display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap;">${badges.join('')}</div>`;
         };
 
         // Research Links
@@ -264,54 +228,54 @@ export class SearchDiscoveryUI {
         }).join('');
 
         container.innerHTML = `
-            <div class="${CSS_CLASSES.RICH_PREVIEW_CONTAINER}">
-                <div class="${CSS_CLASSES.DISCOVERY_HEADER_SIMPLE}" style="display: flex; flex-direction: column; margin-bottom: 0.5rem;">
-                   <div style="display: flex; justify-content: space-between; align-items: flex-end;"> 
-                        <h2 class="${CSS_CLASSES.DISPLAY_TITLE}" style="line-height: 1;">${stock.code}</h2>
-                        <span class="${CSS_CLASSES.PREVIEW_PRICE}" style="font-size: 1.5rem; font-weight: bold;">${formatCurrency(stock.live)}</span>
-                   </div>
-                   <span class="${CSS_CLASSES.MODAL_SUBTITLE}" style="margin-top: 4px;">${stock.name}</span>
-                   ${renderBadges(stock)}
+            <div class="${CSS_CLASSES.RICH_PREVIEW_CONTAINER}" style="padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border-color); background: rgba(var(--color-accent-rgb), 0.03); margin-bottom: 1.5rem;">
+                <!-- Main Header Info -->
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem;">
+                    <div style="flex: 1;">
+                        <div style="display: flex; flex-direction: column; gap: 4px;">
+                            <h2 style="font-size: 2.5rem; font-weight: 800; margin: 0; line-height: 1; letter-spacing: -1px; color: var(--text-color);">${stock.code}</h2>
+                            <span style="font-size: 1.1rem; color: var(--text-muted); font-weight: 500; opacity: 0.9;">${stock.name}</span>
+                        </div>
+                        ${renderBadges(stock)}
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-size: 2.2rem; font-weight: 800; line-height: 1; color: var(--text-color);">${formatCurrency(stock.live)}</div>
+                        <div class="${stock.change >= 0 ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}" style="font-size: 1.1rem; font-weight: 600; margin-top: 8px;">
+                            ${stock.change >= 0 ? '+' : ''}${formatCurrency(stock.change)} (${formatPercent(stock.pctChange)})
+                        </div>
+                    </div>
                 </div>
 
-                <!-- 52-Week Sparkline (New) -->
-                ${renderSparkline(stock)}
-
-                <div class="${CSS_CLASSES.PREVIEW_MAIN_ROW} discovery-price-right">
-                    <span class="${CSS_CLASSES.PREVIEW_PRICE} ${CSS_CLASSES.PREVIEW_PRICE_LARGE}" style="font-size: 2rem;">${formatCurrency(stock.live)}</span>
-                    <span class="${CSS_CLASSES.PREVIEW_CHANGE} ${CSS_CLASSES.PREVIEW_CHANGE_LARGE} ${stock.change >= 0 ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}" style="font-size: 1.1rem;">
-                        ${stock.change >= 0 ? '+' : ''}${formatCurrency(stock.change)} (${formatPercent(stock.pctChange)})
-                    </span>
-                </div>
-                
-                <div class="${CSS_CLASSES.STATS_GRID}" style="margin-top: 1rem;">
-                    <div class="${CSS_CLASSES.STAT_ITEM}">
-                        <span class="${CSS_CLASSES.STAT_LABEL}">52W Low</span>
-                        <span class="${CSS_CLASSES.STAT_VALUE}">${safeVal(stock.low, formatCurrency)}</span>
+                <!-- Detailed Stats Grid -->
+                <div class="${CSS_CLASSES.STATS_GRID}" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 1.5rem; padding-top: 1.2rem; border-top: 1px solid var(--border-color);">
+                    <div class="${CSS_CLASSES.STAT_ITEM}" style="align-items: flex-start;">
+                        <span class="${CSS_CLASSES.STAT_LABEL}" style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px;">52W Low</span>
+                        <span class="${CSS_CLASSES.STAT_VALUE}" style="font-size: 1.05rem; font-weight: 700;">${safeVal(stock.low, formatCurrency)}</span>
                     </div>
-                    <div class="${CSS_CLASSES.STAT_ITEM}">
-                        <span class="${CSS_CLASSES.STAT_LABEL}">52W High</span>
-                        <span class="${CSS_CLASSES.STAT_VALUE}">${safeVal(stock.high, formatCurrency)}</span>
+                    <div class="${CSS_CLASSES.STAT_ITEM}" style="align-items: flex-start;">
+                        <span class="${CSS_CLASSES.STAT_LABEL}" style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px;">52W High</span>
+                        <span class="${CSS_CLASSES.STAT_VALUE}" style="font-size: 1.05rem; font-weight: 700;">${safeVal(stock.high, formatCurrency)}</span>
                     </div>
-                    <div class="${CSS_CLASSES.STAT_ITEM}">
-                        <span class="${CSS_CLASSES.STAT_LABEL}">P/E Ratio</span>
-                        <span class="${CSS_CLASSES.STAT_VALUE}">${safeVal(stock.pe, (v) => v.toFixed(2))}</span>
+                    <div class="${CSS_CLASSES.STAT_ITEM}" style="align-items: flex-start;">
+                        <span class="${CSS_CLASSES.STAT_LABEL}" style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px;">P/E Ratio</span>
+                        <span class="${CSS_CLASSES.STAT_VALUE}" style="font-size: 1.05rem; font-weight: 700;">${safeVal(stock.pe, (v) => v.toFixed(2))}</span>
                     </div>
                 </div>
             </div>
 
-            <!-- ACTION BUTTON (The Handoff - Subtle Icon) -->
-            <!-- ACTION BUTTON (Modern CTA) -->
-            <div style="display: flex; justify-content: center; margin: 1.5rem 0 1rem 0;">
-                <button id="discoveryAddBtn" class="${CSS_CLASSES.PRIMARY_PILL_BTN}">
+            <!-- ACTION BUTTON -->
+            <div style="display: flex; justify-content: center; margin: 1.5rem 0;">
+                <button id="discoveryAddBtn" class="${CSS_CLASSES.ICON_BTN_GHOST}" style="display: flex; align-items: center; padding: 10px 24px; font-size: 0.95rem; font-weight: 700; gap: 10px; border: 1px solid var(--color-accent); border-radius: 30px; transition: all 0.3s ease; color: var(--color-accent);">
                     <span>Add to Share Tracker</span>
-                    <i class="fas ${UI_ICONS.ADD}" style="font-size: 1.2rem;"></i>
+                    <i class="fas ${UI_ICONS.ADD}" style="font-size: 1.1rem; color: var(--color-accent);"></i>
                 </button>
             </div>
 
-            <h4 class="${CSS_CLASSES.SECTION_TITLE}">Research Tools</h4>
-            <div class="${CSS_CLASSES.RESEARCH_LINKS_GRID}">
-                ${linksHtml}
+            <div style="margin-top: 2rem;">
+                <h4 class="${CSS_CLASSES.SECTION_TITLE}" style="font-weight: 700; color: var(--color-accent); border-bottom: 2px solid var(--color-accent); display: inline-block; padding-bottom: 4px; margin-bottom: 1.5rem;">Research Tools</h4>
+                <div class="${CSS_CLASSES.RESEARCH_LINKS_GRID}">
+                    ${linksHtml}
+                </div>
             </div>
         `;
 
