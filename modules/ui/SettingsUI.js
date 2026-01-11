@@ -203,6 +203,34 @@ export class SettingsUI {
                     .clickable-industry-row:hover {
                         background: rgba(var(--color-accent-rgb, 164, 147, 147), 0.05) !important;
                     }
+
+                    /* Interactive Summary Tiles */
+                    .summary-tile-clickable {
+                        cursor: pointer;
+                        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+                        position: relative;
+                        overflow: hidden;
+                    }
+                    .summary-tile-clickable:hover {
+                        background: var(--bg-hover) !important;
+                        border-color: var(--color-accent) !important;
+                        transform: translateY(-1px);
+                        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+                    }
+                    .summary-tile-clickable:active {
+                        transform: translateY(0);
+                        filter: brightness(1.2);
+                    }
+
+                    /* Flash Highlight for Jump-to-Section */
+                    @keyframes flash-highlight {
+                        0% { background-color: transparent; }
+                        20% { background-color: rgba(var(--color-accent-rgb, 164, 147, 147), 0.2); }
+                        100% { background-color: transparent; }
+                    }
+                    .section-flash {
+                        animation: flash-highlight 1.5s ease-out;
+                    }
                 </style>
             </div>
         `;
@@ -274,42 +302,42 @@ export class SettingsUI {
                     <div class="summary-section-title" style="color: white !important; font-size: 0.82rem;"><i class="fas fa-satellite-dish" style="color: var(--color-accent);"></i> Alert Monitors</div>
                     <div class="summary-grid-compact">
                         <!-- 1. Scope (Custom / All) -->
-                        <div class="${CSS_CLASSES.SUMMARY_TILE} thin">
+                        <div class="${CSS_CLASSES.SUMMARY_TILE} thin summary-tile-clickable" data-toggle-target="badge-scope">
                             <div class="${CSS_CLASSES.SUMMARY_TILE_HEADER}">
                                 <span id="val-scope" class="${CSS_CLASSES.SUMMARY_TILE_LABEL}" style="font-size: 0.65rem; color: var(--color-accent); font-weight: 800;">Badge Custom</span>
                             </div>
                             <div class="${CSS_CLASSES.SUMMARY_STATUS_INDICATOR} kangaroo large always-on"></div>
                         </div>
                         <!-- 2. Alert Icon -->
-                        <div class="${CSS_CLASSES.SUMMARY_TILE} thin">
+                        <div class="${CSS_CLASSES.SUMMARY_TILE} thin summary-tile-clickable" data-toggle-target="toggle-pref-showBadges">
                             <div class="${CSS_CLASSES.SUMMARY_TILE_HEADER}">
                                 <span class="${CSS_CLASSES.SUMMARY_TILE_LABEL}">Alert Icon</span>
                             </div>
                             <div id="ind-icon" class="${CSS_CLASSES.SUMMARY_STATUS_INDICATOR} kangaroo large"></div>
                         </div>
                         <!-- 3. 52w -->
-                        <div class="${CSS_CLASSES.SUMMARY_TILE} thin">
+                        <div class="${CSS_CLASSES.SUMMARY_TILE} thin summary-tile-clickable" data-toggle-target="toggle-hiloEnabled">
                             <div class="${CSS_CLASSES.SUMMARY_TILE_HEADER}">
                                 <span class="${CSS_CLASSES.SUMMARY_TILE_LABEL}">52w</span>
                             </div>
                             <div id="ind-hilo" class="${CSS_CLASSES.SUMMARY_STATUS_INDICATOR} kangaroo large"></div>
                         </div>
                         <!-- 4. Movers -->
-                        <div class="${CSS_CLASSES.SUMMARY_TILE} thin">
+                        <div class="${CSS_CLASSES.SUMMARY_TILE} thin summary-tile-clickable" data-toggle-target="toggle-moversEnabled">
                             <div class="${CSS_CLASSES.SUMMARY_TILE_HEADER}">
                                 <span class="${CSS_CLASSES.SUMMARY_TILE_LABEL}">Market Movers</span>
                             </div>
                             <div id="ind-movers" class="${CSS_CLASSES.SUMMARY_STATUS_INDICATOR} kangaroo large"></div>
                         </div>
                         <!-- 5. Personal -->
-                        <div class="${CSS_CLASSES.SUMMARY_TILE} thin">
+                        <div class="${CSS_CLASSES.SUMMARY_TILE} thin summary-tile-clickable" data-toggle-target="toggle-personalEnabled">
                             <div class="${CSS_CLASSES.SUMMARY_TILE_HEADER}">
                                 <span class="${CSS_CLASSES.SUMMARY_TILE_LABEL}">Personal</span>
                             </div>
                             <div id="ind-personal" class="${CSS_CLASSES.SUMMARY_STATUS_INDICATOR} kangaroo large"></div>
                         </div>
                         <!-- 6. Email -->
-                        <div class="${CSS_CLASSES.SUMMARY_TILE} thin">
+                        <div class="${CSS_CLASSES.SUMMARY_TILE} thin summary-tile-clickable" data-toggle-target="toggle-pref-dailyEmail">
                             <div class="${CSS_CLASSES.SUMMARY_TILE_HEADER}">
                                 <span class="${CSS_CLASSES.SUMMARY_TILE_LABEL}">Email</span>
                             </div>
@@ -323,37 +351,38 @@ export class SettingsUI {
                     <div class="summary-section-title" style="color: white !important; font-size: 0.82rem;"><i class="fas fa-sliders-h" style="color: var(--color-accent);"></i> Parameter Filters</div>
                     <div class="summary-grid-paired">
                         <!-- Movers & 52w Limit -->
-                        <div class="${CSS_CLASSES.SUMMARY_TILE}" style="align-items: center;">
+                        <div class="${CSS_CLASSES.SUMMARY_TILE} summary-tile-clickable" data-scroll-target="section-thresholds" style="align-items: center;">
                             <div class="${CSS_CLASSES.SUMMARY_TILE_HEADER}" style="justify-content: center;"><span class="${CSS_CLASSES.SUMMARY_TILE_LABEL}">Market Movers Limit $</span></div>
                             <div class="${CSS_CLASSES.SUMMARY_TILE_BODY}" style="justify-content: center;"><span class="${CSS_CLASSES.SUMMARY_TILE_VALUE}" id="sum-val-vol">None</span></div>
                         </div>
-                        <div class="${CSS_CLASSES.SUMMARY_TILE}" style="align-items: center;">
+                        <div class="${CSS_CLASSES.SUMMARY_TILE} summary-tile-clickable" data-scroll-target="section-thresholds" style="align-items: center;">
                             <div class="${CSS_CLASSES.SUMMARY_TILE_HEADER}" style="justify-content: center;"><span class="${CSS_CLASSES.SUMMARY_TILE_LABEL}">52w Limit $</span></div>
                             <div class="${CSS_CLASSES.SUMMARY_TILE_BODY}" style="justify-content: center;"><span class="${CSS_CLASSES.SUMMARY_TILE_VALUE}" id="sum-val-hilo">None</span></div>
                         </div>
                     </div>
                     <div class="summary-grid-paired" style="margin-top: 8px;">
                         <!-- Up & Down Alert Thresholds -->
-                        <div class="${CSS_CLASSES.SUMMARY_TILE}" style="align-items: center;">
+                        <div class="${CSS_CLASSES.SUMMARY_TILE} summary-tile-clickable" data-scroll-target="section-movers" style="align-items: center;">
                             <div class="${CSS_CLASSES.SUMMARY_TILE_HEADER}" style="justify-content: center;"><span class="${CSS_CLASSES.SUMMARY_TILE_LABEL}">Increase</span></div>
                             <div class="${CSS_CLASSES.SUMMARY_TILE_BODY}" style="justify-content: center;"><span class="${CSS_CLASSES.SUMMARY_TILE_VALUE}" id="sum-val-up">None</span></div>
                         </div>
-                        <div class="${CSS_CLASSES.SUMMARY_TILE}" style="align-items: center;">
+                        <div class="${CSS_CLASSES.SUMMARY_TILE} summary-tile-clickable" data-scroll-target="section-movers" style="align-items: center;">
                             <div class="${CSS_CLASSES.SUMMARY_TILE_HEADER}" style="justify-content: center;"><span class="${CSS_CLASSES.SUMMARY_TILE_LABEL}">Decrease</span></div>
                             <div class="${CSS_CLASSES.SUMMARY_TILE_BODY}" style="justify-content: center;"><span class="${CSS_CLASSES.SUMMARY_TILE_VALUE}" id="sum-val-down">None</span></div>
                         </div>
                     </div>
                     <div class="summary-grid-paired" style="margin-top: 8px; grid-template-columns: 1fr 1fr;">
-                        <!-- Watchlist Override (New) -->
-                        <div class="${CSS_CLASSES.SUMMARY_TILE}" style="align-items: center;">
+                        <!-- Watchlist Override (New) - Toggleable directly -->
+                        <div class="${CSS_CLASSES.SUMMARY_TILE} summary-tile-clickable" data-toggle-target="${IDS.PREF_EXCLUDE_PORTFOLIO}" style="align-items: center;">
                             <div class="${CSS_CLASSES.SUMMARY_TILE_HEADER}" style="justify-content: center;"><span class="${CSS_CLASSES.SUMMARY_TILE_LABEL}">Watchlist Override</span></div>
-                            <div class="${CSS_CLASSES.SUMMARY_TILE_BODY}" style="justify-content: center;">
+                            <div class="${CSS_CLASSES.SUMMARY_TILE_BODY}" style="justify-content: center; position: relative;">
                                 <span class="${CSS_CLASSES.SUMMARY_TILE_VALUE}" id="sum-val-override">...</span>
+                                <div id="ind-override" class="${CSS_CLASSES.SUMMARY_STATUS_INDICATOR} kangaroo" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); width: 8px; height: 8px;"></div>
                             </div>
                         </div>
 
                         <!-- Sectors (Modified) -->
-                        <div class="${CSS_CLASSES.SUMMARY_TILE}" style="align-items: center;">
+                        <div class="${CSS_CLASSES.SUMMARY_TILE} summary-tile-clickable" data-scroll-target="section-sectors" style="align-items: center;">
                             <div class="${CSS_CLASSES.SUMMARY_TILE_HEADER}" style="justify-content: center;"><span class="${CSS_CLASSES.SUMMARY_TILE_LABEL}">Industry Sectors</span></div>
                             <div class="${CSS_CLASSES.SUMMARY_TILE_BODY}" style="justify-content: center; flex-direction: column;">
                                 <span class="${CSS_CLASSES.SUMMARY_TILE_VALUE}" id="summary-sectors-text" style="font-size: 0.8rem;">Loading...</span>
@@ -497,7 +526,7 @@ export class SettingsUI {
                 <!-- Thresholds Section -->
                 <!-- Thresholds Section -->
                 <!-- Thresholds Section -->
-                <div style="margin-bottom: 20px; margin-top: 24px; margin-left: -16px; display: flex; flex-direction: column; gap: 0;">
+                <div id="section-thresholds" style="margin-bottom: 20px; margin-top: 24px; margin-left: -16px; display: flex; flex-direction: column; gap: 0;">
                     <div style="display: flex; align-items: center; gap: 4px;">
                         <i class="fas fa-ruler-combined" style="color: var(--color-accent); font-size: 0.9em;"></i>
                         <span class="${CSS_CLASSES.DETAIL_LABEL}" style="font-size: 0.82rem; font-weight: 700; color: white; line-height: 1.1;">Thresholds</span>
@@ -528,7 +557,7 @@ export class SettingsUI {
                 </div>
 
                 <!-- Movers Section -->
-                <div style="margin-bottom: 20px; margin-top: 24px; margin-left: -16px; display: flex; flex-direction: column; gap: 0;">
+                <div id="section-movers" style="margin-bottom: 20px; margin-top: 24px; margin-left: -16px; display: flex; flex-direction: column; gap: 0;">
                     <div style="display: flex; align-items: center; gap: 4px;">
                         <i class="fas fa-chart-line" style="color: var(--color-accent); font-size: 0.9em;"></i>
                         <span class="${CSS_CLASSES.DETAIL_LABEL}" style="font-size: 0.82rem; font-weight: 700; color: white; line-height: 1.1;">Market Movers</span>
@@ -579,7 +608,7 @@ export class SettingsUI {
                 </div>
 
                 <!-- Subtle Separator for Sector Selector (Previously sectorCard title) -->
-                <div style="border-top: none; padding-top: 0; margin-top: 24px; margin-bottom: 24px; margin-left: -16px; display: flex; align-items: center; gap: 4px;">
+                <div id="section-sectors" style="border-top: none; padding-top: 0; margin-top: 24px; margin-bottom: 24px; margin-left: -16px; display: flex; align-items: center; gap: 4px;">
                      <i class="fas fa-layer-group" style="color: var(--color-accent); font-size: 0.9em;"></i>
                      <span class="${CSS_CLASSES.DETAIL_LABEL}" style="font-size: 0.82rem; font-weight: 700; color: white; letter-spacing: 0; line-height: 1.1;">Sector Filtering</span>
                 </div>
@@ -680,7 +709,9 @@ export class SettingsUI {
         updateCheck('pref-emailAddr', prefs.alertEmailRecipients || '');
 
         // Initial Sector Population
-        const activeFilters = (prefs.scanner?.activeFilters || []).map(f => f.toUpperCase());
+        const rawFilters = prefs.scanner?.activeFilters;
+        const allIndustries = Object.values(SECTOR_INDUSTRY_MAP).flat().map(f => f.toUpperCase());
+        const activeFilters = (rawFilters === null) ? allIndustries : (rawFilters || []).map(f => f.toUpperCase());
         this._renderSectorAccordion(modal, activeFilters);
 
         // Initial Summary Update
@@ -715,18 +746,36 @@ export class SettingsUI {
             dollarThreshold: getNum(`${type}-dollarVal`)
         });
 
-        const activeFilters = [];
-        if (!skipSectors) {
-            modal.querySelectorAll('.sector-toggle').forEach(cb => {
-                if (cb.checked) {
-                    const ind = cb.dataset.industry;
-                    if (ind) activeFilters.push(ind.toUpperCase()); // NORMALIZATION
-                }
-            });
+        let activeFilters = null;
+
+        if (skipSectors) {
+            // BUG FIX: Prevent converting 'null' (All) into '[]' (None) during fast saves
+            const current = AppState.preferences?.scanner?.activeFilters;
+            activeFilters = (current === null) ? null : (Array.isArray(current) ? [...current].map(f => f.toUpperCase()) : []);
         } else {
-            // If skipping, use the current AppState filters as the placeholder to avoid overwriting with empty
-            const current = AppState.preferences?.scanner?.activeFilters || [];
-            current.forEach(f => activeFilters.push(f.toUpperCase()));
+            const toggles = modal.querySelectorAll('.sector-toggle');
+            if (toggles.length === 0) {
+                // SAFETY: If toggles aren't in the DOM (e.g. accordion closed/not rendered),
+                // preserve the current AppState to prevent accidental "none" reset.
+                // DEFAULT TO 'null' (All) if AppState is also missing.
+                const current = AppState.preferences?.scanner?.activeFilters;
+                activeFilters = (current === undefined) ? null : (current === null ? null : [...current].map(f => f.toUpperCase()));
+            } else {
+                const harvested = [];
+                toggles.forEach(cb => {
+                    if (cb.checked) {
+                        const ind = cb.dataset.industry;
+                        if (ind) harvested.push(ind.toUpperCase());
+                    }
+                });
+
+                // Optimization: If everything is checked OR if counts match the rendered toggles, store as 'null' (All)
+                // This is safer than comparing against the hardcoded constant as it remains resilient to UI rendering glitches.
+                const totalIndustries = Object.values(SECTOR_INDUSTRY_MAP).flat().length;
+                const isAllPhysicallyChecked = harvested.length === toggles.length && toggles.length > 0;
+
+                activeFilters = (isAllPhysicallyChecked || harvested.length === totalIndustries) ? null : harvested;
+            }
         }
 
         return {
@@ -737,7 +786,7 @@ export class SettingsUI {
             scanner: {
                 activeFilters: activeFilters
             },
-            alertEmailRecipients: modal.querySelector('#pref-emailAddr')?.value || '',
+            alertEmailRecipients: modal.querySelector(`#${IDS.PREF_EMAIL_ADDR}`)?.value || '',
             scannerRules: {
                 minPrice: getNum(IDS.PREF_GLOBAL_MIN_PRICE),
                 hiloMinPrice: getNum(IDS.PREF_HILO_MIN_PRICE),
@@ -771,7 +820,9 @@ export class SettingsUI {
         const dailyEmail = prefs.dailyEmail === true;
         const isExclude = prefs.excludePortfolio ?? true;
 
-        const activeFilters = (prefs.scanner?.activeFilters || []).map(f => f.toUpperCase());
+        const rawFilters = prefs.scanner?.activeFilters;
+        const allIndustries = Object.values(SECTOR_INDUSTRY_MAP).flat().map(f => f.toUpperCase());
+        const activeFilters = (rawFilters === null) ? allIndustries : (rawFilters || []).map(f => f.toUpperCase());
 
         // Helper to safely update text and indicators
         const updateTile = (id, indicatorId, isOn, val) => {
@@ -900,7 +951,7 @@ export class SettingsUI {
             updateInput(IDS.PREF_UP_DOLLAR, upDol);
             updateInput(IDS.PREF_DOWN_PERCENT, downPct);
             updateInput(IDS.PREF_DOWN_DOLLAR, downDol);
-            updateInput('pref-emailAddr', prefs.alertEmailRecipients);
+            updateInput(IDS.PREF_EMAIL_ADDR, prefs.alertEmailRecipients);
         }
 
         // Toggles UI Updates
@@ -946,7 +997,8 @@ export class SettingsUI {
 
         // Efficient Sector Update: Only re-render if filters changed OR if accordion is currently empty (initial load fix)
         const accordionContainer = modal.querySelector('#settings-sector-accordion');
-        const currentActive = Array.from(modal.querySelectorAll('.sector-toggle:checked')).map(cb => cb.dataset.industry);
+        // FIX: Ensure casing consistency (Uppercase) for comparison to prevent infinite re-render loop
+        const currentActive = Array.from(modal.querySelectorAll('.sector-toggle:checked')).map(cb => (cb.dataset.industry || '').toUpperCase());
         const hasFilterChange = JSON.stringify(currentActive.sort()) !== JSON.stringify(activeFilters.sort());
         const isEmpty = !accordionContainer || accordionContainer.children.length === 0;
 
@@ -1250,8 +1302,53 @@ export class SettingsUI {
             }
         });
 
-        // 2. Click Delegation (Pills, Bulk Actions, Accordions, Kangaroo)
+        // 2. Click Delegation (Pills, Bulk Actions, Accordions, Kangaroo, Summary Tiles)
         modal.addEventListener('click', (e) => {
+            // --- NEW: Summary Board Interactivity ---
+            const tile = e.target.closest('.summary-tile-clickable');
+            if (tile) {
+                const toggleTarget = tile.dataset.toggleTarget;
+                const scrollTarget = tile.dataset.scrollTarget;
+
+                if (toggleTarget) {
+                    if (toggleTarget === 'badge-scope') {
+                        // Toggle between custom and all
+                        const input = modal.querySelector(`#${IDS.PREF_BADGE_SCOPE}`);
+                        if (input) {
+                            const nextVal = input.value === 'custom' ? 'all' : 'custom';
+                            input.value = nextVal;
+
+                            // SYNC FIX: Explicitly trigger badge update in main UI
+                            if (window.notificationStore) {
+                                window.notificationStore.recalculateBadges();
+                            }
+
+                            triggerUpdate('immediate', `Badge Scope set to ${nextVal}`);
+                        }
+                    } else {
+                        // Standard Toggle
+                        const input = modal.querySelector(`#${toggleTarget}`);
+                        if (input && input.type === 'checkbox') {
+                            input.checked = !input.checked;
+                            input.dispatchEvent(new Event('change', { bubbles: true })); // Trigger persistence
+                        }
+                    }
+                    return;
+                }
+
+                if (scrollTarget) {
+                    const section = modal.querySelector(`#${scrollTarget}`);
+                    if (section) {
+                        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        // Visual feedback flash
+                        section.classList.remove('section-flash');
+                        void section.offsetWidth; // Trigger reflow
+                        section.classList.add('section-flash');
+                    }
+                    return;
+                }
+            }
+
             // A0. Kangaroo Icon (Open Notifications)
             const kangaroo = e.target.closest('.kangaroo');
             if (kangaroo) {
@@ -1308,39 +1405,84 @@ export class SettingsUI {
                         }
                         // Update UI Active State (IMMEDIATE FEEDBACK)
                         Array.from(container.children).forEach(p => p.classList.toggle('active', p === pill));
+
+                        // SYNC FIX: If scope changed via pill, update badge instantly
+                        if (targetId === IDS.PREF_BADGE_SCOPE && window.notificationStore) {
+                            window.notificationStore.recalculateBadges();
+                        }
+
                         triggerUpdate('fast', contextMsg); // Fast Save (Skip heavy sector sweep)
                     }
                 }
                 return;
             }
 
-            // B. Master Sector Bulk Select
+            // B. Master Sector Bulk Select - OPTIMIZED
             const masterSeg = e.target.closest('.master-pill-segment');
             if (masterSeg) {
                 const action = masterSeg.dataset.action;
                 const isAll = action === 'all';
+
+                // CRITICAL FIX: Update AppState directly BEFORE re-render cycle
+                // This prevents the synchronous _updateSummaryBoard from seeing stale data
+                // and rolling back the UI to the previous state.
+                if (AppState.preferences?.scanner) {
+                    AppState.preferences.scanner.activeFilters = isAll ? null : [];
+                }
+
                 modal.querySelectorAll('.sector-toggle').forEach(cb => {
                     cb.checked = isAll;
-                    cb.dispatchEvent(new Event('change', { bubbles: true }));
                 });
 
-                // Update Master Pill UI
+                // Update Master Pill UI State (Immediate Feedback)
                 masterSeg.parentElement.querySelectorAll('.master-pill-segment').forEach(s => s.classList.toggle('active', s.dataset.action === action));
-                triggerUpdate('immediate', 'Bulk Sector Update'); // Immediate Save
+
+                // Sync UI Components
+                this._updateSummaryBoard(modal);
+                triggerUpdate('immediate', 'All Sectors Updated');
                 return;
             }
 
-            // C. Sector-Level Bulk Action
+            // C. Sector-Level Bulk Action - OPTIMIZED
             const bulkBtn = e.target.closest('.bulk-btn');
             if (bulkBtn && !bulkBtn.classList.contains('master-pill-segment')) {
                 const action = bulkBtn.dataset.action;
+                const isAll = action === 'all';
                 const item = bulkBtn.closest('.filter-accordion-item');
-                if (item) {
+                const sectorName = item?.querySelector('.sector-name')?.textContent;
+
+                if (item && sectorName) {
                     item.querySelectorAll('.sector-toggle').forEach(cb => {
-                        cb.checked = (action === 'all');
-                        cb.dispatchEvent(new Event('change', { bubbles: true }));
+                        cb.checked = isAll;
                     });
-                    triggerUpdate('immediate', 'Sector Group Update'); // Immediate Save
+
+                    // CRITICAL FIX: Update AppState directly for this specific sector group
+                    // to prevent re-render "rollback" during the next sync cycle.
+                    if (AppState.preferences?.scanner) {
+                        const industries = SECTOR_INDUSTRY_MAP[sectorName]?.map(i => i.toUpperCase()) || [];
+                        let current = AppState.preferences.scanner.activeFilters;
+
+                        // If currently 'All', expand it first
+                        if (current === null) {
+                            current = Object.values(SECTOR_INDUSTRY_MAP).flat().map(i => i.toUpperCase());
+                        }
+
+                        let next;
+                        if (isAll) {
+                            // Union with this sector's industries
+                            next = Array.from(new Set([...current, ...industries]));
+                            // If resulting union is everything, set to null
+                            const totalCount = Object.values(SECTOR_INDUSTRY_MAP).flat().length;
+                            if (next.length === totalCount) next = null;
+                        } else {
+                            // Subtraction
+                            next = current.filter(i => !industries.includes(i));
+                        }
+                        AppState.preferences.scanner.activeFilters = next;
+                    }
+
+                    this._updateSummaryBoard(modal); // Sync UI Immediately
+                    triggerUpdate('immediate', 'Sector Group Updated');
                 }
                 return;
             }

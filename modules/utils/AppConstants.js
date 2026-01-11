@@ -1218,6 +1218,8 @@ export const IDS = {
     PREF_DOWN_DOLLAR: 'down-dollarVal',
     PREF_EXCLUDE_PORTFOLIO: 'toggle-pref-excludePortfolio',
     PREF_BADGE_SCOPE: 'toggle-pref-badgeScope',
+    PREF_EMAIL_ADDR: 'pref-emailAddr',
+    TOGGLE_DAILY_EMAIL: 'toggle-pref-dailyEmail',
 
     // Watchlist Mode Selection
     WATCHLIST_MODE_CONTAINER: 'watchlist-mode-container',
@@ -1327,11 +1329,6 @@ export const IDS = {
     SORT_MODAL_TITLE: 'sort-modal-title',
 
     // Settings Specific IDs
-    PREF_EMAIL_ADDR: 'pref-emailAddr',
-    PREF_EMAIL_ADDR: 'pref-emailAddr',
-    TOGGLE_DAILY_EMAIL: 'toggle-pref-dailyEmail',
-    PREF_BADGE_SCOPE: 'pref-badgeScope',
-    PREF_EXCLUDE_PORTFOLIO: 'toggle-pref-excludePortfolio',
     SUMMARY_PORTFOLIO_OVERRIDE: 'summary-portfolio-override',
 
     // Favorite Links

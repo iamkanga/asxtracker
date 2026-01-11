@@ -75,16 +75,16 @@ Key files involved in this refactor:
 - **Final Polish:**
   - **Interaction Model**: Implemented `:hover` highlight (Coffee Color) for Watchlist Title.
   - **Vertical Spacing**: Enforced distinct containers with fixed min-heights (48px top, 44px bottom).
-  - **Bottom Alignment**: Removed `margin-bottom` from `.asx-toggle-text` and padding from `.watchlist-controls-row`, forcing elements to the extreme bottom baseline.
-  - **Typography**: Scaled `#sortPickerBtn` font size to `0.51rem` (20% reduction from 0.64rem).
 
 ---
 
 ## Notification System Fixes & Revisions
 
-### 1. UX Reversion: Bell Positioning
-- **Placement**: Reverted the floating notification bell to the **bottom-left** of the screen as per user preference.
-- **Animation**: Switched the entry animation back to `slideInLeft`.
+### 1. Hardened Master Select & Sector Recovery
+- **Direct State Update**: Implemented a critical fix where Master Select (All/None) and Sector-level bulk actions now update `AppState.preferences` *immediately* before triggering a UI refresh. This prevents the re-render cycle from using stale data and rolling back the user's selection to "None".
+- **Initial Render Fix**: Corrected `_updateValuesOnly` to properly handle the `null` (All Sectors) state. Previously, it was defaulting to an empty list `[]` during the initial modal populate, causing a de-sync.
+- **Summary Board IDs**: Added the missing `ind-override` ID to the Watchlist Override tile, enabling the status indicator dot to update correctly.
+- **Dynamic "All" Detection**: Improved the logic for detecting the "All Sectors" state. The system now compares the number of checked boxes against the *rendered* count, ensuring "Select All" works even if there's a minor discrepancy in industry counts.
 - **Visibility Standard**: Ensured the bell button itself (and its container) are explicitly unhidden whenever a non-zero count is processed, overriding any previous dismissal state.
 
 ### 2. Badge Visibility Hardening

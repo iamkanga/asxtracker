@@ -97,7 +97,9 @@ export class NotificationStore {
                         hiloEnabled: data.hiloEnabled,     // Capture 52W Toggle
                         personalEnabled: data.personalEnabled, // Capture Personal Toggle
                         excludePortfolio: prefs.excludePortfolio !== false, // Capture Override Toggle
-                        activeFilters: (prefs.scanner?.activeFilters || []).map(f => f.toUpperCase()) // Capture Whitelist
+                        activeFilters: Array.isArray(prefs.scanner?.activeFilters)
+                            ? prefs.scanner.activeFilters.map(f => f.toUpperCase())
+                            : null // Preserve 'null' for "All Sectors"
                     };
 
                     // console.log('[NotificationStore] Live Preferences Updated. Rules:', this.scannerRules);
@@ -287,7 +289,12 @@ export class NotificationStore {
             }
 
             if (AppState.preferences.scanner && AppState.preferences.scanner.activeFilters !== undefined) {
-                rules.activeFilters = AppState.preferences.scanner.activeFilters;
+                const raw = AppState.preferences.scanner.activeFilters;
+                rules.activeFilters = Array.isArray(raw) ? raw.map(f => f.toUpperCase()) : raw;
+            } else if (this.scannerRules && this.scannerRules.activeFilters !== undefined) {
+                rules.activeFilters = this.scannerRules.activeFilters;
+            } else {
+                rules.activeFilters = null; // Default to All
             }
             return rules;
         }

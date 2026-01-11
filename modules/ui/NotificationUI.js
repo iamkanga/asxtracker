@@ -357,6 +357,9 @@ export class NotificationUI {
                     <div id="notif-timestamp" style="text-align: right; font-size: 0.65rem; color: var(--text-muted); padding: 5px 10px; font-style: italic;"></div>
                     <!-- Accordion Sections -->
                 </div>
+
+                <!-- Intelligence Report Overlay (Deep Dive) -->
+                <div id="intelligence-report" class="intelligence-report-overlay"></div>
             </div>
         `;
 
@@ -1517,24 +1520,24 @@ export class NotificationUI {
 
         const prefs = AppState.preferences || {};
 
-        // 1. TOP ROW: Override Status (Title)
-        // User Requirement: Use Red/Green for Override Status
+        // 1. TOP ROW: Override Status & Threshold Awareness
         // Logic: ExcludePortfolio = true means Override is ON (Bypassing filters)
         const overrideOn = rules.excludePortfolio !== false;
 
         titleRow.innerHTML = overrideOn
-            ? `<span class="status-override-on">WATCHLIST OVERRIDE: ON</span>`
+            ? `<span class="status-override-on">WATCHLIST OVERRIDE ON • BYPASSING LIMITS</span>`
             : `<span class="status-override-off">WATCHLIST OVERRIDE: OFF</span>`;
 
-        // 2. BOTTOM ROW: Monitor Settings
-        // Define Monitors with their specific "Active" logic
-        const totalIndustries = Object.values(SECTOR_INDUSTRY_MAP).flat().length;
-        const rawFilters = prefs.scanner?.activeFilters;
-        const isAll = (rawFilters === null); // Specific 'ALL' state
+        // 2. BOTTOM ROW: Monitor Settings & Sector Awareness (146 total Industries)
+        const allIndustries = Object.values(SECTOR_INDUSTRY_MAP).flat();
+        const totalIndustries = allIndustries.length;
 
-        const activeFilters = (rawFilters || []).map(f => f.toUpperCase());
-        const activeCount = isAll ? totalIndustries : activeFilters.length;
-        const inactiveCount = totalIndustries - activeCount;
+        // SYNC FIX: Use synchronized filters from Store
+        const activeFilters = rules.activeFilters;
+        const isAll = (activeFilters === null || activeFilters === undefined);
+
+        const activeCount = isAll ? totalIndustries : (Array.isArray(activeFilters) ? activeFilters.length : 0);
+        const inactiveCount = Math.max(0, totalIndustries - activeCount);
 
         const monitors = [
             { label: 'Movers', active: rules.moversEnabled !== false },
@@ -1542,8 +1545,8 @@ export class NotificationUI {
             { label: 'Personal', active: rules.personalEnabled !== false },
             { label: 'Email', active: prefs.dailyEmail === true },
             {
-                label: `Sectors: ${activeCount} / ${inactiveCount}`,
-                active: true // Always highlighted per USER request
+                label: `Sectors: <span class="status-count-green">${activeCount}</span> / <span class="status-count-red">${inactiveCount}</span>`,
+                active: true
             }
         ];
 
@@ -1554,10 +1557,108 @@ export class NotificationUI {
 
         monitorsRow.innerHTML = monitorsHtml;
 
-        // Add click handler to open settings
+        // Add click handler to toggle Intelligence Report overlay instead of settings
         statusBar.onclick = (e) => {
             e.stopPropagation();
-            document.dispatchEvent(new CustomEvent(EVENTS.OPEN_SETTINGS));
+            this._toggleIntelligenceReport(modal);
         };
+    }
+
+    /**
+     * Toggles the detailed "Enforcement Report" overlay.
+     */
+    static _toggleIntelligenceReport(modal) {
+        const report = modal.querySelector('#intelligence-report');
+        if (!report) return;
+
+        if (report.classList.contains('visible')) {
+            report.classList.remove('visible');
+        } else {
+            // Get current state to render fresh report
+            const rules = (notificationStore && typeof notificationStore.getScannerRules === 'function')
+                ? notificationStore.getScannerRules()
+                : (AppState.preferences?.scannerRules || {});
+            const prefs = AppState.preferences || {};
+
+            this._renderIntelligenceReport(report, rules, prefs);
+            report.classList.add('visible');
+        }
+    }
+
+    /**
+     * Renders the deep-dive transparency report inside the overlay.
+     */
+    static _renderIntelligenceReport(container, rules, prefs) {
+        const overrideOn = rules.excludePortfolio !== false;
+
+        // Thresholds
+        const moversMinPrice = rules.minPrice || 0.10;
+        const hiloMinPrice = rules.hiloMinPrice || 0.50;
+
+        // Sectors/Industries (Synchronized with Store)
+        const allIndustries = Object.values(SECTOR_INDUSTRY_MAP).flat();
+        const activeFilters = rules.activeFilters;
+        const isAll = (activeFilters === null || activeFilters === undefined);
+        const activeList = isAll ? allIndustries.map(i => i.toUpperCase()) : (Array.isArray(activeFilters) ? activeFilters : []);
+        const blockedSectors = allIndustries.filter(s => !activeList.includes(s.toUpperCase()));
+
+        container.innerHTML = `
+            <div class="report-header">
+                <div class="report-title">Market Enforcement Report</div>
+                <button class="report-close-btn"><i class="fas fa-times"></i></button>
+            </div>
+
+            <div class="report-section">
+                <div class="report-section-title">General Market Rules (Enforced)</div>
+                <div class="report-rule-item">
+                    <span class="report-rule-label">Movers Min Price</span>
+                    <span class="report-rule-value">$${moversMinPrice.toFixed(2)}</span>
+                </div>
+                <div class="report-rule-item">
+                    <span class="report-rule-label">52-Week Min Price</span>
+                    <span class="report-rule-value">$${hiloMinPrice.toFixed(2)}</span>
+                </div>
+                <div class="report-rule-item">
+                    <span class="report-rule-label">Blocked Sectors</span>
+                    <span class="report-rule-value ${blockedSectors.length > 0 ? 'blocked' : ''}">${blockedSectors.length}</span>
+                </div>
+            </div>
+
+            <div class="report-section">
+                <div class="report-section-title">Watchlist Override (${overrideOn ? 'ACTIVE' : 'OFF'})</div>
+                <div class="report-rule-item">
+                    <span class="report-rule-label">Override Rule</span>
+                    <span class="report-rule-value ${overrideOn ? 'active' : ''}">${overrideOn ? 'BYPASSING LIMITS' : 'ENFORCING LIMITS'}</span>
+                </div>
+                <div class="report-rule-item">
+                    <span class="report-rule-label">Bypassing Thresholds</span>
+                    <span class="report-rule-value ${overrideOn ? 'ignored' : ''}">${overrideOn ? 'YES' : 'NO'}</span>
+                </div>
+                <div class="report-rule-item" style="flex-direction: column; align-items: flex-start;">
+                    <span class="report-rule-label" style="margin-bottom: 8px;">Status Awareness</span>
+                    <span class="report-rule-label" style="font-size: 0.75rem; opacity: 0.8;">
+                        ${overrideOn
+                ? 'Your Watchlist is ignoring the $ limits and Sector blocks above to ensure you see your relevant stocks regardless of market rules.'
+                : 'Standard market filters are currently applied to your Watchlist.'}
+                    </span>
+                </div>
+            </div>
+
+            ${blockedSectors.length > 0 ? `
+                <div class="report-section">
+                    <div class="report-section-title">Currently Blocked Sectors</div>
+                    <div style="font-size: 0.8rem; line-height: 1.4; color: var(--text-color);">
+                        ${blockedSectors.join(', ')}
+                    </div>
+                </div>
+            ` : ''}
+
+            <div class="report-footer">
+                Tapping the status bar toggles this awareness report.
+            </div>
+        `;
+
+        const closeBtn = container.querySelector('.report-close-btn');
+        if (closeBtn) closeBtn.onclick = () => container.classList.remove('visible');
     }
 }
