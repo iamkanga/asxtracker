@@ -280,6 +280,14 @@ export function calculatePortfolioTotals(processedShares) {
         ? (totalDailyPnL / previousTotalValue) * 100
         : 0;
 
+    const dayGainPercent = Math.abs(previousTotalValue) > 0.01
+        ? (dayGain / previousTotalValue) * 100
+        : 0;
+
+    const dayLossPercent = Math.abs(previousTotalValue) > 0.01
+        ? (dayLoss / previousTotalValue) * 100
+        : 0;
+
     const totalReturn = totalValue - totalCost;
     const totalReturnPercent = totalCost > 0 ? (totalReturn / totalCost) * 100 : 0;
 
@@ -289,6 +297,8 @@ export function calculatePortfolioTotals(processedShares) {
         dayGain,
         dayLoss,
         dayChangePercent: totalDailyPercent,
+        dayGainPercent,
+        dayLossPercent,
         totalCost,
         totalReturn,
         totalReturnPercent

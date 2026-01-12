@@ -3573,22 +3573,51 @@ h1.modal-title,
     border-radius: 0;
 }
 
-/* Trend-Aware Backgrounds - SUBTLE SOLID GRADIENTS */
-#stock-details-modal .detail-card.trend-up-bg {
+/* Global Trend-Aware Backgrounds - SUBTLE SOLID GRADIENTS */
+/* Shared by Stock Details Modal and Portfolio Summary Cards */
+/* Global Trend-Aware Backgrounds - SUBTLE SOLID GRADIENTS */
+/* Shared by Stock Details Modal and Portfolio Summary Cards */
+.trend-up-bg,
+.detail-card.trend-up-bg,
+.summary-card.trend-up-bg {
     background: linear-gradient(135deg, #253325 0%, #1a1e1a 100%) !important;
     /* Very subtle green hint */
-    border-color: #2e3e2e !important;
+    border-color: var(--color-positive) !important;
 }
 
-#stock-details-modal .detail-card.trend-down-bg {
+.trend-down-bg,
+.detail-card.trend-down-bg,
+.summary-card.trend-down-bg {
     background: linear-gradient(135deg, #332525 0%, #1e1a1a 100%) !important;
     /* Very subtle red hint */
-    border-color: #3e2e2e !important;
+    border-color: var(--color-negative) !important;
 }
 
-#stock-details-modal .detail-card.trend-neutral-bg {
+.trend-neutral-bg,
+.detail-card.trend-neutral-bg,
+.summary-card.trend-neutral-bg {
     background: linear-gradient(135deg, #333333 0%, #292929 100%) !important;
     /* Subtle grey */
+}
+
+/* Specific overrides for Detail Modals to match Summary Cards */
+#summary-detail-modal .modal-content.trend-up-bg {
+    background: linear-gradient(135deg, #253325 0%, #1a1e1a 100%) !important;
+    border-color: var(--color-positive) !important;
+}
+
+#summary-detail-modal .modal-content.trend-down-bg {
+    background: linear-gradient(135deg, #332525 0%, #1e1a1a 100%) !important;
+    border-color: var(--color-negative) !important;
+}
+
+#summary-detail-modal .summary-detail-row {
+    background-color: transparent !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+#summary-detail-modal .summary-detail-row:hover {
+    background-color: rgba(255, 255, 255, 0.05) !important;
 }
 
 #stock-details-modal .detail-card-header,
@@ -3619,7 +3648,8 @@ h1.modal-title,
     color: #e0e0e0;
 }
 
-#stock-details-modal .research-link-card {
+#stock-details-modal .research-link-card,
+#discovery-modal .research-link-card {
     background-color: transparent !important;
     border: none !important;
     color: var(--text-color);
@@ -3628,13 +3658,15 @@ h1.modal-title,
     /* Remove side padding for pure text look */
 }
 
-#stock-details-modal .research-link-card:hover {
+#stock-details-modal .research-link-card:hover,
+#discovery-modal .research-link-card:hover {
     background-color: transparent !important;
     color: var(--color-accent) !important;
     border: none !important;
 }
 
-#stock-details-modal .research-link-card:focus {
+#stock-details-modal .research-link-card:focus,
+#discovery-modal .research-link-card:focus {
     background-color: transparent !important;
     color: var(--color-accent) !important;
     border: none !important;
@@ -3663,6 +3695,20 @@ h1.modal-title,
 
 .detail-card:last-child {
     margin-bottom: 0;
+}
+
+
+/* Border-Only Trend Classes for Summary Cards */
+.trend-up-border {
+    border-color: var(--color-positive) !important;
+}
+
+.trend-down-border {
+    border-color: var(--color-negative) !important;
+}
+
+.trend-accent-border {
+    border-color: var(--color-accent) !important;
 }
 
 .detail-card h3 {

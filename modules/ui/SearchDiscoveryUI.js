@@ -247,7 +247,7 @@ export class SearchDiscoveryUI {
                 </div>
 
                 <!-- Detailed Stats Grid -->
-                <div class="${CSS_CLASSES.STATS_GRID}" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 1.5rem; padding-top: 1.2rem; border-top: 1px solid var(--border-color);">
+                <div class="${CSS_CLASSES.STATS_GRID}" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 1.5rem; padding-top: 1.2rem; border-top: none;">
                     <div class="${CSS_CLASSES.STAT_ITEM}" style="align-items: flex-start;">
                         <span class="${CSS_CLASSES.STAT_LABEL}" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px;">52W Low</span>
                         <span class="${CSS_CLASSES.STAT_VALUE}" style="font-size: 0.9rem; font-weight: 700;">${safeVal(stock.low, formatCurrency)}</span>
@@ -272,7 +272,7 @@ export class SearchDiscoveryUI {
             </div>
 
             <div style="margin-top: 2rem;">
-                <h4 class="${CSS_CLASSES.SECTION_TITLE}" style="font-weight: 700; color: var(--color-accent); border-bottom: 2px solid var(--color-accent); display: inline-block; padding-bottom: 4px; margin-bottom: 1.5rem;">Research Tools</h4>
+                <h4 class="${CSS_CLASSES.SECTION_TITLE}" style="font-weight: 700; color: var(--color-accent); border-bottom: none; display: inline-block; padding-bottom: 4px; margin-bottom: 1.5rem;">Research Tools</h4>
                 <div class="${CSS_CLASSES.RESEARCH_LINKS_GRID}">
                     ${linksHtml}
                 </div>

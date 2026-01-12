@@ -522,23 +522,24 @@ export class ViewRenderer {
         // Note: Styles for .portfolio-summary should be in CSS, not JS.
 
         const isDailyPos = metrics.dayChangeValue >= 0;
-        const dailySign = isDailyPos ? '+' : ''; // Only for Currency, formatPercent handles its own sign
-        const dailyBorder = isDailyPos ? CSS_CLASSES.BORDER_POSITIVE : CSS_CLASSES.BORDER_NEGATIVE;
+        const dailyBg = isDailyPos ? 'trend-up-bg' : 'trend-down-bg';
 
         const isTotalPos = metrics.totalReturn >= 0;
-        const totalSign = isTotalPos ? '+' : '';
-        const totalBorder = isTotalPos ? CSS_CLASSES.BORDER_POSITIVE : CSS_CLASSES.BORDER_NEGATIVE;
+        const totalBg = isTotalPos ? 'trend-up-bg' : 'trend-down-bg';
+
+        const dailyBgBorder = isDailyPos ? 'trend-up-border' : 'trend-down-border';
+        const totalBgBorder = isTotalPos ? 'trend-up-border' : 'trend-down-border';
 
         // 2. Construct HTML (Card Layout with Inline Percentages)
         container.innerHTML = `
-            <div class="${CSS_CLASSES.SUMMARY_CARD} ${CSS_CLASSES.CLICKABLE} ${CSS_CLASSES.BORDER_NEUTRAL}" data-type="${SUMMARY_TYPES.VALUE}">
+            <div class="${CSS_CLASSES.SUMMARY_CARD} ${CSS_CLASSES.CLICKABLE} trend-accent-border" data-type="${SUMMARY_TYPES.VALUE}">
                 <span class="${CSS_CLASSES.METRIC_LABEL}">Portfolio Value</span>
                 <div class="${CSS_CLASSES.METRIC_ROW}">
                     <span class="${CSS_CLASSES.METRIC_VALUE_LARGE}">${formatCurrency(metrics.totalValue)}</span>
                 </div>
             </div>
 
-            <div class="${CSS_CLASSES.SUMMARY_CARD} ${CSS_CLASSES.CLICKABLE} ${dailyBorder}" data-type="${SUMMARY_TYPES.DAY_CHANGE}">
+            <div class="${CSS_CLASSES.SUMMARY_CARD} ${CSS_CLASSES.CLICKABLE} ${dailyBgBorder}" data-type="${SUMMARY_TYPES.DAY_CHANGE}">
                 <span class="${CSS_CLASSES.METRIC_LABEL}">Day Change</span>
                 <div class="${CSS_CLASSES.METRIC_ROW}">
                     <span class="${CSS_CLASSES.METRIC_VALUE_LARGE} ${(metrics.dayChangeValue >= 0) ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}">
@@ -550,25 +551,31 @@ export class ViewRenderer {
                 </div>
             </div>
 
-            <div class="${CSS_CLASSES.SUMMARY_CARD} ${CSS_CLASSES.CLICKABLE} ${CSS_CLASSES.BORDER_POSITIVE}" data-type="${SUMMARY_TYPES.WINNERS}">
+            <div class="${CSS_CLASSES.SUMMARY_CARD} ${CSS_CLASSES.CLICKABLE} trend-up-border" data-type="${SUMMARY_TYPES.WINNERS}">
                 <span class="${CSS_CLASSES.METRIC_LABEL}">Day Gain</span>
                 <div class="${CSS_CLASSES.METRIC_ROW}">
                     <span class="${CSS_CLASSES.METRIC_VALUE_LARGE} ${CSS_CLASSES.TEXT_POSITIVE}">
                         ${formatCurrency(metrics.dayGain || 0)}
                     </span>
+                    <span class="${CSS_CLASSES.METRIC_PERCENT_SMALL} ${CSS_CLASSES.TEXT_POSITIVE}">
+                        ${formatPercent(metrics.dayGainPercent || 0)}
+                    </span>
                 </div>
             </div>
 
-            <div class="${CSS_CLASSES.SUMMARY_CARD} ${CSS_CLASSES.CLICKABLE} ${CSS_CLASSES.BORDER_NEGATIVE}" data-type="${SUMMARY_TYPES.LOSERS}">
+            <div class="${CSS_CLASSES.SUMMARY_CARD} ${CSS_CLASSES.CLICKABLE} trend-down-border" data-type="${SUMMARY_TYPES.LOSERS}">
                 <span class="${CSS_CLASSES.METRIC_LABEL}">Day Loss</span>
                 <div class="${CSS_CLASSES.METRIC_ROW}">
                     <span class="${CSS_CLASSES.METRIC_VALUE_LARGE} ${CSS_CLASSES.TEXT_NEGATIVE}">
                         ${formatCurrency(metrics.dayLoss || 0)}
                     </span>
+                    <span class="${CSS_CLASSES.METRIC_PERCENT_SMALL} ${CSS_CLASSES.TEXT_NEGATIVE}">
+                        ${formatPercent(metrics.dayLossPercent || 0)}
+                    </span>
                 </div>
             </div>
 
-            <div class="${CSS_CLASSES.SUMMARY_CARD} ${CSS_CLASSES.CLICKABLE} ${totalBorder}" data-type="${SUMMARY_TYPES.CAPITAL_GAIN}">
+            <div class="${CSS_CLASSES.SUMMARY_CARD} ${CSS_CLASSES.CLICKABLE} ${totalBgBorder}" data-type="${SUMMARY_TYPES.CAPITAL_GAIN}">
                 <span class="${CSS_CLASSES.METRIC_LABEL}">Total Capital Gain</span>
                 <div class="${CSS_CLASSES.METRIC_ROW}">
                     <span class="${CSS_CLASSES.METRIC_VALUE_LARGE} ${isTotalPos ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}">
@@ -2097,13 +2104,15 @@ export class ViewRenderer {
         }
     }
 
-    renderSummaryDetailModal(title, shares, valueField) {
+    renderSummaryDetailModal(title, shares, valueField, trendClass = '') {
         const existing = document.getElementById(IDS.SUMMARY_DETAIL_MODAL);
         if (existing) existing.remove();
 
+        // Apply trend-based class to the modal content for matching gradients
         const modal = document.createElement('div');
         modal.id = IDS.SUMMARY_DETAIL_MODAL;
         modal.className = `${CSS_CLASSES.MODAL} ${CSS_CLASSES.SHOW} `;
+        const modalContentClass = `${CSS_CLASSES.MODAL_CONTENT} ${CSS_CLASSES.MODAL_CONTENT_MEDIUM} ${trendClass}`;
 
         const rowsHtml = shares.map(share => {
             const val = share[valueField] || 0;
@@ -2133,7 +2142,7 @@ export class ViewRenderer {
 
         modal.innerHTML = `
             <div class="${CSS_CLASSES.MODAL_OVERLAY}"></div>
-                <div class="${CSS_CLASSES.MODAL_CONTENT} ${CSS_CLASSES.MODAL_CONTENT_MEDIUM}">
+                <div class="${modalContentClass}">
                     <div class="${CSS_CLASSES.MODAL_HEADER}">
                         <h2 class="${CSS_CLASSES.MODAL_TITLE}">${title}</h2>
                         <div class="${CSS_CLASSES.MODAL_ACTIONS}">

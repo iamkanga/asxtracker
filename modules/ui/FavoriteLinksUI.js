@@ -133,6 +133,10 @@ export class FavoriteLinksUI {
             { name: 'Sharesight', url: 'https://www.sharesight.com/au/login/' },
             { name: 'Market Index', url: 'https://www.marketindex.com.au' },
             { name: 'ASX Official', url: 'https://www2.asx.com.au' },
+            { name: 'InvestorServe', url: 'https://www.investorserve.com.au/' },
+            { name: 'Automic Investor', url: 'https://portal.automic.com.au/investor/home' },
+            { name: 'Link Market Services', url: 'https://au.investorcentre.mpms.mufg.com/Login/Login' },
+            { name: 'Computershare', url: 'https://www-au.computershare.com/Investor/#Home' },
             { name: 'Yahoo Finance', url: 'https://au.finance.yahoo.com' },
             { name: 'Motley Fool', url: 'https://www.fool.com.au' },
             { name: 'HotCopper', url: 'https://hotcopper.com.au' },
@@ -162,13 +166,43 @@ export class FavoriteLinksUI {
         const defaultSharesight = this.DEFAULTS.find(d => d.name === 'Sharesight').url;
         const defaultAFR = this.DEFAULTS.find(d => d.name === 'AFR').url;
 
-        const sanitized = links.filter(link => {
+        let sanitzed = links.filter(link => {
             if (link.name === 'Sharesight' && link.url !== defaultSharesight) return false;
             if (link.name === 'AFR' && link.url !== defaultAFR) return false;
             return true;
         });
 
-        return [...sanitized]; // Return copy of state
+        // AUTO-MERGE: Inject Critical Investor Portals if missing (User Request)
+        // This ensures existing users get the new links without wiping their custom ones.
+        const crucialLinks = [
+            { name: 'InvestorServe', url: 'https://www.investorserve.com.au/' },
+            { name: 'Automic Investor', url: 'https://portal.automic.com.au/investor/home' },
+            { name: 'Link Market Services', url: 'https://au.investorcentre.mpms.mufg.com/Login/Login' },
+            { name: 'Computershare', url: 'https://www-au.computershare.com/Investor/#Home' }
+        ];
+
+        let modified = false;
+        crucialLinks.forEach(cl => {
+            // Check by URL to prevent duplicates (Name might vary if user renamed it)
+            const exists = sanitzed.some(l => l.url === cl.url);
+            if (!exists) {
+                // Insert after 'ASX Official' if possible, else append
+                const asxIndex = sanitzed.findIndex(l => l.name === 'ASX Official');
+                if (asxIndex !== -1) {
+                    sanitzed.splice(asxIndex + 1, 0, cl);
+                } else {
+                    sanitzed.push(cl);
+                }
+                modified = true;
+            }
+        });
+
+        // Save back to state if we modified it, so the user sees it permanently
+        if (modified) {
+            AppState.saveFavoriteLinks(sanitzed);
+        }
+
+        return [...sanitzed]; // Return copy of state
     }
 
     static _renderContent(modal) {

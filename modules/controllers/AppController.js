@@ -2367,23 +2367,31 @@ export class AppController {
             let title = '';
             let filteredShares = [];
             let valueField = '';
+            let trendClass = '';
+
+            // Sum calculation logic moved inside switch to ensure filteredShares or shares is valid.
 
             switch (type) {
                 case SUMMARY_TYPES.VALUE:
                     title = 'Summary Current Value';
                     filteredShares = [...shares].sort((a, b) => (b.value || 0) - (a.value || 0));
                     valueField = 'value';
+                    trendClass = 'trend-neutral-bg'; // Value is neutral
                     break;
                 case SUMMARY_TYPES.DAY_CHANGE:
                     title = 'Summary Day Change';
                     filteredShares = [...shares].sort((a, b) => (b.dayChangeValue || 0) - (a.dayChangeValue || 0));
                     valueField = 'dayChangeValue';
+                    // Calculate total day change to determine background
+                    const totalDayChange = shares.reduce((acc, s) => acc + (s.dayChangeValue || 0), 0);
+                    trendClass = totalDayChange >= 0 ? 'trend-up-bg' : 'trend-down-bg';
                     break;
                 case SUMMARY_TYPES.WINNERS:
                     title = 'Summary Day Change Winners';
                     filteredShares = shares.filter(s => (s.dayChangeValue || 0) > 0)
                         .sort((a, b) => (b.dayChangeValue || 0) - (a.dayChangeValue || 0));
                     valueField = 'dayChangeValue';
+                    trendClass = 'trend-up-bg';
                     break;
                 case SUMMARY_TYPES.LOSERS:
                     title = 'Summary Day Change Losers';
@@ -2391,11 +2399,14 @@ export class AppController {
                     filteredShares = shares.filter(s => (s.dayChangeValue || 0) < 0)
                         .sort((a, b) => (a.dayChangeValue || 0) - (b.dayChangeValue || 0));
                     valueField = 'dayChangeValue';
+                    trendClass = 'trend-down-bg';
                     break;
                 case SUMMARY_TYPES.CAPITAL_GAIN:
                     title = 'Summary Capital Gain';
                     filteredShares = [...shares].sort((a, b) => (b.capitalGain || 0) - (a.capitalGain || 0));
                     valueField = 'capitalGain';
+                    const totalCapGain = shares.reduce((acc, s) => acc + (s.capitalGain || 0), 0);
+                    trendClass = totalCapGain >= 0 ? 'trend-up-bg' : 'trend-down-bg';
                     break;
                 default:
                     console.warn('Unknown summary type:', type);
@@ -2403,7 +2414,7 @@ export class AppController {
             }
             // Delay opening modal to allow any preceding history moves to settle
             setTimeout(() => {
-                this.viewRenderer.renderSummaryDetailModal(title, filteredShares, valueField);
+                this.viewRenderer.renderSummaryDetailModal(title, filteredShares, valueField, trendClass);
             }, 150);
         });
 
