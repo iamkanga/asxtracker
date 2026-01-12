@@ -3573,22 +3573,22 @@ h1.modal-title,
     border-radius: 0;
 }
 
-/* Trend-Aware Backgrounds - SOLID OPAQUE COLORS */
+/* Trend-Aware Backgrounds - SUBTLE SOLID GRADIENTS */
 #stock-details-modal .detail-card.trend-up-bg {
-    background-color: #1a261a !important;
-    /* Very Dark Green (Solid) */
-    border-color: #2d4a2d !important;
+    background: linear-gradient(135deg, #253325 0%, #1a1e1a 100%) !important;
+    /* Very subtle green hint */
+    border-color: #2e3e2e !important;
 }
 
 #stock-details-modal .detail-card.trend-down-bg {
-    background-color: #291a1a !important;
-    /* Very Dark Red (Solid) */
-    border-color: #4a2d2d !important;
+    background: linear-gradient(135deg, #332525 0%, #1e1a1a 100%) !important;
+    /* Very subtle red hint */
+    border-color: #3e2e2e !important;
 }
 
 #stock-details-modal .detail-card.trend-neutral-bg {
-    background-color: var(--card-bg) !important;
-    /* Standard Grey */
+    background: linear-gradient(135deg, #333333 0%, #292929 100%) !important;
+    /* Subtle grey */
 }
 
 #stock-details-modal .detail-card-header,
@@ -3620,22 +3620,24 @@ h1.modal-title,
 }
 
 #stock-details-modal .research-link-card {
-    background-color: var(--card-bg);
-    border: 1px solid var(--border-color);
+    background-color: transparent !important;
+    border: none !important;
     color: var(--text-color);
     border-radius: 0;
+    padding: 10px 0;
+    /* Remove side padding for pure text look */
 }
 
 #stock-details-modal .research-link-card:hover {
     background-color: transparent !important;
     color: var(--color-accent) !important;
-    border-color: var(--color-accent) !important;
+    border: none !important;
 }
 
 #stock-details-modal .research-link-card:focus {
     background-color: transparent !important;
     color: var(--color-accent) !important;
-    border-color: var(--color-accent) !important;
+    border: none !important;
     outline: none !important;
     box-shadow: none !important;
 }
