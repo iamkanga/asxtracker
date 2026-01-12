@@ -629,6 +629,7 @@ export class ViewRenderer {
         const sectorName = stock.sector || FALLBACK_SECTOR_MAP[stock.code] || '';
 
         const colorClass = isPos ? CSS_CLASSES.PREVIEW_CHANGE_POS : (isNeg ? CSS_CLASSES.PREVIEW_CHANGE_NEG : CSS_CLASSES.NEUTRAL);
+        const trendBgClass = isPos ? 'trend-up-bg' : (isNeg ? 'trend-down-bg' : 'trend-neutral-bg');
 
         const modal = document.createElement('div');
         modal.id = IDS.STOCK_DETAILS_MODAL;
@@ -679,7 +680,7 @@ export class ViewRenderer {
                         <div class="${CSS_CLASSES.SHARE_DETAIL_SECTIONS}">
 
                             <!-- Card 1: Investment -->
-                            <div class="${CSS_CLASSES.DETAIL_CARD} ${CSS_CLASSES.ALIGN_START} ${CSS_CLASSES.TEXT_LEFT} ${CSS_CLASSES.INVESTMENT_CARD}">
+                            <div class="${CSS_CLASSES.DETAIL_CARD} ${CSS_CLASSES.ALIGN_START} ${CSS_CLASSES.TEXT_LEFT} ${CSS_CLASSES.INVESTMENT_CARD} ${trendBgClass}">
                                 <div class="${CSS_CLASSES.DETAIL_CARD_HEADER}">
                                     <h3 class="${CSS_CLASSES.DETAIL_LABEL} ${CSS_CLASSES.W_FULL} ${CSS_CLASSES.TEXT_LEFT} ${CSS_CLASSES.START_CENTER_ROW}">
                                         <div class="${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.ALIGN_CENTER} ${CSS_CLASSES.JUSTIFY_BETWEEN} ${CSS_CLASSES.W_FULL}">
@@ -741,7 +742,7 @@ export class ViewRenderer {
 
                             <!-- Card 2: Holdings & Performance (Conditional) -->
                             ${units > 0 ? `
-                            <div class="${CSS_CLASSES.DETAIL_CARD}">
+                            <div class="${CSS_CLASSES.DETAIL_CARD} ${trendBgClass}">
                                 <div class="${CSS_CLASSES.DETAIL_CARD_HEADER}">
                                     <h3 class="${CSS_CLASSES.DETAIL_LABEL}">
                                         <i class="fas ${UI_ICONS.WALLET}"></i> Holdings & Performance
@@ -795,7 +796,7 @@ export class ViewRenderer {
     
                             <!-- Card 3: Dividends -->
                             ${stock.dividendAmount > 0 ? `
-                            <div class="${CSS_CLASSES.DETAIL_CARD}">
+                            <div class="${CSS_CLASSES.DETAIL_CARD} ${trendBgClass}">
                                 <div class="${CSS_CLASSES.DETAIL_CARD_HEADER}">
                                     <h3 class="${CSS_CLASSES.DETAIL_LABEL}">
                                         <i class="fas ${UI_ICONS.DIVIDENDS}"></i> Dividends
@@ -826,7 +827,7 @@ export class ViewRenderer {
     
                             <!-- Card 4: Alerts (Dynamic Target Price) -->
                             ${stock.targetPrice > 0 ? `
-                            <div class="${CSS_CLASSES.DETAIL_CARD} ${CSS_CLASSES.CURSOR_POINTER}" data-action="deep-link" data-id="${stock.id}" data-section="target">
+                            <div class="${CSS_CLASSES.DETAIL_CARD} ${CSS_CLASSES.CURSOR_POINTER} ${trendBgClass}" data-action="deep-link" data-id="${stock.id}" data-section="target">
                                 <div class="${CSS_CLASSES.DETAIL_CARD_HEADER}">
                                     <h3 class="${CSS_CLASSES.DETAIL_LABEL}">
                                         <i class="fas ${UI_ICONS.ALERTS}"></i> Alerts
@@ -845,7 +846,7 @@ export class ViewRenderer {
 
                             <!-- Card 5: Comments (Conditional) -->
                             ${stock.comments && stock.comments.length > 0 ? `
-                                <div class="${CSS_CLASSES.DETAIL_CARD} ${CSS_CLASSES.CURSOR_POINTER}" data-action="deep-link" data-id="${stock.id}" data-section="notes">
+                                <div class="${CSS_CLASSES.DETAIL_CARD} ${CSS_CLASSES.CURSOR_POINTER} ${trendBgClass}" data-action="deep-link" data-id="${stock.id}" data-section="notes">
                                     <div class="${CSS_CLASSES.DETAIL_CARD_HEADER}">
                                         <h3 class="${CSS_CLASSES.DETAIL_LABEL}">
                                             <i class="fas ${UI_ICONS.COMMENTS}"></i> Comments
@@ -863,7 +864,7 @@ export class ViewRenderer {
                                 ` : ''}
 
                             <!-- Card 5: Entry Details (Decoupled & Decentered) -->
-                            <div class="${CSS_CLASSES.DETAIL_CARD}">
+                            <div class="${CSS_CLASSES.DETAIL_CARD} ${trendBgClass}">
                                 <div class="${CSS_CLASSES.DETAIL_CARD_HEADER}">
                                     <h3 class="${CSS_CLASSES.DETAIL_LABEL}">
                                         <i class="fas ${UI_ICONS.HISTORY}"></i> Entry Details
@@ -880,7 +881,7 @@ export class ViewRenderer {
                             </div>
 
                             <!-- Card 6: Research -->
-                            <div class="${CSS_CLASSES.DETAIL_CARD}">
+                            <div class="${CSS_CLASSES.DETAIL_CARD} ${trendBgClass}">
                                 <div class="${CSS_CLASSES.DETAIL_CARD_HEADER}">
                                     <h3 class="${CSS_CLASSES.DETAIL_LABEL}">
                                         <i class="fas ${UI_ICONS.GLOBE}"></i> Research

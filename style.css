@@ -3548,26 +3548,47 @@ h1.modal-title,
 }
 
 .share-detail-sections {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 7px !important;
-    /* Force tight gap for viewing modal */
+    display: flex;
+    /* V2: Flex for better gap support */
+    flex-direction: column;
+    gap: 16px !important;
     margin-top: 10px;
-    align-items: start;
+    align-items: stretch;
 }
 
 /* Force Dark Theme for Stock Details as requested */
 #stock-details-modal .modal-content {
-    background-color: var(--color-dark-surface);
-    color: #e0e0e0;
-    border: 1px solid #444;
+    background-color: var(--bg-secondary);
+    /* Modern variables */
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
 }
 
 #stock-details-modal .detail-card {
-    background-color: #343a40;
-    border-color: #495057;
-    margin-bottom: 0 !important;
-    /* Force tight stacking */
+    background-color: var(--card-bg);
+    /* Default Neutral (Solid #2c2c2c) */
+    border: 1px solid var(--border-color);
+    margin-bottom: 16px !important;
+    /* Fallback gap */
+    border-radius: 0;
+}
+
+/* Trend-Aware Backgrounds - SOLID OPAQUE COLORS */
+#stock-details-modal .detail-card.trend-up-bg {
+    background-color: #1a261a !important;
+    /* Very Dark Green (Solid) */
+    border-color: #2d4a2d !important;
+}
+
+#stock-details-modal .detail-card.trend-down-bg {
+    background-color: #291a1a !important;
+    /* Very Dark Red (Solid) */
+    border-color: #4a2d2d !important;
+}
+
+#stock-details-modal .detail-card.trend-neutral-bg {
+    background-color: var(--card-bg) !important;
+    /* Standard Grey */
 }
 
 #stock-details-modal .detail-card-header,
@@ -3599,9 +3620,10 @@ h1.modal-title,
 }
 
 #stock-details-modal .research-link-card {
-    background-color: #343a40;
-    border-color: #495057;
-    color: #e0e0e0;
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    border-radius: 0;
 }
 
 #stock-details-modal .research-link-card:hover {
@@ -3926,9 +3948,10 @@ h1.modal-title,
 
 /* --- Add Share Modal (Specific) --- */
 #add-share-modal .modal-content {
-    background-color: var(--color-dark-surface);
-    color: #e0e0e0;
-    border: 1px solid #444;
+    background-color: var(--bg-secondary);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    border-radius: 0;
     position: relative;
     left: auto;
     transform: none;
@@ -3946,27 +3969,27 @@ h1.modal-title,
 }
 
 #add-share-modal .accordion-header {
-    background-color: #383838;
-    color: #e0e0e0;
-    border-color: #444;
+    background-color: var(--card-bg);
+    color: var(--text-color);
+    border-color: var(--border-color);
 }
 
 #add-share-modal .accordion-header:hover {
-    background-color: #444;
+    background-color: var(--bg-color);
 }
 
 #add-share-modal .accordion-content {
-    background-color: var(--color-dark-surface);
-    color: #e0e0e0;
-    border-top: 1px solid #444;
+    background-color: var(--card-bg);
+    color: var(--text-color);
+    border-top: 1px solid var(--border-color);
 }
 
 #add-share-modal .accordion-item {
-    border-bottom: 1px solid #444;
+    border-bottom: 1px solid var(--border-color);
 }
 
 #add-share-modal .accordion {
-    border: 1px solid #444;
+    border: 1px solid var(--border-color);
 }
 
 /* Force Watchlist Dropdown in Add Share to Dark */
