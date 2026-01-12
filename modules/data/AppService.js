@@ -431,11 +431,13 @@ export class AppService {
                 lastWatchlistId: 'ALL', // Default to All Shares on first load
                 onboarded: true,
                 // NEW USER DEFAULTS (Requested Jan 2026)
+                badgeScope: 'all', // Badge Count: Set to ALL by default
                 excludePortfolio: true, // Watchlist Override: ON
                 scanner: {
                     activeFilters: null // Sectors: ALL
                 },
                 scannerRules: {
+                    // Set ALL thresholds to $1.00 as requested (Non-negotiable)
                     up: { percentThreshold: null, dollarThreshold: 1.00 },
                     down: { percentThreshold: null, dollarThreshold: 1.00 },
                     minPrice: 1.00,
