@@ -19,7 +19,9 @@ export class NotificationUI {
     static _prevCount = 0; // Track previous count for change detection
     static _openLock = false; // Debounce lock for modal opening
     static _settingsRestorable = false; // Track if we hid settings
+    static _briefingRestorable = false; // Track if we hid briefing
     static _hiloMode = 'high'; // Default toggle state for Market Pulse
+    static _restorableModals = []; // Universal stack for hidden modals
 
     static init() {
         this.renderFloatingBell();
@@ -198,23 +200,28 @@ export class NotificationUI {
         // --- DUPLICATE PROTECTION & SURFACING ---
         let modal = document.getElementById(IDS.NOTIFICATION_MODAL);
 
-        // STACK MANAGEMENT: Hide Settings Modal if open (Mimic Overlay)
-        const settingsModal = document.getElementById(IDS.SETTINGS_MODAL);
-        this._settingsRestorable = false; // Reset state
-        if (settingsModal && !settingsModal.classList.contains(CSS_CLASSES.HIDDEN)) {
-            console.log('[NotificationUI] Hiding Settings Modal temporarily for focus.');
-            settingsModal.classList.add(CSS_CLASSES.HIDDEN);
-            this._settingsRestorable = true;
-        }
+        // --- UNIVERSAL STACK MANAGEMENT: Hide any other open modals ---
+        // We find all visible modals that are NOT the notification modal
+        const allModals = document.querySelectorAll(`.${CSS_CLASSES.MODAL}`);
+        this._restorableModals = []; // Reset stack for this session
 
-        // STACK MANAGEMENT: Persist Daily Briefing (Do not close permanently)
+        allModals.forEach(m => {
+            // EXCLUDE: notification-modal itself, or elements that are already hidden
+            if (m.id === IDS.NOTIFICATION_MODAL) return;
+            if (m.classList.contains(CSS_CLASSES.HIDDEN)) return;
+
+            // Hide and track for restoration
+            console.log(`[NotificationUI] Precedence Check: Hiding modal [${m.id || 'unknown'}] for focus.`);
+            m.classList.add(CSS_CLASSES.HIDDEN);
+            this._restorableModals.push(m);
+        });
+
+        // Specific legacy flags for specialized restoration logic (Briefing/Settings have unique needs)
+        const settingsModal = document.getElementById(IDS.SETTINGS_MODAL);
+        this._settingsRestorable = (settingsModal && this._restorableModals.includes(settingsModal));
+
         const briefingModal = document.getElementById(IDS.DAILY_BRIEFING_MODAL);
-        this._briefingRestorable = false;
-        if (briefingModal && !briefingModal.classList.contains(CSS_CLASSES.HIDDEN)) {
-            console.log('[NotificationUI] Hiding Briefing Modal temporarily.');
-            briefingModal.classList.add(CSS_CLASSES.HIDDEN);
-            this._briefingRestorable = true;
-        }
+        this._briefingRestorable = (briefingModal && this._restorableModals.includes(briefingModal));
 
         if (modal) {
             // If already open, just ensure it's visible and update list if needed
@@ -410,22 +417,30 @@ export class NotificationUI {
     static _close(modal) {
         modal.classList.add(CSS_CLASSES.HIDDEN);
 
-        // RESTORE DAILY BRIEFING IF IT EXISTS (Simplification: If it's in DOM, it should be visible)
-        const briefingModal = document.getElementById(IDS.DAILY_BRIEFING_MODAL);
-        if (briefingModal && briefingModal.classList.contains(CSS_CLASSES.HIDDEN)) {
-            console.log('[NotificationUI] Restoring Briefing Modal (Found in DOM). Bringing to front.');
-            briefingModal.classList.remove(CSS_CLASSES.HIDDEN);
-            briefingModal.style.zIndex = '1001'; // Ensure it pops over standard layers
-            briefingModal.style.display = 'flex'; // Force display just in case
-            document.body.appendChild(briefingModal);
+        // UNIVERSAL RESTORATION: Restore any modals we hid when opening
+        if (this._restorableModals && this._restorableModals.length > 0) {
+            console.log(`[NotificationUI] _close: Restoring ${this._restorableModals.length} hidden modals.`);
+            this._restorableModals.forEach(m => {
+                if (m) {
+                    m.classList.remove(CSS_CLASSES.HIDDEN);
+
+                    // Specialized logic for Briefing (Needs z-index pop)
+                    if (m.id === IDS.DAILY_BRIEFING_MODAL) {
+                        m.style.zIndex = '1001';
+                        m.style.display = 'flex';
+                        document.body.appendChild(m);
+                    }
+                }
+            });
+            this._restorableModals = []; // Clear stack
         }
-        // RESTORE SETTINGS MODAL IF HIDDEN
+
+        // Specific Settings restoration (Fallback if universal logic missed it or for reset)
         if (this._settingsRestorable) {
             const settingsModal = document.getElementById(IDS.SETTINGS_MODAL);
-            if (settingsModal) {
-                console.log('[NotificationUI] Restoring Settings Modal visibility.');
+            if (settingsModal && settingsModal.classList.contains(CSS_CLASSES.HIDDEN)) {
+                console.log('[NotificationUI] Fallback Restoration: Settings Modal.');
                 settingsModal.classList.remove(CSS_CLASSES.HIDDEN);
-                // Reset Z-Index just in case we messed with it previously
                 settingsModal.style.zIndex = '';
             }
             this._settingsRestorable = false;
