@@ -1013,7 +1013,7 @@ export class AppController {
             } else {
                 // Calculate metrics for the CURRENT WATCHLIST (not global portfolio)
                 const currentWatchlistId = AppState.watchlist.id || PORTFOLIO_ID;
-                const { summaryMetrics } = processShares(
+                const { summaryMetrics: headerMetrics } = processShares(
                     AppState.data.shares || [],
                     currentWatchlistId,
                     AppState.livePrices,
@@ -1022,8 +1022,8 @@ export class AppController {
                 );
 
                 // Count-based Sentiment Pulse: Proportion of gainers vs losers by stock count
-                const gainerCount = summaryMetrics?.gainerCount || 0;
-                const loserCount = summaryMetrics?.loserCount || 0;
+                const gainerCount = headerMetrics?.gainerCount || 0;
+                const loserCount = headerMetrics?.loserCount || 0;
                 const totalActive = gainerCount + loserCount;
                 const gainProp = totalActive > 0 ? Math.round((gainerCount / totalActive) * 100) : 50;
 
@@ -1093,8 +1093,8 @@ export class AppController {
 
 
 
-            // Force Title Bar Update (Gradients based on metrics if available)
-            if (this.watchlistUI) this.watchlistUI.updateHeaderTitle(summaryMetrics);
+            // Force Title Bar Update (Header gradient already applied in section above)
+            if (this.watchlistUI) this.watchlistUI.updateHeaderTitle(null);
 
 
 

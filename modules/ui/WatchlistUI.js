@@ -282,8 +282,8 @@ export class WatchlistUI {
 
         this._bindTitleListener();
 
-        // NOTE: Header gradient is now handled by AppController.updateDataAndRender()
-        // based on GLOBAL portfolio metrics, not per-watchlist metrics.
+        // NOTE: Header gradient is handled by AppController.updateDataAndRender()
+        // based on CURRENT WATCHLIST metrics (count-based gainer/loser ratio).
     }
 
     _pickIconForId(id) {

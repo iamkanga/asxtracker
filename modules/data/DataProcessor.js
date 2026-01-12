@@ -266,10 +266,12 @@ export function calculatePortfolioTotals(processedShares) {
         const dailyChange = share.dayChangeValue || 0;
         totalDailyPnL += dailyChange;
 
-        if (dailyChange > 0) {
+        // Use dayChangePercent for gainer/loser counting (works for all stocks, including watchlist-only)
+        const pctChange = share.dayChangePercent || 0;
+        if (pctChange > 0) {
             dayGain += dailyChange;
             gainerCount++;
-        } else if (dailyChange < 0) {
+        } else if (pctChange < 0) {
             dayLoss += dailyChange;
             loserCount++;
         } else {
