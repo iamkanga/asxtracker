@@ -205,6 +205,17 @@ export class SnapshotUI {
         const grid = modal.querySelector(`#${CSS_CLASSES.SNAPSHOT_GRID}`);
         if (!grid) return;
 
+        // Dynamic Background Logic
+        const content = modal.querySelector('.snapshot-content');
+        if (content) {
+            content.classList.remove('trend-up-bg', 'trend-down-bg', 'trend-mixed-desc-bg', 'trend-mixed-asc-bg');
+            if (this._currentSort === 'desc') {
+                content.classList.add('trend-mixed-desc-bg'); // Green Top -> Red Bottom
+            } else {
+                content.classList.add('trend-mixed-asc-bg'); // Red Top -> Green Bottom
+            }
+        }
+
         const data = this._prepareData(); // Get Aggregated Data
 
         console.log('[SnapshotUI] Grid Update. Items found:', data.length);

@@ -134,8 +134,8 @@ export class FavoriteLinksUI {
             { name: 'Market Index', url: 'https://www.marketindex.com.au' },
             { name: 'ASX Official', url: 'https://www2.asx.com.au' },
             { name: 'InvestorServe', url: 'https://www.investorserve.com.au/' },
-            { name: 'Automic Investor', url: 'https://portal.automic.com.au/investor/home' },
-            { name: 'Link Market Services', url: 'https://au.investorcentre.mpms.mufg.com/Login/Login' },
+            { name: 'Automic Investor', url: 'https://automic.com.au' },
+            { name: 'MUFG Corporate Markets', url: 'https://www.mpms.mufg.com/en/mufg-corporate-markets/' },
             { name: 'Computershare', url: 'https://www-au.computershare.com/Investor/#Home' },
             { name: 'Yahoo Finance', url: 'https://au.finance.yahoo.com' },
             { name: 'Motley Fool', url: 'https://www.fool.com.au' },
@@ -163,12 +163,22 @@ export class FavoriteLinksUI {
 
         // SANITIZATION (Fix for duplicates with no icons):
         // Enforce that 'Sharesight' and 'AFR' only appear if they match the official URL.
-        const defaultSharesight = this.DEFAULTS.find(d => d.name === 'Sharesight').url;
-        const defaultAFR = this.DEFAULTS.find(d => d.name === 'AFR').url;
+        const defaultSharesight = 'https://www.sharesight.com/au/login/';
+        const defaultAFR = 'https://www.afr.com';
+
+        // OLD URLS TO REMOVE (Migration)
+        const oldAutomic = 'https://portal.automic.com.au/investor/home';
+        const oldLink = 'https://au.investorcentre.mpms.mufg.com/Login/Login';
 
         let sanitzed = links.filter(link => {
             if (link.name === 'Sharesight' && link.url !== defaultSharesight) return false;
             if (link.name === 'AFR' && link.url !== defaultAFR) return false;
+
+            // Remove Old Links so they can be replaced by new Crucial Links
+            if (link.url === oldAutomic) return false;
+            if (link.url === oldLink) return false;
+            // Also partial match for the old Link one if needed, but exact is safer
+
             return true;
         });
 
@@ -176,8 +186,8 @@ export class FavoriteLinksUI {
         // This ensures existing users get the new links without wiping their custom ones.
         const crucialLinks = [
             { name: 'InvestorServe', url: 'https://www.investorserve.com.au/' },
-            { name: 'Automic Investor', url: 'https://portal.automic.com.au/investor/home' },
-            { name: 'Link Market Services', url: 'https://au.investorcentre.mpms.mufg.com/Login/Login' },
+            { name: 'Automic Investor', url: 'https://automic.com.au' },
+            { name: 'MUFG Corporate Markets', url: 'https://www.mpms.mufg.com/en/mufg-corporate-markets/' },
             { name: 'Computershare', url: 'https://www-au.computershare.com/Investor/#Home' }
         ];
 

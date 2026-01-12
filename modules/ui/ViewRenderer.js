@@ -629,7 +629,7 @@ export class ViewRenderer {
         const isPos = change > 0;
         const isNeg = change < 0;
         const isNeu = change === 0;
-        const changeStr = isPos ? `+ ${formatCurrency(change)}` : formatCurrency(change);
+        const changeStr = formatCurrency(change);
         const pctStr = formatPercent(stock.pctChange || stock.dayChangePercent);
 
         // Resolve Sector

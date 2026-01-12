@@ -3719,6 +3719,18 @@ h1.modal-title,
     padding-bottom: 8px;
 }
 
+
+/* Mixed Diagonal Gradients for Market Pulse */
+.trend-mixed-desc-bg {
+    background: linear-gradient(135deg, #253325 0%, #1a1e1a 50%, #332525 100%) !important;
+    border-color: var(--border-color) !important;
+}
+
+.trend-mixed-asc-bg {
+    background: linear-gradient(135deg, #332525 0%, #1a1e1a 50%, #253325 100%) !important;
+    border-color: var(--border-color) !important;
+}
+
 /* --- Contemporary Summary Dashboard --- */
 .summary-board {
     display: flex;
