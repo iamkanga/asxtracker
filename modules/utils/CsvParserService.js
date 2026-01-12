@@ -109,10 +109,10 @@ export const CsvParserService = {
                 return;
             }
 
-            // Standardize column names (Cost base might be missing currency suffix)
+            // Standardize column names (Cost base might be missing currency suffix, or using Template 'Buy Price')
             const quantity = parseFloat(String(row['Quantity'] || '0').replace(/,/g, ''));
-            const price = parseFloat(String(row['Price'] || '0').replace(/,/g, ''));
-            const costBase = parseFloat(String(row['Cost base per share (AUD)'] || row['Cost base per share'] || '0').replace(/,/g, ''));
+            const price = parseFloat(String(row['Price'] || row['Buy Price'] || row['Unit Price'] || '0').replace(/,/g, ''));
+            const costBase = parseFloat(String(row['Cost base per share (AUD)'] || row['Cost base per share'] || row['Buy Price'] || row['Unit Price'] || '0').replace(/,/g, ''));
 
             if (isNaN(quantity)) return;
 

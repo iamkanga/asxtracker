@@ -1182,14 +1182,34 @@ export class NotificationStore {
         const sortDesc = (type) => (a, b) => {
             const valA = getDisplayPct(a, type);
             const valB = getDisplayPct(b, type);
-            if (valA === valB) return 0;
-            return valB - valA; // Strict Descending
+
+            // Primary: Percentage High to Low (Magnitude) - MATCH UI PRECISION
+            // We round to 2 decimals to ensure 5.001% and 5.004% are treated as "Equal" (5.00%)
+            // so that the Dollar Value sort takes precedence for the user.
+            const pA = Math.round(Math.abs(valA) * 100);
+            const pB = Math.round(Math.abs(valB) * 100);
+
+            if (pB !== pA) return valB - valA;
+
+            // Secondary: Dollar Value High to Low (Magnitude)
+            const chgA = Math.abs(Number(a.change || a.c || 0));
+            const chgB = Math.abs(Number(b.change || b.c || 0));
+            return chgB - chgA;
         };
         const sortAsc = (type) => (a, b) => {
             const valA = getDisplayPct(a, type);
             const valB = getDisplayPct(b, type);
-            if (valA === valB) return 0;
-            return valA - valB; // Strict Ascending
+
+            // Primary: Percentage Low to High (Most Negative First)
+            const pA = Math.round(valA * 100);
+            const pB = Math.round(valB * 100);
+
+            if (pA !== pB) return valA - valB;
+
+            // Secondary: Dollar Value High to Low (Magnitude)
+            const chgA = Math.abs(Number(a.change || a.c || 0));
+            const chgB = Math.abs(Number(b.change || b.c || 0));
+            return chgB - chgA;
         };
 
         if (movers.up) movers.up.sort(sortDesc('up'));
