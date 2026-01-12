@@ -360,10 +360,10 @@
     /* 3 columns */
     grid-template-rows: repeat(2, auto);
     /* 2 rows */
-    gap: 1px;
-    /* Divider effect between tiles */
-    background: var(--border-color);
-    /* Acts as grid lines */
+    gap: 0;
+    /* Removed gap to eliminate gray lines */
+    background: #000000 !important;
+    /* Set to black to match buttons */
     padding: 0;
     width: 100%;
     box-sizing: border-box;
@@ -1389,7 +1389,8 @@ input:checked+.slider:before {
     padding: 8px 14px;
     /* Reduced from 12px 16px */
     background: #000000 !important;
-    border: 1px solid var(--border-color);
+    border: none !important;
+    /* Removed border for floating look */
     margin: 4px 10px;
     /* Reduced margin */
     border-radius: 4px;
