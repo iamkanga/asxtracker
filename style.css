@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Permanent+Marker&display=swap');
+﻿@import url('https://fonts.googleapis.com/css2?family=Permanent+Marker&display=swap');
 
 /* -------------------------------------------------------------------------- */
 /*                                1. VARIABLES & ROOT                         */
@@ -519,9 +519,11 @@ body {
 #content-container {
     /* V60: Inner Content Constraints */
     width: 100%;
-    max-width: 1400px;
-    margin: 0 auto;
-    padding: 0 10px;
+    max-width: none !important;
+    /* Force full width */
+    margin: 0 !important;
+    padding: 0 !important;
+    /* Removed global side padding */
     box-sizing: border-box;
 
     margin-top: 0 !important;
@@ -789,8 +791,8 @@ i:focus {
     display: flex;
     padding: 12px;
     border-bottom: 1px solid var(--border-color);
-    border-left-width: 4px;
-    border-left-style: solid;
+    border-left-width: 0;
+    border-left-style: none;
     border-left-color: transparent;
     align-items: center;
     transition: all 0.2s ease;
@@ -802,19 +804,19 @@ i:focus {
 .dashboard-row.positive {
     border-left-color: transparent;
     /* Legacy fallback */
-    box-shadow: inset 4px 0 0 0 var(--color-positive) !important;
+    box-shadow: none !important;
 }
 
 .dashboard-row.negative {
     border-left-color: transparent;
     /* Legacy fallback */
-    box-shadow: inset 4px 0 0 0 var(--color-negative) !important;
+    box-shadow: none !important;
 }
 
 .dashboard-row.neutral {
     border-left-color: transparent;
     /* Coffee/accent color for zero change */
-    box-shadow: inset 4px 0 0 0 var(--color-accent) !important;
+    box-shadow: none !important;
 }
 
 /* Clickable Dashboard Rows */
@@ -839,8 +841,8 @@ body.dark-theme .dashboard-row.clickable:hover {
 .dashboard-container.view-mode-table .dashboard-row {
     flex-direction: column;
     align-items: stretch;
-    border-left-width: 4px;
-    border-left-style: solid;
+    border-left-width: 0 !important;
+    /* Removed Left Border */
     border-right-width: 0;
 }
 
@@ -866,14 +868,15 @@ body.dark-theme .dashboard-row.clickable:hover {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 10px;
-    padding: 10px;
+    padding: 0 !important;
+    /* Force Full Bleed */
+    margin: 0 !important;
 }
 
 .dashboard-container.view-mode-compact .dashboard-row {
     padding: 12px;
-    border-left-width: 4px;
-    border-left-style: solid;
-    /* LEFT BORDER ONLY - no right border */
+    border-left-width: 0 !important;
+    /* Removed Left Border */
     border-right: none !important;
     border-bottom: 1px solid var(--border-color);
 }
@@ -898,7 +901,9 @@ body.dark-theme .dashboard-row.clickable:hover {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 8px;
-    padding: 8px;
+    padding: 0 !important;
+    /* Force Full Bleed */
+    margin: 0 !important;
 }
 
 .dashboard-container.view-mode-snapshot .dashboard-row {
@@ -915,18 +920,19 @@ body.dark-theme .dashboard-row.clickable:hover {
     /* Restore separator if needed, or keep none? Use 1px solid as per original context but keeping square */
     /* Actually, user wanted "Side Borders... Ends shouldn't be rounded". */
     /* Box Shadow is the safest way to render a square stripe on the left regardless of container */
-    box-shadow: inset 4px 0 0 0 var(--color-accent) !important;
+    /* Box Shadow is the safest way to render a square stripe on the left regardless of container */
+    box-shadow: none !important;
     /* Default to neutral/accent, specific colors overridden below */
     padding-left: 12px;
     /* Ensure content doesn't overlap shadow */
 }
 
 .dashboard-container.view-mode-snapshot .dashboard-row.positive {
-    box-shadow: inset 4px 0 0 0 var(--color-positive) !important;
+    box-shadow: none !important;
 }
 
 .dashboard-container.view-mode-snapshot .dashboard-row.negative {
-    box-shadow: inset 4px 0 0 0 var(--color-negative) !important;
+    box-shadow: none !important;
 }
 
 .dashboard-container.view-mode-snapshot .dashboard-item-name,
@@ -1656,6 +1662,8 @@ h1#dynamicWatchlistTitle.active {
 
 /* --- Sidebar --- */
 .sidebar {
+    /* Coffee Gradient for Sidebar */
+    background: linear-gradient(to bottom, #121212 0%, #1e1b18 100%) !important;
     position: fixed;
     top: 0;
     left: 0;
@@ -1665,13 +1673,14 @@ h1#dynamicWatchlistTitle.active {
     /* Fallback */
     height: 100dvh;
     /* Dynamic Mobile Height */
-    background-color: var(--sidebar-bg);
+    /* background-color: var(--sidebar-bg); REMOVED for Gradient */
     color: var(--text-color);
     z-index: 100001 !important;
     /* Safe High Value */
     /* Topmost UI Element */
     padding: 0;
-    box-shadow: 4px 0 12px rgba(0, 0, 0, 0.1);
+    box-shadow: 4px 0 12px rgba(0, 0, 0, 0.4);
+    /* Stronger shadow for contrast */
     display: flex;
     flex-direction: column;
     box-sizing: border-box;
@@ -2462,9 +2471,10 @@ h1#dynamicWatchlistTitle.active {
 
 .snapshot-card {
     background-color: var(--bg-card);
-    /* Remove full border, keep left indicator */
+    /* Remove full border */
     border: none;
-    border-left: 5px solid var(--border-color);
+    border-left: none !important;
+    /* Removed Left Trend Indicator */
     /* Default neutral */
     border-radius: 4px;
     /* Less rounded for a list/table feel? Or keep 8px? Lets go 6px */
@@ -3858,7 +3868,14 @@ tr.dashboard-grade-neutral td,
 }
 
 /* Dashboard Title Bar & Header Gradients (based on ASX 200) - Maximum Visibility */
+/* Separated Header Rules - Enhanced Visibility (Targeting Inner Container too) */
 body.dashboard-grade-up #appHeader,
+body.dashboard-grade-up .header-inner-container {
+    background: linear-gradient(to right, rgba(0, 160, 0, 0.5) 0%, #1a1a1a 100%) !important;
+    background-color: #1a1a1a !important;
+    border-bottom: 1px solid rgba(0, 160, 0, 0.5) !important;
+}
+
 button#watchlist-selector.dashboard-grade-up,
 .watchlist-selector.dashboard-grade-up,
 #watchlist-selector.dashboard-grade-up {
@@ -3870,6 +3887,12 @@ button#watchlist-selector.dashboard-grade-up,
 }
 
 body.dashboard-grade-down #appHeader,
+body.dashboard-grade-down .header-inner-container {
+    background: linear-gradient(to right, rgba(200, 0, 0, 0.5) 0%, #1a1a1a 100%) !important;
+    background-color: #1a1a1a !important;
+    border-bottom: 1px solid rgba(200, 0, 0, 0.5) !important;
+}
+
 button#watchlist-selector.dashboard-grade-down,
 .watchlist-selector.dashboard-grade-down,
 #watchlist-selector.dashboard-grade-down {
@@ -3881,6 +3904,12 @@ button#watchlist-selector.dashboard-grade-down,
 }
 
 body.dashboard-grade-neutral #appHeader,
+body.dashboard-grade-neutral .header-inner-container {
+    background: linear-gradient(to right, rgba(160, 160, 160, 0.3) 0%, #1a1a1a 100%) !important;
+    background-color: #1a1a1a !important;
+    border-bottom: 1px solid rgba(160, 160, 160, 0.3) !important;
+}
+
 button#watchlist-selector.dashboard-grade-neutral,
 .watchlist-selector.dashboard-grade-neutral,
 #watchlist-selector.dashboard-grade-neutral {
@@ -6027,6 +6056,8 @@ body.dark-theme .sort-picker-row.active {
 .negative {
     color: var(--color-negative) !important;
 }
+
+
 
 .text-neutral {
     color: var(--color-neutral) !important;
@@ -8844,3 +8875,15 @@ body.dark-theme .calc-result-card {
     margin-left: 8px;
     font-size: 0.85em;
 }
+
+
+
+ b o d y . d a s h b o a r d - a c t i v e   # a p p H e a d e r   { 
+         b a c k g r o u n d :   l i n e a r - g r a d i e n t ( t o   r i g h t ,   # 4 e 5 4 c 8 ,   # 8 f 9 4 f b )   ! i m p o r t a n t ; 
+ } 
+ 
+ b o d y . d a s h b o a r d - a c t i v e   . s i d e b a r   { 
+         b a c k g r o u n d :   l i n e a r - g r a d i e n t ( t o   b o t t o m ,   # 4 e 5 4 c 8 ,   # 8 f 9 4 f b )   ! i m p o r t a n t ; 
+ } 
+  
+ 

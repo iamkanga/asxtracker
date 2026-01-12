@@ -17,6 +17,33 @@
 
     <!-- Kangaroo Favicon -->
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <style>
+        /* USER OVERRIDE: Remove Left Borders/Shadows */
+        .share-card.trend-up,
+        .share-card.trend-down,
+        .share-card.trend-neutral {
+            box-shadow: none !important;
+            border-color: transparent !important;
+        }
+
+        /* Watchlist Selector Dashboard Borders */
+        #watchlist-selector.dashboard-grade-up,
+        #watchlist-selector.dashboard-grade-down,
+        #watchlist-selector.dashboard-grade-neutral,
+        .watchlist-selector.dashboard-grade-up,
+        .watchlist-selector.dashboard-grade-down,
+        .watchlist-selector.dashboard-grade-neutral {
+            border-left: none !important;
+        }
+
+        /* Dashboard Rows (if any left) */
+        .dashboard-row.dashboard-grade-up,
+        .dashboard-row.dashboard-grade-down,
+        .dashboard-row.dashboard-grade-neutral {
+            box-shadow: none !important;
+            border-left: none !important;
+        }
+    </style>
 </head>
 
 <body style="background-color: #212529;">

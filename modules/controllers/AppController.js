@@ -980,22 +980,157 @@ export class AppController {
 
 
     async updateDataAndRender(fetchFresh = false) {
+
+
         if (AppState.isLocked) {
+
+
             return;
+
+
         }
+
+
+
+
+
+        const header = document.getElementById('appHeader');
+
+
+        const sidebar = document.getElementById('sidebar');
+
+        // --- GLOBAL HEADER & SIDEBAR STYLING (Universal) ---
+        // 1. Sidebar: Always Coffee Gradient
+        if (sidebar) {
+            sidebar.style.background = 'linear-gradient(135deg, rgba(164, 147, 147, 0.4) 0%, rgba(20, 20, 20, 1) 100%)';
+        }
+
+        // 2. Header: Dynamic Mirrored Gradient based on GLOBAL PORTFOLIO PERFORMANCE
+        // Applies to ALL Stock/Dashboard views. Resets for Cash.
+        if (header) {
+            if (AppState.watchlist.type === 'cash') {
+                header.style.background = ''; // Reset for Cash View
+            } else {
+                // Calculate Global Portfolio Day Change (Robust)
+                // Filter specifically for valid owned quantities
+                // Calculate Global Portfolio Day Change (Robust)
+                // Use DataProcessor.processShares for consistent, authoritative metrics
+                const { summaryMetrics } = processShares(
+                    AppState.data.shares || [],
+                    PORTFOLIO_ID,
+                    AppState.livePrices,
+                    AppState.sortConfig, // Re-use current sort config (doesn't affect total)
+                    AppState.hiddenAssets
+                );
+
+                let portfolioDayChange = 0;
+                if (summaryMetrics) {
+                    portfolioDayChange = summaryMetrics.dayChangeValue || 0;
+                }
+
+                // Determine Color based on Net Daily P/L
+                let colorRGBA = '164, 147, 147'; // Neutral (Coffee)
+                if (portfolioDayChange > 0.01) {
+                    colorRGBA = '20, 160, 20'; // Green
+                } else if (portfolioDayChange < -0.01) {
+                    colorRGBA = '180, 20, 20'; // Red
+                }
+
+                // Apply Mirrored Gradient: Strong -> Black -> Strong
+                header.style.background = `linear-gradient(90deg, rgba(${colorRGBA}, 0.6) 0%, rgba(20, 20, 20, 1) 35%, rgba(20, 20, 20, 1) 65%, rgba(${colorRGBA}, 0.6) 100%)`;
+            }
+        }
+
+
+
+
 
         if (AppState.watchlist.id === DASHBOARD_WATCHLIST_ID) {
+
+
+
+
+
+
+            if (false /* DISABLED REDUNDANT HEADER LOGIC */) {
+
+                if (AppState.watchlist.type === 'cash') {
+                    // Cash View: Reset/Default
+                    header.style.background = '';
+                } else {
+                    // Calculate Global Portfolio Day Change
+                    // We sum up the dayChangeValue of all shares in 'portfolio'
+                    // Note: This relies on AppState.data.shares having the info.
+                    // If we are in 'Dashboard' view, we might not have calculated portfolio metrics yet if not visited.
+                    // However, processShares can run on arbitrary lists.
+
+                    // Quick Calc of Portfolio Total Day Change $
+                    const portfolioShares = (AppState.data.shares || []).filter(s => s.owned > 0);
+                    let portfolioDayChange = 0;
+
+                    // Use live prices map for accuracy if available, else fallback to baked data
+                    portfolioShares.forEach(s => {
+                        const data = AppState.livePrices.get(s.code);
+                        const change = data ? data.change : (s.dayChange || 0);
+                        portfolioDayChange += (change * s.owned);
+                    });
+
+                    // Determine Color
+                    let colorRGBA = '164, 147, 147'; // Neutral (Coffee)
+                    if (portfolioDayChange > 0.01) {
+                        colorRGBA = '20, 160, 20'; // Green
+                    } else if (portfolioDayChange < -0.01) {
+                        colorRGBA = '180, 20, 20'; // Red
+                    }
+
+                    // Apply Mirrored Gradient: Strong -> Black -> Strong
+                    // 90deg = Left to Right
+                    header.style.background = `linear-gradient(90deg, rgba(${colorRGBA}, 0.6) 0%, rgba(20, 20, 20, 1) 35%, rgba(20, 20, 20, 1) 65%, rgba(${colorRGBA}, 0.6) 100%)`;
+                }
+            }
+
+
             const dashboardData = AppState.data.dashboard || [];
+
+
             this.dashboardRenderer.render(dashboardData);
 
+
+
+
+
             // Force Title Bar Update (Gradients based on ASX 200)
+
+
             if (this.watchlistUI) this.watchlistUI.updateHeaderTitle();
 
+
+
+
+
             if (fetchFresh) {
+
+
                 this._refreshAllPrices([]);
+
+
             }
+
+
             return;
+
+
         }
+
+
+
+
+
+
+
+
+
+
 
         if (AppState.watchlist.type === 'cash') {
             const cashData = AppState.data.cash || [];
@@ -1025,6 +1160,11 @@ export class AppController {
 
         this.viewRenderer.render(mergedData, summaryMetrics);
         this._updateLiveRefreshTime();
+
+        // Ensure Header Title / Gradient updates with new data
+        if (this.watchlistUI) {
+            this.watchlistUI.updateHeaderTitle();
+        }
 
         if (AppState.watchlist.type !== 'cash') {
             const activeCodes = mergedData
@@ -1100,6 +1240,9 @@ export class AppController {
                                 AppState.hiddenAssets
                             );
                             this.viewRenderer.render(freshMerged, freshMetrics);
+                            if (this.watchlistUI) {
+                                this.watchlistUI.updateHeaderTitle();
+                            }
 
                             const freshCodes = freshMerged
                                 .filter(s => !s.isHidden)
