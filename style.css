@@ -1352,7 +1352,7 @@ body.dark-theme .toast-title {
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
-    padding: 12px 12px 10px 12px;
+    padding: 12px 4px 10px 4px;
     gap: 0;
     margin: 0;
     border-radius: 0;
@@ -1409,17 +1409,19 @@ body.dark-theme .toast-title {
 .header-left {
     display: flex;
     align-items: flex-end;
-    gap: 8px;
+    gap: 4px;
     height: 60px;
     padding-bottom: 8px;
+    padding-left: 0;
 }
 
 .header-right {
     display: flex;
     align-items: flex-end;
-    gap: 8px;
+    gap: 4px;
     height: 60px;
     padding-bottom: 8px;
+    padding-right: 0;
 }
 
 /* Header Buttons */
@@ -7732,7 +7734,7 @@ body.dark-theme .calc-result-card {
 
     /* 12px Standard Mobile Gutter Compliance */
     #appHeader {
-        padding: 12px 12px 10px 12px !important;
+        padding: 12px 0 10px 0 !important;
     }
 
     #content-container {
@@ -7751,6 +7753,27 @@ body.dark-theme .calc-result-card {
     .header-action-btn-right {
         gap: 4px;
         min-width: 0;
+    }
+
+    /* Mobile Edge-Aligned Controls */
+    #hamburger-btn {
+        justify-content: flex-start !important;
+        width: auto !important;
+        padding-left: 4px !important;
+    }
+
+    #viewToggleBtn {
+        justify-content: flex-end !important;
+        width: auto !important;
+        padding-right: 4px !important;
+    }
+
+    .header-left {
+        padding-left: 0 !important;
+    }
+
+    .header-right {
+        padding-right: 0 !important;
     }
 
     .watchlist-selector span {
