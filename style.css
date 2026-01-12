@@ -5134,10 +5134,10 @@ body.dark-theme .sort-picker-row.active {
 .dashboard-container {
     display: flex;
     flex-direction: column;
-    padding: 10px;
+    padding: 10px 0 !important;
     gap: 8px;
-    max-width: 800px;
-    margin: 0 auto;
+    max-width: 100% !important;
+    margin: 0 !important;
 }
 
 /* Modal Manual Sort Styles (Moved to Features) */
