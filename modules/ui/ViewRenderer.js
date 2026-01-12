@@ -317,8 +317,13 @@ export class ViewRenderer {
             `;
         }
 
+        // Gradient Background Logic
+        let gradeClass = 'dashboard-grade-neutral'; // Default: coffee/amber
+        if (changePercent > 0) gradeClass = 'dashboard-grade-up';
+        else if (changePercent < 0) gradeClass = 'dashboard-grade-down';
+
         return `
-            <tr data-id="${item.id}" data-code="${item.code}" class="${trendClass}">
+            <tr data-id="${item.id}" data-code="${item.code}" class="${trendClass} ${gradeClass}">
                 <td class="${CSS_CLASSES.CODE_CELL} ${CSS_CLASSES.FONT_BOLD}">${item.code}</td>
                 <td>${formatCurrency(price)}</td>
                 <td class="${CSS_CLASSES.DESKTOP_ONLY} ${changeValue >= 0 ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE} ${CSS_CLASSES.CHANGE_VALUE}">
@@ -363,8 +368,13 @@ export class ViewRenderer {
             // For the new Portfolio Card, always use TOTAL holding change
             const displayChangeValue = item.dayChangeValue || 0;
 
+            // Gradient Background Logic
+            let gradeClass = 'dashboard-grade-neutral'; // Default: coffee/amber
+            if (changePercent > 0) gradeClass = 'dashboard-grade-up';
+            else if (changePercent < 0) gradeClass = 'dashboard-grade-down';
+
             return `
-                <div class="${CSS_CLASSES.CARD} ${trendClass} ${ghostClass}" data-id="${item.id}" data-code="${item.code}">
+                <div class="${CSS_CLASSES.CARD} ${trendClass} ${gradeClass} ${ghostClass}" data-id="${item.id}" data-code="${item.code}">
                     <div class="${CSS_CLASSES.CARD_HEADER_ROW} ${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.JUSTIFY_BETWEEN} ${CSS_CLASSES.ALIGN_START} ${CSS_CLASSES.W_FULL} ${CSS_CLASSES.MB_2PX} ${CSS_CLASSES.BORDER_NONE}">
                         <div class="${CSS_CLASSES.CARD_HEADER_LEFT} ${CSS_CLASSES.FLEX_COLUMN} ${CSS_CLASSES.ALIGN_START} ${CSS_CLASSES.GAP_SMALL}">
                             <span class="${CSS_CLASSES.CARD_CODE}" data-code="${item.code}">${item.code}</span>
@@ -446,8 +456,13 @@ export class ViewRenderer {
                     </div>
                 </div>` : '';
 
+            // Gradient Background Logic
+            let gradeClass = 'dashboard-grade-neutral'; // Default: coffee/amber
+            if (changePercent > 0) gradeClass = 'dashboard-grade-up';
+            else if (changePercent < 0) gradeClass = 'dashboard-grade-down';
+
             return `
-                <div class="${CSS_CLASSES.CARD} ${trendClass} ${CSS_CLASSES.PB_4PX}" data-id="${item.id}" data-code="${item.code}">
+                <div class="${CSS_CLASSES.CARD} ${trendClass} ${gradeClass} ${CSS_CLASSES.PB_4PX}" data-id="${item.id}" data-code="${item.code}">
                     <div class="${CSS_CLASSES.CARD_HEADER_ROW} ${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.JUSTIFY_BETWEEN} ${CSS_CLASSES.ALIGN_START} ${CSS_CLASSES.W_FULL} ${CSS_CLASSES.MB_2PX}">
                         <div class="${CSS_CLASSES.CARD_HEADER_LEFT} ${CSS_CLASSES.FLEX_COLUMN} ${CSS_CLASSES.ALIGN_START}">
                             <span class="${CSS_CLASSES.CARD_CODE}" data-code="${item.code}">${item.code}</span>
@@ -480,8 +495,13 @@ export class ViewRenderer {
                 }
             }
 
+            // Gradient Background Logic
+            let gradeClass = 'dashboard-grade-neutral'; // Default: coffee
+            if (changePercent > 0) gradeClass = 'dashboard-grade-up';
+            else if (changePercent < 0) gradeClass = 'dashboard-grade-down';
+
             return `
-                <div class="${CSS_CLASSES.CARD} ${trendClass}" data-id="${item.id}" data-code="${item.code}" data-view="compact">
+                <div class="${CSS_CLASSES.CARD} ${trendClass} ${gradeClass}" data-id="${item.id}" data-code="${item.code}" data-view="compact">
                     ${iconHtml}
                     <div class="${CSS_CLASSES.CARD_HEADER} ${CSS_CLASSES.FLEX_COLUMN} ${CSS_CLASSES.ALIGN_START} ${CSS_CLASSES.W_FULL}">
                         <span class="${CSS_CLASSES.CARD_CODE} ${CSS_CLASSES.TEXT_LG} ${CSS_CLASSES.CODE_PILL} ${CSS_CLASSES.JUSTIFY_START}" data-code="${item.code}">${item.code}</span>
@@ -499,8 +519,13 @@ export class ViewRenderer {
             `;
         } else {
             // Snapshot View
+            // Gradient Background Logic
+            let gradeClass = 'dashboard-grade-neutral'; // Default: coffee/amber
+            if (changePercent > 0) gradeClass = 'dashboard-grade-up';
+            else if (changePercent < 0) gradeClass = 'dashboard-grade-down';
+
             return `
-                <div class="${CSS_CLASSES.CARD} ${trendClass}" data-id="${item.id}" data-code="${item.code}" data-view="snapshot">
+                <div class="${CSS_CLASSES.CARD} ${trendClass} ${gradeClass}" data-id="${item.id}" data-code="${item.code}" data-view="snapshot">
                     <div class="${CSS_CLASSES.CARD_HEADER} ${CSS_CLASSES.FLEX_COLUMN} ${CSS_CLASSES.ALIGN_START} ${CSS_CLASSES.W_FULL}">
                         <span class="${CSS_CLASSES.CARD_CODE} ${CSS_CLASSES.TEXT_LG} ${CSS_CLASSES.CODE_PILL} ${CSS_CLASSES.JUSTIFY_START}" data-code="${item.code}">${item.code}</span>
                         <span class="${CSS_CLASSES.CARD_PRICE} ${CSS_CLASSES.PRIMARY_TEXT} ${CSS_CLASSES.TEXT_LG} ${CSS_CLASSES.MT_TINY} ${CSS_CLASSES.TEXT_LEFT}">${formatCurrency(price)}</span>
@@ -530,16 +555,34 @@ export class ViewRenderer {
         const dailyBgBorder = isDailyPos ? 'trend-up-border' : 'trend-down-border';
         const totalBgBorder = isTotalPos ? 'trend-up-border' : 'trend-down-border';
 
-        // 2. Construct HTML (Card Layout with Inline Percentages)
+        // Update Portfolio Title Bar (Watchlist Selector)
+        const watchlistSelector = document.getElementById('watchlist-selector');
+        if (watchlistSelector) {
+            watchlistSelector.classList.remove('trend-up-bg', 'trend-down-bg');
+            // Only apply if we are actually in Portfolio view (which renderSummary implies, as per check in render())
+            if (metrics.dayChangeValue >= 0) {
+                watchlistSelector.classList.add('trend-up-bg');
+            } else {
+                watchlistSelector.classList.add('trend-down-bg');
+            }
+        }
+
+        // Gradient classes for summary cards
+        const dayChangeGrade = metrics.dayChangeValue > 0 ? 'dashboard-grade-up' :
+            metrics.dayChangeValue < 0 ? 'dashboard-grade-down' : 'dashboard-grade-neutral';
+        const totalGainGrade = metrics.totalReturn > 0 ? 'dashboard-grade-up' :
+            metrics.totalReturn < 0 ? 'dashboard-grade-down' : 'dashboard-grade-neutral';
+
+        // 2. Construct HTML (Card Layout with Inline Percentages and Gradients)
         container.innerHTML = `
-            <div class="${CSS_CLASSES.SUMMARY_CARD} ${CSS_CLASSES.CLICKABLE} trend-accent-border" data-type="${SUMMARY_TYPES.VALUE}">
+            <div class="${CSS_CLASSES.SUMMARY_CARD} ${CSS_CLASSES.CLICKABLE} dashboard-grade-neutral trend-accent-border" data-type="${SUMMARY_TYPES.VALUE}">
                 <span class="${CSS_CLASSES.METRIC_LABEL}">Portfolio Value</span>
                 <div class="${CSS_CLASSES.METRIC_ROW}">
                     <span class="${CSS_CLASSES.METRIC_VALUE_LARGE}">${formatCurrency(metrics.totalValue)}</span>
                 </div>
             </div>
 
-            <div class="${CSS_CLASSES.SUMMARY_CARD} ${CSS_CLASSES.CLICKABLE} ${dailyBgBorder}" data-type="${SUMMARY_TYPES.DAY_CHANGE}">
+            <div class="${CSS_CLASSES.SUMMARY_CARD} ${CSS_CLASSES.CLICKABLE} ${dayChangeGrade} ${dailyBgBorder}" data-type="${SUMMARY_TYPES.DAY_CHANGE}">
                 <span class="${CSS_CLASSES.METRIC_LABEL}">Day Change</span>
                 <div class="${CSS_CLASSES.METRIC_ROW}">
                     <span class="${CSS_CLASSES.METRIC_VALUE_LARGE} ${(metrics.dayChangeValue >= 0) ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}">
@@ -551,7 +594,7 @@ export class ViewRenderer {
                 </div>
             </div>
 
-            <div class="${CSS_CLASSES.SUMMARY_CARD} ${CSS_CLASSES.CLICKABLE} trend-up-border" data-type="${SUMMARY_TYPES.WINNERS}">
+            <div class="${CSS_CLASSES.SUMMARY_CARD} ${CSS_CLASSES.CLICKABLE} dashboard-grade-up trend-up-border" data-type="${SUMMARY_TYPES.WINNERS}">
                 <span class="${CSS_CLASSES.METRIC_LABEL}">Day Gain</span>
                 <div class="${CSS_CLASSES.METRIC_ROW}">
                     <span class="${CSS_CLASSES.METRIC_VALUE_LARGE} ${CSS_CLASSES.TEXT_POSITIVE}">
@@ -563,7 +606,7 @@ export class ViewRenderer {
                 </div>
             </div>
 
-            <div class="${CSS_CLASSES.SUMMARY_CARD} ${CSS_CLASSES.CLICKABLE} trend-down-border" data-type="${SUMMARY_TYPES.LOSERS}">
+            <div class="${CSS_CLASSES.SUMMARY_CARD} ${CSS_CLASSES.CLICKABLE} dashboard-grade-down trend-down-border" data-type="${SUMMARY_TYPES.LOSERS}">
                 <span class="${CSS_CLASSES.METRIC_LABEL}">Day Loss</span>
                 <div class="${CSS_CLASSES.METRIC_ROW}">
                     <span class="${CSS_CLASSES.METRIC_VALUE_LARGE} ${CSS_CLASSES.TEXT_NEGATIVE}">
@@ -575,7 +618,7 @@ export class ViewRenderer {
                 </div>
             </div>
 
-            <div class="${CSS_CLASSES.SUMMARY_CARD} ${CSS_CLASSES.CLICKABLE} ${totalBgBorder}" data-type="${SUMMARY_TYPES.CAPITAL_GAIN}">
+            <div class="${CSS_CLASSES.SUMMARY_CARD} ${CSS_CLASSES.CLICKABLE} ${totalGainGrade} ${totalBgBorder}" data-type="${SUMMARY_TYPES.CAPITAL_GAIN}">
                 <span class="${CSS_CLASSES.METRIC_LABEL}">Total Capital Gain</span>
                 <div class="${CSS_CLASSES.METRIC_ROW}">
                     <span class="${CSS_CLASSES.METRIC_VALUE_LARGE} ${isTotalPos ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}">
@@ -1318,9 +1361,9 @@ export class ViewRenderer {
                 </div>
 
                 <!-- Sort Direction Toggle (Unified) -->
-                <div id="sort-direction-toggle" class="${CSS_CLASSES.SORT_TAGGLE_CONTAINER} sort-direction-toggle">
+                <div id="${IDS.SORT_DIRECTION_TOGGLE}" class="sort-direction-toggle">
                     <div class="${CSS_CLASSES.SEGMENTED_CONTROL}">
-                        <button id="sort-toggle-btn" class="${CSS_CLASSES.SEGMENTED_BUTTON} w-full">
+                        <button id="${IDS.SORT_TOGGLE_BTN}" class="${CSS_CLASSES.SEGMENTED_BUTTON} w-full">
                             <!-- Content populated dynamically -->
                         </button>
                     </div>
@@ -1751,11 +1794,11 @@ export class ViewRenderer {
                 let labelText = '';
 
                 if (activeDir === highToLowDir) {
-                    iconClass = `${UI_ICONS.CARET_DOWN || 'fa-caret-down'}`;
+                    iconClass = 'fa-chevron-down';
                     colorClass = CSS_CLASSES.TEXT_NEGATIVE;
                     labelText = 'Low to High';
                 } else {
-                    iconClass = `${UI_ICONS.CARET_UP || 'fa-caret-up'}`;
+                    iconClass = 'fa-chevron-up';
                     colorClass = CSS_CLASSES.TEXT_POSITIVE;
                     labelText = 'High to Low';
                 }

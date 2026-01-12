@@ -17,6 +17,16 @@ export class WatchlistPickerModal {
                         <i class="fas ${UI_ICONS.CLOSE}"></i>
                     </button>
                 </div>
+
+                <!-- Sort Direction Toggle -->
+                <div id="${IDS.WATCHLIST_SORT_DIRECTION_TOGGLE}" class="sort-direction-toggle">
+                    <div class="${CSS_CLASSES.SEGMENTED_CONTROL}">
+                        <button id="${IDS.WATCHLIST_SORT_TOGGLE_BTN}" class="${CSS_CLASSES.SEGMENTED_BUTTON} w-full">
+                            <!-- Content populated dynamically -->
+                        </button>
+                    </div>
+                </div>
+
                 <!-- Selection Mode Headers (Hidden by default) -->
                 <div id="watchlistEditHeaders" class="watchlist-edit-headers ${CSS_CLASSES.HIDDEN}">
                     <span class="col-hide">Hide</span>

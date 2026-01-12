@@ -43,7 +43,7 @@ export class SettingsUI {
             <div class="${CSS_CLASSES.MODAL_OVERLAY}"></div>
             <div class="${CSS_CLASSES.MODAL_CONTENT} settings-modal-body" style="display: flex; flex-direction: column; max-height: 90vh;">
                 <!-- Header: Standard Mobile Modal Type -->
-                <div class="${CSS_CLASSES.MODAL_HEADER}" style="display: flex; align-items: center; justify-content: space-between; padding: 15px; border-bottom: 1px solid var(--border-color); flex-shrink: 0;">
+                <div class="${CSS_CLASSES.MODAL_HEADER}" style="display: flex; align-items: center; justify-content: space-between; padding: 15px; border: none !important; flex-shrink: 0;">
                     <span class="${CSS_CLASSES.MODAL_TITLE}" style="font-size: 1.45rem; font-weight: 700;">Notification Settings</span>
                     <button class="${CSS_CLASSES.MODAL_CLOSE_BTN}" style="background: none; border: none; color: var(--text-muted); font-size: 1.2rem; cursor: pointer; padding: 4px;">
                         <i class="fas fa-times"></i>
@@ -57,8 +57,8 @@ export class SettingsUI {
                     /* Global Pill Architecture (Flush Design) */
                     .pill-container {
                         display: flex;
-                        background: var(--bg-secondary);
-                        border: 1px solid var(--border-color);
+                        background: transparent !important;
+                        border: none !important;
                         overflow: hidden;
                         padding: 0;
                         justify-content: center;
@@ -109,7 +109,7 @@ export class SettingsUI {
                     .accordion-control-segment:first-child,
                     .pill-segment-personal:first-child,
                     .pill-segment-badge-scope:first-child {
-                        border-right: 1px solid var(--border-color);
+                        border-right: none !important;
                     }
 
                     .master-pill-segment, .accordion-control-segment {
@@ -287,7 +287,7 @@ export class SettingsUI {
 
         const summaryCard = document.createElement('div');
         summaryCard.className = CSS_CLASSES.DETAIL_CARD;
-        summaryCard.style.border = '1px solid var(--border-color)'; // Uniform thin border
+        // Border removed for floating effect via style.css
         summaryCard.innerHTML = `
             <div class="${CSS_CLASSES.DETAIL_CARD_HEADER}" style="justify-content: flex-start; border-bottom: none !important;">
                 <h3 class="${CSS_CLASSES.DETAIL_LABEL}" style="text-decoration: none !important; border-bottom: none !important; color: white !important; display: flex; align-items: center; font-size: 1.1rem !important;">
@@ -397,7 +397,7 @@ export class SettingsUI {
         // --- 2. ALERTS (User Prefs) ---
         const notifCard = document.createElement('div');
         notifCard.className = CSS_CLASSES.DETAIL_CARD;
-        notifCard.style.border = '1px solid var(--border-color)'; // Uniform thin border
+        // Border removed for floating effect via style.css
         notifCard.innerHTML = `
             <div class="${CSS_CLASSES.DETAIL_CARD_HEADER}" style="border-bottom: none;">
                 <h3 class="${CSS_CLASSES.DETAIL_LABEL}" style="text-decoration: none; border-bottom: none; color: white; font-size: 1.1rem;">
@@ -497,7 +497,7 @@ export class SettingsUI {
         // --- 3. COMBINED THRESHOLD & SECTOR SELECTOR ---
         const combinedCard = document.createElement('div');
         combinedCard.className = CSS_CLASSES.DETAIL_CARD;
-        combinedCard.style.border = '1px solid var(--border-color)'; // Uniform thin border
+        // Border removed for floating effect via style.css
         combinedCard.innerHTML = `
             <div class="${CSS_CLASSES.DETAIL_CARD_HEADER}" style="flex-direction: column; align-items: flex-start; gap: 0; border-bottom: none; padding-bottom: 0;">
                 <h3 class="${CSS_CLASSES.DETAIL_LABEL}" style="text-decoration: none !important; border-bottom: none !important; color: white !important; display: flex !important; align-items: center !important; gap: 8px !important; margin-bottom: 0 !important; text-transform: none !important; line-height: 1.0 !important; font-size: 1.1rem !important;">

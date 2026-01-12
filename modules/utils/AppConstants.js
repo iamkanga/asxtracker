@@ -56,6 +56,7 @@ export const WATCHLIST_NAMES = {
 
 export const STORAGE_KEYS = {
     WATCHLIST_ID: 'ASX_NEXT_lastWatchlistId',
+    WATCHLIST_SORT: 'ASX_NEXT_watchlistSort',
     SORT: 'ASX_NEXT_sortConfig',
     HIDDEN_ASSETS: 'ASX_NEXT_hiddenAssets',
     PINNED_ALERTS: 'ASX_NEXT_pinnedAlerts',
@@ -913,7 +914,7 @@ export const CSS_CLASSES = {
     SORT_PICKER_LABEL: 'sort-picker-label',
     SORT_PICKER_DIRECTION: 'sort-picker-direction',
     SORT_ASX_ICON: 'sort-asx-icon',
-    SORT_TOGGLE_BTN: 'sort-toggle-btn',
+    SORT_TOGGLE_BTN: 'sortToggleBtn',
 
 
     // ASX Dropdown
@@ -1180,6 +1181,8 @@ export const IDS = {
     // Watchlist Management
     WATCHLIST_PICKER_MODAL: 'watchlistPickerModal',
     WATCHLIST_PICKER_LIST: 'watchlistPickerList',
+    WATCHLIST_SORT_DIRECTION_TOGGLE: 'watchlistSortDirectionToggle',
+    WATCHLIST_SORT_TOGGLE_BTN: 'watchlistSortToggleBtn',
     WATCHLIST_SELECTOR: 'watchlist-selector',
     DYNAMIC_WATCHLIST_TITLE: 'dynamicWatchlistTitle',
     APP_HEADER: 'appHeader',
@@ -1203,7 +1206,8 @@ export const IDS = {
     CASH_ASSET_MODAL: 'cash-asset-modal',
     CASH_CATEGORY_DROPDOWN: 'cash-category-dropdown',
     CATEGORY_TRIGGER: 'category-trigger',
-    SORT_DIRECTION_TOGGLE: 'sortDirectionToggle',
+    SORT_DIRECTION_TOGGLE: 'sort-direction-toggle',
+    SORT_TOGGLE_BTN: 'sortToggleBtn',
     SORT_DIR_ASC: 'sortDirAsc',
     SORT_DIR_DESC: 'sortDirDesc',
     CATEGORY_LABEL_TEXT: 'category-label-text',

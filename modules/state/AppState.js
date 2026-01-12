@@ -107,6 +107,7 @@ export const AppState = {
             }
         })(),
         snapshotSort: localStorage.getItem(STORAGE_KEYS.SNAPSHOT_SORT) || 'desc',
+        watchlistSort: localStorage.getItem(STORAGE_KEYS.WATCHLIST_SORT) || 'asc',
         favoriteLinks: (() => {
             try {
                 const stored = localStorage.getItem(STORAGE_KEYS.FAVORITE_LINKS);
@@ -442,6 +443,12 @@ export const AppState = {
     saveSnapshotSort(sortOrder) {
         this.preferences.snapshotSort = sortOrder;
         localStorage.setItem(STORAGE_KEYS.SNAPSHOT_SORT, sortOrder);
+        this._triggerSync();
+    },
+
+    saveWatchlistSort(sortOrder) {
+        this.preferences.watchlistSort = sortOrder;
+        localStorage.setItem(STORAGE_KEYS.WATCHLIST_SORT, sortOrder);
         this._triggerSync();
     },
 

@@ -65,6 +65,19 @@ export class WatchlistUI {
                         this.renderWatchlistDropdown();
                     });
                 }
+
+                // Bind Sort Toggle
+                const toggleBtn = document.getElementById(IDS.WATCHLIST_SORT_TOGGLE_BTN);
+                if (toggleBtn) {
+                    toggleBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const currentSort = AppState.preferences.watchlistSort || 'asc';
+                        const newSort = currentSort === 'asc' ? 'desc' : 'asc';
+                        AppState.saveWatchlistSort(newSort);
+                        this.renderWatchlistDropdown();
+                        this.updateToggleUI();
+                    });
+                }
             }
         }
     }
@@ -102,6 +115,27 @@ export class WatchlistUI {
             chevron.style.transform = 'rotate(0deg)';
             chevron.style.opacity = '0.3'; // Reset opacity
         }
+
+        // Initialize Toggle UI if visible
+        this.updateToggleUI();
+    }
+
+    updateToggleUI() {
+        const toggleBtn = document.getElementById(IDS.WATCHLIST_SORT_TOGGLE_BTN);
+        if (!toggleBtn) return;
+
+        const isDesc = AppState.preferences.watchlistSort === 'desc';
+        const text = isDesc ? 'Z to A' : 'A to Z';
+        const iconClass = isDesc ? 'fa-chevron-down' : 'fa-chevron-up';
+        const colorClass = isDesc ? CSS_CLASSES.TEXT_NEGATIVE : CSS_CLASSES.TEXT_POSITIVE;
+
+        toggleBtn.innerHTML = `
+            <div class="${CSS_CLASSES.W_FULL} ${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.ALIGN_CENTER}" style="justify-content: center;">
+                <i class="fas ${iconClass} ${colorClass}" style="margin-right: 15px;"></i>
+                <span class="${CSS_CLASSES.FONT_BOLD}">${text}</span>
+                <i class="fas ${iconClass} ${colorClass}" style="margin-left: 15px;"></i>
+            </div>
+        `;
     }
 
     init() {
@@ -263,6 +297,51 @@ export class WatchlistUI {
                 renameBtn.disabled = false;
             }
         }
+
+        // Dashboard Title Bar Gradient based on ASX 200 (XJO) performance
+        const watchlistSelector = document.getElementById(IDS.WATCHLIST_SELECTOR);
+        if (watchlistSelector) {
+            // Remove any existing gradient classes
+            // Reset all gradient classes - BOTH on button and body for broad targeting
+            const gradientClasses = ['trend-up-bg', 'trend-down-bg', 'dashboard-grade-up', 'dashboard-grade-down', 'dashboard-grade-neutral'];
+            watchlistSelector.classList.remove(...gradientClasses);
+            document.body.classList.remove(...gradientClasses);
+
+            // Only apply gradient when viewing Dashboard
+            console.log('[WatchlistUI] Dashboard Title Bar Gradient Check:', { currentId, DASHBOARD_WATCHLIST_ID, match: currentId === DASHBOARD_WATCHLIST_ID });
+            if (currentId === DASHBOARD_WATCHLIST_ID) {
+                // Get ASX 200 (XJO) data from livePrices - try multiple key formats
+                let xjoData = AppState.livePrices.get('XJO') ||
+                    AppState.livePrices.get('^AXJO') ||
+                    AppState.livePrices.get('XJO.AX') ||
+                    AppState.livePrices.get('^XJO');
+
+                // Fallback to Dashboard Data
+                if (!xjoData && AppState.data.dashboard) {
+                    xjoData = AppState.data.dashboard.find(item =>
+                        ['XJO', '^AXJO', 'XJO.AX', '^XJO'].includes((item.code || '').toUpperCase())
+                    );
+                }
+
+                if (xjoData && xjoData.pctChange !== undefined) {
+                    const pctChange = parseFloat(xjoData.pctChange) || 0;
+                    if (pctChange > 0) {
+                        watchlistSelector.classList.add('dashboard-grade-up');
+                        document.body.classList.add('dashboard-grade-up');
+                    } else if (pctChange < 0) {
+                        watchlistSelector.classList.add('dashboard-grade-down');
+                        document.body.classList.add('dashboard-grade-down');
+                    } else {
+                        watchlistSelector.classList.add('dashboard-grade-neutral');
+                        document.body.classList.add('dashboard-grade-neutral');
+                    }
+                } else {
+                    // Default to neutral if no data
+                    watchlistSelector.classList.add('dashboard-grade-neutral');
+                    document.body.classList.add('dashboard-grade-neutral');
+                }
+            }
+        }
     }
 
     _pickIconForId(id) {
@@ -311,6 +390,13 @@ export class WatchlistUI {
             modal.querySelector(`.${CSS_CLASSES.MODAL_CONTENT}`).classList.remove('edit-mode');
         }
 
+        // --- Toggle Button Visibility (Hide in Reorder Mode) ---
+        const toggleContainer = document.getElementById(IDS.WATCHLIST_SORT_DIRECTION_TOGGLE);
+        if (toggleContainer) {
+            toggleContainer.classList.toggle(CSS_CLASSES.HIDDEN, this.isEditMode);
+        }
+        this.updateToggleUI();
+
         // 2. Prepare List Data
         let watchlistItems = [
             { id: ALL_SHARES_ID, name: WATCHLIST_NAMES.ALL_SHARES, icon: UI_ICONS.GLOBE, isSystem: true },
@@ -347,6 +433,18 @@ export class WatchlistUI {
                 if (idxA === -1) return 1;
                 if (idxB === -1) return -1;
                 return idxA - idxB;
+            });
+        } else {
+            // Default Alphabetical Sort if no manual order
+            const sortDir = AppState.preferences.watchlistSort || 'asc';
+            fullList.sort((a, b) => {
+                const nameA = a.name.toUpperCase();
+                const nameB = b.name.toUpperCase();
+                if (sortDir === 'asc') {
+                    return nameA < nameB ? -1 : (nameA > nameB ? 1 : 0);
+                } else {
+                    return nameA > nameB ? -1 : (nameA < nameB ? 1 : 0);
+                }
             });
         }
 

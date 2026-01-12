@@ -988,6 +988,9 @@ export class AppController {
             const dashboardData = AppState.data.dashboard || [];
             this.dashboardRenderer.render(dashboardData);
 
+            // Force Title Bar Update (Gradients based on ASX 200)
+            if (this.watchlistUI) this.watchlistUI.updateHeaderTitle();
+
             if (fetchFresh) {
                 this._refreshAllPrices([]);
             }

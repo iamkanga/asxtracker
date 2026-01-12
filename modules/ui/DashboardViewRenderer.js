@@ -200,8 +200,15 @@ export class DashboardViewRenderer {
         const high52 = liveData?.high || item.high || 0;
         const low52 = liveData?.low || item.low || 0;
 
-        const isPositive = pctChange >= 0;
-        const sentimentClass = isPositive ? CSS_CLASSES.DASHBOARD_ROW_POSITIVE : CSS_CLASSES.DASHBOARD_ROW_NEGATIVE;
+        // Sentiment class for border color (3-way: positive/negative/neutral)
+        let sentimentClass = 'neutral';
+        if (pctChange > 0) sentimentClass = CSS_CLASSES.DASHBOARD_ROW_POSITIVE;
+        else if (pctChange < 0) sentimentClass = CSS_CLASSES.DASHBOARD_ROW_NEGATIVE;
+
+        // Gradient Background Class
+        let gradeClass = 'dashboard-grade-neutral'; // Default: coffee/amber
+        if (pctChange > 0) gradeClass = 'dashboard-grade-up';
+        else if (pctChange < 0) gradeClass = 'dashboard-grade-down';
 
         // Market Status Calculation
         const isOpen = this._isMarketOpen(code);
@@ -245,7 +252,7 @@ export class DashboardViewRenderer {
 
         if (viewMode === 'COMPACT' || viewMode === 'SNAPSHOT') {
             return `
-                <div class="${CSS_CLASSES.DASHBOARD_ROW} ${sentimentClass} ${clickableClass} ${this.reorderMode ? CSS_CLASSES.REORDER_ACTIVE : ''}" ${dataUrlAttr}>
+                <div class="${CSS_CLASSES.DASHBOARD_ROW} ${sentimentClass} ${gradeClass} ${clickableClass} ${this.reorderMode ? CSS_CLASSES.REORDER_ACTIVE : ''}" ${dataUrlAttr}>
                     ${this.reorderMode ? `
                         <div class="${CSS_CLASSES.DASHBOARD_REORDER_CONTROLS}">
                             ${index > 0 ? `<button class="${CSS_CLASSES.REORDER_BTN}" data-code="${code}" data-dir="up"><i class="fas fa-chevron-up"></i></button>` : '<div style="height:24px"></div>'}
@@ -258,7 +265,7 @@ export class DashboardViewRenderer {
                             ${viewMode !== 'SNAPSHOT' ? `<div class="analog-clock-hook" data-open="${isOpen}" style="width:14px; height:14px; opacity:0.8;"></div>` : ''}
                         </div>
                         <div class="${CSS_CLASSES.DASHBOARD_ITEM_PRICE}">${formattedValue}</div>
-                        <div class="${CSS_CLASSES.DASHBOARD_ITEM_CHANGE} ${isPositive ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}">
+                        <div class="${CSS_CLASSES.DASHBOARD_ITEM_CHANGE} ${pctChange >= 0 ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}">
                             <span class="change-value">${formattedChange}</span>
                             <span class="change-percent">${formattedPct}</span>
                         </div>
@@ -269,7 +276,7 @@ export class DashboardViewRenderer {
 
         // DEFAULT / TABLE VIEW
         return `
-            <div class="${CSS_CLASSES.DASHBOARD_ROW} ${sentimentClass} ${clickableClass} ${this.reorderMode ? CSS_CLASSES.REORDER_ACTIVE : ''}" ${dataUrlAttr}>
+            <div class="${CSS_CLASSES.DASHBOARD_ROW} ${sentimentClass} ${gradeClass} ${clickableClass} ${this.reorderMode ? CSS_CLASSES.REORDER_ACTIVE : ''}" ${dataUrlAttr}>
                 ${this.reorderMode ? `
                     <div class="${CSS_CLASSES.DASHBOARD_REORDER_CONTROLS}">
                         ${index > 0 ? `<button class="${CSS_CLASSES.REORDER_BTN}" data-code="${code}" data-dir="up"><i class="fas fa-chevron-up"></i></button>` : '<div style="height:24px"></div>'}
@@ -288,7 +295,7 @@ export class DashboardViewRenderer {
                     </div>
                     <div class="${CSS_CLASSES.DASHBOARD_CELL_RIGHT}">
                         <div class="${CSS_CLASSES.DASHBOARD_ITEM_PRICE}">${formattedValue}</div>
-                        <div class="${CSS_CLASSES.DASHBOARD_ITEM_CHANGE} ${isPositive ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}">
+                        <div class="${CSS_CLASSES.DASHBOARD_ITEM_CHANGE} ${pctChange >= 0 ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}">
                             ${formattedChange} (${formattedPct})
                         </div>
                     </div>
