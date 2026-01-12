@@ -10,6 +10,7 @@ import { CSS_CLASSES, IDS, UI_ICONS, EVENTS, SECTOR_INDUSTRY_MAP, DASHBOARD_SYMB
 import { navManager } from '../utils/NavigationManager.js';
 import { formatCurrency, formatPercent } from '../utils/formatters.js';
 import { BriefingUI } from './BriefingUI.js?v=327';
+import { SnapshotUI } from './SnapshotUI.js';
 
 export class NotificationUI {
 
@@ -354,6 +355,9 @@ export class NotificationUI {
                         <button id="btn-daily-briefing" title="Daily Brief" style="background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem;">
                             <i class="fas fa-coffee"></i>
                         </button>
+                        <button id="btn-market-pulse" title="Market Pulse" style="background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem;">
+                            <i class="fas fa-heartbeat"></i>
+                        </button>
                         <button id="notif-settings-btn" title="Notification Settings" style="background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem;">
                             <i class="fas ${UI_ICONS.PEN}"></i>
                         </button>
@@ -448,6 +452,15 @@ export class NotificationUI {
             briefingBtn.addEventListener('click', () => {
                 console.log('[NotificationUI] Daily Briefing button clicked.');
                 BriefingUI.show();
+            });
+        }
+
+        // Market Pulse Button
+        const marketPulseBtn = modal.querySelector('#btn-market-pulse');
+        if (marketPulseBtn) {
+            marketPulseBtn.addEventListener('click', () => {
+                console.log('[NotificationUI] Market Pulse button clicked.');
+                SnapshotUI.show();
             });
         }
 
@@ -586,65 +599,12 @@ export class NotificationUI {
         // FIX: Use strict mode (false) so that if thresholds are "Not Set" (0), no shares are returned.
         const globalData = notificationStore.getGlobalAlerts(false) || { movers: { up: [], down: [] }, hilo: { high: [], low: [] } };
 
-        // FILTER: Remove Dashboard-Specific Codes (Indices, Currencies, etc.)
-        // FILTER: Remove Dashboard-Specific Codes (Indices, Currencies, etc.)
-        // User Request: "Codes strictly designed for the dashboard... XJO, XAO, SPI200... And that 52 week threshold container"
-        // FIX: Use Central Helper from Store (Single Source of Truth)
-        const filterDashboardCodes = (list) => {
-            if (!list) return [];
-            return list.filter(item => {
-                const code = item.code || item.shareName || item.symbol;
-                if (!code) return false; // Invalid item
-
-                // Use Store Helper if available
-                if (notificationStore && typeof notificationStore._isDashboardCode === 'function') {
-                    if (notificationStore._isDashboardCode(code)) return false;
-                } else {
-                    // Fallback to strict blacklist check
-                    if (DASHBOARD_SYMBOLS.includes(code.toUpperCase())) return false;
-                }
-                return true;
-            });
-        };
-
-        const filterHiddenSectors = (list) => {
-            if (!list) return [];
-            const hidden = AppState.preferences?.hiddenSectors; // Array of strings
-            if (!hidden || !Array.isArray(hidden) || hidden.length === 0) return list;
-
-            const excludePortfolio = AppState.preferences?.excludePortfolio ?? true;
-            const myCodes = excludePortfolio ? new Set((AppState.data?.shares || []).map(s => s.code)) : null;
-
-            return list.filter(item => {
-                const code = item.code || item.symbol || item.asxCode || item.ASXCode; // robustness
-                if (!item.Sector) return true;
-
-                if (hidden.includes(item.Sector)) {
-                    // If in portfolio (override hidden)
-                    if (excludePortfolio && code && myCodes.has(code)) {
-                        return true;
-                    }
-                    return false;
-                }
-                return true;
-            });
-        };
-
         const rules = notificationStore.getScannerRules() || { up: {}, down: {} };
-        const minPrice = rules.up?.minPrice || rules.down?.minPrice || 0.05; // Base default
 
-        const globalMoversUp = filterHiddenSectors(filterDashboardCodes(globalData.movers?.up));
-        const globalMoversDown = filterHiddenSectors(filterDashboardCodes(globalData.movers?.down));
-        const globalHiloHigh = filterHiddenSectors(filterDashboardCodes(globalData.hilo?.high));
-        const globalHiloLow = filterHiddenSectors(filterDashboardCodes(globalData.hilo?.low));
-
-        // Use Enrichment to Filter and SORT strictly
-        const finalMoversUp = this._enrichAndFilter(globalMoversUp, rules.up || {}, 'up');
-        const finalMoversDown = this._enrichAndFilter(globalMoversDown, rules.down || {}, 'down');
-
-        // FIX: Hilo lists MUST also be enriched and sorted with the same logic
-        const finalHiloHigh = this._enrichAndFilter(globalHiloHigh, { minPrice: rules.hiloMinPrice }, 'up');
-        const finalHiloLow = this._enrichAndFilter(globalHiloLow, { minPrice: rules.hiloMinPrice }, 'down');
+        const finalMoversUp = globalData.movers?.up || [];
+        const finalMoversDown = globalData.movers?.down || [];
+        const finalHiloHigh = globalData.hilo?.high || [];
+        const finalHiloLow = globalData.hilo?.low || [];
 
         // Wait, 'minPrice' above is LOCAL logic fallback? 
         // No, I'll use proper Coalescing.
@@ -1444,110 +1404,6 @@ export class NotificationUI {
         `;
     }
 
-    // --- HELPER: ENRICH & FILTER MOVERS ---
-    static _enrichAndFilter(list, rules, direction) {
-        if (!list || list.length === 0) return [];
-
-        // Check Override Preference
-        const excludePortfolio = AppState.preferences?.excludePortfolio ?? true; // Default True (Override ON)
-        // FIX: Use shareName as primary key (UserStore standard), fall back to code.
-        const myCodes = excludePortfolio ? new Set((AppState.data?.shares || []).map(s => s.shareName || s.code)) : null;
-
-        const enrichedList = list.map(item => {
-            const clone = { ...item };
-            const code = clone.code || clone.shareName || clone.symbol;
-
-            // 1. JIT Enrichment from Live Prices
-            if (code && AppState.livePrices && AppState.livePrices.has(code)) {
-                const live = AppState.livePrices.get(code);
-
-                // Prioritize 'dayChangePercent' (Standard) or 'pct'
-                const lPct = Number(live.dayChangePercent ?? live.changeInPercent ?? live.pctChange ?? live.pct ?? 0);
-                const lDol = Number(live.change ?? live.c ?? live.dayChange ?? 0);
-
-                if (Math.abs(lPct) > 0 || Math.abs(lDol) > 0) {
-                    clone.pct = lPct;
-                    clone.change = lDol;
-                    // Also update price if available
-                    const lPrice = Number(live.live || live.price || live.last || 0);
-                    if (lPrice > 0) clone.live = lPrice;
-                }
-            }
-            return clone;
-        });
-
-        const limitPct = rules.percentThreshold || 0;
-        const limitDol = rules.dollarThreshold || 0;
-
-        return enrichedList.filter(item => {
-            const pct = Number(item.pct || 0);
-            const dol = Number(item.change || 0);
-
-            // 2. Strict Direction Check
-            if (direction === 'up' && pct <= 0) return false;
-            if (direction === 'down' && pct >= 0) return false;
-
-            // 3. Threshold Check
-            // EXCEPTION: Targets and 52-Week Hi/Lo hits are explicit events. They bypass generic movement thresholds.
-            // EXCEPTION: If Override is ON (shouldBypass), we ignore the numeric threshold checks.
-            const code = item.code || item.shareName || item.symbol;
-            if (limitPct === 0 && limitDol === 0) return true; // Show all if no limits
-
-            // OVERRIDE LOGIC: Bypass if in Watchlist
-            if (myCodes && myCodes.has(code)) return true;
-
-            const absPct = Math.abs(pct);
-            const absDol = Math.abs(dol);
-
-            const metPct = (limitPct > 0 && absPct >= limitPct);
-            const metDol = (limitDol > 0 && absDol >= limitDol);
-
-            return metPct || metDol;
-        }).sort((a, b) => {
-            // STANDARDIZED SORT: Percentage first (primary), Dollar value second (tiebreaker)
-            const codeA = a.code || a.shareName || '';
-            const codeB = b.code || b.shareName || '';
-
-            // Robust Value Access (Ensuring we use the same fallback logic as _renderCard)
-            const getValues = (item) => {
-                let p = Number(item.pct ?? 0);
-                let d = Number(item.change ?? 0);
-
-                // Fallback Calculation (matches _renderCard)
-                if (Math.abs(p) === 0 && Math.abs(d) > 0) {
-                    const price = Number(item.live || 0);
-                    const prev = price - d;
-                    if (prev > 0) p = (d / prev) * 100;
-                }
-                return { p, d };
-            };
-
-            const valA = getValues(a);
-            const valB = getValues(b);
-
-            // Rounding for "tie" detection (to 2 decimal places in percent)
-            const pAR = Math.round(valA.p * 100);
-            const pBR = Math.round(valB.p * 100);
-
-            let result = 0;
-            if (direction === 'up') {
-                // Gainers/Highs: Highest percentage first
-                if (pBR !== pAR) result = pBR - pAR;
-                else result = Math.abs(valB.d) - Math.abs(valA.d); // Highest dollar magnitude tiebreaker
-            } else {
-                // Losers/Lows: Most negative percentage first
-                if (pAR !== pBR) result = pAR - pBR;
-                else result = Math.abs(valB.d) - Math.abs(valA.d); // Highest dollar magnitude (biggest loss) tiebreaker
-            }
-
-            // OPTIONAL: Diagnostic Log (only for ties or inconsistencies)
-            if (pAR === pBR && Math.abs(valA.d) !== Math.abs(valB.d)) {
-                // console.log(`[Sort Tie] ${codeA} vs ${codeB}: Pct=${valA.p.toFixed(2)}%, DolA=${valA.d.toFixed(2)}, DolB=${valB.d.toFixed(2)} -> Result=${result > 0 ? 'B first' : 'A first'}`);
-            }
-
-            return result;
-        });
-    }
 
     static async renderFloatingBell() {
         if (document.getElementById('floating-bell-container')) return;
@@ -1661,11 +1517,19 @@ export class NotificationUI {
         btn.addEventListener('mouseleave', cancelPress);
         btn.addEventListener('touchend', cancelPress);
 
-        // Click Logic (Open Modal if not dismissing)
+        // Click Logic (Open/Toggle Modal if not dismissing)
         btn.addEventListener('click', (e) => {
             if (isLongPress) {
                 isLongPress = false;
                 return; // Handled by startPress/Timer
+            }
+
+            // TOGGLE LOGIC: If notification modal is already open, close it.
+            const existingModal = document.getElementById(IDS.NOTIFICATION_MODAL);
+            if (existingModal && !existingModal.classList.contains(CSS_CLASSES.HIDDEN)) {
+                console.log('[NotificationUI] Bell clicked while modal open. Toggling close...');
+                this._close(existingModal);
+                return;
             }
 
             // Dispatch Event for Controller to handle

@@ -406,8 +406,8 @@ export class AppService {
             const watchlistId = await userStore.addWatchlist(userId, 'My Watch List');
             // console.log(`[AppService] Watchlist created with ID: ${watchlistId}`);
 
-            // 2. Add 5 specific Australian top shares (Request: BHP, VAS, QAN, CBA, TLS)
-            const defaultStocks = ['BHP', 'VAS', 'QAN', 'CBA', 'TLS'];
+            // 2. Add 5 specific Australian top shares (Request: CBA, VAS, BHP, QAN, TLS)
+            const defaultStocks = ['CBA', 'VAS', 'BHP', 'QAN', 'TLS'];
             console.log('[AppService] Seeding stocks (Active V5):', defaultStocks); // DEBUG: Prove version
             const now = new Date().toISOString();
 
@@ -436,10 +436,10 @@ export class AppService {
                     activeFilters: null // Sectors: ALL
                 },
                 scannerRules: {
-                    up: { percentThreshold: null, dollarThreshold: 0.50 },
-                    down: { percentThreshold: null, dollarThreshold: 0.50 },
-                    minPrice: null,
-                    hiloMinPrice: 0.50, // 52 Week High Low Limit: $0.50
+                    up: { percentThreshold: null, dollarThreshold: 1.00 },
+                    down: { percentThreshold: null, dollarThreshold: 1.00 },
+                    minPrice: 1.00,
+                    hiloMinPrice: 1.00, // 52 Week High Low Limit: $1.00
                     moversEnabled: true,
                     hiloEnabled: true,
                     personalEnabled: true

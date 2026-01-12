@@ -410,32 +410,36 @@ export class NotificationStore {
             // EXCEPTION 1: Always show if the stock is in the user's watchlist AND override is enabled.
             // EXCEPTION 2: Always show Price Targets (User Intent) regardless of sector.
             // EXCEPTION 3: If activeFilters is null, ALL sectors are allowed (no filtering).
+
+            // Consolidate Industry Lookup
+            let ind = (hit.Industry || hit.Sector || hit.industry || hit.sector || '').toUpperCase();
+            if (!ind && hit.code) {
+                if (AppState.livePrices instanceof Map) {
+                    const priceData = AppState.livePrices.get(hit.code);
+                    if (priceData) ind = (priceData.Industry || priceData.Sector || priceData.industry || priceData.sector || '').toUpperCase();
+                }
+                if (!ind && AppState.data.shares) {
+                    const share = AppState.data.shares.find(s => s.code === hit.code);
+                    if (share) ind = (share.industry || share.sector || share.Industry || share.Sector || '').toUpperCase();
+                }
+            }
+
             if (!shouldBypass && !isAllSectors) {
                 // If Whitelist is explicitly empty array, block everything that isn't bypassed
                 if (activeFilters.length === 0) return false;
-
-                let ind = (hit.Industry || hit.Sector || hit.industry || hit.sector || '').toUpperCase();
-
-                if (!ind && hit.code) {
-                    // 1. Try Live Prices
-                    if (AppState.livePrices instanceof Map) {
-                        const priceData = AppState.livePrices.get(hit.code);
-                        if (priceData) ind = (priceData.Industry || priceData.Sector || priceData.industry || priceData.sector || '').toUpperCase();
-                    }
-                    // 2. Fallback to Master List
-                    if (!ind && AppState.data.shares) {
-                        const share = AppState.data.shares.find(s => s.code === hit.code);
-                        if (share) ind = (share.industry || share.sector || share.Industry || share.Sector || '').toUpperCase();
-                    }
-                }
 
                 if (ind && !activeFilters.includes(ind)) {
                     // console.log(`[NotificationStore] Filtering out ${hit.code} (Industry: ${ind}) – Not in whitelist.`);
                     return false;
                 }
-                // If it HAS industry data but it's not in the whitelist, it's already blocked above.
-                // If it LACKS industry data entirely (not found in hit or JIT), we allow it through 
-                // to avoid hiding alerts for stocks with missing metadata.
+            }
+
+            // 2e. HIDDEN SECTOR FILTER
+            const hiddenSectors = AppState.preferences?.hiddenSectors;
+            if (hiddenSectors && Array.isArray(hiddenSectors) && hiddenSectors.length > 0) {
+                if (ind && hiddenSectors.includes(ind)) {
+                    if (!shouldBypass) return false;
+                }
             }
 
             // 3. Threshold Check
@@ -649,31 +653,36 @@ export class NotificationStore {
             const activeFilters = rules.activeFilters; // Can be null (All), [] (None), or [...industries]
             const isAllSectors = (activeFilters === null || activeFilters === undefined);
             const isTarget = (hit.intent === 'target' || hit.intent === 'TARGET');
+            const shouldBypass = isTarget || overrideOn; // In localAlerts, it's always "local"
+
+            // Consolidate Industry Lookup
+            let ind = (hit.Industry || hit.Sector || hit.industry || hit.sector || '').toUpperCase();
+            if (!ind && hit.code) {
+                if (AppState.livePrices instanceof Map) {
+                    const priceData = AppState.livePrices.get(hit.code);
+                    if (priceData) ind = (priceData.Industry || priceData.Sector || priceData.industry || priceData.sector || '').toUpperCase();
+                }
+                if (!ind && AppState.data.shares) {
+                    const share = AppState.data.shares.find(s => s.code === hit.code);
+                    if (share) ind = (share.industry || share.sector || share.Industry || share.Sector || '').toUpperCase();
+                }
+            }
 
             // EXCEPTION: Targets are exempt from sector filtering
             // EXCEPTION: If activeFilters is null, ALL sectors are allowed (no filtering)
-            if (!overrideOn && !isTarget && !isAllSectors) {
+            if (!shouldBypass && !isAllSectors) {
                 // If Whitelist is explicitly empty array, block everything
                 if (activeFilters.length === 0) return false;
 
-                let ind = (hit.Industry || hit.Sector || hit.industry || hit.sector || '').toUpperCase();
-
-                // JIT lookup if missing in hit
-                // JIT lookup (Live Prices -> Master List)
-                if (!ind && hit.code) {
-                    // 1. Try Live Prices
-                    if (AppState.livePrices instanceof Map) {
-                        const priceData = AppState.livePrices.get(hit.code);
-                        if (priceData) ind = (priceData.Industry || priceData.Sector || priceData.industry || priceData.sector || '').toUpperCase();
-                    }
-                    // 2. Fallback to Master List (Critical for newly discovered movers)
-                    if (!ind && AppState.data.shares) {
-                        const share = AppState.data.shares.find(s => s.code === hit.code);
-                        if (share) ind = (share.industry || share.sector || share.Industry || share.Sector || '').toUpperCase();
-                    }
-                }
-
                 if (ind && !activeFilters.includes(ind)) return false;
+            }
+
+            // --- HIDDEN SECTOR FILTER ---
+            const hiddenSectors = AppState.preferences?.hiddenSectors;
+            if (hiddenSectors && Array.isArray(hiddenSectors) && hiddenSectors.length > 0) {
+                if (ind && hiddenSectors.includes(ind)) {
+                    if (!shouldBypass) return false;
+                }
             }
 
             // --- STRICT FILTER FOR 52-WEEK HI/LO ---
@@ -1377,26 +1386,45 @@ export class NotificationStore {
     }
 
     /**
+     * Centralized Reporting: Returns accurate counts for Gainers, Losers, Highs, Lows, and Custom Alerts.
+     * These counts respect all active filters (Thresholds, Min Price, Sectors, Muting).
+     */
+    getPulseCounts() {
+        if (!this.userId) return { gainers: 0, losers: 0, highs: 0, lows: 0, custom: 0 };
+
+        const global = this.getGlobalAlerts();
+        const local = this.getLocalAlerts();
+
+        return {
+            gainers: (global.movers?.up || []).length,
+            losers: (global.movers?.down || []).length,
+            highs: (global.hilo?.high || []).length,
+            lows: (global.hilo?.low || []).length,
+            custom: (local.fresh || []).length,
+            // Original data for badge counting
+            _global: global,
+            _local: local
+        };
+    }
+
+    /**
      * Computed: Badge Counts for Sidebar (Total) and Kangaroo (Custom Triggers).
      */
     getBadgeCounts() {
         if (!this.userId) return { total: 0, custom: 0 };
 
-        const now = Date.now();
         const thresholds = {
             total: this.lastViewed.total || 0,
             custom: this.lastViewed.custom || 0
         };
 
-        const local = this.getLocalAlerts();
-        const myHits = local.fresh || [];
-
-        const global = this.getGlobalAlerts();
+        const pulse = this.getPulseCounts();
+        const myHits = pulse._local.fresh || [];
         const globalHits = [
-            ...(global.movers?.up || []),
-            ...(global.movers?.down || []),
-            ...(global.hilo?.high || []),
-            ...(global.hilo?.low || [])
+            ...(pulse._global.movers?.up || []),
+            ...(pulse._global.movers?.down || []),
+            ...(pulse._global.hilo?.high || []),
+            ...(pulse._global.hilo?.low || [])
         ];
 
         const allVisibleHits = [...myHits, ...globalHits];

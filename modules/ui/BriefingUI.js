@@ -306,36 +306,27 @@ export class BriefingUI {
 
         // --- 4. Market Pulse (Footer & Hero Card) ---
         // Proxy using NotificationStore Global data
-        const globalMovers = notificationStore.getGlobalAlerts(false) || { movers: { up: [], down: [] }, hilo: { high: [], low: [] } };
-        const upCount = (globalMovers.movers?.up || []).length;
-        const downCount = (globalMovers.movers?.down || []).length;
-
-        const hiCount = (globalMovers.hilo?.high || []).length;
-        const loCount = (globalMovers.hilo?.low || []).length;
-
-        const totalSignals = upCount + downCount + hiCount + loCount;
+        const pulse = notificationStore.getPulseCounts();
+        const upCount = pulse.gainers;
+        const downCount = pulse.losers;
+        const hiCount = pulse.highs;
+        const loCount = pulse.lows;
+        const customCount = pulse.custom;
 
         // Sentiment Logic
         let sentiment = 'Neutral';
         let sentimentColor = 'var(--text-muted)'; // Default Gray/Gold
-        let gradientBg = 'linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(203, 166, 41, 0.15) 100%)'; // Default
         let iconHtml = '<i class="fas fa-balance-scale"></i>';
-
-        const bullRatio = upCount / (downCount || 1);
 
         if (upCount > downCount * 1.5) {
             sentiment = 'Bullish';
             sentimentColor = 'var(--color-positive)';
-            gradientBg = 'linear-gradient(135deg, rgba(30,30,30,1) 0%, rgba(0, 50, 0, 0.4) 100%)'; // Dark Green fade
             iconHtml = '<i class="fas fa-arrow-trend-up"></i>';
         } else if (downCount > upCount * 1.5) {
             sentiment = 'Bearish';
             sentimentColor = 'var(--color-negative)';
-            gradientBg = 'linear-gradient(135deg, rgba(30,30,30,1) 0%, rgba(50, 0, 0, 0.4) 100%)'; // Dark Red fade
             iconHtml = '<i class="fas fa-arrow-trend-down"></i>';
         }
-
-        // REMOVED: Hero Card update (User requested minimal footer-only design)
 
         // --- 2b. Clean Up Pulse Card (Removed per user request) ---
         // LOGIC FIX v311: We do NOT remove the Partner Card anymore!
@@ -367,9 +358,6 @@ export class BriefingUI {
             footer.style.paddingTop = '2px'; // Tiny breathing room
             footer.style.paddingBottom = '4px'; // Tiny breathing room
 
-            // Custom Count
-            const customCount = (notificationStore.getLocalAlerts().fresh || []).length;
-
             // UPDATED FOOTER LAYOUT (V3): Aggressive Vertical Compression (~20% reduction)
             footer.innerHTML = `
                 <div style="text-align: center; padding: 0 0 4px 0;">
@@ -392,39 +380,22 @@ export class BriefingUI {
         }
 
         // --- 4. Market Pulse Top 3 ---
-        // MERGE Global (Server) and Local (Watchlist Generated) Alerts
-        const localAlerts = notificationStore.getLocalAlerts().fresh || [];
-        const localMovers = localAlerts.filter(i =>
-            i.intent === 'mover' || i.intent === 'hilo' || i.type === 'up' || i.type === 'down'
-        );
-
-        const allGlobal = [
-            ...(globalMovers.movers?.up || []),
-            ...(globalMovers.movers?.down || []),
-            ...localMovers
+        // USE Centralized merged list from store
+        const allAlerts = [
+            ...(pulse._global.movers?.up || []),
+            ...(pulse._global.movers?.down || []),
+            ...(pulse._global.hilo?.high || []),
+            ...(pulse._global.hilo?.low || [])
         ];
 
-        // Deduplicate by Code (prefer Global/Server if duplicate?)
-        const uniqueMap = new Map();
-        allGlobal.forEach(item => {
-            if (item.code) uniqueMap.set(item.code, item);
+        // Sort by magnitude of movement (absolute percentage)
+        allAlerts.sort((a, b) => {
+            const pA = Math.abs(a.pctChange || a.pct || 0);
+            const pB = Math.abs(b.pctChange || b.pct || 0);
+            if (pB !== pA) return pB - pA;
+            return Math.abs(b.change || 0) - Math.abs(a.change || 0);
         });
-        const uniqueList = Array.from(uniqueMap.values());
-
-        // Sort by magnitude
-        uniqueList.sort((a, b) => {
-            const pA = a.pctChange || a.pct || 0;
-            const pB = b.pctChange || b.pct || 0;
-            const pAR = Math.round(pA * 100);
-            const pBR = Math.round(pB * 100);
-
-            if (pBR !== pAR) return pBR - pAR;
-
-            const dA = a.change || a.dol || a.dayChange || 0;
-            const dB = b.change || b.dol || b.dayChange || 0;
-            return Math.abs(dB) - Math.abs(dA);
-        });
-        const top3Global = uniqueList.slice(0, 3);
+        const top3Global = allAlerts.slice(0, 3);
 
         const marketGrid = modal.querySelector('#briefing-market-grid');
         if (marketGrid) {
