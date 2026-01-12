@@ -209,15 +209,15 @@ export class BriefingUI {
             };
 
             heroCard.innerHTML = `
-                <div class="hero-header-row" style="display: flex; justify-content: space-between; align-items: flex-end;">
-                    <div class="hero-label">My Portfolio</div>
+                <div class="hero-header-row" style="display: flex; flex-direction: column; align-items: flex-start; gap: 4px;">
                     <div class="hero-brand">ASX TRACKER</div>
+                    <div class="hero-label" style="margin-bottom: 0;">My Portfolio</div>
                 </div>
                 <div class="hero-main-stat ${colorClass}">
-                    ${sign}${totalPctChange.toFixed(2)}% <span class="hero-arrow">${arrow}</span>
+                    ${Math.abs(totalPctChange).toFixed(2)}% <span class="hero-arrow">${arrow}</span>
                 </div>
                 <div class="hero-sub-stat ${colorClass}">
-                    ${sign}${formatCurrency(totalDayChangeVal)} Today
+                    ${formatCurrency(totalDayChangeVal)} Today
                 </div>
                 
                 <div class="hero-footer-row">
@@ -244,7 +244,12 @@ export class BriefingUI {
                 });
             }
         });
-        pfMovers.sort((a, b) => Math.abs(b.pctChange) - Math.abs(a.pctChange));
+        pfMovers.sort((a, b) => {
+            const pAR = Math.round((a.pctChange || 0) * 100);
+            const pBR = Math.round((b.pctChange || 0) * 100);
+            if (pBR !== pAR) return pBR - pAR;
+            return Math.abs(b.change || 0) - Math.abs(a.change || 0);
+        });
         const top3Portfolio = pfMovers.slice(0, 3);
 
         const pfGrid = modal.querySelector('#briefing-portfolio-grid');
@@ -282,7 +287,12 @@ export class BriefingUI {
         });
 
         // Sort by Magnitude of movement (absolute) to find "News"
-        userMovers.sort((a, b) => Math.abs(b.pctChange) - Math.abs(a.pctChange));
+        userMovers.sort((a, b) => {
+            const pAR = Math.round((a.pctChange || 0) * 100);
+            const pBR = Math.round((b.pctChange || 0) * 100);
+            if (pBR !== pAR) return pBR - pAR;
+            return Math.abs(b.change || 0) - Math.abs(a.change || 0);
+        });
         const top3User = userMovers.slice(0, 3);
 
         const grid = modal.querySelector('#briefing-watchlist-grid');
@@ -347,7 +357,7 @@ export class BriefingUI {
                     detail: {
                         tab: 'global', // Force global tab since these are market stats
                         source: 'briefing',
-                        section: targetSec || null // Deep link or default
+                        section: null // Default to Dashboard (Overview)
                     }
                 }));
             };
@@ -402,7 +412,18 @@ export class BriefingUI {
         const uniqueList = Array.from(uniqueMap.values());
 
         // Sort by magnitude
-        uniqueList.sort((a, b) => Math.abs(b.pctChange || b.pct || 0) - Math.abs(a.pctChange || a.pct || 0));
+        uniqueList.sort((a, b) => {
+            const pA = a.pctChange || a.pct || 0;
+            const pB = b.pctChange || b.pct || 0;
+            const pAR = Math.round(pA * 100);
+            const pBR = Math.round(pB * 100);
+
+            if (pBR !== pAR) return pBR - pAR;
+
+            const dA = a.change || a.dol || a.dayChange || 0;
+            const dB = b.change || b.dol || b.dayChange || 0;
+            return Math.abs(dB) - Math.abs(dA);
+        });
         const top3Global = uniqueList.slice(0, 3);
 
         const marketGrid = modal.querySelector('#briefing-market-grid');
@@ -443,9 +464,9 @@ export class BriefingUI {
                     <div style="display: flex; flex-direction: column; align-items: flex-end;">
                         <span class="highlight-price">${formatCurrency(item.live || item.price)}</span>
                         
-                        <!-- Change Row: $ then % -->
+                    <!-- Change Row: $ then % -->
                         <div class="highlight-change ${colorClass}" style="display: flex; gap: 6px; align-items: center; margin-top: 2px;">
-                            <span>${isUp ? '+' : '-'}$${dolVal}</span>
+                            <span>$${dolVal}</span>
                             <span>${arrow} ${pctVal}%</span>
                         </div>
                     </div>
@@ -468,7 +489,7 @@ export class BriefingUI {
             <div class="market-row" onclick="document.dispatchEvent(new CustomEvent('${EVENTS.ASX_CODE_CLICK}', { detail: { code: '${displayCode}' } }))">
                 <div class="market-row-code">${displayCode}</div>
                 <div class="market-row-name">${item.name || ''}</div>
-                <div class="market-row-change ${colorClass}">${isUp ? '+' : '-'}${val}%</div>
+                <div class="market-row-change ${colorClass}">${val}%</div>
             </div>
          `;
     }

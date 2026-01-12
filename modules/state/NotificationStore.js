@@ -198,13 +198,16 @@ export class NotificationStore {
 
             // FILTER: Source-Level Exclusion of Dashboard Symbols (XJO, XAO, etc.)
             // We do this AFTER normalization to ensure we catch "XJO.AX" as "XJO".
+            // FILTER: Source-Level Exclusion of Dashboard Symbols (XJO, XAO, etc.)
+            // We do this AFTER normalization to ensure we catch "XJO.AX" as "XJO".
             const filterDashboard = (list) => {
                 return list.filter(h => {
-                    if (!h.code) return false;
-                    // Strict Check against Registry Constant
-                    if (DASHBOARD_SYMBOLS.includes(h.code)) return false;
-                    // Also check for common index prefix if not in list
-                    if (h.code.startsWith('^')) return false;
+                    const code = h.code || h.shareName;
+                    if (!code) return false;
+
+                    // --- ROBUST CENTRAL HELPER CHECK ---
+                    if (this._isDashboardCode(code)) return false;
+
                     return true;
                 });
             };
@@ -634,7 +637,10 @@ export class NotificationStore {
             // }
 
             // --- EXCLUDE DASHBOARD SYMBOLS ---
-            if (hit.code && DASHBOARD_SYMBOLS.includes(hit.code)) return false;
+            // Fix: Check against Registry Constant (Both exact match and fuzzy logic)
+            if (hit.code) {
+                if (this._isDashboardCode(hit.code)) return false;
+            }
 
             // --- SECTOR FILTER (Enforce if Override is OFF) ---
             const rules = this.getScannerRules() || {};
@@ -751,7 +757,7 @@ export class NotificationStore {
                 // "Ignore stocks below..." rule.
                 const minPrice = rules.minPrice || 0;
                 if (!overrideOn && minPrice > 0 && price < minPrice) {
-                    // console.log(`[NotificationStore] Dropping Watchlist Mover ${code}: Price $${price} < Min $${minPrice}`);
+                    // console.log(`[NotificationStore] Dropping Watchlist Mover ${ code }: Price $${ price } < Min $${minPrice}`);
                     return false;
                 }
 
@@ -759,7 +765,7 @@ export class NotificationStore {
                 const metPct = (thresholdPct > 0 && pct >= thresholdPct);
                 const metDol = (thresholdDol > 0 && dol >= thresholdDol);
                 if (!metPct && !metDol) {
-                    // console.log(`[NotificationStore] Dropping Watchlist Mover ${code}: Pct ${pct}% < ${thresholdPct}%, Dol $${dol} < $${thresholdDol}`);
+                    // console.log(`[NotificationStore] Dropping Watchlist Mover ${ code }: Pct ${ pct }% < ${thresholdPct}%, Dol $${ dol } < $${thresholdDol}`);
                     return false;
                 }
             }
@@ -838,8 +844,9 @@ export class NotificationStore {
         // Filter: Exclude Dashboard Symbols and Invalid Data
         const candidates = all.filter(item => {
             if (!item.code) return false;
-            // Exclude Indices/Currencies (DASHBOARD_SYMBOLS)
-            if (DASHBOARD_SYMBOLS.includes(item.code)) return false;
+            // Exclude Indices/Currencies (Strict Helper)
+            if (this._isDashboardCode(item.code)) return false;
+
             if (item.code.startsWith('.')) return false;
 
             // Robust Property Access
@@ -852,18 +859,44 @@ export class NotificationStore {
             return true;
         });
 
-        // 1. Gainers (Sort by % Change DESC)
+        // 1. Gainers (Sort by % Change DESC, then by $ Change DESC)
         const gainers = [...candidates]
             .filter(i => (i.pctChange ?? i.changeInPercent ?? i.pct ?? 0) > 0)
-            .sort((a, b) => (b.pctChange ?? b.changeInPercent ?? b.pct ?? 0) - (a.pctChange ?? a.changeInPercent ?? a.pct ?? 0))
-            .slice(0, 500) // Increased to 500 to allow post-filtering
+            .sort((a, b) => {
+                const pctA = a.pctChange ?? a.changeInPercent ?? a.pct ?? 0;
+                const pctB = b.pctChange ?? b.changeInPercent ?? b.pct ?? 0;
+
+                // Rounding for tie detection (Matches UI)
+                const pAR = Math.round(pctA * 100);
+                const pBR = Math.round(pctB * 100);
+
+                if (pBR !== pAR) return pBR - pAR; // Primary: Percentage DESC
+
+                const chgA = Math.abs(a.change ?? a.dayChange ?? a.c ?? 0);
+                const chgB = Math.abs(b.change ?? b.dayChange ?? b.c ?? 0);
+                return chgB - chgA; // Secondary: Dollar magnitude DESC
+            })
+            .slice(0, 500)
             .map(i => this._mapPriceToHit(i));
 
-        // 2. Losers (Sort by % Change ASC -> Most Negative First)
+        // 2. Losers (Sort by % Change ASC -> Most Negative First, then by $ Change DESC Magnitude)
         const losers = [...candidates]
             .filter(i => (i.pctChange ?? i.changeInPercent ?? i.pct ?? 0) < 0)
-            .sort((a, b) => (a.pctChange ?? a.changeInPercent ?? a.pct ?? 0) - (b.pctChange ?? b.changeInPercent ?? b.pct ?? 0))
-            .slice(0, 500) // Increased to 500
+            .sort((a, b) => {
+                const pctA = a.pctChange ?? a.changeInPercent ?? a.pct ?? 0;
+                const pctB = b.pctChange ?? b.changeInPercent ?? b.pct ?? 0;
+
+                // Rounding for tie detection (Matches UI)
+                const pAR = Math.round(pctA * 100);
+                const pBR = Math.round(pctB * 100);
+
+                if (pAR !== pBR) return pAR - pBR; // Primary: Percentage ASC (Most Negative First)
+
+                const chgA = Math.abs(a.change ?? a.dayChange ?? a.c ?? 0);
+                const chgB = Math.abs(b.change ?? b.dayChange ?? b.c ?? 0);
+                return chgB - chgA; // Secondary: Dollar magnitude DESC (Biggest loss first)
+            })
+            .slice(0, 500)
             .map(i => this._mapPriceToHit(i));
 
         // 3. 52-Week Highs (Price >= 99% of 52w High)
@@ -875,7 +908,14 @@ export class NotificationStore {
                 const price = i.live || i.price || i.lastPrice || 0;
                 return i.high > 0 && price >= (i.high * 0.99);
             })
-            .sort((a, b) => (b.pctChange ?? b.changeInPercent ?? b.pct ?? 0) - (a.pctChange ?? a.changeInPercent ?? a.pct ?? 0))
+            .sort((a, b) => {
+                const pA = a.pctChange ?? a.changeInPercent ?? a.pct ?? 0;
+                const pB = b.pctChange ?? b.changeInPercent ?? b.pct ?? 0;
+                const pAR = Math.round(pA * 100);
+                const pBR = Math.round(pB * 100);
+                if (pBR !== pAR) return pBR - pAR;
+                return Math.abs(b.change ?? 0) - Math.abs(a.change ?? 0);
+            })
             .slice(0, 2500)
             .map(i => ({ ...this._mapPriceToHit(i), type: 'high', intent: 'hilo-up' }));
 
@@ -886,7 +926,14 @@ export class NotificationStore {
                 const price = i.live || i.price || i.lastPrice || 0;
                 return i.low > 0 && price <= (i.low * 1.01);
             })
-            .sort((a, b) => (a.pctChange ?? a.changeInPercent ?? a.pct ?? 0) - (b.pctChange ?? b.changeInPercent ?? b.pct ?? 0))
+            .sort((a, b) => {
+                const pA = a.pctChange ?? a.changeInPercent ?? a.pct ?? 0;
+                const pB = b.pctChange ?? b.changeInPercent ?? b.pct ?? 0;
+                const pAR = Math.round(pA * 100);
+                const pBR = Math.round(pB * 100);
+                if (pAR !== pBR) return pAR - pBR;
+                return Math.abs(b.change ?? 0) - Math.abs(a.change ?? 0);
+            })
             .slice(0, 2500)
             .map(i => ({ ...this._mapPriceToHit(i), type: 'low', intent: 'hilo-down' }));
 
@@ -908,7 +955,7 @@ export class NotificationStore {
             dayChangePercent: priceObj.pctChange ?? priceObj.changeInPercent ?? priceObj.pct ?? 0, // Redundancy for UI
             high: priceObj.high || 0, // Pass 52W High
             low: priceObj.low || 0,   // Pass 52W Low
-            t: this._getStableTimestamp ? this._getStableTimestamp(`${priceObj.code}-global`) : Date.now()
+            t: this._getStableTimestamp ? this._getStableTimestamp(`${priceObj.code} -global`) : Date.now()
         };
     }
 
@@ -1172,7 +1219,7 @@ export class NotificationStore {
         const TEST_MIN_PRICE = 0.50;
         const TEST_PCT_THRESHOLD = 3.0;
 
-        console.log(`⚙️  Test Rules: Price > $${TEST_MIN_PRICE}, Move > ${TEST_PCT_THRESHOLD}%`);
+        console.log(`⚙️  Test Rules: Price > $${TEST_MIN_PRICE}, Move > ${TEST_PCT_THRESHOLD}% `);
 
         // 1. MANUAL CALCULATION (Control Group)
         const controlUp = prices.filter(p => {
@@ -1213,7 +1260,7 @@ export class NotificationStore {
 
             // Count Check
             if (control.length !== system.length) {
-                console.error(`❌ COUNT MISMATCH: Expected ${control.length}, Got ${system.length}`);
+                console.error(`❌ COUNT MISMATCH: Expected ${control.length}, Got ${system.length} `);
             } else {
                 console.log(`✅ Count Matching: ${system.length} items.`);
             }
@@ -1224,9 +1271,9 @@ export class NotificationStore {
                 const sysItem = system[i];
                 const ctrlItem = control[i];
                 if (sysItem.code !== ctrlItem.code) {
-                    console.error(`❌ ORDER/CONTENT FAIL at #${i + 1}: Expected ${ctrlItem.code} (${ctrlItem.pctChange}%), Got ${sysItem.code} (${sysItem.pct}%)`);
+                    console.error(`❌ ORDER / CONTENT FAIL at #${i + 1}: Expected ${ctrlItem.code} (${ctrlItem.pctChange}%), Got ${sysItem.code} (${sysItem.pct}%)`);
                 } else {
-                    console.log(`   OK #${i + 1}: ${sysItem.code} @ ${sysItem.pct}%`);
+                    console.log(`   OK #${i + 1}: ${sysItem.code} @${sysItem.pct}% `);
                 }
             }
 
@@ -1237,7 +1284,7 @@ export class NotificationStore {
                 const next = Math.abs(system[i + 1].pct);
                 // Magnitude should descend
                 if (curr < next) {
-                    console.warn(`⚠️ SORT WARN at #${i}: ${curr}% < ${next}%`);
+                    console.warn(`⚠️ SORT WARN at #${i}: ${curr}% < ${next}% `);
                     sortOk = false;
                 }
             }
@@ -1290,21 +1337,21 @@ export class NotificationStore {
         check("🔻 TEST: 52 Week Lows", controlLow, systemLow, 'asc');
 
         console.log("%c TEST COMPLETE ", "background: #222; color: #bada55");
-        console.log(`User ID: ${this.userId}`);
-        console.log(`Last Updated: ${this.lastUpdated}`);
+        console.log(`User ID: ${this.userId} `);
+        console.log(`Last Updated: ${this.lastUpdated} `);
         console.table(this.scannerRules);
 
         console.group("1. Raw Data Sources");
-        console.log(`Backend Global Gainers: ${this.scanData.globalMovers.up.length}`);
-        console.log(`Backend Global Losers: ${this.scanData.globalMovers.down.length}`);
-        console.log(`Backend Global Highs: ${this.scanData.globalHiLo.high.length}`);
-        console.log(`Backend Global Lows: ${this.scanData.globalHiLo.low.length}`);
+        console.log(`Backend Global Gainers: ${this.scanData.globalMovers.up.length} `);
+        console.log(`Backend Global Losers: ${this.scanData.globalMovers.down.length} `);
+        console.log(`Backend Global Highs: ${this.scanData.globalHiLo.high.length} `);
+        console.log(`Backend Global Lows: ${this.scanData.globalHiLo.low.length} `);
         console.groupEnd();
 
         console.group("2. Dashboard Filter Check");
         const blockedUp = (this.scanData.globalMovers.up || []).filter(i => DASHBOARD_SYMBOLS.includes(i.code));
         if (blockedUp.length > 0) {
-            console.warn(`Blocked ${blockedUp.length} Gainers due to Dashboard Filter:`, blockedUp.map(i => i.code));
+            console.warn(`Blocked ${blockedUp.length} Gainers due to Dashboard Filter: `, blockedUp.map(i => i.code));
         } else {
             console.log("No Gainers blocked by Dashboard Filter.");
         }
@@ -1312,15 +1359,15 @@ export class NotificationStore {
 
         console.group("3. Local/Portfolio Merge");
         const local = this.getLocalAlerts();
-        console.log(`Local Fresh Alerts: ${local.fresh.length}`);
+        console.log(`Local Fresh Alerts: ${local.fresh.length} `);
         const localMovers = local.fresh.filter(i => i.intent === 'mover' || i.intent === 'up' || i.intent === 'down');
-        console.log(`Local Movers (to be merged): ${localMovers.length}`, localMovers.map(i => `${i.code} (${i.pct}%)`));
+        console.log(`Local Movers(to be merged): ${localMovers.length} `, localMovers.map(i => `${i.code} (${i.pct}%)`));
         console.groupEnd();
 
         console.group("4. Final Output (Strict Mode Bypassed)");
         const final = this.getGlobalAlerts(true);
-        console.log(`Final Gainers: ${final.movers.up.length}`);
-        console.log(`Final Losers: ${final.movers.down.length}`);
+        console.log(`Final Gainers: ${final.movers.up.length} `);
+        console.log(`Final Losers: ${final.movers.down.length} `);
         if (final.movers.up.length === 0) console.warn("WARNING: Final Gainers is EMPTY.");
         console.groupEnd();
 
@@ -1424,6 +1471,33 @@ export class NotificationStore {
     }
 
     /**
+     * Centralized Dashboard Filtering Helper
+     * Returns true if code should be excluded.
+     */
+    _isDashboardCode(code) {
+        if (!code) return false;
+
+        // 1. Exact Match against Blacklist
+        // Includes: XJO, XAO, AUDUSD, AUD/USD
+        if (DASHBOARD_SYMBOLS.includes(code)) return true;
+
+        // 2. Normalized Check (Strip non-alphanumeric)
+        // Catches: AUD-USD -> AUDUSD
+        // Note: 'AUD/USD' in blacklist ensures direct hit, but 'AUDUSD' in list handles normalize('AUD/USD')
+        const normalized = code.replace(/[^A-Za-z0-9]/g, '');
+        if (DASHBOARD_SYMBOLS.includes(normalized)) return true;
+
+        // 3. Common Index Prefixes/Suffixes
+        // ^XJO (Yahoo), .AX (handled elsewhere but safety here)
+        if (code.startsWith('^')) return true;
+
+        // 4. Manual "Known Bad" Patterns from User Reports if any mismatch with list
+        // e.g. "YAP=F" is in list. "TIO=F" is in list.
+
+        return false;
+    }
+
+    /**
      * Generates persistent alerts for User Price Targets AND 52-Week Hi/Lo using Live Data.
      * This bypasses the need for the Backend to be perfectly sync'd.
      */
@@ -1431,8 +1505,6 @@ export class NotificationStore {
         if (!this.userId || !AppState.data.shares || !AppState.livePrices) return [];
 
         const alerts = [];
-        // Removed global 'today' constant. We now resolve per-item.
-
         const processedCodes = new Set(); // DEDUPLICATION GUARD
 
         AppState.data.shares.forEach(share => {
@@ -1443,14 +1515,15 @@ export class NotificationStore {
             processedCodes.add(code);
 
             // Exclude Dashboard Symbols from alerts
-            if (DASHBOARD_SYMBOLS.includes(code)) return;
+            if (this._isDashboardCode(code)) return;
+            // Normalized Check (Redundant if helper is good, but keeping safe)
+            // if (DASHBOARD_SYMBOLS.includes(code.replace(/[^A-Za-z0-9]/g, ''))) return;
 
             const liveData = AppState.livePrices.get(code);
 
             if (code && liveData) {
                 // EXCLUDE DASHBOARD SYMBOLS (Double Check)
-                if (DASHBOARD_SYMBOLS.includes(code)) return;
-
+                if (this._isDashboardCode(code)) return;
                 const price = Number(liveData.live || liveData.price || liveData.last || 0);
                 const volume = Number(liveData.volume || liveData.vol || 0);
 
@@ -1513,7 +1586,7 @@ export class NotificationStore {
                         }
 
                         if (hit) {
-                            const key = `${code}-target-${direction}`;
+                            const key = `${code} -target - ${direction} `;
                             alerts.push({
                                 userId: this.userId,
                                 code: code,
@@ -1551,7 +1624,7 @@ export class NotificationStore {
                         // Check High
                         if (high52 > 0 && price >= (high52 - tolerance) && !isStatic && !isPhantom) {
                             if (code === 'GAP') console.warn("⚠️ GAP PUSHED HIGH ALERT");
-                            const key = `${code}-hilo-high`;
+                            const key = `${code} -hilo - high`;
                             alerts.push({
                                 userId: this.userId,
                                 code: code,
@@ -1570,7 +1643,7 @@ export class NotificationStore {
                         // Check Low
                         if (low52 > 0 && price <= (low52 + tolerance) && !isStatic && !isPhantom) {
                             if (code === 'GAP') console.warn("⚠️ GAP PUSHED LOW ALERT");
-                            const key = `${code}-hilo-low`;
+                            const key = `${code} -hilo - low`;
                             alerts.push({
                                 userId: this.userId,
                                 code: code,
@@ -1632,11 +1705,11 @@ export class NotificationStore {
 
                         if (isHit) {
                             const moverType = pctChange >= 0 ? 'up' : 'down';
-                            const key = `${code}-mover-${moverType}`;
+                            const key = `${code} -mover - ${moverType} `;
 
-                            // console.log(`[NotificationStore] Custom Mover Hit: ${code} ${moverType} ${pctChange}% $${dolChange}`);
+                            // console.log(`[NotificationStore] Custom Mover Hit: ${ code } ${ moverType } ${ pctChange }% $${ dolChange } `);
                             // DEBUG: Trace Generation
-                            console.log(`[NotificationStore] Generated Watchlist Mover: ${code}, Type: ${moverType}, Pct: ${pctChange}%, Threshold: ${thresholdPct}%`);
+                            console.log(`[NotificationStore] Generated Watchlist Mover: ${code}, Type: ${moverType}, Pct: ${pctChange}%, Threshold: ${thresholdPct}% `);
                             alerts.push({
                                 userId: this.userId,
                                 code: code,
@@ -1686,7 +1759,7 @@ export class NotificationStore {
         }
 
         const prices = Array.from(AppState.livePrices.values());
-        console.log(`📊 Scanning ${prices.length} live instruments against criteria: >$${minPrice} AND >${minPct}%`);
+        console.log(`📊 Scanning ${prices.length} live instruments against criteria: > $${minPrice} AND > ${minPct}% `);
 
         // Fetch Current Rules
         const rules = this.getScannerRules() || {};
@@ -1733,7 +1806,7 @@ export class NotificationStore {
             const shouldBypass = (isInWatchlist && overrideOn);
 
             if (!blockedReason && !shouldBypass && rules.minPrice > 0 && price < rules.minPrice) {
-                blockedReason = `Global Min Price ($${rules.minPrice})`;
+                blockedReason = `Global Min Price($${rules.minPrice})`;
             }
 
             // 3. Sector Block
@@ -1747,7 +1820,7 @@ export class NotificationStore {
                 }
 
                 if (!ind || !activeFilters.includes(ind)) {
-                    blockedReason = `Sector Mismatch (${ind})`;
+                    blockedReason = `Sector Mismatch(${ind})`;
                 }
             }
 
@@ -1761,7 +1834,7 @@ export class NotificationStore {
             // STRICT Threshold Logic (fixed):
             if (!blockedReason && !shouldBypass) {
                 if (!metPct && !metDol) {
-                    blockedReason = `Threshold Miss (Need ${tPct}% or $${tDol})`;
+                    blockedReason = `Threshold Miss(Need ${tPct} % or $${tDol})`;
                 }
             }
 
@@ -1769,11 +1842,11 @@ export class NotificationStore {
             const calcChange = (p.prevClose > 0) ? (price - p.prevClose) : 0;
             const calcPct = (p.prevClose > 0) ? ((calcChange / p.prevClose) * 100) : 0;
             if (!blockedReason && p.prevClose > 0 && Math.abs(pct) > 1.0 && Math.abs(calcPct) < 0.1) {
-                blockedReason = `Phantom Data (API ${pct}% vs Calc ${calcPct.toFixed(2)}%)`;
+                blockedReason = `Phantom Data(API ${pct} % vs Calc ${calcPct.toFixed(2)} %)`;
             }
 
             if (blockedReason) {
-                console.warn(`❌ BLOCKED: ${blockedReason}`);
+                console.warn(`❌ BLOCKED: ${blockedReason} `);
                 failed++;
             } else {
                 console.log(`✅ PASSED: Should be visible in ${direction.toUpperCase()} list.`);
@@ -1782,7 +1855,7 @@ export class NotificationStore {
             console.groupEnd();
         });
 
-        console.log(`🏁 Analysis Complete. Candidates: ${candidates}, Valid: ${passed}, Blocked: ${failed}`);
+        console.log(`🏁 Analysis Complete.Candidates: ${candidates}, Valid: ${passed}, Blocked: ${failed} `);
         console.groupEnd();
     }
 }

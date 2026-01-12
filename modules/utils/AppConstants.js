@@ -7,7 +7,14 @@ export const ALL_SHARES_ID = 'ALL';
 export const KANGAROO_ICON_SRC = 'favicon.svg';
 export const CASH_WATCHLIST_ID = 'CASH';
 export const DASHBOARD_WATCHLIST_ID = 'DASHBOARD';
-export const DASHBOARD_SYMBOLS = [];
+export const DASHBOARD_SYMBOLS = [
+    'XJO', 'XAO', 'SPI200',
+    'AUDUSD', 'USDAUD', 'AUDGBP', 'AUDNZD', 'AUDKRW', 'AUDEUR', 'AUDHKD', 'AUDJPY',
+    'AUD/USD', 'USD/AUD', 'AUD/GBP', 'AUD/NZD', 'AUD/KRW', 'AUD/EUR', 'AUD/HKD', 'AUD/JPY',
+    'CDIC', 'RBA',
+    'GLD', 'SLV', 'OIL', 'BTC', 'ETH', 'LTC', 'NICKEL',
+    'TIO=F', 'YAP=F'
+];
 export const DASHBOARD_LINKS = {
     'NICKEL': 'https://au.finance.yahoo.com/quote/NICKEL=F',
     'TIO=F': 'https://www.marketindex.com.au/commodities',

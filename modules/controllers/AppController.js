@@ -29,7 +29,7 @@ import { SecurityUI } from '../ui/SecurityUI.js';
 import { GeneralSettingsUI } from '../ui/GeneralSettingsUI.js';
 import CalculatorUI from '../ui/CalculatorUI.js';
 import { AnalogClock } from '../ui/AnalogClock.js';
-import { IDS, CSS_CLASSES, EVENTS, WATCHLIST_ICON_POOL, ALL_SHARES_ID, CASH_WATCHLIST_ID, DASHBOARD_WATCHLIST_ID, PORTFOLIO_ID, UI_ICONS, USER_MESSAGES, STORAGE_KEYS, WATCHLIST_MODES, SORT_OPTIONS, WATCHLIST_NAMES, DASHBOARD_SYMBOLS, DASHBOARD_LINKS } from '../utils/AppConstants.js?v=1029';
+import { IDS, CSS_CLASSES, EVENTS, WATCHLIST_ICON_POOL, ALL_SHARES_ID, CASH_WATCHLIST_ID, DASHBOARD_WATCHLIST_ID, PORTFOLIO_ID, UI_ICONS, USER_MESSAGES, STORAGE_KEYS, WATCHLIST_MODES, SORT_OPTIONS, WATCHLIST_NAMES, DASHBOARD_SYMBOLS, DASHBOARD_LINKS, SUMMARY_TYPES } from '../utils/AppConstants.js?v=1029';
 import { ToastManager } from '../ui/ToastManager.js';
 import { navManager } from '../utils/NavigationManager.js';
 // renderSortSelect removed
@@ -491,7 +491,8 @@ export class AppController {
                             // AND the user hasn't already been onboarded (verified via cloud prefs)
                             if (AppState.user && !this._onboardingTriggered && !AppState.preferences.onboarded) {
                                 this._onboardingTriggered = true;
-                                this.appService.createDefaultOnboardingData(AppState.user.uid);
+                                // CRITICAL FIX: Must await to ensure all 5 stocks are written before snapshot re-fires
+                                await this.appService.createDefaultOnboardingData(AppState.user.uid);
                                 // FORCE SWITCH: Align local state with the cloud preference we just wrote ('ALL')
                                 // This prevents race conditions where local 'portfolio' state overwrites cloud 'ALL'.
                                 this.handleSwitchWatchlist('ALL');

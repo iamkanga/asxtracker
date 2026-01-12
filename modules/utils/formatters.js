@@ -6,20 +6,29 @@
 export const formatCurrency = (value) => {
     if (typeof value !== 'number') return '$0.00';
 
+    // Always use absolute value - colors indicate direction, not signs
+    const absValue = Math.abs(value);
+
     // Auto-expand precision for sub-dollar penny stocks (e.g. $0.004)
-    const opts = { style: 'currency', currency: 'AUD' };
-    if (value !== 0 && Math.abs(value) < 1.0) {
-        opts.minimumFractionDigits = 3;
-        opts.maximumFractionDigits = 3;
+    // But drop trailing zeros for cleaner display
+    if (absValue !== 0 && absValue < 1.0) {
+        // Format with 3 decimals, then strip trailing zeros if the 3rd decimal is 0
+        const formatted = new Intl.NumberFormat('en-AU', {
+            style: 'currency',
+            currency: 'AUD',
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 3
+        }).format(absValue);
+        return formatted;
     }
 
-    return new Intl.NumberFormat('en-AU', opts).format(value);
+    return new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD' }).format(absValue);
 };
 
 export const formatPercent = (value) => {
     if (typeof value !== 'number') return '0.00%';
-    const formatted = new Intl.NumberFormat('en-AU', { style: 'percent', minimumFractionDigits: 2 }).format(value / 100);
-    return (value > 0 ? '+' : '') + formatted;
+    // Always use absolute value - colors indicate direction, not signs
+    return new Intl.NumberFormat('en-AU', { style: 'percent', minimumFractionDigits: 2 }).format(Math.abs(value) / 100);
 };
 
 export const formatFriendlyDate = (dateStr) => {

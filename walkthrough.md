@@ -117,6 +117,23 @@ Key files involved in this refactor:
 - [x] **Logic**: The frontend logic is now "Production Ready" and correctly calculates `0` because without fresh backend timestamps, all alerts are interpreted as "old".
 - [x] **Manual Control**: Added a "Mark Read" icon (double-check) to the modal header. Automatic badge clearing has been disabled.
 
+## Execution
+- [x] Implement default threshold and sector settings <!-- id: 4 -->
+- [x] Implement empty watchlist UI message in `SnapshotUI.js` <!-- id: 5 -->
+- [x] Implement empty watchlist UI in `ViewRenderer.js` and `CashViewRenderer.js` <!-- id: 8 -->
+- [x] Fix code display bug on "Wipe Data" screen <!-- id: 10 -->
+- [x] Set default new user watchlist to 'All Shares' <!-- id: 11 -->
+- [x] Update default onboarding stocks to include 5 shares <!-- id: 12 -->
+- [x] Standardize Notification sort order (Pct then Dollar) <!-- id: 15 -->
+
+## Verification
+- [x] Verify default settings are applied correctly for new users <!-- id: 6 -->
+- [x] Verify empty watchlist UI message is displayed and looks premium <!-- id: 7 -->
+- [x] Verify premium empty states in Portfolio and Cash views <!-- id: 9 -->
+- [x] Verify "Wipe Data" screen looks correct <!-- id: 13 -->
+- [x] Verify new user defaults (All Shares, 5 Stocks) <!-- id: 14 -->
+- [x] Verify standardized sort order in all Notification sections <!-- id: 16 -->
+
 > [!IMPORTANT]
 > **Apps Script Deployment Required**:
 > The final step to make the badge persist is to **Deploy the Apps Script** as a new version. This will start stamping new alerts with the correct time, which the frontend is now ready to detect as "New".

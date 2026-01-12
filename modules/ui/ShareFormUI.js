@@ -752,21 +752,11 @@ export class ShareFormUI {
             const isPos = data.change >= 0;
             const colorClass = isPos ? CSS_CLASSES.PREVIEW_CHANGE_POS : CSS_CLASSES.PREVIEW_CHANGE_NEG;
 
-            // Fix Double Plus Issue: Check if formatter already adds it or if value is negative
-            // Our formatPercent usually adds nothing for pos, but let's be safe.
-            // Clean approach:
+            // Fix Double Plus Issue: Color indicates direction, no sign needed
             let pctStr = formatPercent(data.pctChange);
-            if (isPos && !pctStr.startsWith('+')) {
-                pctStr = `+${pctStr}`; // Add single +
-            } else if (isPos && pctStr.startsWith('+')) {
-                // already has +, do nothing
-            }
 
             // Format Change Value
             let changeStr = formatCurrency(data.change);
-            if (isPos && !changeStr.startsWith('+')) {
-                changeStr = `+${changeStr}`;
-            }
 
             const row1 = `
                 <div class="${CSS_CLASSES.PREVIEW_ROW_MAIN}">

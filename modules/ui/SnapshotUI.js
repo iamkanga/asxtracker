@@ -233,9 +233,21 @@ export class SnapshotUI {
 
         // Sort
         data.sort((a, b) => {
-            const pctA = a.pctChange;
-            const pctB = b.pctChange;
-            return this._currentSort === 'desc' ? pctB - pctA : pctA - pctB;
+            const pA = a.pctChange || a.dayChangePct || 0;
+            const pB = b.pctChange || b.dayChangePct || 0;
+            const pAR = Math.round(pA * 100);
+            const pBR = Math.round(pB * 100);
+
+            let res = 0;
+            if (pBR !== pAR) {
+                res = pBR - pAR; // Pct Descending
+            } else {
+                const dA = a.dayChangeVal || a.change || 0;
+                const dB = b.dayChangeVal || b.change || 0;
+                res = Math.abs(dB) - Math.abs(dA); // Dollar magnitude Descending
+            }
+
+            return this._currentSort === 'desc' ? res : -res;
         });
 
         grid.innerHTML = data.map(item => this._renderCard(item)).join('');
@@ -312,12 +324,10 @@ export class SnapshotUI {
 
         const priceStr = formatCurrency(item.price);
         const pctVal = Math.abs(item.pctChange).toFixed(2);
-        const signHtml = isPos ? '+' : (isNeg ? '-' : '');
-        const pctStr = `${signHtml}${pctVal}%`;
+        const pctStr = `${pctVal}%`;
 
         const valStr = formatCurrency(Math.abs(item.valChange));
-        const valSign = isPos ? '+' : (isNeg ? '-' : '');
-        const displayVal = `${valSign}${valStr}`;
+        const displayVal = `${valStr}`;
 
         const high = item.high || 0;
         const low = item.low || 0;

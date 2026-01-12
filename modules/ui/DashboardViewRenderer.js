@@ -225,15 +225,15 @@ export class DashboardViewRenderer {
         } else if (isForex) {
             // Forex: 4 Decimals, no $
             formattedValue = new Intl.NumberFormat('en-AU', { minimumFractionDigits: 4, maximumFractionDigits: 4 }).format(liveValue);
-            formattedChange = valueChange.toFixed(4);
+            formattedChange = Math.abs(valueChange).toFixed(4);
         } else if (isIndex || isFuture) {
             // Indices/Futures: 2 Decimals (usually), no $
             formattedValue = new Intl.NumberFormat('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(liveValue);
-            formattedChange = valueChange.toFixed(2);
+            formattedChange = Math.abs(valueChange).toFixed(2);
         } else {
             // Default: Monetary (Shares, Crypto, etc.) -> use $
             formattedValue = formatCurrency(liveValue);
-            formattedChange = valueChange.toFixed(2);
+            formattedChange = formatCurrency(valueChange);
         }
 
         const formattedPct = (liveValue === 0) ? '--' : formatPercent(pctChange);
@@ -259,7 +259,7 @@ export class DashboardViewRenderer {
                         </div>
                         <div class="${CSS_CLASSES.DASHBOARD_ITEM_PRICE}">${formattedValue}</div>
                         <div class="${CSS_CLASSES.DASHBOARD_ITEM_CHANGE} ${isPositive ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}">
-                            <span class="change-value">${liveValue !== 0 && isPositive ? '+' : ''}${formattedChange}</span>
+                            <span class="change-value">${formattedChange}</span>
                             <span class="change-percent">${formattedPct}</span>
                         </div>
                     </div>
@@ -289,7 +289,7 @@ export class DashboardViewRenderer {
                     <div class="${CSS_CLASSES.DASHBOARD_CELL_RIGHT}">
                         <div class="${CSS_CLASSES.DASHBOARD_ITEM_PRICE}">${formattedValue}</div>
                         <div class="${CSS_CLASSES.DASHBOARD_ITEM_CHANGE} ${isPositive ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}">
-                            ${liveValue !== 0 && isPositive ? '+' : ''}${formattedChange} (${formattedPct})
+                            ${formattedChange} (${formattedPct})
                         </div>
                     </div>
                 </div>

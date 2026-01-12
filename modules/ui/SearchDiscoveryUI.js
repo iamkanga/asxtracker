@@ -241,7 +241,7 @@ export class SearchDiscoveryUI {
                     <div style="text-align: right;">
                         <div style="font-size: 1.6rem; font-weight: 800; line-height: 1; color: var(--text-color);">${formatCurrency(stock.live)}</div>
                         <div class="${stock.change >= 0 ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}" style="font-size: 0.9rem; font-weight: 600; margin-top: 8px;">
-                            ${stock.change >= 0 ? '+' : ''}${formatCurrency(stock.change)} (${formatPercent(stock.pctChange)})
+                            ${formatCurrency(stock.change)} (${formatPercent(stock.pctChange)})
                         </div>
                     </div>
                 </div>

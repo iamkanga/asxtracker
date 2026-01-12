@@ -6,7 +6,7 @@
 
 import { notificationStore } from '../state/NotificationStore.js';
 import { AppState } from '../state/AppState.js';
-import { CSS_CLASSES, IDS, UI_ICONS, EVENTS, SECTOR_INDUSTRY_MAP } from '../utils/AppConstants.js';
+import { CSS_CLASSES, IDS, UI_ICONS, EVENTS, SECTOR_INDUSTRY_MAP, DASHBOARD_SYMBOLS } from '../utils/AppConstants.js';
 import { navManager } from '../utils/NavigationManager.js';
 import { formatCurrency, formatPercent } from '../utils/formatters.js';
 import { BriefingUI } from './BriefingUI.js?v=327';
@@ -65,7 +65,8 @@ export class NotificationUI {
 
             const source = (e.detail && e.detail.source) ? e.detail.source : 'total';
             const tab = (e.detail && e.detail.tab) ? e.detail.tab : 'custom';
-            this.showModal(tab, source);
+            const section = (e.detail && e.detail.section) ? e.detail.section : null;
+            this.showModal(tab, source, section);
         });
 
         // LOGIC HARDENING: Listen for ready event to auto-refresh loading modal
@@ -350,10 +351,10 @@ export class NotificationUI {
                 <div class="${CSS_CLASSES.MODAL_HEADER}">
                     <h2 class="${CSS_CLASSES.MODAL_TITLE}">Notifications</h2>
                     <div style="margin-left: auto; display: flex; gap: 15px; align-items: center;">
-                        <button id="btn-daily-briefing" title="Market Pulse" style="background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem;">
+                        <button id="btn-daily-briefing" title="Daily Brief" style="background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem;">
                             <i class="fas fa-coffee"></i>
                         </button>
-                        <button id="notif-settings-btn" title="Volatility Settings" style="background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem;">
+                        <button id="notif-settings-btn" title="Notification Settings" style="background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem;">
                             <i class="fas ${UI_ICONS.PEN}"></i>
                         </button>
                         <button id="notif-mark-read-btn" title="Dismiss Badge" style="background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem;">
@@ -586,24 +587,22 @@ export class NotificationUI {
         const globalData = notificationStore.getGlobalAlerts(false) || { movers: { up: [], down: [] }, hilo: { high: [], low: [] } };
 
         // FILTER: Remove Dashboard-Specific Codes (Indices, Currencies, etc.)
+        // FILTER: Remove Dashboard-Specific Codes (Indices, Currencies, etc.)
         // User Request: "Codes strictly designed for the dashboard... XJO, XAO, SPI200... And that 52 week threshold container"
-        const DASHBOARD_BLACKLIST = ['XJO', 'XAO', 'SPI200', 'ALL', 'AUDUSD', 'USDAUD', 'AUDGBP', 'AUDNZD', 'AUDKRW', 'AUDEUR', 'AUDHKD', 'AUDJPY', 'CDIC', 'RBA', 'GLD', 'SLV', 'OIL', 'BTC', 'ETH', 'LTC'];
-
+        // FIX: Use Central Helper from Store (Single Source of Truth)
         const filterDashboardCodes = (list) => {
             if (!list) return [];
             return list.filter(item => {
-                const raw = (item.code || item.shareName || item.symbol || '').toUpperCase().trim();
-                const c = raw.replace(/\.AX$/i, ''); // Normalize: "XJO.AX" -> "XJO"
+                const code = item.code || item.shareName || item.symbol;
+                if (!code) return false; // Invalid item
 
-                // Filter if in blacklist OR if it's a currency pair (6 chars, starts with AUD, usually) - sticking to explicit list for safety + common indices.
-                if (DASHBOARD_BLACKLIST.includes(c) || DASHBOARD_BLACKLIST.includes(raw)) {
-                    // console.log(`[NotificationUI] Filtered Dashboard Code: ${raw}`);
-                    return false;
+                // Use Store Helper if available
+                if (notificationStore && typeof notificationStore._isDashboardCode === 'function') {
+                    if (notificationStore._isDashboardCode(code)) return false;
+                } else {
+                    // Fallback to strict blacklist check
+                    if (DASHBOARD_SYMBOLS.includes(code.toUpperCase())) return false;
                 }
-                if (c.startsWith('^') || raw.startsWith('^')) return false; // Common Index Prefix
-                // Special check for typical Currency pairs if not in list (e.g. AUDUSD)
-                // Actually, relying on list is safer unless we want to filter ALL currencies.
-                // User said "Codes strictly designed for the dashboard".
                 return true;
             });
         };
@@ -636,12 +635,16 @@ export class NotificationUI {
 
         const globalMoversUp = filterHiddenSectors(filterDashboardCodes(globalData.movers?.up));
         const globalMoversDown = filterHiddenSectors(filterDashboardCodes(globalData.movers?.down));
+        const globalHiloHigh = filterHiddenSectors(filterDashboardCodes(globalData.hilo?.high));
+        const globalHiloLow = filterHiddenSectors(filterDashboardCodes(globalData.hilo?.low));
 
-        // Use Enrichment to Filter Strictly
+        // Use Enrichment to Filter and SORT strictly
         const finalMoversUp = this._enrichAndFilter(globalMoversUp, rules.up || {}, 'up');
         const finalMoversDown = this._enrichAndFilter(globalMoversDown, rules.down || {}, 'down');
-        const finalHiloHigh = filterHiddenSectors(filterDashboardCodes(globalData.hilo?.high));
-        const finalHiloLow = filterHiddenSectors(filterDashboardCodes(globalData.hilo?.low));
+
+        // FIX: Hilo lists MUST also be enriched and sorted with the same logic
+        const finalHiloHigh = this._enrichAndFilter(globalHiloHigh, { minPrice: rules.hiloMinPrice }, 'up');
+        const finalHiloLow = this._enrichAndFilter(globalHiloLow, { minPrice: rules.hiloMinPrice }, 'down');
 
         // Wait, 'minPrice' above is LOCAL logic fallback? 
         // No, I'll use proper Coalescing.
@@ -720,8 +723,39 @@ export class NotificationUI {
             const rankB = getRank(b);
 
             if (rankA !== rankB) return rankA - rankB;
-            // Secondary Sort: Magnitude (Largest move first) within its rank
-            return Math.abs(Number(b.pct || 0)) - Math.abs(Number(a.pct || 0));
+
+            // Secondary Sort: Percentage Primary, Dollar Tiebreaker
+            const getValues = (item) => {
+                let p = Number(item.pct ?? 0);
+                let d = Number(item.change ?? 0);
+                // Fallback Calculation (matches _renderCard)
+                if (Math.abs(p) === 0 && Math.abs(d) > 0) {
+                    const price = Number(item.live || 0);
+                    const prev = price - d;
+                    if (prev > 0) p = (d / prev) * 100;
+                }
+                return { p, d };
+            };
+
+            const valA = getValues(a);
+            const valB = getValues(b);
+
+            // Determine if this rank should sort descending (up/gain) or ascending (down/loss)
+            const isDownRank = rankA === 3 || rankA === 5;
+
+            // Rounding for "tie" detection (to 2 decimal places in percent)
+            const pAR = Math.round(valA.p * 100);
+            const pBR = Math.round(valB.p * 100);
+
+            if (!isDownRank) {
+                // High/Gain Sort: Highest % first
+                if (pBR !== pAR) return pBR - pAR;
+                return Math.abs(valB.d) - Math.abs(valA.d); // Highest dollar magnitude tiebreaker
+            } else {
+                // Low/Loss Sort: Most negative % first (Ascending)
+                if (pAR !== pBR) return pAR - pBR;
+                return Math.abs(valB.d) - Math.abs(valA.d); // Still highest impact (magnitude) first
+            }
         });
 
         // Structure Definitions - REORDERED & SPLIT
@@ -793,19 +827,26 @@ export class NotificationUI {
         // Re-bind events because we replaced innerHTML
         this._bindAccordionEvents(modal);
 
-        // LOGIC: Handle 'Global' Tab Request (Shortcuts)
-        // If activeTab is 'global', we want to show the Market Pulse container (Gainers)
-        if (this._activeTab === 'global') {
-            const targetChip = chips.querySelector('.filter-chip[data-target="gainers"]');
+        // LOGIC: Handle Deep Linking or Defaults
+        if (this._targetSection) {
+            const targetChip = chips.querySelector(`.filter-chip[data-target="${this._targetSection}"]`);
             if (targetChip) {
-                // Short timeout to ensure DOM is painted and listeners active
                 setTimeout(() => {
                     targetChip.click();
-                    console.log('[NotificationUI] Auto-switched to Gainers (Global Mode)');
+                    console.log(`[NotificationUI] Auto-switched to Section: ${this._targetSection}`);
                 }, 50);
             }
-            this._activeTab = null; // Clear to prevent sticky state
         }
+        // REMOVED: Default to Gainers for Global Tab. 
+        // User Request: "The default position should be dashboard open, not a specific selection"
+        /*
+        else if (this._activeTab === 'global') {
+            const targetChip = chips.querySelector('.filter-chip[data-target="gainers"]');
+             // ...
+        } 
+        */
+
+        this._activeTab = null; // Clear to prevent sticky state
     }
 
     static _bindAccordionEvents(modal) {
@@ -1462,6 +1503,49 @@ export class NotificationUI {
             const metDol = (limitDol > 0 && absDol >= limitDol);
 
             return metPct || metDol;
+        }).sort((a, b) => {
+            // STANDARDIZED SORT: Percentage first (primary), Dollar value second (tiebreaker)
+            const codeA = a.code || a.shareName || '';
+            const codeB = b.code || b.shareName || '';
+
+            // Robust Value Access (Ensuring we use the same fallback logic as _renderCard)
+            const getValues = (item) => {
+                let p = Number(item.pct ?? 0);
+                let d = Number(item.change ?? 0);
+
+                // Fallback Calculation (matches _renderCard)
+                if (Math.abs(p) === 0 && Math.abs(d) > 0) {
+                    const price = Number(item.live || 0);
+                    const prev = price - d;
+                    if (prev > 0) p = (d / prev) * 100;
+                }
+                return { p, d };
+            };
+
+            const valA = getValues(a);
+            const valB = getValues(b);
+
+            // Rounding for "tie" detection (to 2 decimal places in percent)
+            const pAR = Math.round(valA.p * 100);
+            const pBR = Math.round(valB.p * 100);
+
+            let result = 0;
+            if (direction === 'up') {
+                // Gainers/Highs: Highest percentage first
+                if (pBR !== pAR) result = pBR - pAR;
+                else result = Math.abs(valB.d) - Math.abs(valA.d); // Highest dollar magnitude tiebreaker
+            } else {
+                // Losers/Lows: Most negative percentage first
+                if (pAR !== pBR) result = pAR - pBR;
+                else result = Math.abs(valB.d) - Math.abs(valA.d); // Highest dollar magnitude (biggest loss) tiebreaker
+            }
+
+            // OPTIONAL: Diagnostic Log (only for ties or inconsistencies)
+            if (pAR === pBR && Math.abs(valA.d) !== Math.abs(valB.d)) {
+                // console.log(`[Sort Tie] ${codeA} vs ${codeB}: Pct=${valA.p.toFixed(2)}%, DolA=${valA.d.toFixed(2)}, DolB=${valB.d.toFixed(2)} -> Result=${result > 0 ? 'B first' : 'A first'}`);
+            }
+
+            return result;
         });
     }
 

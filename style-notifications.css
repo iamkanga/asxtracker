@@ -2029,13 +2029,26 @@ input:checked+.slider:before {
 /* Watchlist Grid */
 .briefing-watchlist-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: 1fr;
     gap: 12px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.briefing-empty {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 24px;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 8px;
+    font-style: italic;
 }
 
 .highlight-card {
-    background: rgba(255, 255, 255, 0.03);
-    /* Base Dark */
+    background: rgba(255, 255, 255, 0.05);
+    /* Increased Opacity for Visibility */
     border-radius: 8px;
     padding: 12px;
     display: flex;
@@ -2047,6 +2060,8 @@ input:checked+.slider:before {
     /* Slight Border */
     position: relative;
     overflow: hidden;
+    min-width: 0;
+    /* Prevent blowout */
 }
 
 .highlight-card:hover {

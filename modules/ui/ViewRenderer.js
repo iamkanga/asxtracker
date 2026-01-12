@@ -377,7 +377,7 @@ export class ViewRenderer {
                         <span class="${CSS_CLASSES.CARD_PRICE} ${CSS_CLASSES.TEXT_CENTER} ${CSS_CLASSES.FLEX_2}">${formatCurrency(price)}</span>
                         <div class="${CSS_CLASSES.CARD_CHANGE_COL} ${CSS_CLASSES.FLEX_COLUMN} ${CSS_CLASSES.ALIGN_END}">
                             <span class="${CSS_CLASSES.CHANGE_VALUE} ${displayChangeValue >= 0 ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}">
-                                ${displayChangeValue >= 0 ? '+' : ''}${formatCurrency(displayChangeValue)}
+                                ${formatCurrency(displayChangeValue)}
                             </span>
                             <span class="${CSS_CLASSES.CHANGE_PERCENT} ${CSS_CLASSES.TEXT_SM} ${changePercent >= 0 ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}">
                                 ${formatPercent(changePercent)}
@@ -452,10 +452,10 @@ export class ViewRenderer {
                         <div class="${CSS_CLASSES.CARD_HEADER_LEFT} ${CSS_CLASSES.FLEX_COLUMN} ${CSS_CLASSES.ALIGN_START}">
                             <span class="${CSS_CLASSES.CARD_CODE}" data-code="${item.code}">${item.code}</span>
                         </div>
-                        <span class="${CSS_CLASSES.CARD_PRICE} ${CSS_CLASSES.TEXT_LEFT} ${CSS_CLASSES.FLEX_2}">${formatCurrency(price)}</span>
+                        <span class="${CSS_CLASSES.CARD_PRICE} ${CSS_CLASSES.TEXT_CENTER} ${CSS_CLASSES.FLEX_2}">${formatCurrency(price)}</span>
                         <div class="${CSS_CLASSES.CARD_CHANGE_COL} ${CSS_CLASSES.FLEX_COLUMN} ${CSS_CLASSES.ALIGN_END}">
                             <span class="${CSS_CLASSES.CHANGE_VALUE} ${changeValue >= 0 ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}">
-                                ${changeValue >= 0 ? '+' : ''}${formatCurrency(changeValue)}
+                                ${formatCurrency(changeValue)}
                             </span>
                             <span class="${CSS_CLASSES.CHANGE_PERCENT} ${CSS_CLASSES.TEXT_SM} ${changePercent >= 0 ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}">
                                 ${formatPercent(changePercent)}
@@ -542,7 +542,7 @@ export class ViewRenderer {
                 <span class="${CSS_CLASSES.METRIC_LABEL}">Day Change</span>
                 <div class="${CSS_CLASSES.METRIC_ROW}">
                     <span class="${CSS_CLASSES.METRIC_VALUE_LARGE} ${(metrics.dayChangeValue >= 0) ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}">
-                        ${(metrics.dayChangeValue >= 0 ? '+' : '')}${formatCurrency(metrics.dayChangeValue)}
+                        ${formatCurrency(metrics.dayChangeValue)}
                     </span>
                     <span class="${CSS_CLASSES.METRIC_PERCENT_SMALL} ${(metrics.dayChangePercent >= 0) ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}">
                         ${formatPercent(metrics.dayChangePercent)}
@@ -554,7 +554,7 @@ export class ViewRenderer {
                 <span class="${CSS_CLASSES.METRIC_LABEL}">Day Gain</span>
                 <div class="${CSS_CLASSES.METRIC_ROW}">
                     <span class="${CSS_CLASSES.METRIC_VALUE_LARGE} ${CSS_CLASSES.TEXT_POSITIVE}">
-                        +${formatCurrency(metrics.dayGain || 0)}
+                        ${formatCurrency(metrics.dayGain || 0)}
                     </span>
                 </div>
             </div>
@@ -572,7 +572,7 @@ export class ViewRenderer {
                 <span class="${CSS_CLASSES.METRIC_LABEL}">Total Capital Gain</span>
                 <div class="${CSS_CLASSES.METRIC_ROW}">
                     <span class="${CSS_CLASSES.METRIC_VALUE_LARGE} ${isTotalPos ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}">
-                        ${totalSign}${formatCurrency(metrics.totalReturn)}
+                        ${formatCurrency(metrics.totalReturn)}
                     </span>
                     <span class="${CSS_CLASSES.METRIC_PERCENT_SMALL} ${isTotalPos ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}">
                         ${formatPercent(metrics.totalReturnPercent)}
@@ -708,7 +708,7 @@ export class ViewRenderer {
                                     <div class="${CSS_CLASSES.DETAIL_ROW} ${CSS_CLASSES.PT_TINY} ${CSS_CLASSES.MB_SMALL}">
                                         <span class="${CSS_CLASSES.DETAIL_LABEL}">Net Impact</span>
                                         <span class="${CSS_CLASSES.DETAIL_VALUE} ${stock.dayChangeValue > 0 ? CSS_CLASSES.POSITIVE : (stock.dayChangeValue < 0 ? CSS_CLASSES.NEGATIVE : CSS_CLASSES.NEUTRAL)}">
-                                            ${stock.dayChangeValue > 0 ? '+' : ''}${formatCurrency(stock.dayChangeValue || 0)}
+                                            ${formatCurrency(stock.dayChangeValue || 0)}
                                         </span>
                                     </div>
                                     ` : ''}
@@ -760,10 +760,10 @@ export class ViewRenderer {
 
                                 <div class="${CSS_CLASSES.DETAIL_ROW}">
                                     <span class="${CSS_CLASSES.DETAIL_LABEL}">Unit Margin</span>
-                                    <span class="${CSS_CLASSES.DETAIL_VALUE} ${((stock.live || currentPrice) - avgPrice) > 0 ? CSS_CLASSES.POSITIVE : (((stock.live || currentPrice) - avgPrice) < 0 ? CSS_CLASSES.NEGATIVE : CSS_CLASSES.NEUTRAL)}">
-                                        ${((stock.live || currentPrice) - avgPrice) > 0 ? '+' : ''}${formatCurrency((stock.live || currentPrice) - avgPrice)} 
-                                        (${formatPercent((((stock.live || currentPrice) - avgPrice) / (avgPrice || 1)) * 100)})
-                                    </span>
+                                        <span class="${CSS_CLASSES.DETAIL_VALUE} ${((stock.live || currentPrice) - avgPrice) > 0 ? CSS_CLASSES.POSITIVE : (((stock.live || currentPrice) - avgPrice) < 0 ? CSS_CLASSES.NEGATIVE : CSS_CLASSES.NEUTRAL)}">
+                                            ${formatCurrency((stock.live || currentPrice) - avgPrice)} 
+                                            (${formatPercent((((stock.live || currentPrice) - avgPrice) / (avgPrice || 1)) * 100)})
+                                        </span>
                                 </div>
 
                                 <div class="${CSS_CLASSES.DETAIL_ROW}">
@@ -773,9 +773,9 @@ export class ViewRenderer {
 
                                 <div class="${CSS_CLASSES.DETAIL_ROW}">
                                     <span class="${CSS_CLASSES.DETAIL_LABEL}">Net Return</span>
-                                    <span class="${CSS_CLASSES.DETAIL_VALUE} ${capitalGain > 0 ? CSS_CLASSES.POSITIVE : (capitalGain < 0 ? CSS_CLASSES.NEGATIVE : CSS_CLASSES.NEUTRAL)}">
-                                        ${capitalGain > 0 ? '+' : ''}${formatCurrency(capitalGain)}
-                                    </span>
+                                        <span class="${CSS_CLASSES.DETAIL_VALUE} ${capitalGain > 0 ? CSS_CLASSES.POSITIVE : (capitalGain < 0 ? CSS_CLASSES.NEGATIVE : CSS_CLASSES.NEUTRAL)}">
+                                            ${formatCurrency(capitalGain)}
+                                        </span>
                                 </div>
 
                                 <div class="${CSS_CLASSES.DETAIL_ROW}">
@@ -1113,7 +1113,7 @@ export class ViewRenderer {
                             <div class="${CSS_CLASSES.PREVIEW_MAIN_ROW}">
                                 <span class="${CSS_CLASSES.PREVIEW_PRICE}">${formatCurrency(stock.live)}</span>
                                 <span class="${CSS_CLASSES.PREVIEW_CHANGE} ${stock.change >= 0 ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}">
-                                    ${stock.change >= 0 ? '+' : ''}${formatCurrency(stock.change)} (${formatPercent(stock.pctChange)})
+                                    ${formatCurrency(stock.change)} (${formatPercent(stock.pctChange)})
                                 </span>
                             </div>
 
@@ -2041,7 +2041,7 @@ export class ViewRenderer {
 
         // Clear and render into container
         if (!data || data.length === 0) {
-            container.innerHTML = `< div class="${CSS_CLASSES.ASX_DROPDOWN_EMPTY}" > No Active Shares</div > `;
+            container.innerHTML = `<div class="${CSS_CLASSES.ASX_DROPDOWN_EMPTY}">No Active Shares</div>`;
             return;
         }
 
@@ -2050,9 +2050,9 @@ export class ViewRenderer {
 
             // NO ARROW - just the code
             return `
-                < button class="${CSS_CLASSES.ASX_DROPDOWN_PILL} status-${status}" data - code="${item.code}" >
+                <button class="${CSS_CLASSES.ASX_DROPDOWN_PILL} status-${status}" data-code="${item.code}">
                     ${item.code}
-            </button >
+                </button>
             `;
         }).join('');
 
@@ -2123,15 +2123,15 @@ export class ViewRenderer {
                 formattedVal = formatPercent(val);
             }
             return `
-            < div class="${CSS_CLASSES.SUMMARY_DETAIL_ROW}" data - code="${share.code}" data - id="${share.id}" >
+                <div class="${CSS_CLASSES.SUMMARY_DETAIL_ROW}" data-code="${share.code}" data-id="${share.id}">
                     <span class="${CSS_CLASSES.SUMMARY_DETAIL_CODE}">${share.code}</span>
                     <span class="${CSS_CLASSES.SUMMARY_DETAIL_VALUE} ${colorClass}">${formattedVal}</span>
-                </div >
+                </div>
             `;
         }).join('');
 
         modal.innerHTML = `
-            < div class="${CSS_CLASSES.MODAL_OVERLAY}" ></div >
+            <div class="${CSS_CLASSES.MODAL_OVERLAY}"></div>
                 <div class="${CSS_CLASSES.MODAL_CONTENT} ${CSS_CLASSES.MODAL_CONTENT_MEDIUM}">
                     <div class="${CSS_CLASSES.MODAL_HEADER}">
                         <h2 class="${CSS_CLASSES.MODAL_TITLE}">${title}</h2>
