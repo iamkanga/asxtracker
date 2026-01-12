@@ -1005,39 +1005,33 @@ export class AppController {
             sidebar.style.background = 'linear-gradient(135deg, rgba(164, 147, 147, 0.4) 0%, rgba(20, 20, 20, 1) 100%)';
         }
 
-        // 2. Header: Dynamic Mirrored Gradient based on GLOBAL PORTFOLIO PERFORMANCE
+        // 2. Header: Dynamic Proportional Gradient based on CURRENT WATCHLIST PERFORMANCE
         // Applies to ALL Stock/Dashboard views. Resets for Cash.
         if (header) {
             if (AppState.watchlist.type === 'cash') {
                 header.style.background = ''; // Reset for Cash View
             } else {
-                // Calculate Global Portfolio Day Change (Robust)
-                // Filter specifically for valid owned quantities
-                // Calculate Global Portfolio Day Change (Robust)
-                // Use DataProcessor.processShares for consistent, authoritative metrics
+                // Calculate metrics for the CURRENT WATCHLIST (not global portfolio)
+                const currentWatchlistId = AppState.watchlist.id || PORTFOLIO_ID;
                 const { summaryMetrics } = processShares(
                     AppState.data.shares || [],
-                    PORTFOLIO_ID,
+                    currentWatchlistId,
                     AppState.livePrices,
-                    AppState.sortConfig, // Re-use current sort config (doesn't affect total)
+                    AppState.sortConfig,
                     AppState.hiddenAssets
                 );
 
-                let portfolioDayChange = 0;
-                if (summaryMetrics) {
-                    portfolioDayChange = summaryMetrics.dayChangeValue || 0;
-                }
+                // Count-based Sentiment Pulse: Proportion of gainers vs losers by stock count
+                const gainerCount = summaryMetrics?.gainerCount || 0;
+                const loserCount = summaryMetrics?.loserCount || 0;
+                const totalActive = gainerCount + loserCount;
+                const gainProp = totalActive > 0 ? Math.round((gainerCount / totalActive) * 100) : 50;
 
-                // Determine Color based on Net Daily P/L
-                let colorRGBA = '164, 147, 147'; // Neutral (Coffee)
-                if (portfolioDayChange > 0.01) {
-                    colorRGBA = '20, 160, 20'; // Green
-                } else if (portfolioDayChange < -0.01) {
-                    colorRGBA = '180, 20, 20'; // Red
-                }
+                // Dynamic Gradient: Green left → Black center → Red right
+                // Position of black center shifts based on gainer proportion
+                const dynamicGradient = `linear-gradient(to right, rgba(0, 180, 0, 0.6) 0%, rgba(20, 20, 20, 1) ${gainProp}%, rgba(180, 0, 0, 0.6) 100%)`;
 
-                // Apply Mirrored Gradient: Strong -> Black -> Strong
-                header.style.background = `linear-gradient(90deg, rgba(${colorRGBA}, 0.6) 0%, rgba(20, 20, 20, 1) 35%, rgba(20, 20, 20, 1) 65%, rgba(${colorRGBA}, 0.6) 100%)`;
+                header.style.background = dynamicGradient;
             }
         }
 
@@ -1099,10 +1093,8 @@ export class AppController {
 
 
 
-            // Force Title Bar Update (Gradients based on ASX 200)
-
-
-            if (this.watchlistUI) this.watchlistUI.updateHeaderTitle();
+            // Force Title Bar Update (Gradients based on metrics if available)
+            if (this.watchlistUI) this.watchlistUI.updateHeaderTitle(summaryMetrics);
 
 
 
@@ -1163,7 +1155,7 @@ export class AppController {
 
         // Ensure Header Title / Gradient updates with new data
         if (this.watchlistUI) {
-            this.watchlistUI.updateHeaderTitle();
+            this.watchlistUI.updateHeaderTitle(summaryMetrics);
         }
 
         if (AppState.watchlist.type !== 'cash') {
@@ -1241,7 +1233,7 @@ export class AppController {
                             );
                             this.viewRenderer.render(freshMerged, freshMetrics);
                             if (this.watchlistUI) {
-                                this.watchlistUI.updateHeaderTitle();
+                                this.watchlistUI.updateHeaderTitle(freshMetrics);
                             }
 
                             const freshCodes = freshMerged

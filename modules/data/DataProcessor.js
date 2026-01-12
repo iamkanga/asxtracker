@@ -243,7 +243,10 @@ export function calculatePortfolioTotals(processedShares) {
             dayChangePercent: 0,
             totalCost: 0,
             totalReturn: 0,
-            totalReturnPercent: 0
+            totalReturnPercent: 0,
+            gainerCount: 0,
+            loserCount: 0,
+            neutralCount: 0
         };
     }
 
@@ -253,6 +256,9 @@ export function calculatePortfolioTotals(processedShares) {
     let dayGain = 0;
     let dayLoss = 0;
     let previousTotalValue = 0;
+    let gainerCount = 0;
+    let loserCount = 0;
+    let neutralCount = 0;
 
     for (const share of processedShares) {
         totalValue += share.value || 0;
@@ -262,8 +268,12 @@ export function calculatePortfolioTotals(processedShares) {
 
         if (dailyChange > 0) {
             dayGain += dailyChange;
-        } else {
+            gainerCount++;
+        } else if (dailyChange < 0) {
             dayLoss += dailyChange;
+            loserCount++;
+        } else {
+            neutralCount++;
         }
 
         // precise previous value reconstruction for accurate %
@@ -301,7 +311,10 @@ export function calculatePortfolioTotals(processedShares) {
         dayLossPercent,
         totalCost,
         totalReturn,
-        totalReturnPercent
+        totalReturnPercent,
+        gainerCount,
+        loserCount,
+        neutralCount
     };
 }
 

@@ -2036,9 +2036,16 @@ h1#dynamicWatchlistTitle.active {
     transition: color 0.2s;
 }
 
-/* NOTE: #sortPickerBtn defined in Header Buttons section above (line 232) */
+/* NOTE: #sortPickerBtn defined in Header Buttons section */
 
+/* Update Portfolio Title Bar (Watchlist Selector) */
+.watchlist-selector.trend-up-bg {
+    background: linear-gradient(to right, var(--color-positive-light), var(--card-bg) 50%, var(--card-bg)) !important;
+}
 
+.watchlist-selector.trend-down-bg {
+    background: linear-gradient(to right, var(--color-negative-light), var(--card-bg) 50%, var(--card-bg)) !important;
+}
 
 .watchlist-selector:hover,
 .watchlist-selector:focus,
@@ -2134,8 +2141,23 @@ h1#dynamicWatchlistTitle.active {
     justify-content: stretch;
 }
 
-.view-snapshot .share-card {
-    padding: 12px 10px !important;
+.view-snapshot .share-card,
+.snapshot-view .share-card {
+    padding: 10px 8px !important;
+}
+
+.view-snapshot .card-code,
+.snapshot-view .card-code,
+.view-snapshot .card-price,
+.snapshot-view .card-price {
+    font-size: 1.05rem !important;
+}
+
+.view-snapshot .change-value,
+.snapshot-view .change-value,
+.view-snapshot .card-change-col,
+.snapshot-view .card-change-col {
+    font-size: 0.75rem !important;
 }
 
 .share-card {
@@ -2156,21 +2178,15 @@ h1#dynamicWatchlistTitle.active {
 }
 
 .share-card.trend-up {
-    /* Left-side border only using box-shadow */
-    border-color: transparent !important;
-    box-shadow: inset 4px 0 0 0 var(--color-positive) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
 }
 
 .share-card.trend-down {
-    /* Left-side border only using box-shadow */
-    border-color: transparent !important;
-    box-shadow: inset 4px 0 0 0 var(--color-negative) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
 }
 
 .share-card.trend-neutral {
-    /* Left-side border only using box-shadow - app coffee color */
-    border-color: transparent !important;
-    box-shadow: inset 4px 0 0 0 var(--color-accent) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
 }
 
 .share-card.ghosted {
@@ -2355,13 +2371,23 @@ h1#dynamicWatchlistTitle.active {
     justify-content: center;
     background-color: var(--card-bg);
     padding: 15px;
-    border-radius: 0;
+    border-radius: 4px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-    border: 4px solid transparent;
-    /* Base */
+    border: none !important;
+    position: relative;
+    overflow: hidden;
     box-sizing: border-box;
-    border-left-width: 4px !important;
-    border-width: 4px !important;
+}
+
+/* Gradient Sidebar Implementation Removed - Pure Background design */
+@keyframes shimmer {
+    0% {
+        transform: translateX(-100%);
+    }
+
+    100% {
+        transform: translateX(100%);
+    }
 }
 
 .metric-label {
@@ -3755,17 +3781,17 @@ h1.modal-title,
 }
 
 
-/* Border-Only Trend Classes for Summary Cards */
-.trend-up-border {
-    border-color: var(--color-positive) !important;
+/* Trend Colors for Reference */
+.trend-up-accent {
+    color: var(--color-positive);
 }
 
-.trend-down-border {
-    border-color: var(--color-negative) !important;
+.trend-down-accent {
+    color: var(--color-negative);
 }
 
 .trend-accent-border {
-    border-color: var(--color-accent) !important;
+    --strip-color: var(--color-accent);
 }
 
 .detail-card h3 {
@@ -3779,15 +3805,15 @@ h1.modal-title,
 }
 
 
-/* Mixed Diagonal Gradients for Market Pulse - halfway strength (0.25 alpha) */
+/* Mixed Sentiment Gradients (Harmonized: Neutral Center) */
 .trend-mixed-desc-bg {
-    /* Green top-left -> neutral middle -> red bottom-right - strong strength (0.6 alpha) */
+    /* Positive: Green top-left -> neutral middle -> red bottom-right */
     background: linear-gradient(135deg, rgba(20, 160, 20, 0.6) 0%, rgba(20, 20, 20, 1) 50%, rgba(180, 20, 20, 0.6) 100%) !important;
     border-color: var(--border-color) !important;
 }
 
 .trend-mixed-asc-bg {
-    /* Red top-left -> neutral middle -> green bottom-right - strong strength (0.6 alpha) */
+    /* Red top-left -> neutral middle -> green bottom-right */
     background: linear-gradient(135deg, rgba(180, 20, 20, 0.6) 0%, rgba(20, 20, 20, 1) 50%, rgba(20, 160, 20, 0.6) 100%) !important;
     border-color: var(--border-color) !important;
 }
@@ -3850,21 +3876,17 @@ tr.dashboard-grade-neutral td,
     background: transparent !important;
 }
 
-/* Portfolio Title Bar Gradient */
-#watchlist-selector.trend-up-bg {
-    background: linear-gradient(135deg, rgba(20, 160, 20, 0.6) 0%, rgba(20, 20, 20, 1) 100%) !important;
+/* Watchlist Selector Sentiment Mixed Gradients (Harmonized: Neutral Center) */
+#watchlist-selector.trend-up-bg,
+#watchlist-selector.trend-down-bg {
+    /* Base background will be overridden by dynamic inline style from JS, 
+       but we keep these for transitions and non-dynamic fallback (or specific trend glows) */
     border-color: var(--color-positive) !important;
-    color: var(--color-positive) !important;
-    box-shadow: 0 4px 15px rgba(0, 200, 0, 0.4);
-    /* Stronger Glow */
+    color: var(--text-inverse) !important;
 }
 
 #watchlist-selector.trend-down-bg {
-    background: linear-gradient(135deg, rgba(200, 20, 20, 0.6) 0%, rgba(20, 20, 20, 1) 100%) !important;
     border-color: var(--color-negative) !important;
-    color: var(--color-negative) !important;
-    box-shadow: 0 4px 15px rgba(200, 0, 0, 0.4);
-    /* Stronger Glow */
 }
 
 /* Dashboard Title Bar & Header Gradients (based on ASX 200) - Maximum Visibility */
@@ -3879,10 +3901,10 @@ body.dashboard-grade-up .header-inner-container {
 button#watchlist-selector.dashboard-grade-up,
 .watchlist-selector.dashboard-grade-up,
 #watchlist-selector.dashboard-grade-up {
-    background: linear-gradient(135deg, rgba(0, 200, 0, 0.6) 0%, rgba(5, 5, 5, 1) 100%) !important;
+    background: linear-gradient(to right, rgba(0, 180, 0, 0.7) 0%, rgba(180, 0, 0, 0.7) 100%) !important;
     background-color: transparent !important;
     box-shadow: none !important;
-    border-left: 4px solid var(--color-positive) !important;
+    border-left: none !important;
     font-weight: 800 !important;
 }
 
@@ -3896,10 +3918,10 @@ body.dashboard-grade-down .header-inner-container {
 button#watchlist-selector.dashboard-grade-down,
 .watchlist-selector.dashboard-grade-down,
 #watchlist-selector.dashboard-grade-down {
-    background: linear-gradient(135deg, rgba(200, 0, 0, 0.6) 0%, rgba(5, 5, 5, 1) 100%) !important;
+    background: linear-gradient(to right, rgba(180, 0, 0, 0.7) 0%, rgba(0, 180, 0, 0.7) 100%) !important;
     background-color: transparent !important;
     box-shadow: none !important;
-    border-left: 4px solid var(--color-negative) !important;
+    border-left: none !important;
     font-weight: 800 !important;
 }
 
@@ -4794,12 +4816,11 @@ button#watchlist-selector.dashboard-grade-neutral,
     cursor: pointer;
     border: none;
 
-    /* NEW: Direct Sidebar Implementation */
-    border-left: 6px solid #424242;
-    /* Default Fallback Color */
+    border-left: none !important;
+    /* Ensure no border by default */
+    border-right: none !important;
 
-    border-right: 4px solid transparent;
-    /* Match balance alignment if needed */
+    border-right: none !important;
     transition: transform 0.1s, background-color 0.1s;
     position: relative;
     overflow: hidden;
@@ -4887,6 +4908,70 @@ button#watchlist-selector.dashboard-grade-neutral,
     color: var(--text-color);
 }
 
+/* Hide Actions in 2/3 Columns */
+.cash-view-two-column .cash-grid-actions,
+.cash-view-three-column .cash-grid-actions {
+    display: none !important;
+}
+
+/* Typography Scaling for Two-Column View */
+.cash-view-two-column .cash-grid-name {
+    font-size: 0.95rem;
+    /* Slightly larger for readability */
+    white-space: nowrap;
+    /* Revert to truncation */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    grid-column: 1 / span 2;
+    /* Utilize full width since actions are hidden */
+    line-height: 1.2;
+}
+
+.cash-view-two-column .cash-grid-balance {
+    font-size: 1rem;
+}
+
+.cash-view-two-column .cash-grid-category {
+    font-size: 0.7rem;
+}
+
+/* Typography Scaling for Three-Column View */
+.cash-view-three-column .cash-grid-name {
+    font-size: 0.8rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cash-view-three-column .cash-grid-balance {
+    font-size: 0.75rem;
+    grid-column: 1;
+    /* Match name alignment */
+    grid-row: 3;
+    text-align: left;
+    /* Match name alignment */
+}
+
+.cash-view-three-column .cash-grid-category {
+    font-size: 0.6rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Adjust Card Padding for Density */
+.cash-view-two-column .cash-card,
+.cash-view-three-column .cash-card {
+    padding: 10px 12px;
+    gap: 1px 8px;
+}
+
+.cash-view-three-column .cash-card {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto;
+    gap: 4px;
+}
+
 /* Hide Eye Icon in 2/3 Columns */
 .cash-view-two-column .cash-eye-btn,
 .cash-view-three-column .cash-eye-btn {
@@ -4912,17 +4997,23 @@ button#watchlist-selector.dashboard-grade-neutral,
 .cash-total-header {
     background: var(--card-bg);
     padding: 20px;
-    border-radius: 0;
+    border-radius: 4px;
     margin: 40px auto 20px auto !important;
     max-width: 1000px;
-    box-shadow: var(--shadow-medium);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
     display: flex;
     justify-content: space-between;
     align-items: center;
     font-size: 1.25rem;
     font-weight: 700;
     color: var(--text-color);
-    border: 3px solid var(--color-accent);
+    border: none;
+    border-left: 6px solid var(--color-accent);
+    position: relative;
+    overflow: hidden;
+
+    /* Matching Gradient Effect to Cards */
+    background: linear-gradient(135deg, color-mix(in srgb, var(--color-accent) 60%, black), color-mix(in srgb, var(--color-accent) 5%, black)) !important;
 }
 
 /* Override the first-child margin reset specifically for cash-total-header */
@@ -7649,10 +7740,6 @@ body.dark-theme .calc-result-card {
         padding-bottom: 100px !important;
     }
 
-    .header-inner-container {
-        padding: 0 !important;
-        /* Managed by #appHeader */
-    }
 
     .header-top-row {
         gap: 4px;
@@ -8878,12 +8965,40 @@ body.dark-theme .calc-result-card {
 
 
 
- b o d y . d a s h b o a r d - a c t i v e   # a p p H e a d e r   { 
-         b a c k g r o u n d :   l i n e a r - g r a d i e n t ( t o   r i g h t ,   # 4 e 5 4 c 8 ,   # 8 f 9 4 f b )   ! i m p o r t a n t ; 
- } 
- 
- b o d y . d a s h b o a r d - a c t i v e   . s i d e b a r   { 
-         b a c k g r o u n d :   l i n e a r - g r a d i e n t ( t o   b o t t o m ,   # 4 e 5 4 c 8 ,   # 8 f 9 4 f b )   ! i m p o r t a n t ; 
- } 
-  
- 
+body.dashboard-active #appHeader {
+    background: linear-gradient(to right, #4e54c8, #8f94fb) !important;
+}
+
+body.dashboard-active .sidebar {
+    background: linear-gradient(to bottom, #4e54c8, #8f94fb) !important;
+}
+
+/* --- Cash Total Header Styling --- */
+.cash-total-header {
+    background: linear-gradient(135deg, color-mix(in srgb, var(--color-accent) 60%, black), color-mix(in srgb, var(--color-accent) 5%, black)) !important;
+    --strip-color: var(--color-accent);
+    padding: 15px 20px;
+    margin-bottom: 20px;
+    position: relative;
+    overflow: hidden;
+    border: none !important;
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.cash-total-label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 700;
+}
+
+.cash-total-amount {
+    font-size: 1.8rem;
+    font-weight: 600;
+    color: var(--text-inverse);
+}

@@ -546,43 +546,46 @@ export class ViewRenderer {
         container.className = CSS_CLASSES.PORTFOLIO_SUMMARY;
         // Note: Styles for .portfolio-summary should be in CSS, not JS.
 
-        const isDailyPos = metrics.dayChangeValue >= 0;
-        const dailyBg = isDailyPos ? 'trend-up-bg' : 'trend-down-bg';
-
-        const isTotalPos = metrics.totalReturn >= 0;
-        const totalBg = isTotalPos ? 'trend-up-bg' : 'trend-down-bg';
-
-        const dailyBgBorder = isDailyPos ? 'trend-up-border' : 'trend-down-border';
-        const totalBgBorder = isTotalPos ? 'trend-up-border' : 'trend-down-border';
-
-        // Update Portfolio Title Bar (Watchlist Selector)
-        const watchlistSelector = document.getElementById('watchlist-selector');
-        if (watchlistSelector) {
-            watchlistSelector.classList.remove('trend-up-bg', 'trend-down-bg');
-            // Only apply if we are actually in Portfolio view (which renderSummary implies, as per check in render())
-            if (metrics.dayChangeValue >= 0) {
-                watchlistSelector.classList.add('trend-up-bg');
-            } else {
-                watchlistSelector.classList.add('trend-down-bg');
-            }
-        }
-
         // Gradient classes for summary cards
-        const dayChangeGrade = metrics.dayChangeValue > 0 ? 'dashboard-grade-up' :
-            metrics.dayChangeValue < 0 ? 'dashboard-grade-down' : 'dashboard-grade-neutral';
+        const dayChangeGrade = metrics.dayChangeValue > 0 ? 'trend-mixed-desc-bg' :
+            metrics.dayChangeValue < 0 ? 'trend-mixed-asc-bg' : 'dashboard-grade-neutral';
         const totalGainGrade = metrics.totalReturn > 0 ? 'dashboard-grade-up' :
             metrics.totalReturn < 0 ? 'dashboard-grade-down' : 'dashboard-grade-neutral';
 
-        // 2. Construct HTML (Card Layout with Inline Percentages and Gradients)
+        const isTotalPos = metrics.totalReturn >= 0;
+
+        // 2. Proportional Sentiment Logic (Dynamic Gradient) - Count-based
+        const gainerCount = metrics.gainerCount || 0;
+        const loserCount = metrics.loserCount || 0;
+        const totalActive = gainerCount + loserCount;
+
+        // Calculate percentages (clamped)
+        const gainProp = totalActive > 0 ? Math.round((gainerCount / totalActive) * 100) : 50;
+
+        // Construct Proportional Gradient (Green left -> Red right) - ONLY for Day Change
+        // High gainers = more green. High losers = more red.
+        const dynamicGradient = `linear-gradient(to right, rgba(0, 180, 0, 0.6) 0%, rgba(20, 20, 20, 1) ${gainProp}%, rgba(180, 0, 0, 0.6) 100%)`;
+
+        // Static Mirrored Gradients (Color → Black → Same Color)
+        const neutralGradient = 'linear-gradient(90deg, rgba(164, 147, 147, 0.6) 0%, rgba(20, 20, 20, 1) 50%, rgba(164, 147, 147, 0.6) 100%)';
+        const greenGradient = 'linear-gradient(90deg, rgba(0, 180, 0, 0.6) 0%, rgba(20, 20, 20, 1) 50%, rgba(0, 180, 0, 0.6) 100%)';
+        const redGradient = 'linear-gradient(90deg, rgba(180, 0, 0, 0.6) 0%, rgba(20, 20, 20, 1) 50%, rgba(180, 0, 0, 0.6) 100%)';
+        const capitalGainGradient = isTotalPos ? greenGradient : redGradient;
+
+        // 3. Construct HTML (Card Layout with Inline Percentages and Gradients)
         container.innerHTML = `
-            <div class="${CSS_CLASSES.SUMMARY_CARD} ${CSS_CLASSES.CLICKABLE} dashboard-grade-neutral trend-accent-border" data-type="${SUMMARY_TYPES.VALUE}">
+            <div class="${CSS_CLASSES.SUMMARY_CARD} ${CSS_CLASSES.CLICKABLE}" 
+                 style="background: ${neutralGradient} !important;"
+                 data-type="${SUMMARY_TYPES.VALUE}">
                 <span class="${CSS_CLASSES.METRIC_LABEL}">Portfolio Value</span>
                 <div class="${CSS_CLASSES.METRIC_ROW}">
                     <span class="${CSS_CLASSES.METRIC_VALUE_LARGE}">${formatCurrency(metrics.totalValue)}</span>
                 </div>
             </div>
 
-            <div class="${CSS_CLASSES.SUMMARY_CARD} ${CSS_CLASSES.CLICKABLE} ${dayChangeGrade} ${dailyBgBorder}" data-type="${SUMMARY_TYPES.DAY_CHANGE}">
+            <div class="${CSS_CLASSES.SUMMARY_CARD} ${CSS_CLASSES.CLICKABLE}" 
+                 style="background: ${dynamicGradient} !important;"
+                 data-type="${SUMMARY_TYPES.DAY_CHANGE}">
                 <span class="${CSS_CLASSES.METRIC_LABEL}">Day Change</span>
                 <div class="${CSS_CLASSES.METRIC_ROW}">
                     <span class="${CSS_CLASSES.METRIC_VALUE_LARGE} ${(metrics.dayChangeValue >= 0) ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}">
@@ -594,7 +597,9 @@ export class ViewRenderer {
                 </div>
             </div>
 
-            <div class="${CSS_CLASSES.SUMMARY_CARD} ${CSS_CLASSES.CLICKABLE} dashboard-grade-up trend-up-border" data-type="${SUMMARY_TYPES.WINNERS}">
+            <div class="${CSS_CLASSES.SUMMARY_CARD} ${CSS_CLASSES.CLICKABLE}" 
+                 style="background: ${greenGradient} !important;"
+                 data-type="${SUMMARY_TYPES.WINNERS}">
                 <span class="${CSS_CLASSES.METRIC_LABEL}">Day Gain</span>
                 <div class="${CSS_CLASSES.METRIC_ROW}">
                     <span class="${CSS_CLASSES.METRIC_VALUE_LARGE} ${CSS_CLASSES.TEXT_POSITIVE}">
@@ -606,7 +611,9 @@ export class ViewRenderer {
                 </div>
             </div>
 
-            <div class="${CSS_CLASSES.SUMMARY_CARD} ${CSS_CLASSES.CLICKABLE} dashboard-grade-down trend-down-border" data-type="${SUMMARY_TYPES.LOSERS}">
+            <div class="${CSS_CLASSES.SUMMARY_CARD} ${CSS_CLASSES.CLICKABLE}" 
+                 style="background: ${redGradient} !important;"
+                 data-type="${SUMMARY_TYPES.LOSERS}">
                 <span class="${CSS_CLASSES.METRIC_LABEL}">Day Loss</span>
                 <div class="${CSS_CLASSES.METRIC_ROW}">
                     <span class="${CSS_CLASSES.METRIC_VALUE_LARGE} ${CSS_CLASSES.TEXT_NEGATIVE}">
@@ -618,7 +625,9 @@ export class ViewRenderer {
                 </div>
             </div>
 
-            <div class="${CSS_CLASSES.SUMMARY_CARD} ${CSS_CLASSES.CLICKABLE} ${totalGainGrade} ${totalBgBorder}" data-type="${SUMMARY_TYPES.CAPITAL_GAIN}">
+            <div class="${CSS_CLASSES.SUMMARY_CARD} ${CSS_CLASSES.CLICKABLE}" 
+                 style="background: ${capitalGainGradient} !important;"
+                 data-type="${SUMMARY_TYPES.CAPITAL_GAIN}">
                 <span class="${CSS_CLASSES.METRIC_LABEL}">Total Capital Gain</span>
                 <div class="${CSS_CLASSES.METRIC_ROW}">
                     <span class="${CSS_CLASSES.METRIC_VALUE_LARGE} ${isTotalPos ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}">

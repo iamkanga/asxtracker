@@ -245,7 +245,7 @@ export class WatchlistUI {
         }
     }
 
-    updateHeaderTitle() {
+    updateHeaderTitle(metrics = null) {
         const titleSpan = document.getElementById(IDS.CURRENT_WATCHLIST_NAME);
         if (!titleSpan) return;
 
@@ -282,66 +282,8 @@ export class WatchlistUI {
 
         this._bindTitleListener();
 
-        // Ghosting Logic
-        const ghostId = AppState.watchlist.id || PORTFOLIO_ID;
-        const isSystem = (ghostId === ALL_SHARES_ID || ghostId === PORTFOLIO_ID || ghostId === CASH_WATCHLIST_ID || ghostId === DASHBOARD_WATCHLIST_ID);
-
-        const renameBtn = document.getElementById(IDS.RENAME_WATCHLIST_BTN);
-        if (renameBtn) {
-            if (isSystem) {
-                // Use simpler logic: pointer-events: none + opacity
-                renameBtn.classList.add(CSS_CLASSES.GHOSTED);
-                renameBtn.disabled = true;
-            } else {
-                renameBtn.classList.remove(CSS_CLASSES.GHOSTED);
-                renameBtn.disabled = false;
-            }
-        }
-
-        // Dashboard Title Bar Gradient based on ASX 200 (XJO) performance
-        const watchlistSelector = document.getElementById(IDS.WATCHLIST_SELECTOR);
-        if (watchlistSelector) {
-            // Remove any existing gradient classes
-            // Reset all gradient classes - BOTH on button and body for broad targeting
-            const gradientClasses = ['trend-up-bg', 'trend-down-bg', 'dashboard-grade-up', 'dashboard-grade-down', 'dashboard-grade-neutral'];
-            watchlistSelector.classList.remove(...gradientClasses);
-            document.body.classList.remove(...gradientClasses);
-
-            // Only apply gradient when viewing Dashboard
-            console.log('[WatchlistUI] Dashboard Title Bar Gradient Check:', { currentId, DASHBOARD_WATCHLIST_ID, match: currentId === DASHBOARD_WATCHLIST_ID });
-            if (currentId === DASHBOARD_WATCHLIST_ID) {
-                // Get ASX 200 (XJO) data from livePrices - try multiple key formats
-                let xjoData = AppState.livePrices.get('XJO') ||
-                    AppState.livePrices.get('^AXJO') ||
-                    AppState.livePrices.get('XJO.AX') ||
-                    AppState.livePrices.get('^XJO');
-
-                // Fallback to Dashboard Data
-                if (!xjoData && AppState.data.dashboard) {
-                    xjoData = AppState.data.dashboard.find(item =>
-                        ['XJO', '^AXJO', 'XJO.AX', '^XJO'].includes((item.code || '').toUpperCase())
-                    );
-                }
-
-                if (xjoData && xjoData.pctChange !== undefined) {
-                    const pctChange = parseFloat(xjoData.pctChange) || 0;
-                    if (pctChange > 0) {
-                        watchlistSelector.classList.add('dashboard-grade-up');
-                        document.body.classList.add('dashboard-grade-up');
-                    } else if (pctChange < 0) {
-                        watchlistSelector.classList.add('dashboard-grade-down');
-                        document.body.classList.add('dashboard-grade-down');
-                    } else {
-                        watchlistSelector.classList.add('dashboard-grade-neutral');
-                        document.body.classList.add('dashboard-grade-neutral');
-                    }
-                } else {
-                    // Default to neutral if no data
-                    watchlistSelector.classList.add('dashboard-grade-neutral');
-                    document.body.classList.add('dashboard-grade-neutral');
-                }
-            }
-        }
+        // NOTE: Header gradient is now handled by AppController.updateDataAndRender()
+        // based on GLOBAL portfolio metrics, not per-watchlist metrics.
     }
 
     _pickIconForId(id) {

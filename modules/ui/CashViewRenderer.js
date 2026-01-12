@@ -88,17 +88,12 @@ export class CashViewRenderer {
      */
     createTotalHeader(totalValue) {
         const headerDiv = document.createElement('div');
-        headerDiv.className = CSS_CLASSES.CASH_TOTAL_HEADER; // 'cash-total-header'
+        headerDiv.className = 'cash-total-header';
 
-        const label = document.createElement('span');
-        label.textContent = 'Total Cash';
-
-        const value = document.createElement('span');
-        value.className = CSS_CLASSES.CASH_VALUE_POSITIVE; // 'cash-value-positive' (assuming typically positive)
-        value.textContent = formatCurrency(totalValue);
-
-        headerDiv.appendChild(label);
-        headerDiv.appendChild(value);
+        headerDiv.innerHTML = `
+            <span class="cash-total-label">Total Portfolio Cash</span>
+            <span class="cash-total-amount">${formatCurrency(totalValue)}</span>
+        `;
 
         return headerDiv;
     }
@@ -112,14 +107,17 @@ export class CashViewRenderer {
         const card = document.createElement('div');
         card.className = CSS_CLASSES.CASH_CARD; // 'cash-card'
 
-        // Apply Side Border based on Category
-        // Apply Sidebar Variable based on Category
+        // Apply Side Border & Background based on Category
+        let colorVal = 'var(--asset-other)'; // Default
+
         if (asset.category) {
             const userCat = AppState.preferences.userCategories?.find(c => c.id === asset.category);
+
             if (userCat && userCat.color) {
-                card.style.borderLeftColor = userCat.color;
+                // User Custom Category (HEX)
+                colorVal = userCat.color;
             } else {
-                // Map standard categories to their CSS variables (resolved to values if possible, or kept as vars)
+                // Standard Categories (CSS Vars)
                 const standardColors = {
                     'cash': 'var(--asset-cash)',
                     'cash_in_bank': 'var(--asset-cash-in-bank)',
@@ -131,30 +129,32 @@ export class CashViewRenderer {
                     'personal': 'var(--asset-personal)',
                     'other': 'var(--asset-other)'
                 };
-                const defaultVar = standardColors[asset.category] || 'var(--asset-other)';
 
                 // Prioritize: 
                 // 1. Explicit Asset Color (Specific override)
-                // 2. User Category Preference (Global theme override)
+                // 2. User Category Preference (Global theme override - handled above)
                 // 3. Name-based Hashing (Only for 'other')
                 // 4. Default CSS Var
 
-                const userCat = AppState.preferences.userCategories?.find(c => c.id === asset.category);
-                const themeColor = userCat?.color;
-
                 if (asset.color) {
-                    card.style.borderLeftColor = asset.color;
-                } else if (themeColor) {
-                    card.style.borderLeftColor = themeColor;
+                    colorVal = asset.color;
+                } else if (standardColors[asset.category]) {
+                    colorVal = standardColors[asset.category];
                 } else if (asset.category === 'other' && asset.name) {
-                    card.style.borderLeftColor = this._getColorForString(asset.name);
-                } else {
-                    card.style.borderLeftColor = defaultVar;
+                    colorVal = this._getColorForString(asset.name);
                 }
             }
-        } else {
-            card.style.borderLeftColor = 'var(--asset-other)';
+        } else if (asset.color) {
+            colorVal = asset.color;
         }
+
+        // Apply Styles
+        // Dynamic "Hue on Black" Background Effect
+        // Uses color-mix to blend the category color with black. 
+        // We need a stronger blend (e.g. 60% color) to match the 'dashboard-grade' opacity look (approx 0.6).
+        // Using "color-mix(in srgb, ${colorVal} 60%, black)" gives 60% color, 40% black.
+        // We start with strong color, fade to almost black.
+        card.setAttribute('style', `border-left: none !important; border-right: none !important; background: linear-gradient(135deg, color-mix(in srgb, ${colorVal} 60%, black), color-mix(in srgb, ${colorVal} 5%, black)) !important;`);
 
         // Handle Ghosting
         if (asset.isHidden) {
