@@ -415,14 +415,35 @@ export class UserStore {
      */
     async addStock(userId, watchlistId, symbol, price, timestamp) {
         if (!userId || !watchlistId || !symbol) return;
-        // Re-use addShare but include watchlistId
+
+        // FIX: Check for existing share first to prevent duplicates (Link Mode)
+        const shares = AppState.data.shares || [];
+        const existing = shares.find(s => s.shareName === symbol);
+
+        if (existing) {
+            console.log(`[UserStore] Linking existing share ${symbol} (${existing.id}) to ${watchlistId}`);
+            const ref = doc(db, `artifacts/${APP_ID}/users/${userId}/shares`, existing.id);
+
+            // Migration: Ensure the legacy singular 'watchlistId' is included in the new array
+            const idsToUnion = [watchlistId];
+            if (existing.watchlistId) idsToUnion.push(existing.watchlistId);
+
+            await updateDoc(ref, {
+                watchlistIds: arrayUnion(...idsToUnion),
+                updatedAt: serverTimestamp()
+            });
+            return existing.id;
+        }
+
+        // Fallback: Create New (Primary Record)
         return this.addShare(userId, {
             code: symbol,
-            shareName: symbol, // Critical Fix: Save shareName to prevent "undefined" in legacy UI
+            shareName: symbol,
             watchlistId: watchlistId,
+            watchlistIds: [watchlistId], // Initialize Array
             purchasePrice: price,
             purchaseDate: timestamp,
-            units: 0 // Default
+            units: 0
         });
     }
 

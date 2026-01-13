@@ -76,7 +76,7 @@ export class NotificationUI {
         document.addEventListener(EVENTS.NOTIFICATION_READY, () => {
             const modal = document.getElementById(IDS.NOTIFICATION_MODAL);
             if (modal && modal.dataset.loading === 'true') {
-                console.log('[NotificationUI] NOTIFICATION_READY received. Refreshing loading modal...');
+
                 this._updateList(modal);
                 modal.dataset.loading = 'false';
             }
@@ -170,7 +170,7 @@ export class NotificationUI {
 
         // LOGIC HARDENING: Race condition guard - check if store is ready
         if (!notificationStore || !notificationStore.isReady) {
-            console.log('[NotificationUI] Store not ready. Showing loading modal...');
+
             // Render a minimal loading modal
             const loadingModal = this._renderLoadingModal();
             document.body.appendChild(loadingModal);
@@ -195,7 +195,7 @@ export class NotificationUI {
             }
         }
 
-        console.log(`[NotificationUI] showModal() triggered. Tab: ${activeTabId} Source: ${this._currentSource} Target: ${targetSectionId}`);
+
 
         // --- DUPLICATE PROTECTION & SURFACING ---
         let modal = document.getElementById(IDS.NOTIFICATION_MODAL);
@@ -211,7 +211,7 @@ export class NotificationUI {
             if (m.classList.contains(CSS_CLASSES.HIDDEN)) return;
 
             // Hide and track for restoration
-            console.log(`[NotificationUI] Precedence Check: Hiding modal [${m.id || 'unknown'}] for focus.`);
+
             m.classList.add(CSS_CLASSES.HIDDEN);
             this._restorableModals.push(m);
         });
@@ -419,7 +419,7 @@ export class NotificationUI {
 
         // UNIVERSAL RESTORATION: Restore any modals we hid when opening
         if (this._restorableModals && this._restorableModals.length > 0) {
-            console.log(`[NotificationUI] _close: Restoring ${this._restorableModals.length} hidden modals.`);
+
             this._restorableModals.forEach(m => {
                 if (m) {
                     m.classList.remove(CSS_CLASSES.HIDDEN);
@@ -439,7 +439,7 @@ export class NotificationUI {
         if (this._settingsRestorable) {
             const settingsModal = document.getElementById(IDS.SETTINGS_MODAL);
             if (settingsModal && settingsModal.classList.contains(CSS_CLASSES.HIDDEN)) {
-                console.log('[NotificationUI] Fallback Restoration: Settings Modal.');
+
                 settingsModal.classList.remove(CSS_CLASSES.HIDDEN);
                 settingsModal.style.zIndex = '';
             }
@@ -465,7 +465,7 @@ export class NotificationUI {
         const briefingBtn = modal.querySelector('#btn-daily-briefing');
         if (briefingBtn) {
             briefingBtn.addEventListener('click', () => {
-                console.log('[NotificationUI] Daily Briefing button clicked.');
+
                 BriefingUI.show();
             });
         }
@@ -474,7 +474,7 @@ export class NotificationUI {
         const marketPulseBtn = modal.querySelector('#btn-market-pulse');
         if (marketPulseBtn) {
             marketPulseBtn.addEventListener('click', () => {
-                console.log('[NotificationUI] Market Pulse button clicked.');
+
                 SnapshotUI.show();
             });
         }
@@ -483,7 +483,7 @@ export class NotificationUI {
         const settingsBtn = modal.querySelector('#notif-settings-btn');
         if (settingsBtn) {
             settingsBtn.addEventListener('click', () => {
-                console.log('[NotificationUI] Edit/Settings button clicked.');
+
                 document.dispatchEvent(new CustomEvent(EVENTS.OPEN_SETTINGS));
                 // this._close(modal); // Removed to persist in stack
             });
@@ -497,7 +497,7 @@ export class NotificationUI {
                 const currentState = AppState.preferences.showBadges !== false;
                 const newState = !currentState;
 
-                console.log(`[NotificationUI] Kangaroo Toggle: Switching 'showBadges' to ${newState}`);
+
 
                 // 2. Update Local State Immediately (Reactivity)
                 AppState.preferences.showBadges = newState;
@@ -548,7 +548,7 @@ export class NotificationUI {
                 if (card) {
                     const code = card.dataset.code;
                     if (code) {
-                        console.log(`[NotificationUI] Card clicked for ${code}. Checking watchlist...`);
+
                         const isSaved = (AppState.data.shares || []).some(s => {
                             const sCode = s.code || s.shareName || s.symbol;
                             return sCode === code;
@@ -569,7 +569,7 @@ export class NotificationUI {
         // Subtitle Settings Navigation
         modal.addEventListener('click', (e) => {
             if (e.target.closest('.settings-link')) {
-                console.log('[NotificationUI] Settings link clicked.');
+
                 document.dispatchEvent(new CustomEvent(EVENTS.OPEN_SETTINGS));
                 // this._close(modal); // Removed to persist in stack
             }

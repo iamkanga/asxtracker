@@ -555,16 +555,33 @@ export class ViewRenderer {
         const isTotalPos = metrics.totalReturn >= 0;
 
         // 2. Proportional Sentiment Logic (Dynamic Gradient) - Count-based
-        const gainerCount = metrics.gainerCount || 0;
-        const loserCount = metrics.loserCount || 0;
-        const totalActive = gainerCount + loserCount;
+        // 2. Proportional Sentiment Logic (Dynamic Gradient) - Value-based (Dollar Weighted)
+        // User Request: 10000 total, 7500 gain, 2500 loss -> 75% Green, 25% Red.
+        // Also: "which ever is the largest number should be on the left"
 
-        // Calculate percentages (clamped)
-        const gainProp = totalActive > 0 ? Math.round((gainerCount / totalActive) * 100) : 50;
+        const dayGain = metrics.dayGain || 0;
+        const dayLoss = Math.abs(metrics.dayLoss || 0); // Ensure positive for ratio
+        const totalVol = dayGain + dayLoss;
 
-        // Construct Proportional Gradient (Green left -> Red right) - ONLY for Day Change
-        // High gainers = more green. High losers = more red.
-        const dynamicGradient = `linear-gradient(to right, rgba(0, 180, 0, 0.6) 0%, rgba(20, 20, 20, 1) ${gainProp}%, rgba(180, 0, 0, 0.6) 100%)`;
+        let leftColor = 'rgba(0, 180, 0, 0.6)'; // Default Green
+        let rightColor = 'rgba(180, 0, 0, 0.6)'; // Default Red
+        let splitPct = 50;
+
+        if (totalVol > 0) {
+            if (dayGain >= dayLoss) {
+                // Gain Dominant -> Green on Left
+                leftColor = 'rgba(0, 180, 0, 0.6)';
+                rightColor = 'rgba(180, 0, 0, 0.6)';
+                splitPct = Math.round((dayGain / totalVol) * 100);
+            } else {
+                // Loss Dominant -> Red on Left
+                leftColor = 'rgba(180, 0, 0, 0.6)';
+                rightColor = 'rgba(0, 180, 0, 0.6)';
+                splitPct = Math.round((dayLoss / totalVol) * 100);
+            }
+        }
+
+        const dynamicGradient = `linear-gradient(to right, ${leftColor} 0%, rgba(20, 20, 20, 1) ${splitPct}%, ${rightColor} 100%)`;
 
         // Static Mirrored Gradients (Color → Black → Same Color)
         const neutralGradient = 'linear-gradient(90deg, rgba(164, 147, 147, 0.6) 0%, rgba(20, 20, 20, 1) 50%, rgba(164, 147, 147, 0.6) 100%)';
@@ -739,7 +756,7 @@ export class ViewRenderer {
                         <div class="${CSS_CLASSES.SHARE_DETAIL_SECTIONS}">
 
                             <!-- Card 1: Investment -->
-                            <div class="${CSS_CLASSES.DETAIL_CARD} ${CSS_CLASSES.ALIGN_START} ${CSS_CLASSES.TEXT_LEFT} ${CSS_CLASSES.INVESTMENT_CARD} ${trendBgClass}">
+                            <div class="${CSS_CLASSES.DETAIL_CARD} ${CSS_CLASSES.ALIGN_START} ${CSS_CLASSES.TEXT_LEFT} ${CSS_CLASSES.INVESTMENT_CARD} ${trendBgClass} ${CSS_CLASSES.CURSOR_POINTER}" data-action="deep-link" data-id="${stock.id}" data-section="core">
                                 <div class="${CSS_CLASSES.DETAIL_CARD_HEADER}">
                                     <h3 class="${CSS_CLASSES.DETAIL_LABEL} ${CSS_CLASSES.W_FULL} ${CSS_CLASSES.TEXT_LEFT} ${CSS_CLASSES.START_CENTER_ROW}">
                                         <div class="${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.ALIGN_CENTER} ${CSS_CLASSES.JUSTIFY_BETWEEN} ${CSS_CLASSES.W_FULL}">
@@ -801,7 +818,7 @@ export class ViewRenderer {
 
                             <!-- Card 2: Holdings & Performance (Conditional) -->
                             ${units > 0 ? `
-                            <div class="${CSS_CLASSES.DETAIL_CARD} ${trendBgClass}">
+                            <div class="${CSS_CLASSES.DETAIL_CARD} ${trendBgClass} ${CSS_CLASSES.CURSOR_POINTER}" data-action="deep-link" data-id="${stock.id}" data-section="holdings">
                                 <div class="${CSS_CLASSES.DETAIL_CARD_HEADER}">
                                     <h3 class="${CSS_CLASSES.DETAIL_LABEL}">
                                         <i class="fas ${UI_ICONS.WALLET}"></i> Holdings & Performance
@@ -855,7 +872,7 @@ export class ViewRenderer {
     
                             <!-- Card 3: Dividends -->
                             ${stock.dividendAmount > 0 ? `
-                            <div class="${CSS_CLASSES.DETAIL_CARD} ${trendBgClass}">
+                            <div class="${CSS_CLASSES.DETAIL_CARD} ${trendBgClass} ${CSS_CLASSES.CURSOR_POINTER}" data-action="deep-link" data-id="${stock.id}" data-section="dividends">
                                 <div class="${CSS_CLASSES.DETAIL_CARD_HEADER}">
                                     <h3 class="${CSS_CLASSES.DETAIL_LABEL}">
                                         <i class="fas ${UI_ICONS.DIVIDENDS}"></i> Dividends
@@ -923,7 +940,7 @@ export class ViewRenderer {
                                 ` : ''}
 
                             <!-- Card 5: Entry Details (Decoupled & Decentered) -->
-                            <div class="${CSS_CLASSES.DETAIL_CARD} ${trendBgClass}">
+                            <div class="${CSS_CLASSES.DETAIL_CARD} ${trendBgClass} ${CSS_CLASSES.CURSOR_POINTER}" data-action="deep-link" data-id="${stock.id}" data-section="holdings">
                                 <div class="${CSS_CLASSES.DETAIL_CARD_HEADER}">
                                     <h3 class="${CSS_CLASSES.DETAIL_LABEL}">
                                         <i class="fas ${UI_ICONS.HISTORY}"></i> Entry Details
@@ -934,8 +951,8 @@ export class ViewRenderer {
                                     <span class="${CSS_CLASSES.DETAIL_VALUE}">${formatCurrency(stock.enteredPrice || 0)}</span>
                                 </div>
                                 <div class="${CSS_CLASSES.DETAIL_ROW}">
-                                    <span class="${CSS_CLASSES.DETAIL_LABEL}">Last Purchase</span>
-                                    <span class="${CSS_CLASSES.DETAIL_VALUE}">${formatFriendlyDate(stock.purchaseDate || stock.entryDate)}</span>
+                                    <span class="${CSS_CLASSES.DETAIL_LABEL}">Entry Date</span>
+                                    <span class="${CSS_CLASSES.DETAIL_VALUE}">${formatFriendlyDate(stock.entryDate || stock.purchaseDate)}</span>
                                 </div>
                             </div>
 

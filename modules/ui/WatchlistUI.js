@@ -282,8 +282,136 @@ export class WatchlistUI {
 
         this._bindTitleListener();
 
-        // NOTE: Header gradient is handled by AppController.updateDataAndRender()
-        // based on CURRENT WATCHLIST metrics (count-based gainer/loser ratio).
+        // DYNAMIC HEADER GRADIENT
+        // Logic: Dominant sentiment color starts on the Left.
+        // Found in index.html: <header id="appHeader" class="app-header">
+        const header = document.getElementById('appHeader');
+        if (header) {
+            if (AppState.watchlist.type === 'cash') {
+                header.style.background = ''; // Reset for cash
+            } else {
+                // 1. Identify Target Shares (or Codes) based on View
+                // critical: For Custom Watchlists, we must use the codes list directly, 
+                // as AppState.data.shares might only contain Portfolio items.
+                let targetItems = [];
+                const allShares = AppState.data.shares || [];
+
+                if (currentId === PORTFOLIO_ID || currentId === 'PORTFOLIO') {
+                    // Portfolio: Use full share objects where owned > 0
+                    targetItems = allShares.filter(s => (parseFloat(s.owned) || 0) > 0);
+                } else if (currentId === ALL_SHARES_ID) {
+                    // All Shares: Use all available share objects
+                    targetItems = allShares;
+                } else if (currentId === DASHBOARD_WATCHLIST_ID) {
+                    targetItems = (AppState.data.dashboard || []).map(d => (typeof d === 'string' ? { code: d } : d));
+                } else {
+                    // Custom Watchlist
+                    const wList = (AppState.data.watchlists || []).find(w => w.id === currentId);
+                    if (wList && wList.stocks) {
+                        // Map directly to objects with 'code' property for consistent processing
+                        targetItems = wList.stocks.map(c => ({ code: (c || '').toUpperCase() }));
+                    }
+                }
+
+                // 2. Count Sentiment
+                let gainerCount = 0;
+                let loserCount = 0;
+
+                if (metrics && typeof metrics.gainerCount === 'number' && typeof metrics.loserCount === 'number') {
+                    // Use pre-calculated metrics from AppController/processShares if available
+                    gainerCount = metrics.gainerCount;
+                    loserCount = metrics.loserCount;
+                } else {
+                    // Fallback: Calculate manually if metrics not provided
+                    targetItems.forEach(item => {
+                        const code = item.code || item.shareName;
+                        if (!code) return; // Skip invalid
+
+                        // PRIORITIZE LIVE DATA
+                        // Logic: Try LivePrice -> Try Share Object (if available) -> Try cached item dayChange
+                        const live = AppState.livePrices ? AppState.livePrices.get(code) : null;
+                        let change = (live && live.change !== undefined) ? live.change : item.dayChange;
+
+                        // Fallback: If we only had a code (Custom Watchlist) and no live price, 
+                        // we might need to find it in allShares to get a cached dayChange
+                        if (change === undefined || change === null || change === '') {
+                            const cachedShare = allShares.find(s => s.code === code);
+                            if (cachedShare) change = cachedShare.dayChange;
+                        }
+
+                        // Handle "+0.5%" or "$0.5" strings if present
+                        let val = parseFloat(change);
+                        if (typeof change === 'string') {
+                            change = change.replace(/[+$%]/g, '');
+                            val = parseFloat(change);
+                        }
+
+                        if (!isNaN(val)) {
+                            if (val > 0.001) gainerCount++;
+                            else if (val < -0.001) loserCount++;
+                        }
+                    });
+                }
+
+
+
+                // (Debug counters removed)
+
+                // 3. Determine Gradient Colors & Proportions
+                const GREEN_RGBA = '20, 160, 20';
+                const RED_RGBA = '180, 20, 20';
+
+                const total = gainerCount + loserCount;
+
+                if (total === 0) {
+                    header.style.background = ''; // Neutral
+                } else {
+                    const gainerPct = gainerCount / total;
+                    const loserPct = loserCount / total;
+
+                    let leftColor, rightColor, dominantPct;
+
+                    if (gainerPct >= loserPct) {
+                        // Green is Dominant (or equal) -> Green on Left
+                        leftColor = GREEN_RGBA;
+                        // If NO losers, right side should not be Red. make it Green or Black.
+                        // User wants "only one color".
+                        rightColor = (loserCount === 0) ? GREEN_RGBA : RED_RGBA;
+                        dominantPct = Math.round(gainerPct * 100);
+                    } else {
+                        // Red is Dominant -> Red on Left
+                        leftColor = RED_RGBA;
+                        rightColor = (gainerCount === 0) ? RED_RGBA : GREEN_RGBA;
+                        dominantPct = Math.round(loserPct * 100);
+                    }
+
+                    // Constrain for visual aesthetics
+                    // If we have mixed sentiment, keep the gap (95%).
+                    // If we have Pure sentiment (100%), let it go closer to edge (e.g. 100% or 95% with same color).
+                    if (gainerCount > 0 && loserCount > 0) {
+                        dominantPct = Math.max(20, Math.min(95, dominantPct));
+                    } else {
+                        // Pure list: Allow 100% (or very close)
+                        dominantPct = 100;
+                    }
+
+                    // Gradient Logic: 
+                    // Dominant Color starts at 0%.
+                    // Dominant Color stays strong until (percent - 20%).
+                    // Fades to Dark/Black at (percent).
+                    // Fades to Secondary Color at 100%.
+
+                    const spread = 30; // Amount of "fade" space
+                    const stopSolid = Math.max(0, dominantPct - spread);
+
+                    header.style.background = `linear-gradient(90deg, 
+                        rgba(${leftColor}, 0.6) 0%, 
+                        rgba(${leftColor}, 0.5) ${stopSolid}%, 
+                        rgba(20, 20, 20, 1) ${dominantPct}%, 
+                        rgba(${rightColor}, 0.6) 100%)`;
+                }
+            }
+        }
     }
 
     _pickIconForId(id) {
@@ -508,13 +636,13 @@ export class WatchlistUI {
 
     _bindDelegatedEvents(container) {
         container.addEventListener('click', (e) => {
-            console.log('[WatchlistUI] Click Detected on:', e.target);
+
             const row = e.target.closest(`.${CSS_CLASSES.WATCHLIST_ITEM}`);
             if (!row) {
-                console.log('[WatchlistUI] Click Ignored: No Row');
+
                 return;
             }
-            console.log('[WatchlistUI] Row ID:', row.dataset.id);
+
 
             // HANDLE EDIT MODE
             if (this.isEditMode) {
@@ -522,7 +650,7 @@ export class WatchlistUI {
                 if (e.target.closest(`.${CSS_CLASSES.DELETE_WATCHLIST_BTN}`)) {
                     e.stopPropagation();
                     const id = row.dataset.id;
-                    console.log('Requesting Delete Watchlist:', id);
+
                     const event = new CustomEvent(EVENTS.REQUEST_DELETE_WATCHLIST, {
                         detail: { id: id }
                     });
@@ -532,7 +660,7 @@ export class WatchlistUI {
 
                 // HIDE TOGGLE (Col 1)
                 if (e.target.closest('.watchlist-col-hide')) {
-                    console.log('[WatchlistUI] Hide Toggle Clicked');
+
                     e.stopPropagation();
                     const stringId = String(row.dataset.id);
                     if (AppState.hiddenWatchlists.has(stringId)) {
@@ -587,7 +715,7 @@ export class WatchlistUI {
             if (row) {
                 row.classList.remove(CSS_CLASSES.DRAGGING);
                 this._draggedWatchlistItem = null;
-                console.log('[WatchlistUI] Drag End - Saving Order');
+
                 this._saveWatchlistOrder(container); // Pass container explicitly
             }
         });

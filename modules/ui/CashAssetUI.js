@@ -123,6 +123,11 @@ export class CashAssetUI {
             modal.dataset.selectedColor = startColor;
         }
 
+        // Store asset ID for duplicate validation
+        if (asset && asset.id) {
+            modal.dataset.editingAssetId = asset.id;
+        }
+
         const renderOptions = (optionsList, currentLabelTarget) => {
             const listContainer = optionsList.querySelector('#category-options-list');
             if (!listContainer) return;
@@ -281,8 +286,46 @@ export class CashAssetUI {
                         </div>
 
                         <div class="${CSS_CLASSES.FORM_GROUP} stacked">
-                            <label for="${IDS.ASSET_BALANCE}" class="${CSS_CLASSES.INPUT_LABEL}">Balance ($)</label>
-                            <input type="number" id="${IDS.ASSET_BALANCE}" class="${CSS_CLASSES.STANDARD_INPUT}" value="${asset ? asset.balance : ''}" placeholder="0.00" step="0.01">
+                            <div class="flex justify-between items-center mb-1 w-full">
+                                <label for="${IDS.ASSET_BALANCE}" class="${CSS_CLASSES.INPUT_LABEL}">Balance ($)</label>
+                            </div>
+                            <input type="number" id="${IDS.ASSET_BALANCE}" class="${CSS_CLASSES.STANDARD_INPUT} ${asset?.isPortfolioLinked ? CSS_CLASSES.DISABLED : ''}" value="${asset ? asset.balance : ''}" placeholder="0.00" step="0.01" ${asset?.isPortfolioLinked ? 'disabled' : ''}>
+                            
+                            <!-- Toggle Switch (Below Input, Right Aligned, Text First) -->
+                            <!-- Toggle Switch (Below Input, Space Between: Text Left, Radio Right) -->
+                            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-top: 10px;">
+                                <span class="text-xs text-muted">Select to auto update from portfolio value</span>
+                                <!-- Custom Ring Radio Implementation -->
+                                <div id="btn-toggle-portfolio-link" class="cursor-pointer no-select" style="display: flex; align-items: center; flex-shrink: 0;">
+                                    <div class="custom-radio-ring" style="
+                                        width: 18px; 
+                                        height: 18px; 
+                                        min-width: 18px; 
+                                        min-height: 18px; 
+                                        border: 2px solid ${asset?.isPortfolioLinked ? '#A49393' : '#6c757d'}; 
+                                        border-radius: 50%; 
+                                        display: flex; 
+                                        align-items: center; 
+                                        justify-content: center; 
+                                        position: relative; 
+                                        box-sizing: border-box; 
+                                        transition: border-color 0.2s;
+                                    ">
+                                        <div class="custom-radio-dot" style="
+                                            width: 10px; 
+                                            height: 10px; 
+                                            min-width: 10px; 
+                                            min-height: 10px; 
+                                            background-color: #A49393; 
+                                            border-radius: 50%; 
+                                            opacity: ${asset?.isPortfolioLinked ? '1' : '0'}; 
+                                            transform: scale(${asset?.isPortfolioLinked ? '1' : '0'}); 
+                                            transition: all 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
+                                        "></div>
+                                    </div>
+                                    <input type="checkbox" id="${IDS.LINK_PORTFOLIO_CHECKBOX}" style="display:none;" ${asset?.isPortfolioLinked ? 'checked' : ''}>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Dynamic Comments Section -->
@@ -352,18 +395,75 @@ export class CashAssetUI {
 
         modal.querySelector('#btn-shuffle-colors-main').addEventListener('click', (e) => {
             e.stopPropagation();
-            // Pick a NEW color that is NOT the current one
+            // Pick a NEW color that is NOT the current one AND not used by other assets
             const current = modal.dataset.selectedColor;
-            const available = this.customColors.filter(c => c !== current);
-            const next = available[Math.floor(Math.random() * available.length)];
+            const allAssets = AppState.data.cash || [];
+            const usedColors = new Set(allAssets.filter(a => a.color).map(a => a.color));
+            const available = this.customColors.filter(c => c !== current && !usedColors.has(c));
 
-            modal.dataset.selectedColor = next;
+            if (available.length === 0) {
+                // All colors used - just exclude current
+                const fallback = this.customColors.filter(c => c !== current);
+                const next = fallback[Math.floor(Math.random() * fallback.length)];
+                modal.dataset.selectedColor = next;
+            } else {
+                const next = available[Math.floor(Math.random() * available.length)];
+                modal.dataset.selectedColor = next;
+            }
+
             this._updateModalHeaderColor(modal);
-            ToastManager.info('Theme Changed');
+            // Silent color change - visual feedback from header is sufficient
         });
 
         // Set Initial Color (so they see the current state)
         this._updateModalHeaderColor(modal);
+
+        // Portfolio Link Listener (Custom Ring Radio Implementation)
+        const linkBtn = modal.querySelector('#btn-toggle-portfolio-link');
+        const linkCheckbox = modal.querySelector(`#${IDS.LINK_PORTFOLIO_CHECKBOX}`);
+        const radioRing = modal.querySelector('.custom-radio-ring'); // UPDATED SELECTOR
+        const radioDot = modal.querySelector('.custom-radio-dot');   // UPDATED SELECTOR
+        const balanceInput = modal.querySelector(`#${IDS.ASSET_BALANCE}`);
+
+        if (linkBtn && linkCheckbox && balanceInput) {
+            linkBtn.addEventListener('click', (e) => {
+                // Toggle State
+                // Prevent double toggle if clicking directly on the already-handled input (though it's hidden)
+
+                linkCheckbox.checked = !linkCheckbox.checked;
+                const isChecked = linkCheckbox.checked;
+
+                // Update UI Visuals
+                if (isChecked) {
+                    // Active State (Coffee)
+                    if (radioRing) radioRing.style.borderColor = '#A49393';
+                    if (radioDot) {
+                        radioDot.style.opacity = '1';
+                        radioDot.style.transform = 'scale(1)';
+                    }
+
+                    // Disable Input
+                    balanceInput.disabled = true;
+                    balanceInput.classList.add(CSS_CLASSES.DISABLED);
+                    balanceInput.value = '';
+                    balanceInput.placeholder = 'Auto-calculated...';
+                } else {
+                    // Inactive State (Muted)
+                    if (radioRing) radioRing.style.borderColor = '#6c757d'; // Default Gray
+                    if (radioDot) {
+                        radioDot.style.opacity = '0';
+                        radioDot.style.transform = 'scale(0)';
+                    }
+
+                    // Enable Input
+                    balanceInput.disabled = false;
+                    balanceInput.classList.remove(CSS_CLASSES.DISABLED);
+                    balanceInput.placeholder = '0.00';
+                    if (asset && asset.balance) balanceInput.value = asset.balance;
+                }
+            });
+        }
+
 
 
         /* --- Comments Logic (Preserved) --- */
@@ -452,7 +552,12 @@ export class CashAssetUI {
         const balanceInput = modal.querySelector(`#${IDS.ASSET_BALANCE}`);
 
         const name = nameInput.value.trim();
-        const balance = parseFloat(balanceInput.value);
+
+        const linkCheckbox = modal.querySelector(`#${IDS.LINK_PORTFOLIO_CHECKBOX}`);
+        const isPortfolioLinked = linkCheckbox ? linkCheckbox.checked : false;
+
+        // If linked, balance is 0 initially (calculated dynamically on render)
+        const balance = isPortfolioLinked ? 0 : parseFloat(balanceInput.value);
 
         // 1. Resolve Category (Normalize)
         let rawCategory = modal.dataset.selectedCategory || this.selectedCategory;
@@ -518,10 +623,24 @@ export class CashAssetUI {
 
         // 5. Validation
         if (!name) { ToastManager.error('Please enter an asset name.'); return null; }
-        if (isNaN(balance)) { ToastManager.error('Please enter a valid balance.'); return null; }
+        if (!isPortfolioLinked && isNaN(balance)) { ToastManager.error('Please enter a valid balance.'); return null; }
+
+        // 5b. Check for duplicate color (prevent same color for different assets)
+        if (color) {
+            const allAssets = AppState.data.cash || [];
+            const editingId = modal.dataset.editingAssetId;
+            const duplicateAsset = allAssets.find(a =>
+                a.id !== editingId &&
+                a.color === color
+            );
+            if (duplicateAsset) {
+                ToastManager.error(`Color already used by "${duplicateAsset.name}". Please choose a different color.`);
+                return null;
+            }
+        }
 
         // 6. Final Payload
-        const payload = { name, balance, category, comments, color };
+        const payload = { name, balance, category, comments, color, isPortfolioLinked };
         console.log(`[CashAssetUI] gatherFormData: EXIT -> Payload Color: ${payload.color}`);
         return payload;
     }

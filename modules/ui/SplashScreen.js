@@ -113,7 +113,7 @@ export class SplashScreen {
     hide() {
         if (!this.container) return;
 
-        console.log('SplashScreen: Transitioning to Dashboard...');
+
         this.container.classList.add(CSS_CLASSES.SPLASH_IS_EXITING);
 
         setTimeout(() => {

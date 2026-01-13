@@ -41,6 +41,16 @@ export class ShareFormUI {
         this._bindSearchResults(modal);
         this._bindPreviewUpdate(modal);
 
+        // CAPTURE INITIAL STATE (For Dirty Checking)
+        // We do this after binding inputs but before user interaction.
+        // We use a timeout to let any dynamic value setting settle (though synchronous is better).
+        setTimeout(() => {
+            const initialState = this._extractShareData(modal);
+            modal._initialFormJSON = JSON.stringify(initialState);
+            // safe-guard: if extract fails (validation), we might disable save anyway.
+            this._validateForm(modal);
+        }, 0);
+
         // 3. Bind Actions
         const saveBtn = modal.querySelector(`#${IDS.SAVE_BTN}`);
         const deleteBtn = modal.querySelector(`#${IDS.DELETE_BTN}`);
@@ -64,7 +74,7 @@ export class ShareFormUI {
             deleteBtn.classList.remove(CSS_CLASSES.HIDDEN);
             deleteBtn.addEventListener('click', () => {
                 if (confirm(USER_MESSAGES.CONFIRM_DELETE)) {
-                    console.log('[ShareFormUI] Requesting delete for:', shareData.id);
+
                     const event = new CustomEvent(EVENTS.REQUEST_DELETE_SHARE, {
                         detail: {
                             shareId: shareData.id,
@@ -141,7 +151,7 @@ export class ShareFormUI {
      */
     static _normalizeDateForInput(dateStr) {
         if (!dateStr) return '';
-        console.log('[ShareFormUI] Normalizing date:', dateStr);
+
 
         // 1. Check for standard ISO / YYYY-MM-DD
         if (typeof dateStr === 'string' && /^\d{4}-\d{2}-\d{2}/.test(dateStr)) {
@@ -200,15 +210,30 @@ export class ShareFormUI {
 
         // FIX: If editing and the name hasn't changed, skip duplicate check.
         // This prevents false positives if the database has legacy duplicates (mixed schema).
-        let isDuplicate = false;
-        if (currentData && currentData.shareName === code) {
-            isDuplicate = false;
+        // Use uppercase comparison since input code is uppercased
+        let duplicateShare = null;
+        if (currentData && (currentData.shareName || '').toUpperCase() === code) {
+            duplicateShare = null;
         } else {
-            isDuplicate = this._checkDuplicate(code, currentData?.id);
+            duplicateShare = this._checkDuplicate(code, currentData?.id);
         }
 
-        if (isDuplicate) {
+        if (duplicateShare) {
             isValid = false;
+        }
+
+        // 4. DIRTY CHECK (Prevent Save if No Changes)
+        if (isValid && modal._initialFormJSON) {
+            const currentFormState = this._extractShareData(modal);
+            if (currentFormState) {
+                // We perform a simple JSON string comparison.
+                // Note: Key order must be stable, which _extractShareData ensures (code construct).
+                const currentJSON = JSON.stringify(currentFormState);
+                if (currentJSON === modal._initialFormJSON) {
+                    isValid = false;
+                    // Optional: We could set title to "No changes detected"
+                }
+            }
         }
 
         // Save Button State
@@ -222,8 +247,7 @@ export class ShareFormUI {
     }
 
     static _checkDuplicate(code, currentId = null) {
-        if (!code) return false;
-        // Check against ALL shares in AppState
+        if (!code) return null;
         // Check against ALL shares in AppState
         const allShares = AppState.data.shares || [];
         const match = allShares.find(s => {
@@ -237,7 +261,152 @@ export class ShareFormUI {
         if (match) {
             console.warn('[ShareFormUI] Duplicate Detected:', { inputCode: code, conflictId: match.id, conflictName: match.shareName });
         }
-        return !!match;
+        return match || null;  // Return the share data, not boolean
+    }
+
+    /**
+     * Converts an Add modal to Edit mode in-place, populating existing share data.
+     * @param {HTMLElement} modal - The modal DOM element
+     * @param {Object} existingShare - The existing share data to populate
+     */
+    static _convertToEditMode(modal, existingShare) {
+        if (!modal || !existingShare) return;
+
+
+
+        // 1. Update modal state to treat as edit
+        modal._shareData = existingShare;
+
+        // 2. Update header title
+        const titleEl = modal.querySelector(`.${CSS_CLASSES.MODAL_TITLE}`);
+        if (titleEl) titleEl.textContent = 'Edit Share';
+
+        // 3. Show delete button and wire event (button was hidden in Add mode)
+        const deleteBtn = modal.querySelector(`#${IDS.DELETE_BTN}`);
+        if (deleteBtn && existingShare.id) {
+            deleteBtn.classList.remove(CSS_CLASSES.HIDDEN);
+
+            // Wire delete event (since it wasn't wired in Add mode)
+            // Remove any existing listener first to prevent duplicates
+            deleteBtn.replaceWith(deleteBtn.cloneNode(true));
+            const newDeleteBtn = modal.querySelector(`#${IDS.DELETE_BTN}`);
+            newDeleteBtn.classList.remove(CSS_CLASSES.HIDDEN);
+            newDeleteBtn.addEventListener('click', () => {
+                if (confirm(USER_MESSAGES.CONFIRM_DELETE)) {
+
+                    const event = new CustomEvent(EVENTS.REQUEST_DELETE_SHARE, {
+                        detail: {
+                            shareId: existingShare.id,
+                            watchlistId: existingShare.watchlistId || 'portfolio'
+                        }
+                    });
+                    document.dispatchEvent(event);
+                    modal.querySelector(`.${CSS_CLASSES.MODAL_CLOSE_BTN}`)?.click();
+                }
+            });
+        }
+
+        // 4. Populate form fields
+        // Holdings
+        const unitsInput = modal.querySelector(`#${IDS.PORTFOLIO_SHARES}`);
+        if (unitsInput) unitsInput.value = existingShare.portfolioShares || '';
+
+        const avgPriceInput = modal.querySelector(`#${IDS.PORTFOLIO_AVG_PRICE}`);
+        if (avgPriceInput) avgPriceInput.value = existingShare.portfolioAvgPrice || '';
+
+        const dateInput = modal.querySelector(`#${IDS.PURCHASE_DATE}`);
+        if (dateInput && (existingShare.purchaseDate || existingShare.entryDate)) {
+            dateInput.type = 'date';
+            dateInput.value = this._normalizeDateForInput(existingShare.purchaseDate || existingShare.entryDate);
+        }
+
+        // Target & Rating
+        const targetInput = modal.querySelector(`#${IDS.TARGET_PRICE}`);
+        if (targetInput) targetInput.value = existingShare.targetPrice || '';
+
+        const starInput = modal.querySelector(`#${IDS.STAR_RATING_INPUT}`);
+        const starControl = modal.querySelector(`#${IDS.STAR_RATING_CONTROL}`);
+        if (starInput && starControl && existingShare.starRating) {
+            starInput.value = existingShare.starRating;
+            starControl.querySelectorAll('.star-item').forEach((s, i) => {
+                s.classList.toggle(CSS_CLASSES.ACTIVE, (i + 1) <= existingShare.starRating);
+            });
+        }
+
+        // Buy/Sell Toggle
+        const buySellInput = modal.querySelector(`#${IDS.BUY_SELL_INPUT}`);
+        const buySellControl = modal.querySelector(`#${IDS.BUY_SELL_CONTROL}`);
+        if (buySellInput && buySellControl && existingShare.buySell) {
+            buySellInput.value = existingShare.buySell;
+            buySellControl.querySelectorAll(`.${CSS_CLASSES.TOGGLE_OPTION}`).forEach(opt => {
+                opt.classList.toggle(CSS_CLASSES.ACTIVE, opt.dataset.value === existingShare.buySell);
+            });
+        }
+
+        // Target Direction Toggle
+        const dirInput = modal.querySelector(`#${IDS.TARGET_DIRECTION_INPUT}`);
+        const dirControl = modal.querySelector(`#${IDS.TARGET_DIRECTION_CONTROL}`);
+        if (dirInput && dirControl && existingShare.targetDirection) {
+            dirInput.value = existingShare.targetDirection;
+            dirControl.querySelectorAll(`.${CSS_CLASSES.TOGGLE_OPTION}`).forEach(opt => {
+                opt.classList.toggle(CSS_CLASSES.ACTIVE, opt.dataset.value === existingShare.targetDirection);
+            });
+        }
+
+        // Dividends
+        const divInput = modal.querySelector(`#${IDS.DIVIDEND_AMOUNT}`);
+        if (divInput) divInput.value = existingShare.dividendAmount || '';
+
+        const frankInput = modal.querySelector(`#${IDS.FRANKING_CREDITS}`);
+        if (frankInput) frankInput.value = existingShare.frankingCredits || '';
+
+        // 5. Update watchlist checkboxes based on which watchlists this share is in
+        // Use same dual-lookup logic as ModalController.openAddShareModal
+        const stockCode = existingShare.shareName?.toUpperCase() || '';
+        const membershipIds = new Set();
+
+        // 5a. Find explicit share documents (Legacy & Mixed Schema)
+        const allShares = AppState.data.shares || [];
+        allShares.filter(s => (s.shareName || '').toUpperCase() === stockCode).forEach(s => {
+            const wId = s.watchlistId || 'portfolio';
+            membershipIds.add(wId);
+        });
+
+        // 5b. Find implicit memberships in Watchlist 'stocks' arrays (New Schema)
+        (AppState.data.watchlists || []).forEach(wl => {
+            if (wl.stocks && Array.isArray(wl.stocks)) {
+                if (wl.stocks.some(code => code.toUpperCase() === stockCode)) {
+                    membershipIds.add(wl.id);
+                }
+            }
+        });
+
+
+
+        modal.querySelectorAll('input[name="watchlist"]').forEach(cb => {
+            const isChecked = membershipIds.has(cb.value);
+            cb.checked = isChecked;
+            const row = cb.closest(`.${CSS_CLASSES.WATCHLIST_ROW}`);
+            if (row) row.classList.toggle(CSS_CLASSES.SELECTED, isChecked);
+        });
+
+        // Update watchlist trigger text
+        const triggerText = modal.querySelector('#watchlistTriggerText');
+        if (triggerText) {
+            const selectedNames = [];
+            modal.querySelectorAll('input[name="watchlist"]:checked').forEach(cb => {
+                const row = cb.closest(`.${CSS_CLASSES.WATCHLIST_ROW}`);
+                const name = row?.querySelector(`.${CSS_CLASSES.WATCHLIST_NAME}`)?.textContent;
+                if (name) selectedNames.push(name);
+            });
+            triggerText.textContent = selectedNames.length > 0 ? selectedNames.join(', ') : 'Select Watchlists...';
+        }
+
+        // 6. Re-run validation (should now pass since it's the same code being edited)
+        this._validateForm(modal);
+
+        // 7. Toast feedback
+        ToastManager.info(`${existingShare.shareName} already in watchlist. Now editing...`);
     }
 
     /**
@@ -610,17 +779,26 @@ export class ShareFormUI {
             // 1. Run Validation (Includes Duplicate Check)
             ShareFormUI._validateForm(modal);
 
-            // 2. Immediate Duplicate feedback via Toast (if code looks complete)
+            // 2. Duplicate Detection - Switch to Edit Mode (Re-Mount)
             if (query.length >= 3) {
                 const currentData = modal._shareData;
-                if (ShareFormUI._checkDuplicate(query, currentData?.id)) {
-                    // Prevent spam: Only toast if this code wasn't the last one toasted
+                const duplicateShare = ShareFormUI._checkDuplicate(query, currentData?.id);
+
+                if (duplicateShare) {
+                    // Prevent spam: Only convert if this code wasn't already processed
                     if (modal._lastToastCode !== query) {
-                        ToastManager.error(USER_MESSAGES.SHARE_DUPLICATE.replace('{0}', query));
                         modal._lastToastCode = query;
+
+                        // Inform user and dispatch edit request (Instant Re-Mount)
+                        ToastManager.info(`${query} already exists. Switching to edit mode...`);
+
+                        document.dispatchEvent(new CustomEvent(EVENTS.REQUEST_EDIT_SHARE, {
+                            detail: { id: duplicateShare.id, code: query, instant: true }
+                        }));
                     }
+                    return; // Stop further processing
                 } else {
-                    // Reset if it's no longer a duplicate (allows re-toasting if they type it again)
+                    // Reset if it's no longer a duplicate
                     modal._lastToastCode = null;
                 }
             } else {
@@ -691,18 +869,21 @@ export class ShareFormUI {
                     list.classList.add(CSS_CLASSES.HIDDEN);
                     list.innerHTML = '';
 
-                    // Check duplicate immediately on selection
+                    // Check duplicate immediately on selection - Switch to Edit Mode (Re-Mount)
                     const currentData = modal._shareData;
-                    if (ShareFormUI._checkDuplicate(code, currentData?.id)) {
-                        // For selection, we always show it if they clicked it, 
-                        // but we still update the tracker to stay in sync
-                        if (modal._lastToastCode !== code) {
-                            ToastManager.error(USER_MESSAGES.SHARE_DUPLICATE.replace('{0}', code));
-                            modal._lastToastCode = code;
-                        }
-                    } else {
-                        modal._lastToastCode = null;
+                    const duplicateShare = ShareFormUI._checkDuplicate(code, currentData?.id);
+
+                    if (duplicateShare) {
+                        // Inform user and dispatch edit request (Instant Re-Mount)
+                        ToastManager.info(`${code} already exists. Switching to edit mode...`);
+
+                        document.dispatchEvent(new CustomEvent(EVENTS.REQUEST_EDIT_SHARE, {
+                            detail: { id: duplicateShare.id, code: code, instant: true }
+                        }));
+                        return; // Stop further processing
                     }
+
+                    modal._lastToastCode = null;
 
                     // Run Validation
                     ShareFormUI._validateForm(modal);
@@ -813,7 +994,15 @@ export class ShareFormUI {
 
         // Check Duplicate (Toast on Save Attempt)
         const currentData = modal._shareData; // Data attached during render
-        const isDuplicate = this._checkDuplicate(code, currentData?.id);
+
+        let isDuplicate = null;
+        // SKIP check if editing the same share code (Case Insensitive)
+        if (currentData && (currentData.shareName || '').toUpperCase() === code) {
+            isDuplicate = null;
+        } else {
+            isDuplicate = this._checkDuplicate(code, currentData?.id);
+        }
+
         if (isDuplicate) {
             ToastManager.error(USER_MESSAGES.SHARE_DUPLICATE.replace('{0}', code));
             return null;
@@ -830,6 +1019,7 @@ export class ShareFormUI {
         });
 
         return {
+            id: currentData?.id || null, // CRITICAL: Preserve ID for Updates vs Creates
             shareName: code,
             targetPrice: getNum(IDS.TARGET_PRICE),
             targetDirection: getVal(IDS.TARGET_DIRECTION_INPUT) || 'below',

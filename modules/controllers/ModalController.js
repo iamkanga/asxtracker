@@ -75,11 +75,16 @@ export class ModalController {
 
         if (typeof input === 'string') {
             // EDIT MODE (shareId)
+            console.log('[ModalController] Opening in Edit Mode. ID:', input);
             const targetShare = AppState.data.shares.find(s => s.id === input);
+
             if (!targetShare) {
+                console.error('[ModalController] Share NOT found for ID:', input);
+                console.log('[ModalController] Available IDs:', AppState.data.shares.slice(0, 5).map(s => s.id));
                 ToastManager.error(USER_MESSAGES.SHARE_NOT_FOUND);
                 return;
             }
+            console.log('[ModalController] Found Share Data:', targetShare);
             stockCode = targetShare.shareName;
             initialData = {
                 ...targetShare,
@@ -165,7 +170,8 @@ export class ModalController {
                     // OPTIMISTIC INJECTION FIX:
                     // Determine if the share already exists in AppState (Global Lookup)
                     const lookupKey = String(formData.shareName).trim().toUpperCase();
-                    let shareExists = AppState.data.shares.some(s => s.shareName === lookupKey);
+                    // FIX: Trust the ID if present (Edit Mode / Search Redirect), otherwise fallback to name check
+                    let shareExists = !!formData.id || AppState.data.shares.some(s => (s.shareName || '').toUpperCase() === lookupKey);
 
                     for (const wid of toAdd) {
                         // FIX: Use explicit PORTFOLIO_ID instead of null for visibility
@@ -315,8 +321,9 @@ export class ModalController {
                     }
 
                 } catch (error) {
-                    console.error("Save Sync Fatal Error:", error);
-                    ToastManager.error(USER_MESSAGES.ERROR_SAVE + error.message);
+                    const msg = error.message || error.toString() || 'Unknown Error';
+                    console.error("Save Sync Fatal Error:", msg, error);
+                    ToastManager.error(USER_MESSAGES.ERROR_SAVE + msg);
                     throw error;
                 }
             }

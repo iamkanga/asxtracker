@@ -7,22 +7,22 @@
 import { AuthService } from '../auth/AuthService.js';
 import { DataService } from '../data/DataService.js';
 import { AppService } from '../data/AppService.js';
-import { ViewRenderer } from '../ui/ViewRenderer.js?v=1029';
+import { ViewRenderer } from '../ui/ViewRenderer.js?v=1040';
 import { AppState } from '../state/AppState.js';
 import { HeaderLayout } from '../ui/HeaderLayout.js';
 import { processShares, getSingleShareData, getASXCodesStatus } from '../data/DataProcessor.js';
 import { WatchlistUI } from '../ui/WatchlistUI.js';
-import { ShareFormUI } from '../ui/ShareFormUI.js';
-import { SearchDiscoveryUI } from '../ui/SearchDiscoveryUI.js?v=1029'; // Added
-import { NotificationUI } from '../ui/NotificationUI.js?v=327';
+import { ShareFormUI } from '../ui/ShareFormUI.js?v=1040';
+import { SearchDiscoveryUI } from '../ui/SearchDiscoveryUI.js?v=1040'; // Added
+import { NotificationUI } from '../ui/NotificationUI.js?v=1040';
 import { NotificationStore } from '../state/NotificationStore.js';
-import { BriefingUI } from '../ui/BriefingUI.js?v=327';
+import { BriefingUI } from '../ui/BriefingUI.js?v=1040';
 import { SnapshotUI } from '../ui/SnapshotUI.js'; // Added
 import { SettingsUI } from '../ui/SettingsUI.js?v=55';
 import { FavoriteLinksUI } from '../ui/FavoriteLinksUI.js';
 import { notificationStore } from '../state/NotificationStore.js';
-import { DashboardViewRenderer } from '../ui/DashboardViewRenderer.js?v=1029';
-import { ModalController } from './ModalController.js';
+import { DashboardViewRenderer } from '../ui/DashboardViewRenderer.js?v=1040';
+import { ModalController } from './ModalController.js?v=1040';
 import { CashController } from './CashController.js';
 import { SecurityController } from './SecurityController.js';
 import { SecurityUI } from '../ui/SecurityUI.js';
@@ -88,6 +88,7 @@ export class AppController {
     async init() {
         if (this._initialized) return;
         this._initialized = true;
+        console.log('%c [APP] CONTROLLER INIT v1040 - CACHE BUSTED ', 'background: #00bcd4; color: #000; font-size: 1.2em; padding: 4px;');
 
         // CRITICAL DEPLOYMENT FIX: Force Unregister Service Worker to fix stale cache issues (User reported stuck on old version)
         if ('serviceWorker' in navigator) {
@@ -1005,39 +1006,42 @@ export class AppController {
             sidebar.style.background = 'linear-gradient(135deg, rgba(164, 147, 147, 0.4) 0%, rgba(20, 20, 20, 1) 100%)';
         }
 
-        // 2. Header: Dynamic Proportional Gradient based on CURRENT WATCHLIST PERFORMANCE
-        // Applies to ALL Stock/Dashboard views. Resets for Cash.
-        if (header) {
-            if (AppState.watchlist.type === 'cash') {
-                header.style.background = ''; // Reset for Cash View
-            } else {
-                // Calculate metrics for the CURRENT WATCHLIST (not global portfolio)
-                const currentWatchlistId = AppState.watchlist.id || PORTFOLIO_ID;
-                const { summaryMetrics: headerMetrics } = processShares(
-                    AppState.data.shares || [],
-                    currentWatchlistId,
-                    AppState.livePrices,
-                    AppState.sortConfig,
-                    AppState.hiddenAssets
-                );
+        // NOTE: Gradient Logic has been consolidated into WatchlistUI.js (updateHeaderTitle)
+        // This block is disabled to prevent conflicting overwrites (AppController enforced Green-Left vs User Req Red-Left).
 
-                // Count-based Sentiment Pulse: Proportion of gainers vs losers by stock count
-                const gainerCount = headerMetrics?.gainerCount || 0;
-                const loserCount = headerMetrics?.loserCount || 0;
-                const totalActive = gainerCount + loserCount;
-                const gainProp = totalActive > 0 ? Math.round((gainerCount / totalActive) * 100) : 50;
+        // const dynamicGradient = `linear-gradient(to right, rgba(0, 180, 0, 0.6) 0%, rgba(20, 20, 20, 1) ${gainProp}%, rgba(180, 0, 0, 0.6) 100%)`;
+        // header.style.background = dynamicGradient;
 
-                // Dynamic Gradient: Green left → Black center → Red right
-                // Position of black center shifts based on gainer proportion
-                const dynamicGradient = `linear-gradient(to right, rgba(0, 180, 0, 0.6) 0%, rgba(20, 20, 20, 1) ${gainProp}%, rgba(180, 0, 0, 0.6) 100%)`;
 
-                header.style.background = dynamicGradient;
-            }
+
+
+
+        // === DYNAMIC CASH ASSET UPDATE ===
+        // Check if any cash assets are linked to Portfolio Value
+        const cashAssets = AppState.data.cash || [];
+        const linkedAssets = cashAssets.filter(a => a.isPortfolioLinked);
+
+        if (linkedAssets.length > 0) {
+            // Calculate Portfolio Value on-the-fly
+            // We use the full share list and PORTFOLIO_ID context
+            const { summaryMetrics } = processShares(
+                AppState.data.shares || [],
+                PORTFOLIO_ID,
+                AppState.livePrices,
+                AppState.sortConfig,
+                AppState.hiddenAssets
+            );
+
+            const currentPortfolioValue = summaryMetrics ? summaryMetrics.totalValue : 0;
+
+            linkedAssets.forEach(asset => {
+                // Only update memory (Display Only) - Prevents DB write thrashing
+                if (asset.balance !== currentPortfolioValue) {
+                    // console.log(`[AppController] Auto-updating Linked Asset '${asset.name}' to ${currentPortfolioValue}`);
+                    asset.balance = currentPortfolioValue;
+                }
+            });
         }
-
-
-
-
 
         if (AppState.watchlist.id === DASHBOARD_WATCHLIST_ID) {
 
@@ -1046,42 +1050,7 @@ export class AppController {
 
 
 
-            if (false /* DISABLED REDUNDANT HEADER LOGIC */) {
 
-                if (AppState.watchlist.type === 'cash') {
-                    // Cash View: Reset/Default
-                    header.style.background = '';
-                } else {
-                    // Calculate Global Portfolio Day Change
-                    // We sum up the dayChangeValue of all shares in 'portfolio'
-                    // Note: This relies on AppState.data.shares having the info.
-                    // If we are in 'Dashboard' view, we might not have calculated portfolio metrics yet if not visited.
-                    // However, processShares can run on arbitrary lists.
-
-                    // Quick Calc of Portfolio Total Day Change $
-                    const portfolioShares = (AppState.data.shares || []).filter(s => s.owned > 0);
-                    let portfolioDayChange = 0;
-
-                    // Use live prices map for accuracy if available, else fallback to baked data
-                    portfolioShares.forEach(s => {
-                        const data = AppState.livePrices.get(s.code);
-                        const change = data ? data.change : (s.dayChange || 0);
-                        portfolioDayChange += (change * s.owned);
-                    });
-
-                    // Determine Color
-                    let colorRGBA = '164, 147, 147'; // Neutral (Coffee)
-                    if (portfolioDayChange > 0.01) {
-                        colorRGBA = '20, 160, 20'; // Green
-                    } else if (portfolioDayChange < -0.01) {
-                        colorRGBA = '180, 20, 20'; // Red
-                    }
-
-                    // Apply Mirrored Gradient: Strong -> Black -> Strong
-                    // 90deg = Left to Right
-                    header.style.background = `linear-gradient(90deg, rgba(${colorRGBA}, 0.6) 0%, rgba(20, 20, 20, 1) 35%, rgba(20, 20, 20, 1) 65%, rgba(${colorRGBA}, 0.6) 100%)`;
-                }
-            }
 
 
             const dashboardData = AppState.data.dashboard || [];
@@ -2021,12 +1990,13 @@ export class AppController {
         document.addEventListener(EVENTS.REQUEST_EDIT_SHARE, (e) => {
             console.log('AppController received REQUEST_EDIT_SHARE:', e.detail);
             if (e.detail?.id) {
+                const delay = e.detail.instant ? 0 : 150;
                 // Safety delay for transition from detail to edit
                 setTimeout(() => {
                     // DEEP LINK: Pass specific section if requested (e.g. 'notes', 'target')
                     console.log('AppController opening modal for section:', e.detail.section);
                     this.modalController.openAddShareModal(e.detail.id, e.detail.section);
-                }, 150);
+                }, delay);
             }
         });
 
@@ -2058,13 +2028,22 @@ export class AppController {
         });
 
         // Handle Add Share Pre-fill (from Discovery Modal -> Add Share Modal handoff)
+        // Handle Add Share Pre-fill (from Discovery Modal -> Add Share Modal handoff)
         document.addEventListener(EVENTS.REQUEST_ADD_SHARE_PREFILL, (e) => {
             const { stock } = e.detail || {};
             if (stock?.code) {
-                // Safety delay for transition from search to add
-                setTimeout(() => {
-                    this.modalController.openAddShareModal({ shareName: stock.code, title: stock.name });
-                }, 150);
+                // DUPLICATE CHECK: Search -> Add Flow
+                const existingShare = AppState.data.shares.find(s => s.shareName === stock.code || s.shareName === stock.code.toUpperCase());
+
+                if (existingShare) {
+                    console.log('[AppController] REQUEST_ADD_SHARE_PREFILL: Duplicate found, redirecting to EDIT mode.', existingShare.id);
+                    this.modalController.openAddShareModal(existingShare.id);
+                } else {
+                    // Safety delay for transition from search to add
+                    setTimeout(() => {
+                        this.modalController.openAddShareModal({ shareName: stock.code, title: stock.name });
+                    }, 150);
+                }
             }
         });
 
@@ -2455,21 +2434,7 @@ export class AppController {
             document.dispatchEvent(new CustomEvent(EVENTS.UPDATE_DISCOVERY_RESULTS, { detail: { results } }));
         });
 
-        // 4. Hand-off: Discovery -> Add Share (Stage 2)
-        document.addEventListener(EVENTS.REQUEST_ADD_SHARE_PREFILL, (e) => {
-            const { stock } = e.detail;
-            // Close Discovery is handled by UI, but we ensure Add Modal opens with data
-            // We map the stock data to what ShareFormUI expects
-            // It expects: shareName (code), title (name), currentPrice (optional but good for preview)
-            const shareData = {
-                shareName: stock.code,
-                title: stock.name,
-                // No ID, so ShareFormUI treats as "Add" (thanks to our fix)
-            };
 
-            // Open Add Modal via ModalController (or directly since AppController has access)
-            this.modalController.openAddShareModal(shareData);
-        });
 
         // 4.5 ASX Code Click Handler (Centralized)
         document.addEventListener(EVENTS.ASX_CODE_CLICK, (e) => {
@@ -2511,13 +2476,13 @@ export class AppController {
 
             switch (type) {
                 case SUMMARY_TYPES.VALUE:
-                    title = 'Summary Current Value';
+                    title = 'Current Value';
                     filteredShares = [...shares].sort((a, b) => (b.value || 0) - (a.value || 0));
                     valueField = 'value';
                     trendClass = 'trend-neutral-bg'; // Value is neutral
                     break;
                 case SUMMARY_TYPES.DAY_CHANGE:
-                    title = 'Summary Day Change';
+                    title = 'Day Change';
                     filteredShares = [...shares].sort((a, b) => (b.dayChangeValue || 0) - (a.dayChangeValue || 0));
                     valueField = 'dayChangeValue';
                     // Calculate total day change to determine background
@@ -2525,14 +2490,14 @@ export class AppController {
                     trendClass = totalDayChange >= 0 ? 'trend-up-bg' : 'trend-down-bg';
                     break;
                 case SUMMARY_TYPES.WINNERS:
-                    title = 'Summary Day Change Winners';
+                    title = 'Day Change Winners';
                     filteredShares = shares.filter(s => (s.dayChangeValue || 0) > 0)
                         .sort((a, b) => (b.dayChangeValue || 0) - (a.dayChangeValue || 0));
                     valueField = 'dayChangeValue';
                     trendClass = 'trend-up-bg';
                     break;
                 case SUMMARY_TYPES.LOSERS:
-                    title = 'Summary Day Change Losers';
+                    title = 'Day Change Losers';
                     // Worst negative to least worse negative: means ASC (e.g. -100, -50, -10)
                     filteredShares = shares.filter(s => (s.dayChangeValue || 0) < 0)
                         .sort((a, b) => (a.dayChangeValue || 0) - (b.dayChangeValue || 0));
@@ -2540,7 +2505,7 @@ export class AppController {
                     trendClass = 'trend-down-bg';
                     break;
                 case SUMMARY_TYPES.CAPITAL_GAIN:
-                    title = 'Summary Capital Gain';
+                    title = 'Capital Gain';
                     filteredShares = [...shares].sort((a, b) => (b.capitalGain || 0) - (a.capitalGain || 0));
                     valueField = 'capitalGain';
                     const totalCapGain = shares.reduce((acc, s) => acc + (s.capitalGain || 0), 0);

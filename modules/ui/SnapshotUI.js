@@ -218,7 +218,7 @@ export class SnapshotUI {
 
         const data = this._prepareData(); // Get Aggregated Data
 
-        console.log('[SnapshotUI] Grid Update. Items found:', data.length);
+
 
         if (data.length === 0) {
             grid.innerHTML = `
@@ -276,9 +276,9 @@ export class SnapshotUI {
 
         const masterList = AppState.data.shares || [];
 
-        console.log('[SnapshotUI] Preparing Data. Master List Size:', masterList.length);
+
         if (masterList.length > 0) {
-            console.log('[SnapshotUI] Sample Item:', masterList[0]);
+
         }
 
         masterList.forEach(share => {
@@ -405,7 +405,7 @@ export class SnapshotUI {
                 e.preventDefault();
                 e.stopImmediatePropagation();
                 hasTriggered = false; // Reset
-                console.log('[SnapshotUI] Click Suppressed (Event was consumed by Long Hold)');
+
                 return false;
             }
         };

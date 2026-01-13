@@ -706,6 +706,7 @@ export const CSS_CLASSES = {
 
     // Cash View Card Structure
     CASH_EYE_BTN: 'cash-eye-btn',
+    LINK_PORTFOLIO_CHECKBOX: 'link-portfolio-checkbox',
 
     // Utility Buttons
     ICON_BTN_GHOST: 'icon-btn-ghost',

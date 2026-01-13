@@ -63,7 +63,7 @@ export const CsvParserService = {
             return code && code !== 'TOTAL' && code !== 'MARKET' && !code.startsWith('SHARE PRICES');
         });
 
-        console.log(`[CsvParserService] Parsed ${dataRows.length} valid rows from ${reportType} report.`);
+
         return { headers, rows: dataRows, type: reportType };
     },
 
@@ -77,7 +77,7 @@ export const CsvParserService = {
         // Transaction types that count as an "active" entry/purchase
         const PURCHASE_TYPES = ['Buy', 'DRRP', 'DRP', 'Dividend Reinvestment', 'Opening Balance', 'Bonus', 'Merge (Buy)'];
 
-        console.log(`[CsvParserService] Analyzing ${rows.length} rows for latest purchases...`);
+
 
         rows.forEach((row, index) => {
             const code = row['Code'];
@@ -129,7 +129,7 @@ export const CsvParserService = {
             }
         });
 
-        console.log(`[CsvParserService] Found latest purchase data for ${latest.size} unique codes.`);
+
         return latest;
     },
 
@@ -142,7 +142,7 @@ export const CsvParserService = {
         const holdings = new Map();
         if (!rows.length) return holdings;
 
-        console.log(`[CsvParserService] Analyzing ${rows.length} rows for holdings data...`);
+
 
         rows.forEach((row, index) => {
             const code = row['Code'];
@@ -160,7 +160,7 @@ export const CsvParserService = {
             });
         });
 
-        console.log(`[CsvParserService] Found holdings data for ${holdings.size} unique codes.`);
+
         return holdings;
     }
 };
