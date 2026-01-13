@@ -78,7 +78,8 @@ export const STORAGE_KEYS = {
     FAVORITE_LINKS: 'ASX_NEXT_favoriteLinks',
     DAILY_EMAIL: 'ASX_NEXT_dailyEmail',
     EMAIL_RECIPIENTS: 'ASX_NEXT_emailRecipients',
-    BADGE_SCOPE: 'ASX_NEXT_badgeScope'
+    BADGE_SCOPE: 'ASX_NEXT_badgeScope',
+    GRADIENT_STRENGTH: 'ASX_NEXT_gradientStrength'
 };
 
 export const EVENTS = {
@@ -496,6 +497,14 @@ export const CSS_CLASSES = {
     SETTINGS_INPUT: 'settings-input',
     SETTINGS_TOGGLE: 'settings-toggle',
     SETTINGS_SECTION: 'settings-section',
+
+    // Filter & Accordion (Settings)
+    FILTER_ACCORDION_ITEM: 'filter-accordion-item',
+    FILTER_BODY: 'filter-body',
+    FILTER_HEADER: 'filter-header',
+    ACCORDION_CONTROL_SEGMENT: 'accordion-control-segment',
+    SECTOR_TOGGLE: 'sector-toggle',
+    CLICKABLE_INDUSTRY_ROW: 'clickable-industry-row',
 
     // Components
     CARD: 'share-card',
@@ -1241,6 +1250,7 @@ export const IDS = {
     PREF_BADGE_SCOPE: 'toggle-pref-badgeScope',
     PREF_EMAIL_ADDR: 'pref-emailAddr',
     TOGGLE_DAILY_EMAIL: 'toggle-pref-dailyEmail',
+    PREF_GRADIENT_STRENGTH: 'toggle-pref-gradientStrength',
 
     // Watchlist Mode Selection
     WATCHLIST_MODE_CONTAINER: 'watchlist-mode-container',

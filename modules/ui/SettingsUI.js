@@ -66,7 +66,7 @@ export class SettingsUI {
                         box-sizing: border-box;
                     }
                     
-                    .pill-segment, .bulk-btn, .master-pill-segment, .pill-segment-movers, .pill-segment-hilo, .pill-segment-badge, .pill-segment-email, .pill-segment-override, .accordion-control-segment, .pill-segment-personal, .pill-segment-badge-scope {
+                    .pill-segment, .bulk-btn, .master-pill-segment, .pill-segment-movers, .pill-segment-hilo, .pill-segment-badge, .pill-segment-email, .pill-segment-override, .accordion-control-segment, .pill-segment-personal, .pill-segment-badge-scope, .pill-segment-accordion {
                         flex: 1;
                         height: 100%;
                         display: flex;
@@ -95,7 +95,8 @@ export class SettingsUI {
                     .pill-segment-override.active,
                     .accordion-control-segment.active,
                     .pill-segment-personal.active,
-                    .pill-segment-badge-scope.active {
+                    .pill-segment-badge-scope.active,
+                    .pill-segment-accordion.active {
                         background: var(--color-accent) !important;
                         color: white !important;
                     }
@@ -108,7 +109,8 @@ export class SettingsUI {
                     .master-pill-segment:first-child,
                     .accordion-control-segment:first-child,
                     .pill-segment-personal:first-child,
-                    .pill-segment-badge-scope:first-child {
+                    .pill-segment-badge-scope:first-child,
+                    .pill-segment-accordion:first-child {
                         border-right: none !important;
                     }
 
@@ -606,22 +608,20 @@ export class SettingsUI {
                     </div>
                 </div>
 
-                <!-- Subtle Separator for Sector Selector (Previously sectorCard title) -->
-                <div id="section-sectors" style="border-top: none; padding-top: 0; margin-top: 24px; margin-bottom: 24px; margin-left: -16px; display: flex; align-items: center; gap: 4px;">
+                <!-- Subtle Separator for Sector Selector -->
+                <div id="section-sectors" style="border-top: none; padding-top: 0; margin-top: 65px; margin-bottom: 35px; margin-left: -16px; display: flex; align-items: center; gap: 4px;">
                      <i class="fas fa-layer-group" style="color: var(--color-accent); font-size: 0.9em;"></i>
                      <span class="${CSS_CLASSES.DETAIL_LABEL}" style="font-size: 0.82rem; font-weight: 700; color: white; letter-spacing: 0; line-height: 1.1;">Sector Filtering</span>
                 </div>
-                 
-
 
                  <!-- Master Select & View All Row -->
-                 <div class="${CSS_CLASSES.DETAIL_ROW}" style="justify-content: space-between; align-items: flex-start; margin-bottom: 24px;">
+                 <div class="${CSS_CLASSES.DETAIL_ROW}" style="justify-content: space-between; align-items: flex-start; margin-bottom: 45px; margin-top: 25px;">
                      
                      <!-- Bulk Select Control -->
                      <div style="display: flex; flex-direction: column; gap: 0; flex: 1; align-items: flex-start;">
                         <span class="${CSS_CLASSES.DETAIL_LABEL}" style="font-size: 0.75rem; font-weight: 700; color: white; letter-spacing: 0; line-height: 1.1;">Bulk Select</span>
-                        <div style="font-size: 0.65rem; opacity: 0.5; color: var(--text-muted); margin-bottom: 2px; margin-top: -1px;">All checked or unchecked</div>
-                        <div class="pill-container large-pill master-pill-selector" style="width: 100px;">
+                        <div style="font-size: 0.65rem; opacity: 0.5; color: var(--text-muted); margin-bottom: 4px; margin-top: -1px;">All checked or unchecked</div>
+                        <div class="pill-container large-pill master-pill-selector" style="width: 90px;">
                               <span class="master-pill-segment" data-action="all">All</span>
                               <span class="master-pill-segment" data-action="none">None</span>
                         </div>
@@ -632,21 +632,17 @@ export class SettingsUI {
 
                      <!-- View All Control -->
                      <div style="display: flex; flex-direction: column; gap: 0; flex: 1; align-items: flex-end;">
-                        <div style="display: flex; flex-direction: column; align-items: flex-start; width: 100px;">
-                            <span class="${CSS_CLASSES.DETAIL_LABEL}" style="font-size: 0.75rem; font-weight: 700; color: white; letter-spacing: 0; line-height: 1.1;">View All</span>
-                            <div style="font-size: 0.65rem; opacity: 0.5; color: var(--text-muted); margin-bottom: 2px; margin-top: -1px;">Display ${Object.values(SECTOR_INDUSTRY_MAP).flat().length} sectors</div>
-                            <div class="pill-container large-pill accordion-pill-selector" style="width: 100px;">
-                                  <span class="accordion-control-segment" data-action="expand">Open</span>
-                                  <span class="accordion-control-segment active" data-action="collapse">Close</span>
-                            </div>
+                        <span class="${CSS_CLASSES.DETAIL_LABEL}" style="font-size: 0.75rem; font-weight: 700; color: white; letter-spacing: 0; line-height: 1.1;">View Sections</span>
+                        <div style="font-size: 0.65rem; opacity: 0.5; color: var(--text-muted); margin-bottom: 4px; margin-top: -1px;">Open or close all</div>
+                        <div class="pill-container large-pill accordion-pill-selector" style="width: 90px;">
+                              <span class="${CSS_CLASSES.ACCORDION_CONTROL_SEGMENT} pill-segment-accordion" data-action="expand">Open</span>
+                              <span class="${CSS_CLASSES.ACCORDION_CONTROL_SEGMENT} pill-segment-accordion ${CSS_CLASSES.ACTIVE}" data-action="collapse">Close</span>
                         </div>
                      </div>
-
                  </div>
-                 
 
-                 <!-- Sectors Section Title -->
-                 <div style="margin-bottom: 12px; margin-top: 0;">
+                 <!-- Sectors Label (Tightened) -->
+                 <div style="margin-bottom: 8px; margin-top: 8px;">
                     <span class="${CSS_CLASSES.DETAIL_LABEL}" style="font-size: 0.75rem; font-weight: 700; color: white;">Sectors</span>
                  </div>
                  
@@ -706,6 +702,8 @@ export class SettingsUI {
 
         // Email
         updateCheck('pref-emailAddr', prefs.alertEmailRecipients || '');
+
+
 
         // Initial Sector Population
         const rawFilters = prefs.scanner?.activeFilters;
@@ -1129,7 +1127,7 @@ export class SettingsUI {
                     
                     <div style="display: flex; align-items: center; gap: 14px; justify-content: flex-end;">
                         <!-- Sector Pill Selector (Flush - Upsized) -->
-                        <div class="pill-container upsized sector-pill-selector" style="width: 104px;">
+                        <div class="pill-container upsized sector-pill-selector pill-segment-accordion" style="width: 104px;">
                             <span class="bulk-btn ${isAllSelected ? 'active' : ''}" data-action="all" title="Select All" style="font-size: 0.65rem;">All</span>
                             <span class="bulk-btn ${activeCount === 0 ? 'active' : ''}" data-action="none" title="Deselect All" style="font-size: 0.65rem;">None</span>
                         </div>

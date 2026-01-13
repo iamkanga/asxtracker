@@ -34,6 +34,9 @@
     --negative: var(--color-negative);
     --color-accent: #a49393;
     /* Coffee */
+    --color-accent-rgb: 164, 147, 147;
+    --gradient-strength: 0.6;
+    --gradient-tint: 0%;
     --color-neutral: #888888;
     /* Mid Grey */
     --color-warning: #ffc107;
@@ -78,6 +81,9 @@
     --asset-super: #9C27B0;
     --asset-personal: #E91E63;
     --asset-other: #424242;
+
+    /* Gradient Strength Presets (0=none, 1=max) */
+    --gradient-strength: 0.6;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -798,6 +804,73 @@ i:focus {
     transition: all 0.2s ease;
     position: relative;
     /* Support absolute children */
+}
+
+/* -------------------------------------------------------------------------- */
+/*                          MINIMAL SEGMENTED CONTROL                         */
+/* -------------------------------------------------------------------------- */
+.segmented-control-minimal {
+    display: flex;
+    width: 100%;
+    gap: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    margin-bottom: 25px;
+}
+
+.segmented-control-minimal .segment {
+    flex: 1;
+    text-align: center;
+    padding: 15px 5px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    font-weight: 600;
+    position: relative;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.segmented-control-minimal .segment.active {
+    color: var(--color-accent);
+}
+
+.segmented-control-minimal .segment.active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 15%;
+    right: 15%;
+    height: 3px;
+    background: var(--color-accent);
+    box-shadow: 0 0 10px rgba(var(--color-accent-rgb), 0.4);
+    border-radius: 3px 3px 0 0;
+}
+
+.segmented-control-minimal .segment:not(.active):hover {
+    color: var(--text-color);
+}
+
+/* -------------------------------------------------------------------------- */
+/*                          GRADIENT INTENSITY CLASSES                         */
+/* -------------------------------------------------------------------------- */
+
+.dashboard-grade-up {
+    background: linear-gradient(135deg,
+            rgba(0, 180, 0, var(--gradient-strength, 0.6)) 0%,
+            color-mix(in srgb, rgb(0, 180, 0) var(--gradient-tint, 0%), rgb(20, 20, 20)) 100%) !important;
+}
+
+.dashboard-grade-down {
+    background: linear-gradient(135deg,
+            rgba(180, 0, 0, var(--gradient-strength, 0.6)) 0%,
+            color-mix(in srgb, rgb(180, 0, 0) var(--gradient-tint, 0%), rgb(20, 20, 20)) 100%) !important;
+}
+
+.dashboard-grade-neutral {
+    background: linear-gradient(135deg,
+            rgba(var(--color-accent-rgb), var(--gradient-strength, 0.6)) 0%,
+            color-mix(in srgb, rgb(var(--color-accent-rgb)) var(--gradient-tint, 0%), rgb(20, 20, 20)) 100%) !important;
 }
 
 /* Sentiment Overrides using Box Shadow */
@@ -1651,7 +1724,7 @@ h1#dynamicWatchlistTitle.active {
     max-height: 500px;
     padding: 10px 0;
     opacity: 1;
-    border-top: 1px solid var(--border-color);
+    border-top: none;
 }
 
 #asxCodeButtonsToggle {
@@ -3810,13 +3883,19 @@ h1.modal-title,
 /* Mixed Sentiment Gradients (Harmonized: Neutral Center) */
 .trend-mixed-desc-bg {
     /* Positive: Green top-left -> neutral middle -> red bottom-right */
-    background: linear-gradient(135deg, rgba(20, 160, 20, 0.6) 0%, rgba(20, 20, 20, 1) 50%, rgba(180, 20, 20, 0.6) 100%) !important;
+    background: linear-gradient(135deg,
+            rgba(20, 160, 20, var(--gradient-strength, 0.6)) 0%,
+            rgba(20, 20, 20, 1) 50%,
+            rgba(180, 20, 20, var(--gradient-strength, 0.6)) 100%) !important;
     border-color: var(--border-color) !important;
 }
 
 .trend-mixed-asc-bg {
     /* Red top-left -> neutral middle -> green bottom-right */
-    background: linear-gradient(135deg, rgba(180, 20, 20, 0.6) 0%, rgba(20, 20, 20, 1) 50%, rgba(20, 160, 20, 0.6) 100%) !important;
+    background: linear-gradient(135deg,
+            rgba(180, 20, 20, var(--gradient-strength, 0.6)) 0%,
+            rgba(20, 20, 20, 1) 50%,
+            rgba(20, 160, 20, var(--gradient-strength, 0.6)) 100%) !important;
     border-color: var(--border-color) !important;
 }
 
@@ -3826,14 +3905,14 @@ tr.dashboard-grade-up,
 .share-card.dashboard-grade-up,
 .dashboard-row.dashboard-grade-up {
     /* Gradient: Green (top-left) fading to dark (bottom-right) */
-    background: linear-gradient(135deg, rgba(20, 160, 20, 0.4) 0%, rgba(20, 20, 20, 1) 100%) !important;
+    background: linear-gradient(135deg, rgba(20, 160, 20, var(--gradient-strength, 0.6)) 0%, rgba(20, 20, 20, 1) 100%) !important;
 }
 
 tr.dashboard-grade-down,
 .share-card.dashboard-grade-down,
 .dashboard-row.dashboard-grade-down {
     /* Gradient: Red (top-left) fading to dark (bottom-right) */
-    background: linear-gradient(135deg, rgba(180, 20, 20, 0.4) 0%, rgba(20, 20, 20, 1) 100%) !important;
+    background: linear-gradient(135deg, rgba(180, 0, 0, var(--gradient-strength, 0.6)) 0%, rgba(20, 20, 20, 1) 100%) !important;
 }
 
 /* Neutral/Coffee gradient for zero-change items - uses --color-accent */
@@ -3841,7 +3920,9 @@ tr.dashboard-grade-neutral,
 .share-card.dashboard-grade-neutral,
 .dashboard-row.dashboard-grade-neutral {
     /* Gradient: Coffee (top-left) fading to dark (bottom-right) */
-    background: linear-gradient(135deg, rgba(164, 147, 147, 0.4) 0%, rgba(20, 20, 20, 1) 100%) !important;
+    background: linear-gradient(135deg,
+            rgba(var(--color-accent-rgb), var(--gradient-strength, 0.6)) 0%,
+            color-mix(in srgb, rgb(var(--color-accent-rgb)) var(--gradient-tint, 0%), rgb(20, 20, 20)) 100%) !important;
 }
 
 /* NUCLEAR OPTION: Clear Child Backgrounds */
@@ -3860,15 +3941,21 @@ tr.dashboard-grade-neutral td,
 
 /* Summary Card Gradients */
 .summary-card.dashboard-grade-up {
-    background: linear-gradient(135deg, rgba(20, 160, 20, 0.35) 0%, rgba(20, 20, 20, 1) 100%) !important;
+    background: linear-gradient(135deg,
+            rgba(20, 160, 20, var(--gradient-strength, 0.6)) 0%,
+            color-mix(in srgb, rgb(20, 160, 20) var(--gradient-tint, 0%), rgb(20, 20, 20)) 100%) !important;
 }
 
 .summary-card.dashboard-grade-down {
-    background: linear-gradient(135deg, rgba(180, 20, 20, 0.35) 0%, rgba(20, 20, 20, 1) 100%) !important;
+    background: linear-gradient(135deg,
+            rgba(180, 20, 20, var(--gradient-strength, 0.6)) 0%,
+            color-mix(in srgb, rgb(180, 20, 20) var(--gradient-tint, 0%), rgb(20, 20, 20)) 100%) !important;
 }
 
 .summary-card.dashboard-grade-neutral {
-    background: linear-gradient(135deg, rgba(164, 147, 147, 0.35) 0%, rgba(20, 20, 20, 1) 100%) !important;
+    background: linear-gradient(135deg,
+            rgba(var(--color-accent-rgb), var(--gradient-strength, 0.6)) 0%,
+            color-mix(in srgb, rgb(var(--color-accent-rgb)) var(--gradient-tint, 0%), rgb(20, 20, 20)) 100%) !important;
 }
 
 .summary-card.dashboard-grade-up *,
@@ -3895,9 +3982,11 @@ tr.dashboard-grade-neutral td,
 /* Separated Header Rules - Enhanced Visibility (Targeting Inner Container too) */
 body.dashboard-grade-up #appHeader,
 body.dashboard-grade-up .header-inner-container {
-    background: linear-gradient(to right, rgba(0, 160, 0, 0.5) 0%, #1a1a1a 100%) !important;
-    background-color: #1a1a1a !important;
-    border-bottom: 1px solid rgba(0, 160, 0, 0.5) !important;
+    background: linear-gradient(to right,
+            rgba(0, 160, 0, var(--gradient-strength, 0.6)) 0%,
+            color-mix(in srgb, rgb(0, 160, 0) var(--gradient-tint, 0%), rgb(20, 20, 20)) 100%) !important;
+    background-color: transparent !important;
+    border-bottom: 1px solid rgba(0, 160, 0, var(--gradient-strength, 0.6)) !important;
 }
 
 button#watchlist-selector.dashboard-grade-up,
@@ -3912,15 +4001,19 @@ button#watchlist-selector.dashboard-grade-up,
 
 body.dashboard-grade-down #appHeader,
 body.dashboard-grade-down .header-inner-container {
-    background: linear-gradient(to right, rgba(200, 0, 0, 0.5) 0%, #1a1a1a 100%) !important;
-    background-color: #1a1a1a !important;
-    border-bottom: 1px solid rgba(200, 0, 0, 0.5) !important;
+    background: linear-gradient(to right,
+            rgba(200, 0, 0, var(--gradient-strength, 0.6)) 0%,
+            color-mix(in srgb, rgb(200, 0, 0) var(--gradient-tint, 0%), rgb(20, 20, 20)) 100%) !important;
+    background-color: transparent !important;
+    border-bottom: 1px solid rgba(200, 0, 0, var(--gradient-strength, 0.6)) !important;
 }
 
 button#watchlist-selector.dashboard-grade-down,
 .watchlist-selector.dashboard-grade-down,
 #watchlist-selector.dashboard-grade-down {
-    background: linear-gradient(to right, rgba(180, 0, 0, 0.7) 0%, rgba(0, 180, 0, 0.7) 100%) !important;
+    background: linear-gradient(to right,
+            rgba(180, 0, 0, var(--gradient-strength, 0.6)) 0%,
+            rgba(0, 180, 0, var(--gradient-strength, 0.6)) 100%) !important;
     background-color: transparent !important;
     box-shadow: none !important;
     border-left: none !important;
@@ -3929,15 +4022,19 @@ button#watchlist-selector.dashboard-grade-down,
 
 body.dashboard-grade-neutral #appHeader,
 body.dashboard-grade-neutral .header-inner-container {
-    background: linear-gradient(to right, rgba(160, 160, 160, 0.3) 0%, #1a1a1a 100%) !important;
-    background-color: #1a1a1a !important;
-    border-bottom: 1px solid rgba(160, 160, 160, 0.3) !important;
+    background: linear-gradient(to right,
+            rgba(var(--color-accent-rgb), var(--gradient-strength, 0.6)) 0%,
+            color-mix(in srgb, rgb(var(--color-accent-rgb)) var(--gradient-tint, 0%), rgb(20, 20, 20)) 100%) !important;
+    background-color: transparent !important;
+    border-bottom: 1px solid rgba(var(--color-accent-rgb), var(--gradient-strength, 0.6)) !important;
 }
 
 button#watchlist-selector.dashboard-grade-neutral,
 .watchlist-selector.dashboard-grade-neutral,
 #watchlist-selector.dashboard-grade-neutral {
-    background: linear-gradient(135deg, rgba(160, 160, 160, 0.3) 0%, rgba(10, 10, 10, 1) 100%) !important;
+    background: linear-gradient(135deg,
+            rgba(var(--color-accent-rgb), var(--gradient-strength, 0.6)) 0%,
+            color-mix(in srgb, rgb(var(--color-accent-rgb)) var(--gradient-tint, 0%), rgb(20, 20, 20)) 100%) !important;
     background-color: transparent !important;
     box-shadow: none !important;
     border-left: 4px solid var(--color-accent) !important;
@@ -4543,8 +4640,11 @@ button#watchlist-selector.dashboard-grade-neutral,
 }
 
 /* Text Highlighting for Selected Items in Carousel */
-.watchlist-item.carousel-selected .picker-item-content span {
-    color: var(--color-accent) !important;
+.watchlist-item.carousel-selected .picker-.pill-container span.active {
+    background: linear-gradient(135deg,
+            rgba(var(--color-accent-rgb), var(--gradient-strength, 0.6)),
+            color-mix(in srgb, rgb(var(--color-accent-rgb)) var(--gradient-tint, 0%), rgba(20, 20, 20, 0.95)));
+    color: white !important;
     font-weight: 700;
 }
 
@@ -6249,7 +6349,9 @@ tr.trend-up,
     border-left: 2px solid var(--color-positive);
     /* Thinnest Standard */
     border-right: none;
-    background: linear-gradient(145deg, hsl(120, 100%, 8%), hsl(120, 100%, 4%));
+    background: linear-gradient(145deg,
+            rgba(20, 160, 20, calc(var(--gradient-strength, 0.6) * 0.15)),
+            color-mix(in srgb, rgb(20, 160, 20) var(--gradient-tint, 0%), rgba(20, 20, 20, 0.95)));
 }
 
 tr.trend-down,
@@ -6257,7 +6359,9 @@ tr.trend-down,
     border-left: 2px solid var(--color-negative);
     /* Thinnest Standard */
     border-right: none;
-    background: linear-gradient(145deg, hsl(353, 70%, 10%), hsl(353, 70%, 6%));
+    background: linear-gradient(145deg,
+            rgba(180, 20, 20, calc(var(--gradient-strength, 0.6) * 0.15)),
+            color-mix(in srgb, rgb(180, 20, 20) var(--gradient-tint, 0%), rgba(20, 20, 20, 0.95)));
 }
 
 tr.trend-neutral,
@@ -6265,7 +6369,9 @@ tr.trend-neutral,
     border-left: 2px solid var(--color-accent);
     /* Thinnest Standard */
     border-right: none;
-    background: linear-gradient(145deg, hsl(20, 30%, 12%), hsl(20, 30%, 8%));
+    background: linear-gradient(145deg,
+            rgba(var(--color-accent-rgb), calc(var(--gradient-strength, 0.6) * 0.15)),
+            color-mix(in srgb, rgb(var(--color-accent-rgb)) var(--gradient-tint, 0%), rgba(20, 20, 20, 0.95)));
 }
 
 /* ?? TABLE VIEW: Side Borders Only, Equal Thickness */
@@ -6351,7 +6457,7 @@ tr.trend-neutral,
 .code-pill.up,
 .asx-dropdown-pill.status-up {
     color: var(--color-positive);
-    background: linear-gradient(135deg, rgba(20, 160, 20, 0.45) 0%, rgba(20, 20, 20, 1) 100%) !important;
+    background: linear-gradient(135deg, rgba(20, 160, 20, var(--gradient-strength, 0.6)) 0%, rgba(20, 20, 20, 1) 100%) !important;
     border: none !important;
     padding-left: 8px;
     padding-right: 8px;
@@ -6363,7 +6469,7 @@ tr.trend-neutral,
 .code-pill.down,
 .asx-dropdown-pill.status-down {
     color: var(--color-negative);
-    background: linear-gradient(135deg, rgba(180, 20, 20, 0.45) 0%, rgba(20, 20, 20, 1) 100%) !important;
+    background: linear-gradient(135deg, rgba(180, 20, 20, var(--gradient-strength, 0.6)) 0%, rgba(20, 20, 20, 1) 100%) !important;
     border: none !important;
     padding-left: 8px;
     padding-right: 8px;
@@ -6375,7 +6481,7 @@ tr.trend-neutral,
 .code-pill.neutral,
 .asx-dropdown-pill.status-neutral {
     color: var(--color-accent);
-    background: linear-gradient(135deg, rgba(164, 147, 147, 0.5) 0%, rgba(20, 20, 20, 1) 100%) !important;
+    background: linear-gradient(135deg, rgba(164, 147, 147, var(--gradient-strength, 0.6)) 0%, rgba(20, 20, 20, 1) 100%) !important;
     border: none !important;
     padding-left: 8px;
     padding-right: 8px;
@@ -8436,7 +8542,7 @@ body.dark-theme .calc-result-card {
     left: 0;
     right: 0;
     padding: 20px;
-    background: linear-gradient(to top, rgba(220, 53, 69, 0.15), transparent);
+    background: linear-gradient(to top, rgba(220, 53, 69, calc(var(--gradient-strength, 0.6) * 0.25)), transparent);
     border-top: 2px dashed var(--color-negative, #dc3545);
     text-align: center;
     color: var(--color-negative, #dc3545);
@@ -8450,7 +8556,7 @@ body.dark-theme .calc-result-card {
 }
 
 .favorite-delete-zone.over {
-    background: linear-gradient(to top, rgba(220, 53, 69, 0.35), transparent);
+    background: linear-gradient(to top, rgba(220, 53, 69, calc(var(--gradient-strength, 0.6) * 0.6)), transparent);
 }
 
 .favorite-delete-zone i {
@@ -8989,16 +9095,22 @@ body.dark-theme .calc-result-card {
 
 
 body.dashboard-active #appHeader {
-    background: linear-gradient(to right, #4e54c8, #8f94fb) !important;
+    background: linear-gradient(to right,
+            rgba(var(--color-accent-rgb), var(--gradient-strength, 0.6)) 0%,
+            color-mix(in srgb, rgb(var(--color-accent-rgb)) var(--gradient-tint, 0%), rgb(20, 20, 20)) 100%) !important;
 }
 
 body.dashboard-active .sidebar {
-    background: linear-gradient(to bottom, #4e54c8, #8f94fb) !important;
+    background: linear-gradient(to bottom,
+            rgba(var(--color-accent-rgb), var(--gradient-strength, 0.6)) 0%,
+            color-mix(in srgb, rgb(var(--color-accent-rgb)) var(--gradient-tint, 0%), rgb(20, 20, 20)) 100%) !important;
 }
 
 /* --- Cash Total Header Styling --- */
 .cash-total-header {
-    background: linear-gradient(135deg, color-mix(in srgb, var(--color-accent) 60%, black), color-mix(in srgb, var(--color-accent) 5%, black)) !important;
+    background: linear-gradient(135deg,
+            rgba(var(--color-accent-rgb), var(--gradient-strength, 0.6)) 0%,
+            color-mix(in srgb, rgb(var(--color-accent-rgb)) var(--gradient-tint, 0%), rgb(20, 20, 20)) 100%) !important;
     --strip-color: var(--color-accent);
     padding: 15px 20px;
     margin-bottom: 20px;

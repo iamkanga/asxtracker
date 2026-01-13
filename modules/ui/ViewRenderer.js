@@ -563,20 +563,20 @@ export class ViewRenderer {
         const dayLoss = Math.abs(metrics.dayLoss || 0); // Ensure positive for ratio
         const totalVol = dayGain + dayLoss;
 
-        let leftColor = 'rgba(0, 180, 0, 0.6)'; // Default Green
-        let rightColor = 'rgba(180, 0, 0, 0.6)'; // Default Red
+        let leftColor = 'rgba(0, 180, 0, var(--gradient-strength, 0.6))'; // Default Green
+        let rightColor = 'rgba(180, 0, 0, var(--gradient-strength, 0.6))'; // Default Red
         let splitPct = 50;
 
         if (totalVol > 0) {
             if (dayGain >= dayLoss) {
                 // Gain Dominant -> Green on Left
-                leftColor = 'rgba(0, 180, 0, 0.6)';
-                rightColor = 'rgba(180, 0, 0, 0.6)';
+                leftColor = 'rgba(0, 180, 0, var(--gradient-strength, 0.6))';
+                rightColor = 'rgba(180, 0, 0, var(--gradient-strength, 0.6))';
                 splitPct = Math.round((dayGain / totalVol) * 100);
             } else {
                 // Loss Dominant -> Red on Left
-                leftColor = 'rgba(180, 0, 0, 0.6)';
-                rightColor = 'rgba(0, 180, 0, 0.6)';
+                leftColor = 'rgba(180, 0, 0, var(--gradient-strength, 0.6))';
+                rightColor = 'rgba(0, 180, 0, var(--gradient-strength, 0.6))';
                 splitPct = Math.round((dayLoss / totalVol) * 100);
             }
         }
@@ -584,9 +584,9 @@ export class ViewRenderer {
         const dynamicGradient = `linear-gradient(to right, ${leftColor} 0%, rgba(20, 20, 20, 1) ${splitPct}%, ${rightColor} 100%)`;
 
         // Static Mirrored Gradients (Color → Black → Same Color)
-        const neutralGradient = 'linear-gradient(90deg, rgba(164, 147, 147, 0.6) 0%, rgba(20, 20, 20, 1) 50%, rgba(164, 147, 147, 0.6) 100%)';
-        const greenGradient = 'linear-gradient(90deg, rgba(0, 180, 0, 0.6) 0%, rgba(20, 20, 20, 1) 50%, rgba(0, 180, 0, 0.6) 100%)';
-        const redGradient = 'linear-gradient(90deg, rgba(180, 0, 0, 0.6) 0%, rgba(20, 20, 20, 1) 50%, rgba(180, 0, 0, 0.6) 100%)';
+        const neutralGradient = 'linear-gradient(90deg, rgba(164, 147, 147, var(--gradient-strength, 0.6)) 0%, rgba(20, 20, 20, 1) 50%, rgba(164, 147, 147, var(--gradient-strength, 0.6)) 100%)';
+        const greenGradient = 'linear-gradient(90deg, rgba(0, 180, 0, var(--gradient-strength, 0.6)) 0%, rgba(20, 20, 20, 1) 50%, rgba(0, 180, 0, var(--gradient-strength, 0.6)) 100%)';
+        const redGradient = 'linear-gradient(90deg, rgba(180, 0, 0, var(--gradient-strength, 0.6)) 0%, rgba(20, 20, 20, 1) 50%, rgba(180, 0, 0, var(--gradient-strength, 0.6)) 100%)';
         const capitalGainGradient = isTotalPos ? greenGradient : redGradient;
 
         // 3. Construct HTML (Card Layout with Inline Percentages and Gradients)

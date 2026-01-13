@@ -121,7 +121,8 @@ export const AppState = {
             return stored ? parseInt(stored) : 0;
         })(),
         dailyEmail: localStorage.getItem(STORAGE_KEYS.DAILY_EMAIL) === 'true',
-        alertEmailRecipients: localStorage.getItem(STORAGE_KEYS.EMAIL_RECIPIENTS) || ''
+        alertEmailRecipients: localStorage.getItem(STORAGE_KEYS.EMAIL_RECIPIENTS) || '',
+        gradientStrength: parseFloat(localStorage.getItem(STORAGE_KEYS.GRADIENT_STRENGTH)) || 0.25
     },
 
     // Security Runtime State
@@ -257,7 +258,8 @@ export const AppState = {
                 favoriteLinks: this.preferences.favoriteLinks || [],
                 colorSeed: this.preferences.colorSeed || 0,
                 dailyEmail: this.preferences.dailyEmail || false,
-                alertEmailRecipients: this.preferences.alertEmailRecipients || ''
+                alertEmailRecipients: this.preferences.alertEmailRecipients || '',
+                gradientStrength: this.preferences.gradientStrength ?? 0.6
             };
             // console.log('[AppState] Triggering Sync with payload:', payload);
             this.onPersistenceUpdate(payload);

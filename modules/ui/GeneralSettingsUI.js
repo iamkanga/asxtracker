@@ -4,7 +4,7 @@
  * Refined for Professional UI/UX.
  */
 
-import { CSS_CLASSES, UI_ICONS, IDS, EVENTS } from '../utils/AppConstants.js';
+import { CSS_CLASSES, UI_ICONS, IDS, EVENTS, STORAGE_KEYS } from '../utils/AppConstants.js';
 import { AppState } from '../state/AppState.js';
 import { ToastManager } from './ToastManager.js';
 import { navManager } from '../utils/NavigationManager.js';
@@ -36,9 +36,25 @@ export class GeneralSettingsUI {
                 
                 <div class="${CSS_CLASSES.MODAL_BODY}">
                     
-                    <!-- 1. SECURITY SECTION -->
-                    <div class="${CSS_CLASSES.SETTINGS_SECTION}">
-                        <h4 class="${CSS_CLASSES.SIDEBAR_SECTION_TITLE}" style="margin-bottom: 12px; color: var(--text-muted); font-size: 0.75rem; letter-spacing: 1px;">Security</h4>
+                    <!-- 1. DISPLAY SECTION -->
+                    <div class="${CSS_CLASSES.SETTINGS_SECTION}" style="margin-bottom: 50px;">
+                        <h4 class="${CSS_CLASSES.SIDEBAR_SECTION_TITLE}" style="margin-bottom: 15px; color: var(--color-accent); font-size: 0.85rem; letter-spacing: 1.5px; text-transform: uppercase; border-bottom: 1px solid rgba(var(--color-accent-rgb), 0.2); padding-bottom: 8px; font-weight: 800;">Display</h4>
+                        
+                        <div class="${CSS_CLASSES.SETTING_ROW}" id="gen-display-mgmt-row" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between; padding: 12px 0;">
+                            <div>
+                                <div class="${CSS_CLASSES.FONT_BOLD}" style="font-size: 0.95rem;">Display Coloring</div>
+                                <div class="${CSS_CLASSES.TEXT_SM} ${CSS_CLASSES.TEXT_MUTED}">Adjust background color strength</div>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <span id="current-gradient-label" style="font-size: 0.75rem; color: var(--color-accent); font-weight: 600;">${this._getStrengthLabel(AppState.preferences.gradientStrength || 0.6)}</span>
+                                <i class="fas fa-chevron-right ${CSS_CLASSES.TEXT_MUTED}"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2. SECURITY SECTION -->
+                    <div class="${CSS_CLASSES.SETTINGS_SECTION}" style="margin-bottom: 50px;">
+                        <h4 class="${CSS_CLASSES.SIDEBAR_SECTION_TITLE}" style="margin-bottom: 15px; color: var(--color-accent); font-size: 0.85rem; letter-spacing: 1.5px; text-transform: uppercase; border-bottom: 1px solid rgba(var(--color-accent-rgb), 0.2); padding-bottom: 8px; font-weight: 800;">Security</h4>
                         
                         <!-- Biometric Toggle -->
                         <div class="${CSS_CLASSES.SETTING_ROW}" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 0;">
@@ -68,11 +84,9 @@ export class GeneralSettingsUI {
                         </div>
                     </div>
 
-                    <hr class="settings-divider" style="border: 0; border-top: 1px solid var(--border-color); margin: 20px 0;">
-
-                        <!-- 2. DATA SECTION -->
+                        <!-- 3. DATA SECTION -->
                     <div class="${CSS_CLASSES.SETTINGS_SECTION}">
-                        <h4 class="${CSS_CLASSES.SIDEBAR_SECTION_TITLE}" style="margin-bottom: 12px; color: var(--text-muted); font-size: 0.75rem; letter-spacing: 1px;">Data Management</h4>
+                        <h4 class="${CSS_CLASSES.SIDEBAR_SECTION_TITLE}" style="margin-bottom: 15px; color: var(--color-accent); font-size: 0.85rem; letter-spacing: 1.5px; text-transform: uppercase; border-bottom: 1px solid rgba(var(--color-accent-rgb), 0.2); padding-bottom: 8px; font-weight: 800;">Data Management</h4>
                         
                         <!-- NEW: Unified Data Management Hub -->
                         <div class="${CSS_CLASSES.SETTING_ROW}" id="gen-data-mgmt-row" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between; padding: 12px 0;">
@@ -180,6 +194,92 @@ export class GeneralSettingsUI {
         modal.querySelector('#gen-delete-row').addEventListener('click', () => {
             GeneralSettingsUI._close(modal); // Close self first
             document.dispatchEvent(new CustomEvent(EVENTS.REQUEST_DELETE_DATA));
+        });
+
+        // --- DISPLAY ---
+        const displayRow = modal.querySelector('#gen-display-mgmt-row');
+        if (displayRow) {
+            displayRow.addEventListener('click', () => {
+                this.renderGradientSettings(controller, modal);
+            });
+        }
+    }
+
+    static _getStrengthLabel(val) {
+        val = parseFloat(val);
+        if (val === 0) return 'None';
+        if (val <= 0.125) return 'Muted';
+        if (val <= 0.25) return 'Subtle';
+        if (val <= 0.4) return 'Light';
+        if (val <= 0.6) return 'Medium';
+        return 'Strong';
+    }
+
+    static renderGradientSettings(controller, parentModal) {
+        const modal = document.createElement('div');
+        modal.id = 'gradient-settings-modal';
+        modal.className = `${CSS_CLASSES.MODAL} ${CSS_CLASSES.SHOW}`;
+        modal.style.zIndex = '10001'; // Above GeneralSettings
+
+        const currentStrength = AppState.preferences.gradientStrength || 0.6;
+
+        modal.innerHTML = `
+            <div class="${CSS_CLASSES.MODAL_OVERLAY}"></div>
+            <div class="${CSS_CLASSES.MODAL_CONTENT} ${CSS_CLASSES.MODAL_CONTENT_SMALL}">
+                <div class="${CSS_CLASSES.MODAL_HEADER}">
+                    <button class="back-btn" style="background: none; border: none; color: white; margin-right: 15px; cursor: pointer;"><i class="fas fa-arrow-left"></i></button>
+                    <h2 class="${CSS_CLASSES.MODAL_TITLE}">Coloring</h2>
+                </div>
+                
+                    <div class="segmented-control-minimal gradient-strength-selector-minimal" style="margin-top: 5px;">
+                        <div class="segment pill-segment-gradient ${currentStrength === 0 ? 'active' : ''}" data-value="0.0" data-tint="0%">None</div>
+                        <div class="segment pill-segment-gradient ${currentStrength === 0.125 ? 'active' : ''}" data-value="0.125" data-tint="22%">Muted</div>
+                        <div class="segment pill-segment-gradient ${currentStrength === 0.25 ? 'active' : ''}" data-value="0.25" data-tint="0%">Subtle</div>
+                        <div class="segment pill-segment-gradient ${currentStrength === 0.4 ? 'active' : ''}" data-value="0.4" data-tint="0%">Light</div>
+                        <div class="segment pill-segment-gradient ${currentStrength === 0.6 ? 'active' : ''}" data-value="0.6" data-tint="0%">Medium</div>
+                        <div class="segment pill-segment-gradient ${currentStrength === 0.85 ? 'active' : ''}" data-value="0.85" data-tint="0%">Strong</div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        const close = () => {
+            modal.remove();
+        };
+
+        modal.querySelector('.back-btn').addEventListener('click', close);
+        modal.querySelector(`.${CSS_CLASSES.MODAL_OVERLAY}`).addEventListener('click', close);
+
+        modal.querySelectorAll('.pill-segment-gradient').forEach(pill => {
+            pill.addEventListener('click', () => {
+                const val = parseFloat(pill.dataset.value);
+                const tint = pill.dataset.tint || '0%';
+
+                const internalVal = val;
+
+                // Update UI state
+                modal.querySelectorAll('.pill-segment-gradient').forEach(p => p.classList.remove('active'));
+                pill.classList.add('active');
+
+                // Apply CSS Variables Immediately
+                document.documentElement.style.setProperty('--gradient-strength', val);
+                document.documentElement.style.setProperty('--gradient-tint', tint);
+
+                // Update Parent Label if still in DOM
+                const parentLabel = parentModal.querySelector('#current-gradient-label');
+                if (parentLabel) parentLabel.textContent = this._getStrengthLabel(internalVal);
+
+                // Persist
+                AppState.preferences.gradientStrength = internalVal;
+                localStorage.setItem(STORAGE_KEYS.GRADIENT_STRENGTH, internalVal);
+
+                // Trigger Sync
+                if (AppState.triggerSync) AppState.triggerSync();
+
+                ToastManager.success(`Intensity set to ${this._getStrengthLabel(internalVal)}`);
+            });
         });
     }
 

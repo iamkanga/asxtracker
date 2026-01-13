@@ -364,7 +364,10 @@ export class WatchlistUI {
                 const total = gainerCount + loserCount;
 
                 if (total === 0) {
-                    header.style.background = ''; // Neutral
+                    header.style.background = `linear-gradient(90deg, 
+                        rgba(var(--color-accent-rgb), var(--gradient-strength, 0.6)) 0%, 
+                        color-mix(in srgb, rgb(var(--color-accent-rgb)) var(--gradient-tint, 0%), rgb(20, 20, 20)) 50%, 
+                        rgba(var(--color-accent-rgb), var(--gradient-strength, 0.6)) 100%)`; // Neutral
                 } else {
                     const gainerPct = gainerCount / total;
                     const loserPct = loserCount / total;
@@ -405,10 +408,10 @@ export class WatchlistUI {
                     const stopSolid = Math.max(0, dominantPct - spread);
 
                     header.style.background = `linear-gradient(90deg, 
-                        rgba(${leftColor}, 0.6) 0%, 
-                        rgba(${leftColor}, 0.5) ${stopSolid}%, 
+                        rgba(${leftColor}, var(--gradient-strength, 0.6)) 0%, 
+                        rgba(${leftColor}, calc(var(--gradient-strength, 0.6) * 0.8)) ${stopSolid}%, 
                         rgba(20, 20, 20, 1) ${dominantPct}%, 
-                        rgba(${rightColor}, 0.6) 100%)`;
+                        rgba(${rightColor}, var(--gradient-strength, 0.6)) 100%)`;
                 }
             }
         }

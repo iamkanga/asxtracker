@@ -110,6 +110,14 @@ export class AppController {
         // Notification System Bindings (Unified)
         NotificationUI.init(); // Initialize Floating Bell
 
+        // Initialize Global CSS Variables from Prefs (Unified Strength & Shine logic)
+        const strength = AppState.preferences.gradientStrength || 0.25;
+        const isMuted = strength === 0.125;
+        const sVal = strength;
+        const tVal = isMuted ? '22%' : '0%';
+        document.documentElement.style.setProperty('--gradient-strength', sVal);
+        document.documentElement.style.setProperty('--gradient-tint', tVal);
+
 
 
         // Update Badge Listener (Single)
@@ -615,6 +623,22 @@ export class AppController {
                     if (prefs.security) {
                         AppState.preferences.security = { ...AppState.preferences.security, ...prefs.security };
                         this.handleSecurityLock();
+                    }
+
+                    // 0a. Sync Gradient Preference
+                    if (prefs.gradientStrength !== undefined && prefs.gradientStrength !== null) {
+                        const strength = parseFloat(prefs.gradientStrength);
+                        if (!isNaN(strength)) {
+                            AppState.preferences.gradientStrength = strength;
+                            localStorage.setItem(STORAGE_KEYS.GRADIENT_STRENGTH, strength);
+                            const isMuted = strength === 0.125;
+                            const sVal = strength;
+                            const tVal = isMuted ? '22%' : '0%';
+
+                            document.documentElement.style.setProperty('--gradient-strength', sVal);
+                            document.documentElement.style.setProperty('--gradient-tint', tVal);
+                            needsRender = true;
+                        }
                     }
 
                     // 0b. Sync Notification Prefs

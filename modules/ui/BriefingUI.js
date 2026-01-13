@@ -338,6 +338,12 @@ export class BriefingUI {
             footer.classList.add('clickable-footer');
             footer.title = "View Market Notifications";
 
+            // Apply Sentiment Background Class (Dynamic Theming)
+            footer.classList.remove('footer-bg-positive', 'footer-bg-negative', 'footer-bg-neutral');
+            if (sentiment === 'Bullish') footer.classList.add('footer-bg-positive');
+            else if (sentiment === 'Bearish') footer.classList.add('footer-bg-negative');
+            else footer.classList.add('footer-bg-neutral');
+
             // General Click (Opens Notification Center)
             footer.onclick = (e) => {
                 const targetSec = e.target.closest('[data-section]')?.dataset.section;
