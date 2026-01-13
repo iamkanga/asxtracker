@@ -1919,18 +1919,45 @@ export class AppController {
 
         // Hard Reload Button - Intentional page reload for cache bust (Settings Feature)
         // Hard Reload Button - Intentional page reload for cache bust (Settings Feature)
-        document.body.addEventListener('click', (e) => {
+        document.body.addEventListener('click', async (e) => {
             const reloadBtn = e.target.closest(`#${IDS.RELOAD_BTN}`);
             if (reloadBtn) {
-                if (confirm('Reload the app? This will refresh all data and check for updates.')) {
-                    if ('serviceWorker' in navigator) {
-                        navigator.serviceWorker.getRegistrations().then(function (registrations) {
-                            for (let registration of registrations) {
-                                registration.unregister();
-                            }
-                        });
+                if (confirm('Reload the app? This will clear caches to ensure you have the latest version. Your data will be safe.')) {
+
+                    // User Feedback
+                    ToastManager.show('Cleaning caches and updating...', 'info');
+                    console.log('[AppController] Starting Clean Reload sequence...');
+
+                    try {
+                        // 1. Clear Session Storage (Temporary Tab Data)
+                        sessionStorage.clear();
+                        console.log('[AppController] sessionStorage cleared.');
+
+                        // 2. Clear Cache Storage API (The heavy lifter for PWA assets)
+                        if ('caches' in window) {
+                            const cacheKeys = await caches.keys();
+                            await Promise.all(cacheKeys.map(key => {
+                                console.log(`[AppController] Deleting cache: ${key}`);
+                                return caches.delete(key);
+                            }));
+                        }
+
+                        // 3. Unregister Service Workers (Prevent stale fetching on next load)
+                        if ('serviceWorker' in navigator) {
+                            const registrations = await navigator.serviceWorker.getRegistrations();
+                            await Promise.all(registrations.map(registration => {
+                                console.log('[AppController] Unregistering Service Worker:', registration);
+                                return registration.unregister();
+                            }));
+                        }
+
+                    } catch (err) {
+                        console.warn('[AppController] Issue during cache cleanup (continuing to reload):', err);
+                    } finally {
+                        // 4. Force Reload from Server
+                        console.log('[AppController] Triggering location.reload(true)');
+                        window.location.reload(true);
                     }
-                    window.location.reload(true);
                 }
             }
         });
