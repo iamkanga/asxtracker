@@ -1787,11 +1787,12 @@ function sendCombinedDailyDigest_() {
   function fmtMoney(n){ const x = num(n); return x==null? '' : ('$' + x.toFixed(x<1?4:2)); }
   function fmtPct(n){ const x = num(n); return x==null? '' : ((x>=0?'+':'') + x.toFixed(2) + '%'); }
 
-  function createTable(title, rows, headersHtml) {
+  function createTable(title, rows, headersHtml, color) {
     if (!rows || rows.length === 0) return '';
+    const headerStyle = `margin:16px 0 0 0;padding:10px;font-family:Arial,Helvetica,sans-serif;color:#ffffff;background-color:${color || '#333'};font-size:14px;font-weight:bold;border-radius:4px 4px 0 0;`;
     return (
-      '<h3 style="margin:16px 0 8px 0;font-family:Arial,Helvetica,sans-serif;color:#333;">' + esc(title) + '</h3>' +
-      '<table cellspacing="0" cellpadding="0" style="border-collapse:collapse;width:100%;font-family:Arial,Helvetica,sans-serif;font-size:13px;border:1px solid #eee;">' +
+      `<h3 style="${headerStyle}">` + esc(title) + '</h3>' +
+      '<table cellspacing="0" cellpadding="0" style="border-collapse:collapse;width:100%;font-family:Arial,Helvetica,sans-serif;font-size:13px;border:1px solid ' + (color || '#eee') + ';border-top:none;">' +
         '<thead><tr style="text-align:left;background:#f9f9f9;color:#555;">' + headersHtml + '</tr></thead>' +
         '<tbody>' + rows.join('') + '</tbody>' +
       '</table>'
@@ -1864,18 +1865,46 @@ function sendCombinedDailyDigest_() {
       const userLows = allLows.filter(o => !t.hiloPrice || num(o.live) >= t.hiloPrice).sort((a,b)=> (num(b.live)||0) - (num(a.live)||0));
       const userHighs = allHighs.filter(o => !t.hiloPrice || num(o.live) >= t.hiloPrice).sort((a,b)=> (num(b.live)||0) - (num(a.live)||0));
 
+      // Build Mover Map for Personal Alerts Validation
+      const moverMap = new Map();
+      allUp.concat(allDown).forEach(m => moverMap.set(m.code, m));
+
       // Filter User-Specific Custom Triggers
       const userCustomHits = (Array.isArray(customHits.hits) ? customHits.hits : [])
         .filter(h => h.userId === userId)
+        .filter(h => {
+          // 1. Always show manual target hits
+          if (h.intent === 'target-hit') return true;
+          
+          // 2. For Movers: Must match User's Thresholds
+          if (h.intent === 'mover') {
+            const rich = moverMap.get(h.code);
+            // If we can't find the rich data, we default to filtering it OUT (safety) 
+            // or we could check 'live' vs 'prev' if we had it, but 'qualifies' needs pct/change.
+            // Since it came from duplicateMoversIntoCustom_, it SHOULD be in allUp/allDown.
+            if (!rich) return false;
+            return qualifies(rich);
+          }
+
+          // 3. For 52-Week: Must match Min Price rule
+          if (h.intent === '52w-high' || h.intent === '52w-low') {
+             if (t.hiloPrice && num(h.live) < t.hiloPrice) return false;
+             return true;
+          }
+
+          // Default: allow other unknown intents? Or strict? 
+          // Strict is safer to reduce noise.
+          return false; 
+        })
         .map(o => '<tr>'+td(o.code)+td(o.name)+td(fmtMoney(o.live))+td(fmtMoney(o.target))+td(o.direction)+td(o.intent)+'</tr>');
 
-      // Assemble Tables
+      // Assemble Tables (Order: Personal > 52W Low > 52W High > Losers > Gainers)
       const sections = [
-        createTable('Global Movers — Losers', userDown.map(o => '<tr>'+td(o.code)+td(o.name)+td(fmtMoney(o.live))+td(fmtPct(o.pct))+td(fmtMoney(o.change))+'</tr>'), hdrMovers),
-        createTable('Global Movers — Gainers', userUp.map(o => '<tr>'+td(o.code)+td(o.name)+td(fmtMoney(o.live))+td(fmtPct(o.pct))+td(fmtMoney(o.change))+'</tr>'), hdrMovers),
-        createTable('52-Week Lows', userLows.map(o => '<tr>'+td(o.code)+td(o.name)+td(fmtMoney(o.live))+td(fmtMoney(o.low52))+td(fmtMoney(o.high52))+'</tr>'), hdrHiLo),
-        createTable('52-Week Highs', userHighs.map(o => '<tr>'+td(o.code)+td(o.name)+td(fmtMoney(o.live))+td(fmtMoney(o.low52))+td(fmtMoney(o.high52))+'</tr>'), hdrHiLo),
-        createTable('Your Personal Alerts', userCustomHits, hdrCustom)
+        createTable('Your Personal Alerts', userCustomHits, hdrCustom, '#1976d2'), // Blue
+        createTable('52-Week Lows', userLows.map(o => '<tr>'+td(o.code)+td(o.name)+td(fmtMoney(o.live))+td(fmtMoney(o.low52))+td(fmtMoney(o.high52))+'</tr>'), hdrHiLo, '#d32f2f'), // Red
+        createTable('52-Week Highs', userHighs.map(o => '<tr>'+td(o.code)+td(o.name)+td(fmtMoney(o.live))+td(fmtMoney(o.low52))+td(fmtMoney(o.high52))+'</tr>'), hdrHiLo, '#388e3c'), // Green
+        createTable('Global Movers — Losers', userDown.map(o => '<tr>'+td(o.code)+td(o.name)+td(fmtMoney(o.live))+td(fmtPct(o.pct))+td(fmtMoney(o.change))+'</tr>'), hdrMovers, '#e53935'), // Red (lighter/distinct or same?) - Let's use similar Red
+        createTable('Global Movers — Gainers', userUp.map(o => '<tr>'+td(o.code)+td(o.name)+td(fmtMoney(o.live))+td(fmtPct(o.pct))+td(fmtMoney(o.change))+'</tr>'), hdrMovers, '#43a047')  // Green
       ].filter(s => !!s);
 
       if (sections.length === 0) {

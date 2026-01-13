@@ -22,56 +22,43 @@ export class CashAssetUI {
      * 2. Else, pick a color NOT used by any visible asset.
      * 3. Fallback to random from pool.
      */
+    /**
+     * Helper: Pick a color for a new/editing asset.
+     */
     _pickInitialColor(name, currentAssetId, currentCategory) {
-        // 1. Check User Preferences (Category-First / Overrides)
+        const allAssets = AppState.data.cash || [];
+
+        // 1. Calculate Used Colors (Strict Global)
+        const usedColors = new Set(allAssets.filter(a => a.id !== currentAssetId && a.color).map(a => a.color));
+        const available = this.customColors.filter(c => !usedColors.has(c));
+
+        // 2. Check User Preferences (Category-First) - BUT ONLY IF AVAILABLE
         if (currentCategory) {
             const userCat = AppState.preferences.userCategories?.find(c => c.id === currentCategory);
-            if (userCat && userCat.color) {
-                console.log(`[CashAssetUI] _pickInitialColor: Using Theme Color for ${currentCategory} -> ${userCat.color}`);
+            // Only use the theme color if it is NOT used by another asset
+            if (userCat && userCat.color && !usedColors.has(userCat.color)) {
                 return userCat.color;
             }
         }
 
-        // Standard categories that HAVEN'T been overridden return null 
-        // to use CSS variable defaults in _getPreviewColor
-        const isStandard = !currentCategory || currentCategory === 'cash' || currentCategory === 'cash_in_bank' ||
-            currentCategory === 'term_deposit' || currentCategory === 'property' ||
-            currentCategory === 'crypto' || currentCategory === 'shares' ||
-            currentCategory === 'super' || currentCategory === 'personal';
-
-        if (isStandard && currentCategory !== 'other') return null;
-
-        const allAssets = AppState.data.cash || [];
-
-        // 2. Match Name (Case Insensitive)
-        // If we have another asset with the same name, we use its color to keep things unified.
+        // 3. Match Name (Legacy/Consistency) - Only if available
         if (name) {
-            const match = allAssets.find(a =>
-                (a.category === 'other' || a.category?.startsWith('user_')) &&
-                a.name.toLowerCase() === name.toLowerCase() &&
-                a.id !== currentAssetId &&
-                a.color
-            );
-            if (match) {
-                console.log(`[CashAssetUI] _pickInitialColor: Matched Name '${name}' -> ${match.color}`);
-                return match.color;
-            }
+            // ... Logic removed to enforce uniqueness preference ...
         }
 
-        // 3. Find Unused Color
-        const usedColors = new Set(allAssets.filter(a => a.id !== currentAssetId && a.color).map(a => a.color));
-        const available = this.customColors.filter(c => !usedColors.has(c));
-
+        // 4. Pick Unused
         if (available.length > 0) {
-            const picked = available[Math.floor(Math.random() * available.length)];
-            console.log(`[CashAssetUI] _pickInitialColor: Picked Unused -> ${picked}`);
-            return picked;
+            // Pick deterministic based on name if possible
+            if (name) {
+                const seed = name.length + name.charCodeAt(0);
+                return available[seed % available.length];
+            }
+            return available[Math.floor(Math.random() * available.length)];
         }
 
-        // 4. Fallback: Random from full pool
-        const fallback = this.customColors[Math.floor(Math.random() * this.customColors.length)];
-        console.log(`[CashAssetUI] _pickInitialColor: Fallback Random -> ${fallback}`);
-        return fallback;
+        // 5. Fallback: If ALL colors used, we forced to reuse (or return null)
+        // Returning random fallback to ensure UI has *something*
+        return this.customColors[Math.floor(Math.random() * this.customColors.length)];
     }
 
     /**
@@ -180,8 +167,11 @@ export class CashAssetUI {
                     // Show/Hide Custom Input AND Shuffle Button
                     const customGroup = modal.querySelector('#custom-category-group');
                     // Show Shuffle Button for EVERY category
-                    const shuffleBtn = modal.querySelector('#btn-shuffle-colors-main');
-                    shuffleBtn.classList.remove(CSS_CLASSES.HIDDEN);
+                    const pickerContainer = modal.querySelector('#color-picker-container');
+                    if (!pickerContainer.classList.contains(CSS_CLASSES.HIDDEN)) {
+                        // Re-render picker if open to reflect any category-based logic? 
+                        // Actually picker is based on USED colors, which is global.
+                    }
                     const currentName = modal.querySelector('#asset-name')?.value || '';
 
                     // ALWAYS re-sync color when category changes to ensure Theme persistence
@@ -278,9 +268,14 @@ export class CashAssetUI {
                         <div class="${CSS_CLASSES.FORM_GROUP} stacked">
                             <div class="flex justify-between items-center mb-1">
                                 <label for="${IDS.ASSET_NAME}" class="${CSS_CLASSES.INPUT_LABEL}">Asset Name</label>
-                                <button type="button" id="btn-shuffle-colors-main" class="${CSS_CLASSES.ICON_BTN_GHOST}" title="Change Color Theme" style="font-size: 0.9rem; color: var(--text-muted);">
-                                    <i class="fas fa-random"></i>
+                                <button type="button" id="btn-toggle-color-picker" class="${CSS_CLASSES.BTN_TEXT_SMALL}" style="font-size: 0.8rem; color: var(--color-accent);">
+                                    Select Color
                                 </button>
+                            </div>
+                            <!-- Color Picker Container -->
+                            <div id="color-picker-container" class="${CSS_CLASSES.HIDDEN} mb-3 p-3 bg-[var(--card-bg-light)] rounded border border-[var(--border-color)]">
+                                <div class="text-xs text-muted mb-2">Available Colors (Unique to this asset)</div>
+                                <div id="color-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(24px, 1fr)); gap: 8px;"></div>
                             </div>
                             <input type="text" id="${IDS.ASSET_NAME}" class="${CSS_CLASSES.STANDARD_INPUT}" value="${asset ? asset.name : ''}" placeholder="e.g. High Interest Savings">
                         </div>
@@ -393,26 +388,62 @@ export class CashAssetUI {
             if (initialColor) modal.dataset.selectedColor = initialColor;
         }
 
-        modal.querySelector('#btn-shuffle-colors-main').addEventListener('click', (e) => {
-            e.stopPropagation();
-            // Pick a NEW color that is NOT the current one AND not used by other assets
-            const current = modal.dataset.selectedColor;
+        // Color Picker Logic
+        const togglePickerBtn = modal.querySelector('#btn-toggle-color-picker');
+        const pickerContainer = modal.querySelector('#color-picker-container');
+        const colorGrid = modal.querySelector('#color-grid');
+
+        const renderPicker = () => {
+            // Calculate Used Colors
+            const currentAssetId = asset ? asset.id : null;
+            // FIX: Define allAssets properly in scope
             const allAssets = AppState.data.cash || [];
-            const usedColors = new Set(allAssets.filter(a => a.color).map(a => a.color));
-            const available = this.customColors.filter(c => c !== current && !usedColors.has(c));
 
-            if (available.length === 0) {
-                // All colors used - just exclude current
-                const fallback = this.customColors.filter(c => c !== current);
-                const next = fallback[Math.floor(Math.random() * fallback.length)];
-                modal.dataset.selectedColor = next;
+            // Strictly exclude colors used by ANY other asset
+            const usedColors = new Set(allAssets
+                .filter(a => a.id !== currentAssetId && a.color)
+                .map(a => a.color));
+
+            // Available
+            const available = this.customColors.filter(c => !usedColors.has(c));
+
+            colorGrid.innerHTML = available.map(c => `
+                <div class="color-swatch-item" data-color="${c}" style="
+                    width: 24px; 
+                    height: 24px; 
+                    border-radius: 50%; 
+                    background-color: ${c}; 
+                    cursor: pointer; 
+                    border: 2px solid ${modal.dataset.selectedColor === c ? '#fff' : 'transparent'};
+                    box-shadow: ${modal.dataset.selectedColor === c ? '0 0 0 2px var(--color-accent)' : 'none'};
+                    transition: transform 0.1s;
+                "></div>
+            `).join('');
+
+            // Bind Events
+            colorGrid.querySelectorAll('.color-swatch-item').forEach(item => {
+                item.addEventListener('click', (e) => {
+                    const color = item.dataset.color;
+                    modal.dataset.selectedColor = color;
+                    // Visual Feedback
+                    renderPicker();
+                    this._updateModalHeaderColor(modal);
+                    // pickerContainer.classList.add(CSS_CLASSES.HIDDEN); // Optional: Close on select
+                });
+            });
+        };
+
+        togglePickerBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isHidden = pickerContainer.classList.contains(CSS_CLASSES.HIDDEN);
+            if (isHidden) {
+                renderPicker();
+                pickerContainer.classList.remove(CSS_CLASSES.HIDDEN);
+                togglePickerBtn.textContent = 'Hide Colors';
             } else {
-                const next = available[Math.floor(Math.random() * available.length)];
-                modal.dataset.selectedColor = next;
+                pickerContainer.classList.add(CSS_CLASSES.HIDDEN);
+                togglePickerBtn.textContent = 'Select Color';
             }
-
-            this._updateModalHeaderColor(modal);
-            // Silent color change - visual feedback from header is sufficient
         });
 
         // Set Initial Color (so they see the current state)
@@ -564,11 +595,31 @@ export class CashAssetUI {
         let category = String(rawCategory || 'cash').toLowerCase();
 
         // 2. Resolve Color (Early)
+        // 2. Resolve Color (Early)
         let color = modal.dataset.selectedColor;
 
         // Persist the explicit color for 'Other', Custom, or re-themed Standard categories
         if (!color) {
             color = modal.dataset.selectedColor || this._pickInitialColor(name, null, category);
+        }
+
+        // --- STRICT VALIDATION: Color Uniqueness ---
+        if (color) {
+            const allAssets = AppState.data.cash || [];
+            // We check if this color is used by ANY other asset (Strict 1:1)
+            const conflict = allAssets.find(a => {
+                // Ignore self
+                if (modal.dataset.assetId && a.id === modal.dataset.assetId) return false; // Editing self
+                if (!a.color) return false; // No color
+                if (a.color !== color) return false; // Different color
+
+                return true; // Conflict found!
+            });
+
+            if (conflict) {
+                alert(`The color '${color}' is already used by '${conflict.name}'. Please select a unique color.`);
+                return null; // Block Save
+            }
         }
 
         if (color) {

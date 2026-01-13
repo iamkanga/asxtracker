@@ -278,7 +278,7 @@ export class GeneralSettingsUI {
                 // Trigger Sync
                 if (AppState.triggerSync) AppState.triggerSync();
 
-                ToastManager.success(`Intensity set to ${this._getStrengthLabel(internalVal)}`);
+                // ToastManager.success(`Intensity set to ${this._getStrengthLabel(internalVal)}`);
             });
         });
     }
