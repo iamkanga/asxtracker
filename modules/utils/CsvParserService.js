@@ -19,52 +19,108 @@ export const CsvParserService = {
         if (!csvText) return { headers: [], rows: [] };
 
         const lines = csvText.split(/\r?\n/).filter(line => line.trim().length > 0);
-        if (lines.length < 2) return { headers: [], rows: [] };
+        if (lines.length < 1) return { headers: [], rows: [] };
 
-        // 1. FIND HEADER ROW
+        // --- FLEXIBLE HEADER MAPPING ---
+        const COLUMN_MAP = {
+            code: ['code', 'symbol', 'ticker', 'share', 'stock', 'instrument'],
+            date: ['date', 'purchase date', 'trade date', 'transaction date', 'dt', 'time'],
+            type: ['type', 'transaction type', 'action', 'direction', 'side'],
+            quantity: ['quantity', 'qty', 'units', 'shares', 'number', 'no.', 'vol', 'volume'],
+            price: ['price', 'buy price', 'cost', 'cost base', 'avg price', 'rate', 'unit price', 'amount'],
+            total: ['total', 'value', 'market value', 'market', 'balance']
+        };
+
+        // Helper to normalize a header string
+        const normalize = (h) => h.trim().replace(/^"|"$/g, '').toLowerCase().replace(/[\s\._-]/g, ' ');
+
+        // 1. FIND BEST HEADER ROW
         let headerIndex = -1;
         let delimiter = null;
+        let bestScore = 0;
+        let bestMap = null;
 
-        for (let i = 0; i < Math.min(lines.length, 10); i++) {
+        // Scan first 20 lines for a potential header
+        for (let i = 0; i < Math.min(lines.length, 20); i++) {
             const line = lines[i];
-            const testDelimiter = line.includes('\t') ? '\t' : (line.includes(',') ? ',' : null);
-            if (!testDelimiter) continue;
+            const testDelimiters = [',', '\t', ';', '|']; // Support more delimiters
 
-            const cols = line.split(testDelimiter).map(c => c.trim().replace(/^"|"$/g, '').toLowerCase());
+            for (const d of testDelimiters) {
+                if (!line.includes(d) && testDelimiters.length > 1 && line.includes(',')) continue; // optimization
 
-            const isTrades = cols.includes('code') && (cols.includes('date') || cols.includes('type'));
-            const isHoldings = cols.includes('code') && cols.includes('quantity') && cols.includes('market');
+                const cols = this._splitLine(line, d).map(normalize);
 
-            if (isTrades || isHoldings) {
-                headerIndex = i;
-                delimiter = testDelimiter;
-                break;
+                // Score this row based on how many expected columns it contains
+                let score = 0;
+                let currentMap = {};
+
+                Object.keys(COLUMN_MAP).forEach(key => {
+                    const foundIndex = cols.findIndex(c => COLUMN_MAP[key].some(variation => c === variation || c.includes(variation)));
+                    if (foundIndex !== -1) {
+                        score++;
+                        currentMap[key] = foundIndex; // Store index for direct access later
+                    }
+                });
+
+                // Critical: Must have at least Code and (Quantity OR Price) to be useful
+                if (currentMap.code !== undefined && (currentMap.quantity !== undefined || currentMap.price !== undefined)) {
+                    if (score > bestScore) {
+                        bestScore = score;
+                        headerIndex = i;
+                        delimiter = d;
+                        bestMap = currentMap;
+                    }
+                }
             }
         }
 
         if (headerIndex === -1 || !delimiter) {
-            console.warn('[CsvParserService] Header row not found.');
+            console.warn('[CsvParserService] No valid header row found with flexible matching.');
             return { headers: [], rows: [], type: null };
         }
 
-        const reportType = lines[headerIndex].toLowerCase().includes('quantity') && lines[headerIndex].toLowerCase().includes('market') ? 'HOLDINGS' : 'TRADES';
+        // 2. DETERMINE TYPE
+        // Heuristic: If we matched "market" or "total" but NO "date" or "type", it's likely a HOLDINGS report.
+        let reportType = 'TRADES';
+        if (bestMap.total !== undefined && bestMap.quantity !== undefined && bestMap.date === undefined) {
+            reportType = 'HOLDINGS';
+        }
 
-        const headers = lines[headerIndex].split(delimiter).map(h => h.trim().replace(/^"|"$/g, ''));
+        console.log(`[CsvParserService] Header found at line ${headerIndex}. Type: ${reportType}. Map:`, bestMap);
+
+        const rawHeaders = this._splitLine(lines[headerIndex], delimiter).map(h => h.trim().replace(/^"|"$/g, ''));
+
+        // 3. PARSE ROWS USING MAP
         const dataRows = lines.slice(headerIndex + 1).map(line => {
             const values = this._splitLine(line, delimiter);
+            if (values.length < 2) return null;
+
             const row = {};
-            headers.forEach((header, i) => {
-                if (header) row[header] = values[i] || '';
+
+            // Map the found columns to standard internal names (Code, Date, Type, Quantity, Price, etc.)
+            // We basically project the CSV columns into our expected schema
+
+            if (bestMap.code !== undefined) row['Code'] = values[bestMap.code];
+            if (bestMap.date !== undefined) row['Date'] = values[bestMap.date];
+            if (bestMap.type !== undefined) row['Type'] = values[bestMap.type];
+            if (bestMap.quantity !== undefined) row['Quantity'] = values[bestMap.quantity];
+            if (bestMap.price !== undefined) row['Price'] = values[bestMap.price];
+            if (bestMap.total !== undefined) row['Market Value'] = values[bestMap.total];
+
+            // Also keep original headers just in case other logic needs them (fallback)
+            rawHeaders.forEach((h, i) => {
+                if (values[i] !== undefined) row[h] = values[i];
             });
+
             return row;
         }).filter(row => {
-            // Basic sanity check: Must have a code and it shouldn't be "Total"
+            if (!row) return false;
             const code = String(row['Code'] || '').trim().toUpperCase();
-            return code && code !== 'TOTAL' && code !== 'MARKET' && !code.startsWith('SHARE PRICES');
+            // Filter junk lines
+            return code && code.length > 1 && code !== 'TOTAL' && !code.startsWith('SHARE PRICES');
         });
 
-
-        return { headers, rows: dataRows, type: reportType };
+        return { headers: rawHeaders, rows: dataRows, type: reportType };
     },
 
     /**
@@ -77,58 +133,61 @@ export const CsvParserService = {
         // Transaction types that count as an "active" entry/purchase
         const PURCHASE_TYPES = ['Buy', 'DRRP', 'DRP', 'Dividend Reinvestment', 'Opening Balance', 'Bonus', 'Merge (Buy)'];
 
-
-
         rows.forEach((row, index) => {
             const code = row['Code'];
-            const type = row['Type'];
+            const type = row['Type']; // Might be undefined now
             const dateStr = row['Date'];
 
-            if (!code || !dateStr) {
-                if (index < 5) console.warn(`[CsvParserService] Missing Code/Date at row ${index}:`, row);
-                return;
+            if (!code) return; // Need at least a code
+
+            // If Type is present, check against known list. If NO Type is present, assume it's a simple list and check for positive integer quantity later.
+            if (type && !PURCHASE_TYPES.some(t => t.toLowerCase() === type.toLowerCase()) && !type.toLowerCase().includes('buy')) {
+                // It's a type column, but NOT a buy type (e.g. Sell). Skip.
+                // UNLESS it's just a generic "Purchase" or similar that we missed. 
+                // Flexible Match:
+                const isSell = ['sell', 'sales', 'disposal'].some(s => type.toLowerCase().includes(s));
+                if (isSell) return;
             }
 
-            if (!PURCHASE_TYPES.includes(type)) return;
-
-            // Robust Date Parsing (Handles DD/MM/YYYY or YYYY-MM-DD)
+            // Normalization for date
             let date;
-            if (dateStr.includes('/')) {
-                const parts = dateStr.split('/').map(Number);
-                if (parts[0] > 1900) { // YYYY/MM/DD
-                    date = new Date(parts[0], parts[1] - 1, parts[2]);
-                } else { // DD/MM/YYYY
-                    date = new Date(parts[2], parts[1] - 1, parts[0]);
+            if (dateStr) {
+                if (dateStr.includes('/')) {
+                    const parts = dateStr.split('/').map(Number);
+                    if (parts[0] > 1900) date = new Date(parts[0], parts[1] - 1, parts[2]); // YYYY/MM/DD
+                    else date = new Date(parts[2], parts[1] - 1, parts[0]); // DD/MM/YYYY
+                } else {
+                    date = new Date(dateStr);
                 }
             } else {
-                date = new Date(dateStr);
+                // No date? Maybe just default to now or skip date logic?
+                // The prompt was "flaky uploads". If date is missing, we should probably still accept the Qty/Price update.
+                date = new Date(0); // Epoch
             }
 
-            if (isNaN(date.getTime())) {
-                console.warn(`[CsvParserService] Invalid date format for code ${code}: ${dateStr}`);
-                return;
-            }
+            if (isNaN(date.getTime())) date = new Date(0);
 
             // Standardize column names (Cost base might be missing currency suffix, or using Template 'Buy Price')
             const quantity = parseFloat(String(row['Quantity'] || '0').replace(/,/g, ''));
-            const price = parseFloat(String(row['Price'] || row['Buy Price'] || row['Unit Price'] || '0').replace(/,/g, ''));
-            const costBase = parseFloat(String(row['Cost base per share (AUD)'] || row['Cost base per share'] || row['Buy Price'] || row['Unit Price'] || '0').replace(/,/g, ''));
+            // Try all price fields
+            const price = parseFloat(String(row['Price'] || row['Buy Price'] || row['Unit Price'] || row['Cost base per share (AUD)'] || '0').replace(/,/g, ''));
+            const costBase = price;
 
-            if (isNaN(quantity)) return;
+            if (isNaN(quantity) || quantity <= 0) return; // flexible logic: only positive quantities update "purchases"
 
-            if (!latest.has(code) || date > latest.get(code).date) {
+            // Logic: prefer latest date, OR if date is tied/missing, just take the last one in the file (often latest)
+            if (!latest.has(code) || date >= latest.get(code).date) {
                 latest.set(code, {
                     code,
                     date,
-                    dateStr,
-                    type,
+                    dateStr: dateStr || '',
+                    type: type || 'Buy',
                     quantity,
                     price,
                     costBase
                 });
             }
         });
-
 
         return latest;
     },
@@ -142,11 +201,9 @@ export const CsvParserService = {
         const holdings = new Map();
         if (!rows.length) return holdings;
 
-
-
         rows.forEach((row, index) => {
             const code = row['Code'];
-            const quantityStr = row['Quantity'];
+            const quantityStr = row['Quantity']; // now normalized
 
             if (!code || quantityStr === undefined) return;
 
@@ -159,7 +216,6 @@ export const CsvParserService = {
                 isHoldingsOnly: true // Flag to indicate no price/date data
             });
         });
-
 
         return holdings;
     }

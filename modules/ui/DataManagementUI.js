@@ -231,7 +231,7 @@ export class DataManagementUI {
                 s.enteredPrice || 0,
                 s.portfolioShares || 0,
                 s.brokerage || 0,
-                s.purchaseDate || s.entryDate || ''
+                s.purchaseDate || ''
             ].join(',');
         });
 

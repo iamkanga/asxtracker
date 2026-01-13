@@ -3703,27 +3703,27 @@ h1.modal-title,
 /* Shared by Stock Details Modal and Portfolio Summary Cards */
 .trend-up-bg,
 .summary-card.trend-up-bg {
-    background: linear-gradient(135deg, #253325 0%, #1a1e1a 100%) !important;
+    background: linear-gradient(135deg, rgba(37, 51, 37, var(--gradient-strength, 0.6)) 0%, rgba(26, 30, 26, 1) 100%) !important;
     /* Very subtle green hint */
     border-color: var(--color-positive) !important;
 }
 
 .detail-card.trend-up-bg {
-    /* Stronger strength gradient (0.45 alpha) - side border removed */
-    background: linear-gradient(135deg, rgba(0, 200, 0, 0.45) 0%, rgba(20, 20, 20, 1) 100%) !important;
+    /* Stronger strength gradient (variable alpha) - side border removed */
+    background: linear-gradient(135deg, rgba(0, 200, 0, var(--gradient-strength, 0.6)) 0%, rgba(20, 20, 20, 1) 100%) !important;
     box-shadow: none !important;
 }
 
 .trend-down-bg,
 .summary-card.trend-down-bg {
-    background: linear-gradient(135deg, #332525 0%, #1e1a1a 100%) !important;
+    background: linear-gradient(135deg, rgba(51, 37, 37, var(--gradient-strength, 0.6)) 0%, rgba(30, 26, 26, 1) 100%) !important;
     /* Very subtle red hint */
     border-color: var(--color-negative) !important;
 }
 
 .detail-card.trend-down-bg {
-    /* Stronger strength gradient (0.45 alpha) - side border removed */
-    background: linear-gradient(135deg, rgba(200, 0, 0, 0.45) 0%, rgba(20, 20, 20, 1) 100%) !important;
+    /* Stronger strength gradient (variable alpha) - side border removed */
+    background: linear-gradient(135deg, rgba(200, 0, 0, var(--gradient-strength, 0.6)) 0%, rgba(20, 20, 20, 1) 100%) !important;
     box-shadow: none !important;
 }
 
@@ -3759,12 +3759,12 @@ h1.modal-title,
 
 /* Specific overrides for Detail Modals to match Summary Cards */
 #summary-detail-modal .modal-content.trend-up-bg {
-    background: linear-gradient(135deg, rgba(0, 200, 0, 0.5) 0%, rgba(20, 20, 20, 1) 100%) !important;
+    background: linear-gradient(135deg, rgba(0, 200, 0, var(--gradient-strength, 0.6)) 0%, rgba(20, 20, 20, 1) 100%) !important;
     border: none !important;
 }
 
 #summary-detail-modal .modal-content.trend-down-bg {
-    background: linear-gradient(135deg, rgba(200, 0, 0, 0.5) 0%, rgba(20, 20, 20, 1) 100%) !important;
+    background: linear-gradient(135deg, rgba(200, 0, 0, var(--gradient-strength, 0.6)) 0%, rgba(20, 20, 20, 1) 100%) !important;
     border: none !important;
 }
 
