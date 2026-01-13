@@ -74,13 +74,28 @@ export const AuthService = {
         }
 
         const provider = new GoogleAuthProvider();
-        // V65: Hint Dark Mode for Popups
-        provider.setCustomParameters({
-            // prompt: 'select_account', // Removed to restore auto-login
-            theme: 'dark' // Note: Support depends on Google's current API behavior
-        });
+
+        // V71: Smart Login Hint - Auto-select last known account
+        const lastEmail = localStorage.getItem('asx_last_email');
+        if (lastEmail) {
+            console.log('[AuthService] Applying login_hint:', lastEmail);
+            provider.setCustomParameters({
+                login_hint: lastEmail,
+                prompt: 'select_account',
+                theme: 'dark'
+            });
+        } else {
+            provider.setCustomParameters({
+                theme: 'dark'
+            });
+        }
+
         try {
             const result = await signInWithPopup(auth, provider);
+            // Persist email for next time
+            if (result.user && result.user.email) {
+                localStorage.setItem('asx_last_email', result.user.email);
+            }
             return result.user;
         } catch (error) {
             console.error("AuthService Sign-In Error:", error);
@@ -96,7 +111,9 @@ export const AuthService = {
         if (!auth) return;
         try {
             await firebaseSignOut(auth);
-            // console.log("AuthService: Signed out.");
+            // Optional: Clear hint on explicit sign out? 
+            // Better to keep it for quick re-login unless user wants to switch.
+            // localStorage.removeItem('asx_last_email'); 
         } catch (error) {
             console.error("AuthService Sign-Out Error:", error);
             throw error;
@@ -111,6 +128,9 @@ export const AuthService = {
     observeState(callback) {
         if (!auth) return () => { };
         return onAuthStateChanged(auth, (user) => {
+            if (user && user.email) {
+                localStorage.setItem('asx_last_email', user.email);
+            }
             callback(user);
         });
     },
@@ -121,5 +141,22 @@ export const AuthService = {
      */
     getCurrentUser() {
         return auth ? auth.currentUser : null;
+    },
+
+    /**
+     * silently refreshes the id token to keep the session alive.
+     * Useful on app resume to prevent stale token errors on write.
+     */
+    async refreshSession() {
+        if (!auth || !auth.currentUser) return false;
+        try {
+            // Force refresh of the token
+            await auth.currentUser.getIdToken(true);
+            console.log('[AuthService] Session refreshed silently.');
+            return true;
+        } catch (e) {
+            console.warn('[AuthService] Session refresh failed:', e);
+            return false;
+        }
     }
 };

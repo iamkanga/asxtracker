@@ -326,8 +326,16 @@ export const SecurityUI = {
 
         document.body.appendChild(modal);
 
+        // Navigation Hook
+        navManager.pushState(() => {
+            if (modal.parentElement) {
+                modal.querySelector(`.${CSS_CLASSES.MODAL_CLOSE_BTN}`).click();
+            }
+        });
+
         const closeModal = () => {
             modal.remove();
+            navManager.popStateSilently();
             if (onCancel) onCancel();
         };
 

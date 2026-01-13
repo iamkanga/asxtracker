@@ -184,8 +184,8 @@ export class GeneralSettingsUI {
         const dataRow = modal.querySelector('#gen-data-mgmt-row');
         if (dataRow) {
             dataRow.addEventListener('click', () => {
-                // Close this modal first, then open the new one
-                GeneralSettingsUI._close(modal);
+                // Stack on top
+
                 DataManagementUI.showModal();
             });
         }
@@ -245,8 +245,16 @@ export class GeneralSettingsUI {
 
         document.body.appendChild(modal);
 
+        // Navigation Hook
+        navManager.pushState(() => {
+            if (modal.parentElement) {
+                modal.querySelector('.back-btn').click();
+            }
+        });
+
         const close = () => {
             modal.remove();
+            navManager.popStateSilently();
         };
 
         modal.querySelector('.back-btn').addEventListener('click', close);

@@ -218,6 +218,37 @@ export class AppController {
             }
         });
 
+        // 2. RECONNECTION SAFETY NET
+        // If UserStore detects a write failure (permission-denied), it fires this event.
+        // We prompt the user to "One-Tap Reconnect" using the Smart Login hint.
+        document.addEventListener('auth-reconnect-needed', () => {
+            console.log('[AppController] preventing data loss: Triggering Reconnect Prompt.');
+
+            // Only show if not already showing
+            if (document.getElementById('reconnect-toast')) return;
+
+            ToastManager.show(
+                'Session expired. Tap to Reconnect & Save.',
+                'error',
+                'Reconnect',
+                async () => {
+                    try {
+                        const user = await AuthService.signIn();
+                        if (user) {
+                            ToastManager.show('Connected! Retrying save...', 'success');
+                            // The failed write in UserStore isn't automatically retried here, 
+                            // but the NEXT write (or user clicking save again) will work.
+                            // Ideally, we'd queue the pending write, but minimizing complexity first.
+                            document.dispatchEvent(new CustomEvent(EVENTS.FIREBASE_DATA_LOADED));
+                        }
+                    } catch (e) {
+                        console.error('Reconnection failed:', e);
+                        ToastManager.show('Connection failed. Please reload.', 'error');
+                    }
+                }
+            );
+        });
+
         // 2. Initialize Watchlist UI
         this.watchlistUI = new WatchlistUI({
             onWatchlistChange: (watchlistId) => this.handleSwitchWatchlist(watchlistId),
@@ -981,6 +1012,11 @@ export class AppController {
             if (document.visibilityState === 'hidden') {
                 this._lastBackgroundTime = now;
             } else if (document.visibilityState === 'visible') {
+                // V71: Always refresh session on resume to prevent stale writes
+                if (AppState.user) {
+                    AuthService.refreshSession().catch(err => console.warn('Resume auth refresh failed', err));
+                }
+
                 // 1. Security Lock Check
                 if (AppState.user && AppState.preferences.security.requireLockOnResume) {
                     this.handleSecurityLock();

@@ -31,7 +31,21 @@ export class UserStore {
         this.unsubscribeCash = null;
         this.unsubscribeWatchlists = null;
         this.unsubscribeDashboard = null;
+        this.unsubscribeDashboard = null;
         this._lastPrefsJson = null; // Cache for deep equality checks
+    }
+
+    /**
+     * Internal helper to handle write errors.
+     * Triggers global reconnection flow if permission denied.
+     */
+    _handleWriteError(error, context) {
+        if (error.code === 'permission-denied') {
+            console.warn(`[UserStore] Write denied in ${context}. Triggering Re-Auth.`);
+            document.dispatchEvent(new CustomEvent('auth-reconnect-needed'));
+        } else {
+            console.error(`[UserStore] Error in ${context}:`, error);
+        }
     }
 
     /**
@@ -203,7 +217,7 @@ export class UserStore {
                 updatedAt: serverTimestamp()
             });
         } catch (e) {
-            console.error("UserStore: Error updating share:", e);
+            this._handleWriteError(e, 'updateShare');
         }
     }
 
@@ -554,8 +568,9 @@ export class UserStore {
 
             this._lastPrefsJson = currentJson; // Update cache
             console.log('UserStore: Preferences saved successfully.');
+
         } catch (e) {
-            console.error("UserStore: Error saving preferences:", e);
+            this._handleWriteError(e, 'savePreferences');
         }
     }
 

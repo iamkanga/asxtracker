@@ -135,6 +135,13 @@ export class DataManagementUI {
 
         document.body.appendChild(modal);
 
+        // Navigation Hook
+        navManager.pushState(() => {
+            if (modal.parentElement) {
+                modal.querySelector(`.${CSS_CLASSES.MODAL_CLOSE_BTN}`).click();
+            }
+        });
+
         // --- TAB SWITCHING LOGIC ---
         const switchTab = (tab) => {
             activeTab = tab;
@@ -152,6 +159,7 @@ export class DataManagementUI {
         // --- CLOSE LOGIC ---
         const close = () => {
             modal.remove();
+            navManager.popStateSilently();
         };
         modal.querySelector(`.${CSS_CLASSES.MODAL_CLOSE_BTN}`).addEventListener('click', close);
         modal.querySelector(`.${CSS_CLASSES.MODAL_OVERLAY}`).addEventListener('click', close);
@@ -325,13 +333,23 @@ export class DataManagementUI {
 
         document.body.appendChild(modal);
 
-        modal.querySelector('#res-cancel').addEventListener('click', () => modal.remove());
+        navManager.pushState(() => {
+            if (modal.parentElement) {
+                modal.remove();
+            }
+        });
 
-        const commitBtn = modal.querySelector('#res-commit');
+        const closeModal = () => {
+            modal.remove();
+            navManager.popStateSilently();
+        };
+
+        modal.querySelector('#res-cancel').addEventListener('click', closeModal);
+
         if (commitBtn) {
             commitBtn.addEventListener('click', async () => {
                 await this._commitSync(matches);
-                modal.remove();
+                closeModal();
             });
         }
     }
