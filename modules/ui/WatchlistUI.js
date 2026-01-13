@@ -364,10 +364,7 @@ export class WatchlistUI {
                 const total = gainerCount + loserCount;
 
                 if (total === 0) {
-                    header.style.background = `linear-gradient(90deg, 
-                        rgba(var(--color-accent-rgb), var(--gradient-strength, 0.6)) 0%, 
-                        color-mix(in srgb, rgb(var(--color-accent-rgb)) var(--gradient-tint, 0%), rgb(20, 20, 20)) 50%, 
-                        rgba(var(--color-accent-rgb), var(--gradient-strength, 0.6)) 100%)`; // Neutral
+                    header.style.background = ''; // Neutral (Revert to CSS default)
                 } else {
                     const gainerPct = gainerCount / total;
                     const loserPct = loserCount / total;
