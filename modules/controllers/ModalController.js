@@ -96,6 +96,11 @@ export class ModalController {
             AppState.data.shares.filter(s => (s.shareName || '').toUpperCase() === (stockCode || '').toUpperCase()).forEach(s => {
                 const wId = s.watchlistId || 'portfolio';
                 existingMemberships.set(wId, s.id);
+
+                // FIX: Check Array memberships too
+                if (Array.isArray(s.watchlistIds)) {
+                    s.watchlistIds.forEach(id => existingMemberships.set(id, s.id));
+                }
             });
 
             // 2. Find implicit memberships in Watchlist 'stocks' arrays (New Schema)
@@ -192,7 +197,8 @@ export class ModalController {
                                 watchlistId: persistenceId, // Set primary context
                                 enteredPrice: entryPrice,
                                 purchaseDate: purchaseDate,
-                                entryDate: purchaseDate // Legacy fallback
+                                entryDate: purchaseDate, // Legacy fallback
+                                watchlistIds: newWatchlists // FIX: Persist membership array
                             };
                             delete dataToAdd.watchlists;
 
@@ -242,7 +248,8 @@ export class ModalController {
 
                         // FIX: Use explicit PORTFOLIO_ID
                         const persistenceId = (wid === PORTFOLIO_ID || wid === 'main') ? PORTFOLIO_ID : wid;
-                        const dataToUpdate = { ...formData, watchlistId: persistenceId };
+                        // FIX: Persist the full array of memberships (Sync UI -> DB)
+                        const dataToUpdate = { ...formData, watchlistId: persistenceId, watchlistIds: newWatchlists };
                         delete dataToUpdate.watchlists;
 
                         try {
@@ -283,7 +290,8 @@ export class ModalController {
 
                                 try {
                                     console.log(`[ModalController] MIGRATING Share ${docId} from ${wid} to ${newMasterWl}`);
-                                    await appService.updateShareRecord(docId, { watchlistId: newPersistenceId });
+                                    // FIX: Update watchlistIds array during migration too
+                                    await appService.updateShareRecord(docId, { watchlistId: newPersistenceId, watchlistIds: newWatchlists });
                                     // Note: We don't need to "add" it to newMasterWl because the 'toAdd' loop 
                                     // might have already tried (and linked it). But updating the Master Doc 
                                     // ensures it now "lives" there.

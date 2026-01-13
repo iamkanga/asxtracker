@@ -197,8 +197,8 @@ export class UserStore {
             // console.log(`UserStore: Added share ${shareData.code} (ID: ${docRef.id})`);
             return docRef.id;
         } catch (e) {
-            console.error("UserStore: Error adding share:", e);
-            return null;
+            this._handleWriteError(e, 'addShare');
+            throw e;
         }
     }
 
@@ -217,7 +217,24 @@ export class UserStore {
                 updatedAt: serverTimestamp()
             });
         } catch (e) {
-            this._handleWriteError(e, 'updateShare');
+            if (e.code === 'not-found' || e.message.includes('No document to update')) {
+                console.warn(`[UserStore] Share ${shareId} not found (Ghost). Resurrecting...`);
+                // Resurrect: Use setDoc to recreate with same ID (preserve references)
+                try {
+                    await setDoc(shareRef, {
+                        ...data,
+                        createdAt: serverTimestamp(),
+                        updatedAt: serverTimestamp()
+                    });
+                    console.log(`[UserStore] Share ${shareId} resurrected.`);
+                } catch (resurrectError) {
+                    this._handleWriteError(resurrectError, 'updateShare-Resurrect');
+                    throw resurrectError;
+                }
+            } else {
+                this._handleWriteError(e, 'updateShare');
+                throw e;
+            }
         }
     }
 
@@ -442,11 +459,22 @@ export class UserStore {
             const idsToUnion = [watchlistId];
             if (existing.watchlistId) idsToUnion.push(existing.watchlistId);
 
-            await updateDoc(ref, {
-                watchlistIds: arrayUnion(...idsToUnion),
-                updatedAt: serverTimestamp()
-            });
-            return existing.id;
+            try {
+                await updateDoc(ref, {
+                    watchlistIds: arrayUnion(...idsToUnion),
+                    updatedAt: serverTimestamp()
+                });
+                return existing.id;
+            } catch (e) {
+                // FIX: Handle Ghost Share (Exists in AppState but not in DB)
+                if (e.code === 'not-found' || e.message.includes('No document to update')) {
+                    console.warn(`[UserStore] Share ${symbol} (${existing.id}) is a Ghost. Recreating...`);
+                    // Fallback to Create New Logic (below)
+                } else {
+                    console.error("UserStore: Error linking stock:", e);
+                    return null;
+                }
+            }
         }
 
         // Fallback: Create New (Primary Record)
@@ -524,8 +552,18 @@ export class UserStore {
                 updatedAt: serverTimestamp()
             });
         } catch (e) {
-            console.error(`UserStore: Error updating document in ${collectionName}:`, e);
-            throw e;
+            // FIX: Handle Ghost Document Resurrect
+            if (e.code === 'not-found' || e.message.includes('No document to update')) {
+                console.warn(`[UserStore] Document ${docId} in ${collectionName} not found. Resurrecting...`);
+                await setDoc(ref, {
+                    ...data,
+                    createdAt: serverTimestamp(),
+                    updatedAt: serverTimestamp()
+                });
+            } else {
+                console.error(`UserStore: Error updating document in ${collectionName}:`, e);
+                throw e;
+            }
         }
     }
 
@@ -571,6 +609,7 @@ export class UserStore {
 
         } catch (e) {
             this._handleWriteError(e, 'savePreferences');
+            throw e;
         }
     }
 

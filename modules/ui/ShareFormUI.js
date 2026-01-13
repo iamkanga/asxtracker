@@ -370,6 +370,11 @@ export class ShareFormUI {
         allShares.filter(s => (s.shareName || '').toUpperCase() === stockCode).forEach(s => {
             const wId = s.watchlistId || 'portfolio';
             membershipIds.add(wId);
+
+            // FIX: Check Array memberships too
+            if (Array.isArray(s.watchlistIds)) {
+                s.watchlistIds.forEach(id => membershipIds.add(id));
+            }
         });
 
         // 5b. Find implicit memberships in Watchlist 'stocks' arrays (New Schema)
