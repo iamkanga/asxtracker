@@ -195,6 +195,13 @@ export class ShareFormUI {
         const selectedWatchlists = [...modal.querySelectorAll('input[name="watchlist"]:checked')];
 
         let isValid = true;
+        let validationMsg = '';
+
+        // 0. AUTH CHECK (Live Read-Only Mode)
+        if (!AppState.user) {
+            isValid = false;
+            validationMsg = 'Login to Save';
+        }
 
         // 1. Check Watchlist Selection
         if (selectedWatchlists.length === 0) {
@@ -240,9 +247,11 @@ export class ShareFormUI {
         if (isValid) {
             saveBtn.disabled = false;
             saveBtn.classList.remove(CSS_CLASSES.GHOSTED);
+            saveBtn.title = "Save Changes";
         } else {
             saveBtn.disabled = true;
             saveBtn.classList.add(CSS_CLASSES.GHOSTED);
+            saveBtn.title = validationMsg || "Complete all fields to save";
         }
     }
 

@@ -86,6 +86,10 @@ export class HeaderLayout {
                     </button>
                  </div>
                  <div style="grid-column: 3; justify-self: end; display: flex; align-items: flex-end;">
+                    <div id="connection-status" class="hidden" title="Live Prices Active - Login to Save">
+                        <div class="status-dot"></div>
+                        <span>Read Only</span>
+                    </div>
                     <button id="${IDS.LIVE_REFRESH_BTN}" class="live-refresh-btn" aria-label="Refresh Prices" title="Refresh Live Prices">
                         <i class="fas ${UI_ICONS.SYNC} ${CSS_CLASSES.MR_2PX}"></i><span id="${IDS.LIVE_REFRESH_TIME}">--:--:--</span>
                     </button>
@@ -707,5 +711,33 @@ export class HeaderLayout {
 
         // Note: Floating Bell (Kangaroo) visibility is managed by NotificationUI.updateBadgeCount
         // which listens to the same NOTIFICATION_UPDATE event.
+    }
+
+    /**
+     * Updates the connection status indicator.
+     * @param {boolean} isConnected - True if authenticated
+     */
+    updateConnectionStatus(isConnected) {
+        const el = document.getElementById('connection-status');
+        if (!el) return;
+
+        if (isConnected) {
+            el.classList.remove('visible');
+            el.classList.remove('status-disconnected');
+            // Allow pointer events to fall through when hidden
+        } else {
+            el.classList.add('visible');
+            el.classList.add('status-disconnected');
+
+            // Re-bind click handler here or in init, ensuring it prompts login.
+            // Since this is a view update, the actual logic binding should ideally be in controller,
+            // or wired once in init. Let's assume controller listens to click via delegation or direct bind.
+            if (!el._hasBind) {
+                el._hasBind = true;
+                el.addEventListener('click', () => {
+                    document.dispatchEvent(new CustomEvent('auth-reconnect-needed'));
+                });
+            }
+        }
     }
 }
