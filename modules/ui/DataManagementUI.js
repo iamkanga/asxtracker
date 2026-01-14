@@ -4,7 +4,7 @@
  * Replaces simple "Download" settings with a robust management tool.
  */
 
-import { CSS_CLASSES, UI_ICONS, IDS, EVENTS } from '../utils/AppConstants.js';
+import { CSS_CLASSES, UI_ICONS, IDS, EVENTS, PORTFOLIO_ID } from '../utils/AppConstants.js';
 import { AppState } from '../state/AppState.js';
 import { ToastManager } from './ToastManager.js';
 import { navManager } from '../utils/NavigationManager.js';
@@ -38,7 +38,7 @@ export class DataManagementUI {
                         <i class="fas fa-file-export" style="margin-right: 8px;"></i> Export Data
                     </div>
                     <div id="tab-btn-import" class="tab-btn" style="flex: 1; padding: 15px; text-align: center; cursor: pointer; font-weight: 600; color: var(--text-muted); border-bottom: 2px solid transparent; transition: all 0.2s;">
-                        <i class="fas fa-file-import" style="margin-right: 8px;"></i> Import / Sync
+                        <i class="fas fa-sync-alt" style="margin-right: 8px;"></i> Portfolio Sync
                     </div>
                 </div>
 
@@ -79,39 +79,33 @@ export class DataManagementUI {
                     <div id="tab-content-import" class="tab-content" style="display: none;">
                         
                         <div style="margin-bottom: 25px;">
-                            <h3 style="color: white; margin-bottom: 8px; font-size: 1.1rem;">Update Portfolio</h3>
+                            <h3 style="color: white; margin-bottom: 8px; font-size: 1.1rem;">Portfolio Sync</h3>
                             <p style="color: var(--text-muted); font-size: 0.85rem; line-height: 1.5;">
-                                Upload a Sharesight export or paste data directly to update your unit counts and purchase dates.
+                                Synchronize your portfolio holdings using a Sharesight export. This process will update your **unit counts** and **cost bases** specifically for the Portfolio view.
                             </p>
+                            <div style="margin-top: 10px; font-size: 0.75rem; color: var(--color-accent); font-weight: 600; display: flex; gap: 6px; align-items: center;">
+                                <i class="fas fa-info-circle"></i> Watchlist-only shares (0 units) are not affected unless added as new holdings.
+                            </div>
                         </div>
 
-                        <!-- Option A: File Upload -->
-                        <div class="import-option" style="background: var(--bg-secondary); border: 1px dashed var(--border-color); border-radius: 8px; padding: 20px; margin-bottom: 20px; text-align: center; cursor: pointer; transition: all 0.2s;" id="dm-drop-zone">
-                            <i class="fas fa-cloud-upload-alt" style="font-size: 1.5rem; color: var(--text-muted); margin-bottom: 10px;"></i>
-                            <div style="font-weight: 600; color: white; margin-bottom: 4px;">Upload File</div>
-                            <div style="font-size: 0.8rem; color: var(--text-muted);">Sharesight 'All Trades', 'Holdings' or 'Performance' CSV</div>
+                        <!-- Option A: File Upload (Primary) -->
+                        <div class="import-option" style="background: rgba(255,255,255,0.03); border: 2px dashed var(--border-color); border-radius: 12px; padding: 40px 20px; margin-bottom: 20px; text-align: center; cursor: pointer; transition: all 0.2s;" id="dm-drop-zone">
+                            <i class="fas fa-cloud-upload-alt" style="font-size: 2.5rem; color: var(--color-accent); margin-bottom: 15px; opacity: 0.8;"></i>
+                            <div style="font-weight: 700; color: white; margin-bottom: 8px; font-size: 1.1rem;">Drop your CSV here</div>
+                            <div style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.4;">
+                                Supports Sharesight 'All Trades', 'Holdings' <br>and 'Performance' reports.
+                            </div>
                             <input type="file" id="dm-file-input" accept=".csv" style="display: none;">
                         </div>
 
-                        <div style="display: flex; align-items: center; margin: 20px 0;">
-                            <div style="flex: 1; height: 1px; background: var(--border-color);"></div>
-                            <span style="padding: 0 10px; color: var(--text-muted); font-size: 0.8rem; font-weight: 600;">OR PASTE DATA</span>
-                            <div style="flex: 1; height: 1px; background: var(--border-color);"></div>
-                        </div>
-
-                        <!-- Option B: Paste Template -->
-                        <div class="import-option">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                                <label style="color: white; font-weight: 600; font-size: 0.9rem;">Paste Data</label>
-                                <button id="dm-btn-template" class="btn-text-only" style="font-size: 0.75rem; color: var(--color-accent); background: none; border: none; cursor: pointer; text-decoration: underline;">
-                                    <i class="fas fa-download"></i> Get Template
-                                </button>
-                            </div>
-                            <textarea id="dm-paste-area" placeholder="Code, Date, Type, Quantity, Price..." style="width: 100%; height: 120px; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 6px; color: white; padding: 12px; font-family: monospace; font-size: 0.85rem; resize: vertical;"></textarea>
-                            
-                            <div style="display: flex; justify-content: flex-end; margin-top: 10px;">
-                                <button id="dm-btn-process-paste" class="standard-btn" style="background: var(--color-accent); color: white; border: none; padding: 8px 16px; border-radius: 4px; font-weight: 600; cursor: pointer; opacity: 0.5; pointer-events: none;">
-                                    Process Data
+                        <div style="background: rgba(var(--color-accent-rgb), 0.05); border-radius: 8px; padding: 15px; border: 1px solid rgba(var(--color-accent-rgb), 0.1);">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <i class="fas fa-info-circle" style="color: var(--color-accent);"></i>
+                                    <span style="font-size: 0.85rem; color: white; font-weight: 600;">Need a template?</span>
+                                </div>
+                                <button id="dm-btn-template" class="standard-btn" style="font-size: 0.75rem; background: var(--bg-secondary); color: white; border: 1px solid var(--border-color); padding: 6px 12px; border-radius: 4px; cursor: pointer;">
+                                    Download Starter
                                 </button>
                             </div>
                         </div>
@@ -180,26 +174,11 @@ export class DataManagementUI {
         // --- IMPORT HANDLERS ---
         const fileInput = modal.querySelector('#dm-file-input');
         const dropZone = modal.querySelector('#dm-drop-zone');
-        const pasteArea = modal.querySelector('#dm-paste-area');
-        const processPasteBtn = modal.querySelector('#dm-btn-process-paste');
-
         // File Selection
         dropZone.addEventListener('click', () => fileInput.click());
         fileInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (file) this._processFile(file);
-        });
-
-        // Paste Logic
-        pasteArea.addEventListener('input', (e) => {
-            const hasText = e.target.value.trim().length > 0;
-            processPasteBtn.style.opacity = hasText ? '1' : '0.5';
-            processPasteBtn.style.pointerEvents = hasText ? 'auto' : 'none';
-        });
-
-        processPasteBtn.addEventListener('click', () => {
-            const text = pasteArea.value;
-            if (text) this._simulateSyncWrapper(text);
         });
 
         // Download Template
@@ -288,45 +267,127 @@ export class DataManagementUI {
 
     static _simulateSyncWrapper(csvText) {
         // Calls the existing SyncManager which we will likely enhance next
-        const { matches, ignored } = SyncManager.simulateSync(csvText);
+        const { matches, newShares, ignored } = SyncManager.simulateSync(csvText);
 
         // Close self
         const existing = document.getElementById('data-management-modal');
         if (existing) existing.remove();
 
-        // Show result (using the existing logic in GeneralSettingsUI for now, or we can move it here)
-        // For now, let's just use the GeneralSettingsUI static method if accessible, or replicate.
-        // Better: Delegate back to SyncManager or duplicte the simple UI.
-
-        // Let's implement a simple Result Modal here directly to be self-contained
-        this._showSyncResult(matches, ignored);
+        // Show result
+        this._showSyncResult(matches, newShares, ignored);
     }
 
-    static _showSyncResult(matches, ignored) {
+    static _showSyncResult(matches = [], newShares = [], ignored = []) {
         const modal = document.createElement('div');
         modal.className = `${CSS_CLASSES.MODAL} ${CSS_CLASSES.SHOW}`;
         modal.style.zIndex = '3000';
 
-        const matchRows = matches.map(m => `
-            <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
-                <span style="font-weight: 700; color: var(--color-accent);">${m.code}</span>
-                <span style="font-size: 0.8rem; color: var(--text-muted);">${m.quantity} units @ $${m.price || '-'}</span>
-            </div>
-        `).join('');
+        const renderItemCard = (item, type) => {
+            const isNew = type === 'new';
+            const icon = isNew ? UI_ICONS.ADD : UI_ICONS.SYNC;
+            const tintClass = isNew ? 'tint-green' : 'tint-accent';
+            const badgeLabel = isNew ? 'New Holding' : 'Existing Record';
+            const badgeColor = isNew ? '#4ade80' : 'var(--color-accent)';
+
+            return `
+                <div class="sync-item-card ${tintClass}" style="
+                    background: rgba(255, 255, 255, 0.03);
+                    border: 1px solid var(--border-color);
+                    border-radius: 12px;
+                    padding: 16px;
+                    margin-bottom: 12px;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    backdrop-filter: blur(10px);
+                    animation: cardEntry 0.4s ease-out forwards;
+                    opacity: 0;
+                ">
+                    <div style="display: flex; align-items: center; gap: 16px;">
+                        <div style="
+                            width: 40px;
+                            height: 40px;
+                            border-radius: 10px;
+                            background: ${badgeColor}22;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            color: ${badgeColor};
+                            font-size: 1.2rem;
+                        ">
+                            <i class="fas ${icon}"></i>
+                        </div>
+                        <div>
+                            <div style="font-weight: 800; font-size: 1.1rem; color: white; letter-spacing: 0.5px;">${item.code}</div>
+                            <div style="font-size: 0.75rem; color: ${badgeColor}; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-top: 2px;">
+                                ${badgeLabel}
+                            </div>
+                        </div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-size: 1rem; font-weight: 700; color: white;">${item.quantity} <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 400;">Units</span></div>
+                        <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 2px;">@ $${parseFloat(item.price || 0).toFixed(2)}</div>
+                    </div>
+        `;
+        };
+
+        const totalItems = (matches?.length || 0) + (newShares?.length || 0);
 
         modal.innerHTML = `
-            <div class="${CSS_CLASSES.MODAL_OVERLAY}" style="background: rgba(0,0,0,0.8);"></div>
-            <div class="${CSS_CLASSES.MODAL_CONTENT}" style="max-width: 400px; padding: 25px;">
-                <h3 style="color: white;">Sync Preview</h3>
-                <p style="color: var(--text-muted); font-size: 0.9rem;">Found ${matches.length} matches to update.</p>
+            <style>
+                @keyframes cardEntry {
+                    from { opacity: 0; transform: translateY(10px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+                .sync-item-card.tint-green { border-left: 4px solid #4ade80 !important; }
+                .sync-item-card.tint-accent { border-left: 4px solid var(--color-accent) !important; }
+                .sync-preview-scroll::-webkit-scrollbar { width: 6px; }
+                .sync-preview-scroll::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 10px; }
+                .ignored-item { font-size: 0.8rem; color: #ff8a8a; display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+            </style>
+            <div class="${CSS_CLASSES.MODAL_OVERLAY}" style="background: rgba(0,0,0,0.85); backdrop-filter: blur(5px);"></div>
+            <div class="${CSS_CLASSES.MODAL_CONTENT}" style="max-width: 500px; padding: 0; background: var(--bg-primary); border: 1px solid var(--border-color); overflow: hidden;">
                 
-                <div style="max-height: 300px; overflow-y: auto; margin: 20px 0; border: 1px solid var(--border-color); padding: 10px; border-radius: 4px;">
-                    ${matches.length > 0 ? matchRows : 'No matches found.'}
+                <div style="padding: 24px; border-bottom: 1px solid var(--border-color); background: rgba(255,255,255,0.02);">
+                    <h3 style="color: white; margin: 0; font-size: 1.4rem; font-weight: 800;">Portfolio Sync Preview</h3>
+                    <p style="color: var(--text-muted); font-size: 0.9rem; margin: 8px 0 0 0;">
+                        Applying ${totalItems} updates to your active holdings.
+                    </p>
                 </div>
 
-                <div style="display: flex; gap: 10px;">
-                    <button id="res-cancel" class="standard-btn" style="flex: 1; background: var(--bg-secondary);">Cancel</button>
-                    ${matches.length > 0 ? `<button id="res-commit" class="standard-btn" style="flex: 1; background: var(--color-accent);">Update Records</button>` : ''}
+                <div class="sync-preview-scroll" style="max-height: 50vh; overflow-y: auto; padding: 20px; background: rgba(0,0,0,0.1);">
+                    ${matches.length > 0 ? `<div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 12px; margin-left: 4px;">Updates (${matches.length})</div>` : ''}
+                    ${matches.map((m, i) => `<div style="animation-delay: ${i * 0.05}s">${renderItemCard(m, 'update')}</div>`).join('')}
+                    
+                    ${newShares.length > 0 ? `<div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; margin: 24px 0 12px 4px;">New Holdings (${newShares.length})</div>` : ''}
+                    ${newShares.map((m, i) => `<div style="animation-delay: ${(matches.length + i) * 0.05}s">${renderItemCard(m, 'new')}</div>`).join('')}
+
+                    ${ignored.length > 0 ? `
+                        <div style="margin-top: 24px; border-top: 1px solid var(--border-color); padding-top: 16px;">
+                            <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 12px; margin-left: 4px; display: flex; justify-content: space-between;">
+                                <span>Skipped Items (${ignored.length})</span>
+                                <i class="fas fa-info-circle"></i>
+                            </div>
+                            <div style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 12px;">
+                                ${ignored.map(item => `
+                                    <div class="ignored-item">
+                                        <span style="font-weight: 700;">${item.code}</span>
+                                        <span style="opacity: 0.8;">${item.reason}</span>
+                                    </div>
+                                `).join('')}
+                                <div style="margin-top: 8px; font-size: 0.7rem; color: var(--text-muted); italic; opacity: 0.6;">
+                                    These items were ignored because they were empty positions, non-ASX codes, or invalid data.
+                                </div>
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    ${totalItems === 0 && ignored.length === 0 ? '<div style="text-align: center; padding: 40px; color: var(--text-muted);"><i class="fas fa-search" style="font-size: 2rem; margin-bottom: 16px; opacity: 0.3;"></i><br>No valid data found in this file.</div>' : ''}
+                </div>
+
+                <div style="padding: 20px; display: flex; gap: 12px; background: rgba(255,255,255,0.02); border-top: 1px solid var(--border-color);">
+                    <button id="res-cancel" class="standard-btn" style="flex: 1; background: rgba(255,255,255,0.05); color: white; border: 1px solid var(--border-color); padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer;">Cancel</button>
+                    ${totalItems > 0 ? `<button id="res-commit" class="standard-btn" style="flex: 2; background: var(--color-accent); color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 15px rgba(var(--color-accent-rgb), 0.3);">Apply ${totalItems} Changes</button>` : ''}
                 </div>
             </div>
         `;
@@ -346,21 +407,24 @@ export class DataManagementUI {
 
         modal.querySelector('#res-cancel').addEventListener('click', closeModal);
 
+        const commitBtn = modal.querySelector('#res-commit');
         if (commitBtn) {
             commitBtn.addEventListener('click', async () => {
-                await this._commitSync(matches);
+                await this._commitSync(matches, newShares);
                 closeModal();
             });
         }
     }
 
-    static async _commitSync(matches) {
+    static async _commitSync(matches = [], newShares = []) {
         if (!AppState.user) return;
-        ToastManager.show(`Updating ${matches.length} records...`, 'info');
+        const total = matches.length + newShares.length;
+        ToastManager.show(`Updating ${total} records...`, 'info');
 
-        // Direct DB Update Logic (Replicated from GeneralSettingsUI for independence)
         const userId = AppState.user.uid;
-        const promises = matches.map(match => {
+
+        // 1. Update Existing Matches
+        const updatePromises = (matches || []).map(match => {
             const updateData = { portfolioShares: match.quantity.toString() };
             if (!match.isHoldingsOnly && match.price) {
                 updateData.purchaseDate = match.dateStr || new Date().toISOString().split('T')[0];
@@ -369,7 +433,25 @@ export class DataManagementUI {
             return userStore.updateShare(userId, match.shareId, updateData);
         });
 
-        await Promise.all(promises);
-        ToastManager.show('Portfolio updated successfully.', 'success');
+        // 2. Add New Shares
+        const addPromises = (newShares || []).map(ns => {
+            return userStore.addShare(userId, {
+                code: ns.code,
+                shareName: ns.code,
+                portfolioShares: ns.quantity.toString(),
+                portfolioAvgPrice: (ns.price || 0).toString(),
+                purchaseDate: ns.dateStr || new Date().toISOString().split('T')[0],
+                watchlistIds: [PORTFOLIO_ID], // Default to portfolio
+                updatedAt: new Date()
+            });
+        });
+
+        try {
+            await Promise.all([...updatePromises, ...addPromises]);
+            ToastManager.show(`Successfully processed ${total} items.`, 'success');
+        } catch (err) {
+            console.error('[DataManagementUI] Sync failed:', err);
+            ToastManager.error('Failed to update some records. Check console.');
+        }
     }
 }

@@ -1,9 +1,7 @@
 import { AppState } from '../state/AppState.js';
 import { CsvParserService } from '../utils/CsvParserService.js';
 import { PORTFOLIO_ID } from '../utils/AppConstants.js';
-import { UserStore } from '../data/UserStore.js';
-
-const userStore = new UserStore();
+import { userStore } from '../data/DataService.js';
 
 /**
  * SyncManager.js
@@ -28,29 +26,30 @@ export const SyncManager = {
             syncData = CsvParserService.getLatestPurchases(rows);
         }
 
-        // Get all codes currently in the "Portfolio" using the standard filter logic
+        // 2. Search across ALL shares in AppState (not just Portfolio)
         const allShares = AppState.data.shares || [];
-        const portfolioShares = userStore.getWatchlistData(allShares, PORTFOLIO_ID);
-
-        console.log(`[SyncManager] Portfolio contains ${portfolioShares.length} items for matching.`);
-        if (portfolioShares.length > 0) {
-            console.log(`[SyncManager] Portfolio Sample (first 3):`, portfolioShares.slice(0, 3).map(s => ({
-                code: s.code || 'N/A',
-                shareName: s.shareName || 'N/A',
-                symbol: s.symbol || 'N/A'
-            })));
-        }
-
+        console.log(`[SyncManager] Searching across ${allShares.length} total user shares for matches.`);
 
         const matches = [];
-        const ignored = [];
+        const ignored = []; // Array of { code, reason }
+        const newShares = [];
 
         syncData.forEach((data, csvCode) => {
             if (!csvCode) return;
             // Normalize CSV code (Strip ASX: or .AX)
             const cleanCsvCode = csvCode.toUpperCase().replace(/^ASX:|\.AX$/g, '').trim();
 
-            const shareRecord = portfolioShares.find(s => {
+            if (!cleanCsvCode || cleanCsvCode.length < 2) {
+                ignored.push({ code: csvCode, reason: 'Invalid or missing code' });
+                return;
+            }
+
+            if (data.quantity <= 0) {
+                ignored.push({ code: cleanCsvCode, reason: 'Zero or negative quantity' });
+                return;
+            }
+
+            const shareRecord = allShares.find(s => {
                 // Check every possible "code" property in the user's record
                 const candidates = [
                     s.shareName,
@@ -68,11 +67,17 @@ export const SyncManager = {
                     shareId: shareRecord.id
                 });
             } else {
-                ignored.push(csvCode);
+                // Check if it's a valid ASX-like code (optional but good for filtering true junk)
+                // For now, we assume if it got past the basic check, it's a potential new share.
+                newShares.push({
+                    ...data,
+                    code: cleanCsvCode,
+                    isNew: true
+                });
             }
         });
 
-        console.log(`[SyncManager] Simulation Result: ${matches.length} Matches, ${ignored.length} Ignored.`);
-        return { matches, ignored };
+        console.log(`[SyncManager] Simulation Result: ${matches.length} Matches, ${newShares.length} New, ${ignored.length} Ignored.`);
+        return { matches, newShares, ignored, reportType };
     }
 };

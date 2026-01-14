@@ -9,10 +9,32 @@ export const CsvParserService = {
     _splitLine(line, delimiter) {
         if (delimiter === '\t') return line.split('\t').map(v => v.trim().replace(/^"|"$/g, ''));
 
-        // CSV Regex: Matches either a quoted string or a non-comma string
-        const regex = /(".*?"|[^,]+|(?<=,)(?=,)|(?<=^)(?=,)|(?<=,)(?=$))/g;
-        const matches = line.match(regex) || [];
-        return matches.map(v => v.trim().replace(/^"|"$/g, '').replace(/,/g, ''));
+        // Improved CSV Split: Handles escaped quotes within quoted strings
+        const result = [];
+        let cur = '';
+        let inQuote = false;
+
+        for (let i = 0; i < line.length; i++) {
+            const char = line[i];
+            const next = line[i + 1];
+
+            if (char === '"') {
+                if (inQuote && next === '"') {
+                    // Escaped quote
+                    cur += '"';
+                    i++;
+                } else {
+                    inQuote = !inQuote;
+                }
+            } else if (char === delimiter && !inQuote) {
+                result.push(cur.trim().replace(/^"|"$/g, ''));
+                cur = '';
+            } else {
+                cur += char;
+            }
+        }
+        result.push(cur.trim().replace(/^"|"$/g, ''));
+        return result.map(v => v.replace(/,/g, '')); // Strip commas for numeric parsing later
     },
 
     parseSharesightTrades(csvText) {
@@ -24,6 +46,8 @@ export const CsvParserService = {
         // --- FLEXIBLE HEADER MAPPING ---
         const COLUMN_MAP = {
             code: ['code', 'symbol', 'ticker', 'share', 'stock', 'instrument'],
+            name: ['name', 'company', 'description', 'label'],
+            market: ['market', 'exchange', 'exch'],
             date: ['date', 'purchase date', 'trade date', 'transaction date', 'dt', 'time'],
             type: ['type', 'transaction type', 'action', 'direction', 'side'],
             quantity: ['quantity', 'qty', 'units', 'shares', 'number', 'no.', 'vol', 'volume'],
@@ -80,9 +104,9 @@ export const CsvParserService = {
         }
 
         // 2. DETERMINE TYPE
-        // Heuristic: If we matched "market" or "total" but NO "date" or "type", it's likely a HOLDINGS report.
+        // Heuristic: If we have Quantity but NO Date, it's likely a HOLDINGS / Performance snapshot.
         let reportType = 'TRADES';
-        if (bestMap.total !== undefined && bestMap.quantity !== undefined && bestMap.date === undefined) {
+        if (bestMap.quantity !== undefined && bestMap.date === undefined) {
             reportType = 'HOLDINGS';
         }
 
@@ -168,9 +192,11 @@ export const CsvParserService = {
             if (isNaN(date.getTime())) date = new Date(0);
 
             // Standardize column names (Cost base might be missing currency suffix, or using Template 'Buy Price')
-            const quantity = parseFloat(String(row['Quantity'] || '0').replace(/,/g, ''));
-            // Try all price fields
-            const price = parseFloat(String(row['Price'] || row['Buy Price'] || row['Unit Price'] || row['Cost base per share (AUD)'] || '0').replace(/,/g, ''));
+            const quantity = parseFloat(String(row['Quantity'] || '0').replace(/[^\d\.]/g, ''));
+
+            // Try all price fields with priority
+            const priceVal = row['Price'] || row['Buy Price'] || row['Unit Price'] || row['Cost base per share (AUD)'] || row['Cost'] || '0';
+            const price = parseFloat(String(priceVal).replace(/[^\d\.]/g, ''));
             const costBase = price;
 
             if (isNaN(quantity) || quantity <= 0) return; // flexible logic: only positive quantities update "purchases"
