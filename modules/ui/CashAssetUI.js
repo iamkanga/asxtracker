@@ -16,83 +16,107 @@ export class CashAssetUI {
     }
 
     /**
-     * Helper: Pick a color for a new/editing asset.
-     * Logic:
-     * 1. If name matches existing 'Other' asset, use that color.
-     * 2. Else, pick a color NOT used by any visible asset.
-     * 3. Fallback to random from pool.
+     * Helper: Get all colors currently in use across the entire application.
+     * Includes all assets and all category theme overrides.
      */
+    _getUsedColors(excludeAssetId = null, excludeCategoryId = null) {
+        const usedMap = new Map(); // Color (lowercase) -> Source Label
+
+        // 1. Scan Assets
+        (AppState.data.cash || []).forEach(a => {
+            if (a.color) {
+                const colorVal = a.color.toLowerCase().trim();
+                // A color is "used elsewhere" if it belongs to a DIFFERENT category
+                // OR if it's a DIFFERENT asset in the SAME category (only if we want absolute 1:1 asset color uniqueness)
+                // BUT the user wants unique CAT colors. If assets in the same cat share a color, that's fine/expected.
+                // SO: We block it if category differs.
+                if (a.category !== excludeCategoryId && a.id !== excludeAssetId) {
+                    usedMap.set(colorVal, a.name || 'Unnamed Asset');
+                }
+            }
+        });
+
+        // 2. Scan Category Themes in Registry
+        (AppState.preferences.userCategories || []).forEach(c => {
+            if (c.color) {
+                const colorVal = c.color.toLowerCase().trim();
+                // Block if it's NOT the category we are currently editing
+                if (c.id !== excludeCategoryId) {
+                    usedMap.set(colorVal, `Category: ${c.label}`);
+                }
+            }
+        });
+
+        return usedMap;
+    }
+
     /**
      * Helper: Pick a color for a new/editing asset.
      */
     _pickInitialColor(name, currentAssetId, currentCategory) {
-        const allAssets = AppState.data.cash || [];
-
-        // 1. Calculate Used Colors (Strict Global)
-        const usedColors = new Set(allAssets.filter(a => a.id !== currentAssetId && a.color).map(a => a.color));
-        const available = this.customColors.filter(c => !usedColors.has(c));
-
-        // 2. Check User Preferences (Category-First) - BUT ONLY IF AVAILABLE
-        if (currentCategory) {
-            const userCat = AppState.preferences.userCategories?.find(c => c.id === currentCategory);
-            // Only use the theme color if it is NOT used by another asset
-            if (userCat && userCat.color && !usedColors.has(userCat.color)) {
-                return userCat.color;
-            }
+        let resolvedCategoryId = currentCategory;
+        const customInput = document.getElementById('custom-category-name');
+        if (currentCategory === 'other' && customInput && customInput.value.trim()) {
+            resolvedCategoryId = 'user_' + customInput.value.trim().toLowerCase().replace(/[^a-z0-9]/g, '_');
         }
 
-        // 3. Match Name (Legacy/Consistency) - Only if available
-        if (name) {
-            // ... Logic removed to enforce uniqueness preference ...
-        }
+        // 1. Check if category already has a theme
+        const userCat = AppState.preferences.userCategories?.find(c => c.id === resolvedCategoryId);
+        if (userCat && userCat.color) return userCat.color;
 
-        // 4. Pick Unused
+        // 2. Find first available unique color
+        const usedMap = this._getUsedColors(currentAssetId, resolvedCategoryId);
+        const available = this.customColors.filter(c => !usedMap.has(c.toLowerCase().trim()));
+
         if (available.length > 0) {
-            // Pick deterministic based on name if possible
-            if (name) {
-                const seed = name.length + name.charCodeAt(0);
-                return available[seed % available.length];
-            }
-            return available[Math.floor(Math.random() * available.length)];
+            // Deterministic selection based on name to keep it stable
+            const seedStr = (name || '') + resolvedCategoryId;
+            let seed = 0;
+            for (let i = 0; i < seedStr.length; i++) seed += seedStr.charCodeAt(i);
+            return available[seed % available.length];
         }
 
-        // 5. Fallback: If ALL colors used, we forced to reuse (or return null)
-        // Returning random fallback to ensure UI has *something*
-        return this.customColors[Math.floor(Math.random() * this.customColors.length)];
+        return this.customColors[0];
+    }
+
+    /**
+     * Helper: Merge system and user categories while removing duplicates by ID.
+     */
+    _getMergedCategories() {
+        const systemCats = CASH_CATEGORIES || [];
+        const userCats = AppState.preferences.userCategories || [];
+        const categoryMap = new Map();
+
+        systemCats.forEach(cat => categoryMap.set(cat.id, { ...cat }));
+        userCats.forEach(cat => {
+            if (categoryMap.has(cat.id)) {
+                const existing = categoryMap.get(cat.id);
+                categoryMap.set(cat.id, { ...existing, ...cat, label: existing.label || cat.label });
+            } else {
+                categoryMap.set(cat.id, { ...cat });
+            }
+        });
+
+        return Array.from(categoryMap.values());
     }
 
     /**
      * Shows a modal to Add or Edit a cash asset.
-     * @param {Object|null} asset - The asset to edit, or null for creating new.
-     * @param {Function} onSave - Callback(formData) -> void
-     * @param {Function} [onDelete] - Callback() -> void
      */
     showAddEditModal(asset = null, onSave, onDelete) {
         const isEdit = !!asset;
         const title = isEdit ? 'Edit Asset' : 'Add Cash Asset';
 
-        // Initialize category
         this.selectedCategory = asset ? asset.category : 'cash';
 
-        // 2. Build Category List (System + User Custom)
-        const categories = [...CASH_CATEGORIES, ...(AppState.preferences.userCategories || [])];
-
+        const categories = this._getMergedCategories();
         const currentLabel = categories.find(c => c.id === this.selectedCategory)?.label || 'Cash';
 
-        // Ensure comments is an array from the start
         let comments = [];
-        if (asset) {
-            if (Array.isArray(asset.comments)) {
-                comments = asset.comments;
-            } else if (typeof asset.comments === 'string' && asset.comments.trim() !== '') {
-                comments = [{ text: asset.comments }];
-            } else if (typeof asset.comments === 'object' && asset.comments !== null) {
-                comments = [asset.comments];
-                if (asset.comments.text) comments = [{ text: asset.comments.text }];
-            }
+        if (asset && asset.comments) {
+            comments = Array.isArray(asset.comments) ? asset.comments : [{ text: asset.comments }];
         }
 
-        // Remove existing if any
         const existing = document.getElementById(this.modalId);
         if (existing) existing.remove();
 
@@ -100,114 +124,10 @@ export class CashAssetUI {
         modal.id = this.modalId;
         modal.className = `${CSS_CLASSES.MODAL} ${CSS_CLASSES.HIDDEN}`;
 
-        // CRITICAL FIX: Initialize dataset with existing color or category theme
-        // This ensures the header preview is correct and theme persistence is maintained from the moment the modal opens.
-        const startColor = (asset && (asset.category === 'other' || asset.category.startsWith('user_')) && asset.color)
-            ? asset.color
-            : this._pickInitialColor(asset ? asset.name : '', asset ? asset.id : null, this.selectedCategory);
-
-        if (startColor) {
-            modal.dataset.selectedColor = startColor;
-        }
-
-        // Store asset ID for duplicate validation
-        if (asset && asset.id) {
-            modal.dataset.editingAssetId = asset.id;
-        }
-
-        const renderOptions = (optionsList, currentLabelTarget) => {
-            const listContainer = optionsList.querySelector('#category-options-list');
-            if (!listContainer) return;
-
-            const currentCategories = [...CASH_CATEGORIES, ...(AppState.preferences.userCategories || [])];
-
-            listContainer.innerHTML = currentCategories.map(c => {
-                const isUserCat = c.id.startsWith('user_');
-                return `
-                    <div class="${CSS_CLASSES.DROPDOWN_OPTION} flex justify-between items-center px-3 py-2 cursor-pointer hover:text-[var(--accent-color)]" data-value="${c.id}" style="padding: 10px; transition: color 0.1s;">
-                        <span>${c.label}</span>
-                        ${isUserCat ? `
-                            <button type="button" class="category-delete-btn ${CSS_CLASSES.ICON_BTN_GHOST}" data-id="${c.id}" style="padding: 4px; color: var(--accent-color); margin-left: 10px;">
-                                <i class="fas ${UI_ICONS.CLOSE}" style="font-size: 0.8rem;"></i>
-                            </button>
-                        ` : ''}
-                    </div>
-                `;
-            }).join('');
-
-            // Option Selection
-            listContainer.querySelectorAll(`.${CSS_CLASSES.DROPDOWN_OPTION}`).forEach(opt => {
-                opt.addEventListener('click', (e) => {
-                    // If click was on delete button, handle it separately
-                    if (e.target.closest('.category-delete-btn')) {
-                        e.stopPropagation();
-                        const catId = e.target.closest('.category-delete-btn').dataset.id;
-                        if (confirm(`Delete category "${opt.querySelector('span').textContent}"?`)) {
-                            AppState.deleteUserCategory(catId);
-                            // If we were selecting this category, revert to 'cash'
-                            if (this.selectedCategory === catId) {
-                                this.selectedCategory = 'cash';
-                                currentLabelTarget.textContent = 'Cash';
-                            }
-                            renderOptions(optionsList, currentLabelTarget);
-                        }
-                        return;
-                    }
-
-                    const originalVal = opt.dataset.value;
-                    const val = String(originalVal).toLowerCase();
-                    const lab = opt.querySelector('span').textContent.trim();
-
-                    this.selectedCategory = val;
-                    modal.dataset.selectedCategory = val; // Source of Truth for gatherFormData
-
-                    currentLabelTarget.textContent = lab;
-                    optionsList.classList.add(CSS_CLASSES.HIDDEN);
-
-                    // Show/Hide Custom Input AND Shuffle Button
-                    const customGroup = modal.querySelector('#custom-category-group');
-                    // Show Shuffle Button for EVERY category
-                    const pickerContainer = modal.querySelector('#color-picker-container');
-                    if (!pickerContainer.classList.contains(CSS_CLASSES.HIDDEN)) {
-                        // Re-render picker if open to reflect any category-based logic? 
-                        // Actually picker is based on USED colors, which is global.
-                    }
-                    const currentName = modal.querySelector('#asset-name')?.value || '';
-
-                    // ALWAYS re-sync color when category changes to ensure Theme persistence
-                    const initialColor = this._pickInitialColor(currentName, (asset ? asset.id : null), val);
-                    if (initialColor) {
-                        modal.dataset.selectedColor = initialColor;
-                        console.log(`[CashAssetUI] Dropdown: Synced Theme Color for ${val} -> ${initialColor}`);
-                    } else if (!modal.dataset.selectedColor) {
-                        // For standard categories that haven't been re-themed, we might not have a hex yet.
-                        // _getPreviewColor will handle the CSS variable fallback, but if we want to SHUFFLE,
-                        // we need a starting point. Let's not force one unless they click shuffle.
-                        // But let's clear the dataset so the variable fallback works.
-                        delete modal.dataset.selectedColor;
-                    }
-
-                    if (val === 'other') {
-                        customGroup.classList.remove(CSS_CLASSES.HIDDEN);
-                        modal.querySelector('#custom-category-name').focus();
-                    } else {
-                        customGroup.classList.add(CSS_CLASSES.HIDDEN);
-                    }
-
-                    // LIVE COLOR UPDATE
-                    this._updateModalHeaderColor(modal);
-                });
-
-                opt.onmouseenter = () => {
-                    opt.style.color = 'var(--accent-color)';
-                    opt.style.background = 'transparent';
-                };
-                opt.onmouseleave = () => {
-                    opt.style.color = '';
-                    opt.style.background = 'transparent';
-                };
-            });
-        };
+        const startColor = asset ? (asset.color || this._pickInitialColor(asset.name, asset.id, this.selectedCategory)) : this._pickInitialColor('', null, 'cash');
+        modal.dataset.selectedColor = startColor;
+        modal.dataset.selectedCategory = this.selectedCategory;
+        if (isEdit) modal.dataset.editingAssetId = asset.id;
 
         const dropdownHtml = `
             <div class="${CSS_CLASSES.CUSTOM_DROPDOWN} relative" id="${IDS.CASH_CATEGORY_DROPDOWN}" style="margin-bottom: 20px;">
@@ -229,113 +149,48 @@ export class CashAssetUI {
         modal.innerHTML = `
             <div class="${CSS_CLASSES.MODAL_OVERLAY}"></div>
             <div class="${CSS_CLASSES.MODAL_CONTENT}">
-                <!-- Header -->
                 <div class="${CSS_CLASSES.MODAL_HEADER}">
                     <div class="${CSS_CLASSES.MODAL_HEADER_LEFT}">
                         <h2 class="${CSS_CLASSES.MODAL_TITLE}">${title}</h2>
                     </div>
                     <div class="${CSS_CLASSES.MODAL_ACTIONS}">
-                        ${isEdit ? `
-                        <button class="${CSS_CLASSES.MODAL_ACTION_BTN} ${CSS_CLASSES.DELETE_BTN}" title="Delete">
-                            <i class="fas ${UI_ICONS.DELETE}"></i>
-                        </button>` : ''}
-                        
-                        <button class="${CSS_CLASSES.MODAL_ACTION_BTN} ${CSS_CLASSES.SAVE_BTN}" title="Save">
-                            <i class="fas fa-check"></i>
-                        </button>
-                        
-                        <button class="${CSS_CLASSES.MODAL_CLOSE_BTN} ${CSS_CLASSES.MODAL_ACTION_BTN}" title="Close">
-                            <i class="fas ${UI_ICONS.CLOSE}"></i>
-                        </button>
+                        ${isEdit ? `<button class="${CSS_CLASSES.MODAL_ACTION_BTN} ${CSS_CLASSES.DELETE_BTN}" title="Delete"><i class="fas ${UI_ICONS.DELETE}"></i></button>` : ''}
+                        <button class="${CSS_CLASSES.MODAL_ACTION_BTN} ${CSS_CLASSES.SAVE_BTN}" title="Save"><i class="fas fa-check"></i></button>
+                        <button class="${CSS_CLASSES.MODAL_CLOSE_BTN} ${CSS_CLASSES.MODAL_ACTION_BTN}" title="Close"><i class="fas ${UI_ICONS.CLOSE}"></i></button>
                     </div>
                 </div>
-
-                <!-- Body -->
                 <div class="${CSS_CLASSES.MODAL_BODY}">
                     <div class="${CSS_CLASSES.FORM_CONTAINER}">
-                        
-                        <!-- Stacked Fields: Custom Dropdown -->
                         <div class="${CSS_CLASSES.FORM_GROUP} stacked">
                             <label class="${CSS_CLASSES.INPUT_LABEL}">Category</label>
                             ${dropdownHtml}
                         </div>
-
                         <div class="${CSS_CLASSES.FORM_GROUP} stacked ${this.selectedCategory === 'other' ? '' : CSS_CLASSES.HIDDEN}" id="custom-category-group">
                             <label for="custom-category-name" class="${CSS_CLASSES.INPUT_LABEL}">New Category Name</label>
                             <input type="text" id="custom-category-name" class="${CSS_CLASSES.STANDARD_INPUT}" placeholder="e.g. Savings Goal">
                         </div>
-
                         <div class="${CSS_CLASSES.FORM_GROUP} stacked">
                             <div class="flex justify-between items-center mb-1">
                                 <label for="${IDS.ASSET_NAME}" class="${CSS_CLASSES.INPUT_LABEL}">Asset Name</label>
-                                <button type="button" id="btn-toggle-color-picker" class="${CSS_CLASSES.BTN_TEXT_SMALL}" style="font-size: 0.8rem; color: var(--color-accent);">
-                                    Select Color
-                                </button>
+                                <button type="button" id="btn-toggle-color-picker" class="${CSS_CLASSES.BTN_TEXT_SMALL}" style="font-size: 0.8rem; color: var(--color-accent);">Select Color</button>
                             </div>
-                            <!-- Color Picker Container -->
                             <div id="color-picker-container" class="${CSS_CLASSES.HIDDEN} mb-3 p-3 bg-[var(--card-bg-light)] rounded border border-[var(--border-color)]">
-                                <div class="text-xs text-muted mb-2">Available Colors (Unique to this asset)</div>
-                                <div id="color-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(24px, 1fr)); gap: 8px;"></div>
+                                <div class="flex justify-between items-center mb-2">
+                                    <div class="text-xs text-muted">Available Colors (Unique)</div>
+                                    <button type="button" id="btn-reset-category-color" class="${CSS_CLASSES.BTN_TEXT_SMALL} hidden" style="font-size: 0.7rem;">Reset</button>
+                                </div>
+                                <div id="color-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(28px, 1fr)); gap: 10px;"></div>
                             </div>
                             <input type="text" id="${IDS.ASSET_NAME}" class="${CSS_CLASSES.STANDARD_INPUT}" value="${asset ? asset.name : ''}" placeholder="e.g. High Interest Savings">
                         </div>
-
                         <div class="${CSS_CLASSES.FORM_GROUP} stacked">
-                            <div class="flex justify-between items-center mb-1 w-full">
-                                <label for="${IDS.ASSET_BALANCE}" class="${CSS_CLASSES.INPUT_LABEL}">Balance ($)</label>
-                            </div>
-                            <input type="number" id="${IDS.ASSET_BALANCE}" class="${CSS_CLASSES.STANDARD_INPUT} ${asset?.isPortfolioLinked ? CSS_CLASSES.DISABLED : ''}" value="${asset ? asset.balance : ''}" placeholder="0.00" step="0.01" ${asset?.isPortfolioLinked ? 'disabled' : ''}>
-                            
-                            <!-- Toggle Switch (Below Input, Right Aligned, Text First) -->
-                            <!-- Toggle Switch (Below Input, Space Between: Text Left, Radio Right) -->
-                            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-top: 10px;">
-                                <span class="text-xs text-muted">Select to auto update from portfolio value</span>
-                                <!-- Custom Ring Radio Implementation -->
-                                <div id="btn-toggle-portfolio-link" class="cursor-pointer no-select" style="display: flex; align-items: center; flex-shrink: 0;">
-                                    <div class="custom-radio-ring" style="
-                                        width: 18px; 
-                                        height: 18px; 
-                                        min-width: 18px; 
-                                        min-height: 18px; 
-                                        border: 2px solid ${asset?.isPortfolioLinked ? '#A49393' : '#6c757d'}; 
-                                        border-radius: 50%; 
-                                        display: flex; 
-                                        align-items: center; 
-                                        justify-content: center; 
-                                        position: relative; 
-                                        box-sizing: border-box; 
-                                        transition: border-color 0.2s;
-                                    ">
-                                        <div class="custom-radio-dot" style="
-                                            width: 10px; 
-                                            height: 10px; 
-                                            min-width: 10px; 
-                                            min-height: 10px; 
-                                            background-color: #A49393; 
-                                            border-radius: 50%; 
-                                            opacity: ${asset?.isPortfolioLinked ? '1' : '0'}; 
-                                            transform: scale(${asset?.isPortfolioLinked ? '1' : '0'}); 
-                                            transition: all 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
-                                        "></div>
-                                    </div>
-                                    <input type="checkbox" id="${IDS.LINK_PORTFOLIO_CHECKBOX}" style="display:none;" ${asset?.isPortfolioLinked ? 'checked' : ''}>
-                                </div>
-                            </div>
+                            <label for="${IDS.ASSET_BALANCE}" class="${CSS_CLASSES.INPUT_LABEL}">Balance ($)</label>
+                            <input type="number" id="${IDS.ASSET_BALANCE}" class="${CSS_CLASSES.STANDARD_INPUT}" value="${asset ? asset.balance : ''}" placeholder="0.00" step="0.01">
                         </div>
-
-                        <!-- Dynamic Comments Section -->
                         <div class="${CSS_CLASSES.FORM_GROUP} stacked">
                              <label class="${CSS_CLASSES.INPUT_LABEL} mb-2">Comments</label>
-                             <div class="${CSS_CLASSES.NOTES_DARK_BG}" style="background: transparent; padding: 0;">
-                                 <div id="${IDS.COMMENTS_LIST_CONTAINER}" class="flex flex-col gap-2">
-                                    <!-- Comments Injected Here -->
-                                 </div>
-                                 <div class="${CSS_CLASSES.NOTES_FOOTER}" style="padding: 8px 0;">
-                                    <button type="button" id="${IDS.BTN_ADD_COMMENT}" class="${CSS_CLASSES.BTN_TEXT_SMALL}" title="Add Comment" style="font-size: 1rem;">
-                                        <i class="fas fa-plus"></i>
-                                    </button>
-                                 </div>
-                             </div>
+                             <div id="${IDS.COMMENTS_LIST_CONTAINER}" class="flex flex-col gap-2"></div>
+                             <div style="padding: 8px 0;"><button type="button" id="${IDS.BTN_ADD_COMMENT}" class="${CSS_CLASSES.BTN_TEXT_SMALL}" style="font-size: 1rem;"><i class="fas fa-plus"></i></button></div>
                         </div>
                     </div>
                 </div>
@@ -344,432 +199,226 @@ export class CashAssetUI {
 
         document.getElementById(IDS.MODAL_CONTAINER)?.appendChild(modal);
 
-        /* --- Wiring Custom Dropdown --- */
-        const trigger = modal.querySelector(`#${IDS.CATEGORY_TRIGGER}`);
-        const optionsList = modal.querySelector(`#${IDS.CATEGORY_OPTIONS}`);
-        const labelText = modal.querySelector(`#${IDS.CATEGORY_LABEL_TEXT}`);
-
-        trigger.addEventListener('click', (e) => {
-            e.stopPropagation();
-            optionsList.classList.toggle(CSS_CLASSES.HIDDEN);
-        });
-
-        // Close dropdown when clicking outside
-        modal.addEventListener('click', (e) => {
-            if (!trigger.contains(e.target) && !optionsList.contains(e.target)) {
-                optionsList.classList.add(CSS_CLASSES.HIDDEN);
-            }
-        });
-
-        // Initial Options Render
-        renderOptions(optionsList, labelText);
-
-        // Initial Options Render
-        renderOptions(optionsList, labelText);
-
-        // Wiring Footer Buttons
-        modal.querySelector('#btn-clear-categories').addEventListener('click', (e) => {
-            e.stopPropagation();
-            if (confirm('Clear ALL custom categories? This cannot be undone.')) {
-                AppState.clearAllUserCategories();
-                this.selectedCategory = 'cash';
-                labelText.textContent = 'Cash';
-                renderOptions(optionsList, labelText);
-            }
-        });
-
-        // Initial Color Setup
-        if (asset && asset.color) {
-            modal.dataset.selectedColor = asset.color;
-        } else {
-            // Calculate initial color
-            const initialName = asset ? asset.name : '';
-            const initialColor = this._pickInitialColor(initialName, asset ? asset.id : null, this.selectedCategory);
-            if (initialColor) modal.dataset.selectedColor = initialColor;
-        }
-
-        // Color Picker Logic
         const togglePickerBtn = modal.querySelector('#btn-toggle-color-picker');
         const pickerContainer = modal.querySelector('#color-picker-container');
         const colorGrid = modal.querySelector('#color-grid');
+        const resetColorBtn = modal.querySelector('#btn-reset-category-color');
 
         const renderPicker = () => {
-            // Calculate Used Colors
             const currentAssetId = asset ? asset.id : null;
-            // FIX: Define allAssets properly in scope
-            const allAssets = AppState.data.cash || [];
+            let currentCategoryId = this.selectedCategory;
+            const customInput = modal.querySelector('#custom-category-name');
+            if (currentCategoryId === 'other' && customInput && customInput.value.trim()) {
+                currentCategoryId = 'user_' + customInput.value.trim().toLowerCase().replace(/[^a-z0-9]/g, '_');
+            }
 
-            // Strictly exclude colors used by ANY other asset
-            const usedColors = new Set(allAssets
-                .filter(a => a.id !== currentAssetId && a.color)
-                .map(a => a.color));
+            // GET ABSOLUTELY USED COLORS
+            const usedMap = this._getUsedColors(currentAssetId, currentCategoryId);
 
-            // Available
-            const available = this.customColors.filter(c => !usedColors.has(c));
+            // Available = All Colors - Blocked by other categories
+            // IMPORTANT: We do NOT allow choosing a color that is used by ANOTHER category.
+            const available = this.customColors.filter(c => !usedMap.has(c.toLowerCase().trim()));
+
+            // Safety: If current selection is suddenly used elsewhere (e.g. user typed a name), pick alternative
+            const selectedVal = modal.dataset.selectedColor?.toLowerCase().trim();
+            if (selectedVal && usedMap.has(selectedVal)) {
+                console.warn(`[CashAssetUI] Auto-correcting color conflict for ${currentCategoryId}`);
+                const fallback = available.length > 0 ? available[0] : this.customColors[0];
+                modal.dataset.selectedColor = fallback;
+                this._updateModalHeaderColor(modal);
+                return setTimeout(renderPicker, 0);
+            }
+
+            const hasOverride = AppState.preferences.userCategories?.some(c => c.id === currentCategoryId && c.color);
+            resetColorBtn.classList.toggle('hidden', !hasOverride);
 
             colorGrid.innerHTML = available.map(c => `
-                <div class="color-swatch-item" data-color="${c}" style="
-                    width: 24px; 
-                    height: 24px; 
-                    border-radius: 50%; 
-                    background-color: ${c}; 
-                    cursor: pointer; 
-                    border: 2px solid ${modal.dataset.selectedColor === c ? '#fff' : 'transparent'};
-                    box-shadow: ${modal.dataset.selectedColor === c ? '0 0 0 2px var(--color-accent)' : 'none'};
-                    transition: transform 0.1s;
-                "></div>
+                <div class="color-swatch-item" data-color="${c}" style="width: 28px; height: 28px; border-radius: 50%; background-color: ${c}; cursor: pointer; border: 2px solid ${modal.dataset.selectedColor === c ? '#fff' : 'rgba(255,255,255,0.1)'}; box-shadow: ${modal.dataset.selectedColor === c ? '0 0 0 2px var(--color-accent)' : 'none'};"></div>
             `).join('');
 
-            // Bind Events
             colorGrid.querySelectorAll('.color-swatch-item').forEach(item => {
-                item.addEventListener('click', (e) => {
-                    const color = item.dataset.color;
-                    modal.dataset.selectedColor = color;
-                    // Visual Feedback
+                item.addEventListener('click', () => {
+                    modal.dataset.selectedColor = item.dataset.color;
                     renderPicker();
                     this._updateModalHeaderColor(modal);
-                    // pickerContainer.classList.add(CSS_CLASSES.HIDDEN); // Optional: Close on select
                 });
             });
         };
 
-        togglePickerBtn.addEventListener('click', (e) => {
+        const renderOptions = () => {
+            const listContainer = modal.querySelector('#category-options-list');
+            const labelText = modal.querySelector(`#${IDS.CATEGORY_LABEL_TEXT}`);
+            const cats = this._getMergedCategories();
+
+            listContainer.innerHTML = cats.map(c => `
+                <div class="${CSS_CLASSES.DROPDOWN_OPTION} flex justify-between items-center px-3 py-2 cursor-pointer hover:text-[var(--accent-color)]" data-value="${c.id}" style="padding: 10px;">
+                    <span>${c.label}</span>
+                    ${c.id.startsWith('user_') ? `<button type="button" class="category-delete-btn ${CSS_CLASSES.ICON_BTN_GHOST}" data-id="${c.id}"><i class="fas ${UI_ICONS.CLOSE}"></i></button>` : ''}
+                </div>
+            `).join('');
+
+            listContainer.querySelectorAll(`.${CSS_CLASSES.DROPDOWN_OPTION}`).forEach(opt => {
+                opt.addEventListener('click', (e) => {
+                    if (e.target.closest('.category-delete-btn')) {
+                        e.stopPropagation();
+                        const id = e.target.closest('.category-delete-btn').dataset.id;
+                        if (confirm('Delete category?')) {
+                            AppState.deleteUserCategory(id);
+                            if (this.selectedCategory === id) {
+                                this.selectedCategory = 'cash';
+                                modal.dataset.selectedCategory = 'cash';
+                                labelText.textContent = 'Cash';
+                            }
+                            renderOptions();
+                        }
+                        return;
+                    }
+
+                    const val = opt.dataset.value;
+                    this.selectedCategory = val;
+                    modal.dataset.selectedCategory = val;
+                    labelText.textContent = opt.querySelector('span').textContent;
+                    modal.querySelector(`#${IDS.CATEGORY_OPTIONS}`).classList.add(CSS_CLASSES.HIDDEN);
+
+                    modal.querySelector('#custom-category-group').classList.toggle(CSS_CLASSES.HIDDEN, val !== 'other');
+                    if (val === 'other') {
+                        modal.querySelector('#custom-category-name').focus();
+                        pickerContainer.classList.remove(CSS_CLASSES.HIDDEN);
+                        togglePickerBtn.textContent = 'Hide Colors';
+                    }
+
+                    // Auto-sync color
+                    modal.dataset.selectedColor = this._pickInitialColor(modal.querySelector(`#${IDS.ASSET_NAME}`).value, asset?.id, val);
+                    this._updateModalHeaderColor(modal);
+                    renderPicker();
+                });
+            });
+        };
+
+        renderOptions();
+        renderPicker();
+        this._updateModalHeaderColor(modal);
+
+        modal.querySelector(`#${IDS.CATEGORY_TRIGGER}`).addEventListener('click', (e) => {
             e.stopPropagation();
-            const isHidden = pickerContainer.classList.contains(CSS_CLASSES.HIDDEN);
-            if (isHidden) {
+            modal.querySelector(`#${IDS.CATEGORY_OPTIONS}`).classList.toggle(CSS_CLASSES.HIDDEN);
+        });
+
+        // RE-FILTER PICKER ON TYPING
+        modal.querySelector('#custom-category-name')?.addEventListener('input', () => {
+            renderPicker();
+        });
+
+        togglePickerBtn.addEventListener('click', () => {
+            const isHidden = pickerContainer.classList.toggle(CSS_CLASSES.HIDDEN);
+            togglePickerBtn.textContent = isHidden ? 'Select Color' : 'Hide Colors';
+        });
+
+        resetColorBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (confirm('Reset to default color?')) {
+                AppState.deleteUserCategory(this.selectedCategory);
+                modal.dataset.selectedColor = this._pickInitialColor(modal.querySelector(`#${IDS.ASSET_NAME}`).value, asset?.id, this.selectedCategory);
                 renderPicker();
-                pickerContainer.classList.remove(CSS_CLASSES.HIDDEN);
-                togglePickerBtn.textContent = 'Hide Colors';
-            } else {
-                pickerContainer.classList.add(CSS_CLASSES.HIDDEN);
-                togglePickerBtn.textContent = 'Select Color';
+                this._updateModalHeaderColor(modal);
             }
         });
 
-        // Set Initial Color (so they see the current state)
-        this._updateModalHeaderColor(modal);
+        modal.querySelector('#btn-clear-categories').addEventListener('click', () => {
+            if (confirm('Clear ALL custom categories?')) {
+                AppState.clearAllUserCategories();
+                this.selectedCategory = 'cash';
+                modal.dataset.selectedCategory = 'cash';
+                renderOptions();
+            }
+        });
 
-        // Portfolio Link Listener (Custom Ring Radio Implementation)
-        const linkBtn = modal.querySelector('#btn-toggle-portfolio-link');
-        const linkCheckbox = modal.querySelector(`#${IDS.LINK_PORTFOLIO_CHECKBOX}`);
-        const radioRing = modal.querySelector('.custom-radio-ring'); // UPDATED SELECTOR
-        const radioDot = modal.querySelector('.custom-radio-dot');   // UPDATED SELECTOR
-        const balanceInput = modal.querySelector(`#${IDS.ASSET_BALANCE}`);
-
-        if (linkBtn && linkCheckbox && balanceInput) {
-            linkBtn.addEventListener('click', (e) => {
-                // Toggle State
-                // Prevent double toggle if clicking directly on the already-handled input (though it's hidden)
-
-                linkCheckbox.checked = !linkCheckbox.checked;
-                const isChecked = linkCheckbox.checked;
-
-                // Update UI Visuals
-                if (isChecked) {
-                    // Active State (Coffee)
-                    if (radioRing) radioRing.style.borderColor = '#A49393';
-                    if (radioDot) {
-                        radioDot.style.opacity = '1';
-                        radioDot.style.transform = 'scale(1)';
-                    }
-
-                    // Disable Input
-                    balanceInput.disabled = true;
-                    balanceInput.classList.add(CSS_CLASSES.DISABLED);
-                    balanceInput.value = '';
-                    balanceInput.placeholder = 'Auto-calculated...';
-                } else {
-                    // Inactive State (Muted)
-                    if (radioRing) radioRing.style.borderColor = '#6c757d'; // Default Gray
-                    if (radioDot) {
-                        radioDot.style.opacity = '0';
-                        radioDot.style.transform = 'scale(0)';
-                    }
-
-                    // Enable Input
-                    balanceInput.disabled = false;
-                    balanceInput.classList.remove(CSS_CLASSES.DISABLED);
-                    balanceInput.placeholder = '0.00';
-                    if (asset && asset.balance) balanceInput.value = asset.balance;
-                }
-            });
-        }
-
-
-
-        /* --- Comments Logic (Preserved) --- */
-        // Render Initial Comments
         const commentsContainer = modal.querySelector(`#${IDS.COMMENTS_LIST_CONTAINER}`);
-        const renderComment = (text = '') => {
-            const row = document.createElement('div');
-            // Relative container for absolute X positioning
-            row.className = `${CSS_CLASSES.COMMENT_ROW} relative`;
-            row.style.position = 'relative';
-            row.style.marginBottom = '10px';
-
-            row.innerHTML = `
-                <textarea class="${CSS_CLASSES.STANDARD_TEXTAREA} ${CSS_CLASSES.COMMENT_INPUT} ${CSS_CLASSES.W_FULL}" rows="2" placeholder="Note..." style="width: 100%; padding-right: 35px; box-sizing: border-box;">${text}</textarea>
-                <button type="button" class="${CSS_CLASSES.ICON_BTN_GHOST} ${CSS_CLASSES.DELETE_COMMENT_BTN}" style="position: absolute; top: 8px; right: 8px; color: var(--accent-color); opacity: 1; border: none; background: transparent; cursor: pointer;">
-                    <i class="fas ${UI_ICONS.CLOSE}"></i>
-                </button>
+        const addComment = (text = '') => {
+            const div = document.createElement('div');
+            div.className = 'flex gap-2 items-start mb-2';
+            div.innerHTML = `
+                <textarea class="${CSS_CLASSES.STANDARD_TEXTAREA} flex-grow" rows="1" placeholder="Note...">${text}</textarea>
+                <button type="button" class="text-red-500 p-1 delete-comment"><i class="fas fa-times"></i></button>
             `;
-
-            // Delete Listener
-            row.querySelector(`.${CSS_CLASSES.DELETE_COMMENT_BTN}`).addEventListener('click', () => row.remove());
-            commentsContainer.appendChild(row);
+            div.querySelector('.delete-comment').addEventListener('click', () => div.remove());
+            commentsContainer.appendChild(div);
         };
+        comments.forEach(c => addComment(c.text || c));
+        modal.querySelector(`#${IDS.BTN_ADD_COMMENT}`).addEventListener('click', () => addComment());
 
-        // Populate existing
-        comments.forEach(c => renderComment((typeof c === 'string') ? c : (c.text || '')));
-
-        // Add Button Listener
-        const addBtn = modal.querySelector(`#${IDS.BTN_ADD_COMMENT}`);
-        if (addBtn) {
-            addBtn.addEventListener('click', () => renderComment());
-        }
-
-        // Events
         const close = () => {
             modal.classList.add(CSS_CLASSES.HIDDEN);
             setTimeout(() => modal.remove(), 300);
-
-            // Remove from history stack if closed manually
-            if (modal._navActive) {
-                modal._navActive = false;
-                navManager.popStateSilently();
-            }
-        };
-
-        // Register with NavigationManager
-        modal._navActive = true;
-        navManager.pushState(() => {
-            if (modal.parentElement) {
-                modal._navActive = false;
-                close();
-            }
-        });
-
-        const save = () => {
-            const formData = this.gatherFormData(modal);
-            if (formData && onSave) {
-                onSave(formData);
-                close();
-            }
-        };
-
-        const del = () => {
-            if (onDelete) {
-                onDelete();
-                close();
-            }
+            navManager.popStateSilently();
         };
 
         modal.querySelectorAll(`.${CSS_CLASSES.MODAL_CLOSE_BTN}, .${CSS_CLASSES.MODAL_OVERLAY}`).forEach(el => el.addEventListener('click', close));
-        modal.querySelector(`.${CSS_CLASSES.SAVE_BTN}`).addEventListener('click', save);
+        modal.querySelector(`.${CSS_CLASSES.SAVE_BTN}`).addEventListener('click', () => {
+            const data = this.gatherFormData(modal);
+            if (data) { onSave(data); close(); }
+        });
+        if (isEdit) modal.querySelector(`.${CSS_CLASSES.DELETE_BTN}`).addEventListener('click', () => { if (onDelete) { onDelete(); close(); } });
 
-        const deleteBtn = modal.querySelector(`.${CSS_CLASSES.DELETE_BTN}`);
-        if (deleteBtn) deleteBtn.addEventListener('click', del);
-
+        navManager.pushState(() => { if (modal.parentElement) close(); });
         requestAnimationFrame(() => modal.classList.remove(CSS_CLASSES.HIDDEN));
     }
 
-    /**
-     * Extracts data from the modal form.
-     * @param {HTMLElement} modal 
-     * @returns {Object|null}
-     */
     gatherFormData(modal) {
-        const nameInput = modal.querySelector(`#${IDS.ASSET_NAME}`);
+        const name = modal.querySelector(`#${IDS.ASSET_NAME}`).value.trim();
         const balanceInput = modal.querySelector(`#${IDS.ASSET_BALANCE}`);
+        const balance = parseFloat(balanceInput.value);
+        let category = modal.dataset.selectedCategory;
+        const color = modal.dataset.selectedColor;
 
-        const name = nameInput.value.trim();
+        if (!name) { ToastManager.error('Please enter an asset name.'); return null; }
+        if (isNaN(balance)) { ToastManager.error('Please enter a valid balance.'); return null; }
 
-        const linkCheckbox = modal.querySelector(`#${IDS.LINK_PORTFOLIO_CHECKBOX}`);
-        const isPortfolioLinked = linkCheckbox ? linkCheckbox.checked : false;
-
-        // If linked, balance is 0 initially (calculated dynamically on render)
-        const balance = isPortfolioLinked ? 0 : parseFloat(balanceInput.value);
-
-        // 1. Resolve Category (Normalize)
-        let rawCategory = modal.dataset.selectedCategory || this.selectedCategory;
-        let category = String(rawCategory || 'cash').toLowerCase();
-
-        // 2. Resolve Color (Early)
-        // 2. Resolve Color (Early)
-        let color = modal.dataset.selectedColor;
-
-        // Persist the explicit color for 'Other', Custom, or re-themed Standard categories
-        if (!color) {
-            color = modal.dataset.selectedColor || this._pickInitialColor(name, null, category);
-        }
-
-        // --- STRICT VALIDATION: Color Uniqueness ---
-        if (color) {
-            const allAssets = AppState.data.cash || [];
-            // We check if this color is used by ANY other asset (Strict 1:1)
-            const conflict = allAssets.find(a => {
-                // Ignore self
-                if (modal.dataset.assetId && a.id === modal.dataset.assetId) return false; // Editing self
-                if (!a.color) return false; // No color
-                if (a.color !== color) return false; // Different color
-
-                return true; // Conflict found!
-            });
-
-            if (conflict) {
-                alert(`The color '${color}' is already used by '${conflict.name}'. Please select a unique color.`);
-                return null; // Block Save
-            }
-        }
-
-        if (color) {
-            console.log(`[CashAssetUI] Saving Asset: ${name}, Category: ${category}, Color: ${color}`);
-        }  // 3. Handle Custom Category Creation
+        let resolvedCategory = category;
+        let customLabel = '';
         if (category === 'other') {
             const customInput = modal.querySelector('#custom-category-name');
-            const customName = customInput.value.trim();
-
-            if (customName) {
-                const categoryId = 'user_' + customName.toLowerCase().replace(/[^a-z0-9]/g, '_');
-                console.log(`[CashAssetUI] Creating Custom Category: "${customName}" -> ID: ${categoryId}`);
-
-                const existingCat = AppState.preferences.userCategories?.find(c => c.id === categoryId);
-                if (!existingCat) {
-                    const newCat = { id: categoryId, label: customName, color: color || this.customColors[0] };
-                    AppState.saveUserCategory(newCat);
-                    category = categoryId;
-                } else {
-                    category = existingCat.id;
-                    // If we have a color selected, update the existing category color too
-                    if (color && existingCat.color !== color) {
-                        AppState.saveUserCategory({ ...existingCat, color: color });
-                    }
-                }
+            customLabel = customInput.value.trim();
+            if (!customLabel) {
+                ToastManager.error('Please enter a name for your new category.');
+                customInput.focus();
+                return null;
             }
-        } else {
-            // Check if this is a standard category or custom category
-            // We want to sync the color theme to the registry regardless
-            const existingCat = AppState.preferences.userCategories?.find(c => c.id === category);
-            if (existingCat) {
-                if (color && existingCat.color !== color) {
-                    console.log(`[CashAssetUI] Syncing color ${color} to established category ${category}`);
-                    AppState.saveUserCategory({ ...existingCat, color: color });
-                }
-            } else if (color) {
-                // It's a standard category being re-themed for the first time
-                // We add it to userCategories as an "Override"
-                const allCats = [...CASH_CATEGORIES, ...(AppState.preferences.userCategories || [])];
-                const label = allCats.find(c => c.id === category)?.label || category;
-                console.log(`[CashAssetUI] Creating Theme Override for Standard category: ${category} -> ${color}`);
-                AppState.saveUserCategory({ id: category, label: label, color: color });
-            }
+            resolvedCategory = 'user_' + customLabel.toLowerCase().replace(/[^a-z0-9]/g, '_');
         }
 
-        // 4. Gather Comments
-        const comments = [];
-        modal.querySelectorAll(`.${CSS_CLASSES.COMMENT_INPUT}`).forEach(input => {
-            const text = input.value.trim();
-            if (text) comments.push({ text: text, date: new Date().toISOString() });
-        });
-
-        // 5. Validation
-        if (!name) { ToastManager.error('Please enter an asset name.'); return null; }
-        if (!isPortfolioLinked && isNaN(balance)) { ToastManager.error('Please enter a valid balance.'); return null; }
-
-        // 5b. Check for duplicate color (prevent same color for different assets)
+        // --- STRICT GLOBAL COLOR BLOCKADE ---
         if (color) {
-            const allAssets = AppState.data.cash || [];
-            const editingId = modal.dataset.editingAssetId;
-            const duplicateAsset = allAssets.find(a =>
-                a.id !== editingId &&
-                a.color === color
-            );
-            if (duplicateAsset) {
-                ToastManager.error(`Color already used by "${duplicateAsset.name}". Please choose a different color.`);
+            const usedMap = this._getUsedColors(modal.dataset.editingAssetId, resolvedCategory);
+            const colorVal = color.toLowerCase().trim();
+            if (usedMap.has(colorVal)) {
+                const source = usedMap.get(colorVal);
+                ToastManager.error(`Color Conflict! This color is already used by "${source}". Please choose another.`);
                 return null;
             }
         }
 
-        // 6. Final Payload
-        const payload = { name, balance, category, comments, color, isPortfolioLinked };
-        console.log(`[CashAssetUI] gatherFormData: EXIT -> Payload Color: ${payload.color}`);
-        return payload;
-    }
-
-    /**
-     * Determines the preview color based on current modal state.
-     * @returns {String} CSS Color Value
-     */
-    _getPreviewColor(modal) {
-        const catId = this.selectedCategory;
-
-        // 1. ALWAYS PRIORITIZE ACTIVE SELECTION (Dataset)
-        // This ensures Shuffling or Category Switching shows immediate results
-        if (modal.dataset.selectedColor) {
-            return modal.dataset.selectedColor;
+        // --- PERSIST CHANGES ---
+        if (category === 'other') {
+            AppState.saveUserCategory({ id: resolvedCategory, label: customLabel, color });
+            category = resolvedCategory;
+        } else if (color) {
+            const cat = this._getMergedCategories().find(c => c.id === category);
+            if (cat) {
+                AppState.saveUserCategory({ id: category, label: cat.label || category, color });
+            }
         }
 
-        // 2. Fallback to existing custom category color
-        const userCat = AppState.preferences.userCategories?.find(c => c.id === catId);
-        if (userCat && userCat.color) return userCat.color;
+        const comments = [...modal.querySelectorAll('textarea')].map(t => ({ text: t.value.trim(), date: new Date().toISOString() })).filter(c => c.text);
 
-        // 3. Standard Colors
-        const standardColors = {
-            'cash': 'var(--asset-cash)',
-            'cash_in_bank': 'var(--asset-cash-in-bank)',
-            'term_deposit': 'var(--asset-term-deposit)',
-            'property': 'var(--asset-property)',
-            'crypto': 'var(--asset-crypto)',
-            'shares': 'var(--asset-shares)',
-            'super': 'var(--asset-super)',
-            'personal': 'var(--asset-personal)',
-            'other': 'var(--asset-other)'
-        };
-
-        return standardColors[catId] || 'var(--asset-other)';
+        return { name, balance, category, color, comments };
     }
 
-    /**
-     * Updates the Modal Header background color to match the preview.
-     */
     _updateModalHeaderColor(modal) {
         const header = modal.querySelector(`.${CSS_CLASSES.MODAL_HEADER}`);
         if (!header) return;
-
-        const color = this._getPreviewColor(modal);
-
-        // Apply color with a subtle gradient/shimmer
-        header.style.background = color.startsWith('var')
-            ? `linear-gradient(90deg, ${color}, rgba(0,0,0,0.1))`
-            : `linear-gradient(90deg, ${color}, rgba(0,0,0,0.2))`;
-
-        // Ensure contrast
-        header.style.color = '#ffffff';
-        header.style.textShadow = '0 1px 3px rgba(0,0,0,0.3)';
-    }
-
-    /**
-     * Utility for name-based hashing (duplicates CashViewRenderer logic)
-     */
-    /**
-     * Utility for name-based hashing (duplicates CashViewRenderer logic)
-     */
-    _getColorForString(str) {
-        // If string is empty, use the seed itself as the hash base so "New Assets" also shuffle
-        const seed = AppState.preferences?.colorSeed || 0;
-
-        if (!str) {
-            const index = Math.abs(seed) % ASSET_CUSTOM_COLORS.length;
-            const c = ASSET_CUSTOM_COLORS[index];
-            return c;
-        }
-
-        let hash = seed;
-        for (let i = 0; i < str.length; i++) {
-            hash = str.charCodeAt(i) + ((hash << 5) - hash);
-        }
-        const index = Math.abs(hash) % ASSET_CUSTOM_COLORS.length;
-        const c = ASSET_CUSTOM_COLORS[index];
-        return c;
+        const color = modal.dataset.selectedColor || 'var(--asset-other)';
+        header.style.background = `linear-gradient(90deg, ${color}, rgba(0,0,0,0.1))`;
+        header.style.color = '#fff';
     }
 }

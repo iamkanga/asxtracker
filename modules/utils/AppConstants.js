@@ -24,14 +24,9 @@ export const PORTFOLIO_ID = 'portfolio';
 export const SEARCH_WATCHLIST_ID = 'search';
 
 export const ASSET_CUSTOM_COLORS = [
-    '#F44336', '#E91E63', '#9C27B0', '#673AB7', '#3F51B5',
-    '#2196F3', '#03A9F4', '#00BCD4', '#009688', '#4CAF50',
-    '#8BC34A', '#CDDC39', '#FFEB3B', '#FFC107', '#FF9800',
-    '#FF5722', '#795548', '#9E9E9E', '#607D8B', '#FF3D00',
-    '#FF4081', '#E040FB', '#7C4DFF', '#536DFE', '#448AFF',
-    '#40C4FF', '#18FFFF', '#64FFDA', '#69F0AE', '#B2FF59',
-    '#EEFF41', '#FFFF00', '#FFD740', '#FFAB40', '#FF6E40',
-    '#E91E63', '#6200EA', '#00E5FF', '#00E676'
+    '#FF0000', '#0000FF', '#00FF00', '#FFFF00', '#FF00FF', '#00FFFF',
+    '#FF8000', '#8000FF', '#FF0080', '#008080', '#000080', '#800000',
+    '#808000', '#008000', '#C0C0C0', '#603000'
 ];
 
 export const WATCHLIST_MODES = {
@@ -447,6 +442,7 @@ export const RESEARCH_LINKS_TEMPLATE = [
 
 
 export const CASH_CATEGORIES = [
+    { id: 'other', label: 'Add New Category' },
     { id: 'cash', label: 'Cash' },
     { id: 'cash_in_bank', label: 'Cash in Bank' },
     { id: 'term_deposit', label: 'Term Deposit' },
@@ -454,8 +450,7 @@ export const CASH_CATEGORIES = [
     { id: 'crypto', label: 'Crypto' },
     { id: 'shares', label: 'Shares' },
     { id: 'super', label: 'Superannuation' },
-    { id: 'personal', label: 'Personal' },
-    { id: 'other', label: 'Other' }
+    { id: 'personal', label: 'Personal' }
 ];
 
 export const SUMMARY_TYPES = {
