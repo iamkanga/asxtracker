@@ -2652,9 +2652,17 @@ export class AppController {
                     title = 'Day Change';
                     filteredShares = [...shares].sort((a, b) => (b.dayChangeValue || 0) - (a.dayChangeValue || 0));
                     valueField = 'dayChangeValue';
-                    // Calculate total day change to determine background
-                    const totalDayChange = shares.reduce((acc, s) => acc + (s.dayChangeValue || 0), 0);
-                    trendClass = totalDayChange >= 0 ? 'trend-up-bg' : 'trend-down-bg';
+                    // Calculate GAINS vs LOSSES to determine mixed gradient (Match Market Pulse style)
+                    const dayGains = shares.reduce((acc, s) => {
+                        const val = s.dayChangeValue || 0;
+                        return val > 0 ? acc + val : acc;
+                    }, 0);
+                    const dayLosses = Math.abs(shares.reduce((acc, s) => {
+                        const val = s.dayChangeValue || 0;
+                        return val < 0 ? acc + val : acc;
+                    }, 0));
+                    // Gains dominant = Green Top-Left, Losses dominant = Red Top-Left
+                    trendClass = dayGains >= dayLosses ? 'trend-mixed-desc-bg' : 'trend-mixed-asc-bg';
                     break;
                 case SUMMARY_TYPES.WINNERS:
                     title = 'Day Change Winners';

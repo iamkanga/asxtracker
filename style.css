@@ -3847,6 +3847,25 @@ h1.modal-title,
     border: none !important;
 }
 
+/* Mixed Gradient for Day Change Detail Modal (Matches Market Pulse) */
+#summary-detail-modal .modal-content.trend-mixed-desc-bg {
+    /* Green Top-Left → Neutral Center → Red Bottom-Right (Gains Dominant) */
+    background: linear-gradient(135deg,
+            rgba(20, 160, 20, var(--gradient-strength, 0.6)) 0%,
+            rgba(20, 20, 20, 1) 50%,
+            rgba(180, 20, 20, var(--gradient-strength, 0.6)) 100%) !important;
+    border: none !important;
+}
+
+#summary-detail-modal .modal-content.trend-mixed-asc-bg {
+    /* Red Top-Left → Neutral Center → Green Bottom-Right (Losses Dominant) */
+    background: linear-gradient(135deg,
+            rgba(180, 20, 20, var(--gradient-strength, 0.6)) 0%,
+            rgba(20, 20, 20, 1) 50%,
+            rgba(20, 160, 20, var(--gradient-strength, 0.6)) 100%) !important;
+    border: none !important;
+}
+
 #summary-detail-modal .summary-detail-row {
     background-color: transparent !important;
     border-bottom: none !important;
@@ -4040,6 +4059,29 @@ tr.dashboard-grade-neutral td,
 .summary-card.dashboard-grade-up *,
 .summary-card.dashboard-grade-down *,
 .summary-card.dashboard-grade-neutral * {
+    background-color: transparent !important;
+    background: transparent !important;
+}
+
+/* Summary Card Mixed Gradients (Day Change Card) - Matches Market Pulse Style */
+.summary-card.trend-mixed-desc-bg {
+    /* Green Top-Left → Neutral Center → Red Bottom-Right (Gains Dominant) */
+    background: linear-gradient(135deg,
+            rgba(20, 160, 20, var(--gradient-strength, 0.6)) 0%,
+            rgba(20, 20, 20, 1) 50%,
+            rgba(180, 20, 20, var(--gradient-strength, 0.6)) 100%) !important;
+}
+
+.summary-card.trend-mixed-asc-bg {
+    /* Red Top-Left → Neutral Center → Green Bottom-Right (Losses Dominant) */
+    background: linear-gradient(135deg,
+            rgba(180, 20, 20, var(--gradient-strength, 0.6)) 0%,
+            rgba(20, 20, 20, 1) 50%,
+            rgba(20, 160, 20, var(--gradient-strength, 0.6)) 100%) !important;
+}
+
+.summary-card.trend-mixed-desc-bg *,
+.summary-card.trend-mixed-asc-bg * {
     background-color: transparent !important;
     background: transparent !important;
 }

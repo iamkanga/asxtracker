@@ -547,43 +547,31 @@ export class ViewRenderer {
         // Note: Styles for .portfolio-summary should be in CSS, not JS.
 
         // Gradient classes for summary cards
-        const dayChangeGrade = metrics.dayChangeValue > 0 ? 'trend-mixed-desc-bg' :
-            metrics.dayChangeValue < 0 ? 'trend-mixed-asc-bg' : 'dashboard-grade-neutral';
         const totalGainGrade = metrics.totalReturn > 0 ? 'dashboard-grade-up' :
             metrics.totalReturn < 0 ? 'dashboard-grade-down' : 'dashboard-grade-neutral';
 
         const isTotalPos = metrics.totalReturn >= 0;
 
-        // 2. Proportional Sentiment Logic (Dynamic Gradient) - Count-based
-        // 2. Proportional Sentiment Logic (Dynamic Gradient) - Value-based (Dollar Weighted)
-        // User Request: 10000 total, 7500 gain, 2500 loss -> 75% Green, 25% Red.
-        // Also: "which ever is the largest number should be on the left"
+        // 2. Proportional Sentiment Logic (Dynamic Gradient) - Value-based
+        // Robustness: Strip commas and force number conversion to handle formatted strings safely
+        const rawGain = String(metrics.dayGain || 0).replace(/,/g, '');
+        const rawLoss = String(metrics.dayLoss || 0).replace(/,/g, '');
 
-        const dayGain = metrics.dayGain || 0;
-        const dayLoss = Math.abs(metrics.dayLoss || 0); // Ensure positive for ratio
-        const totalVol = dayGain + dayLoss;
+        const dayGain = Number(rawGain);
+        const dayLoss = Math.abs(Number(rawLoss));
 
-        let leftColor = 'rgba(0, 180, 0, var(--gradient-strength, 0.6))'; // Default Green
-        let rightColor = 'rgba(180, 0, 0, var(--gradient-strength, 0.6))'; // Default Red
-        let splitPct = 50;
+        let dayChangeClass = 'dashboard-grade-neutral';
 
-        if (totalVol > 0) {
-            if (dayGain >= dayLoss) {
-                // Gain Dominant -> Green on Left
-                leftColor = 'rgba(0, 180, 0, var(--gradient-strength, 0.6))';
-                rightColor = 'rgba(180, 0, 0, var(--gradient-strength, 0.6))';
-                splitPct = Math.round((dayGain / totalVol) * 100);
-            } else {
-                // Loss Dominant -> Red on Left
-                leftColor = 'rgba(180, 0, 0, var(--gradient-strength, 0.6))';
-                rightColor = 'rgba(0, 180, 0, var(--gradient-strength, 0.6))';
-                splitPct = Math.round((dayLoss / totalVol) * 100);
-            }
+        // Logic: Whichever is larger determines the Top-Left color (Dominant Side)
+        if (dayGain >= dayLoss) {
+            // Gain Dominant (Matches Market Pulse 'Low to High') -> Green Top-Left
+            dayChangeClass = 'trend-mixed-desc-bg';
+        } else {
+            // Loss Dominant (Matches Market Pulse 'High to Low') -> Red Top-Left
+            dayChangeClass = 'trend-mixed-asc-bg';
         }
 
-        const dynamicGradient = `linear-gradient(to right, ${leftColor} 0%, rgba(20, 20, 20, 1) ${splitPct}%, ${rightColor} 100%)`;
-
-        // Static Mirrored Gradients (Color → Black → Same Color)
+        // Static Gradients (Needed for other cards)
         const neutralGradient = 'linear-gradient(90deg, rgba(164, 147, 147, var(--gradient-strength, 0.6)) 0%, rgba(20, 20, 20, 1) 50%, rgba(164, 147, 147, var(--gradient-strength, 0.6)) 100%)';
         const greenGradient = 'linear-gradient(90deg, rgba(0, 180, 0, var(--gradient-strength, 0.6)) 0%, rgba(20, 20, 20, 1) 50%, rgba(0, 180, 0, var(--gradient-strength, 0.6)) 100%)';
         const redGradient = 'linear-gradient(90deg, rgba(180, 0, 0, var(--gradient-strength, 0.6)) 0%, rgba(20, 20, 20, 1) 50%, rgba(180, 0, 0, var(--gradient-strength, 0.6)) 100%)';
@@ -600,8 +588,7 @@ export class ViewRenderer {
                 </div>
             </div>
 
-            <div class="${CSS_CLASSES.SUMMARY_CARD} ${CSS_CLASSES.CLICKABLE}" 
-                 style="background: ${dynamicGradient} !important;"
+            <div class="${CSS_CLASSES.SUMMARY_CARD} ${CSS_CLASSES.CLICKABLE} ${dayChangeClass}" 
                  data-type="${SUMMARY_TYPES.DAY_CHANGE}">
                 <span class="${CSS_CLASSES.METRIC_LABEL}">Day Change</span>
                 <div class="${CSS_CLASSES.METRIC_ROW}">
