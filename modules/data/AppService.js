@@ -287,6 +287,49 @@ export class AppService {
     }
 
     /**
+     * Removes a share from a specific watchlist (Unlink).
+     * If the share is no longer in ANY watchlist, it deletes the share document.
+     * @param {string} watchlistId 
+     * @param {string} shareId 
+     */
+    async removeShareFromWatchlist(watchlistId, shareId) {
+        if (!shareId || !watchlistId) return;
+        const user = AppState.user;
+        if (!user) {
+            ToastManager.error(USER_MESSAGES.AUTH_REQUIRED);
+            return;
+        }
+
+        console.log(`[AppService] Unlinking Share ${shareId} from Watchlist ${watchlistId}`);
+
+        // 1. Get current share data to check other memberships
+        const shares = AppState.data.shares || [];
+        const share = shares.find(s => s.id === shareId);
+
+        if (!share) {
+            console.warn(`[AppService] Share ${shareId} not found locally.`);
+            return;
+        }
+
+        const currentIds = Array.isArray(share.watchlistIds) ? share.watchlistIds : [share.watchlistId];
+        const newIds = currentIds.filter(id => id !== watchlistId);
+
+        if (newIds.length === 0) {
+            // ORPHAN: Delete completely
+            console.log(`[AppService] Share ${shareId} has no more watchlists. Deleting document.`);
+            await userStore.deleteDocument(user.uid, 'shares', shareId);
+        } else {
+            // SAFE: Update with removed ID
+            console.log(`[AppService] Share ${shareId} remaining in: ${newIds.join(', ')}. Updating...`);
+            await userStore.updateDocument(user.uid, 'shares', shareId, {
+                watchlistIds: newIds,
+                // Legacy support: If watchlistId matched the one we removed, update it to the first available one
+                watchlistId: newIds[0]
+            });
+        }
+    }
+
+    /**
      * Deletes a share record or removes it from a watchlist.
      * @param {string|null} watchlistId - The context we are deleting from.
      * @param {string} shareId - The unique document ID of the share.

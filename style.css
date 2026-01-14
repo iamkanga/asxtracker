@@ -4639,6 +4639,11 @@ button#watchlist-selector.dashboard-grade-neutral,
     flex-direction: column;
     padding-top: 10px;
     gap: 4px;
+    max-height: 50vh;
+    overflow-y: auto;
+    /* Custom Scrollbar for sleekness */
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-accent) var(--card-bg);
 }
 
 /* Core Watchlist Item - PURGED FOR CONSOLIDATION below */

@@ -2335,43 +2335,73 @@ export class AppController {
             // 1. Find all shares currently assigned to this watchlist (by ID)
             const allShares = AppState.data.shares || [];
 
-            // Filter shares that belong to this watchlist
-            const sharesInWatchlist = allShares.filter(s => s.watchlistId === id);
+            // Filter shares that belong to this watchlist (Robust check for array or string)
+            const sharesInWatchlist = allShares.filter(s => {
+                if (Array.isArray(s.watchlistIds)) return s.watchlistIds.includes(id);
+                return s.watchlistId === id;
+            });
 
-            // 2. Identify Orphans (Shares that are ONLY in this watchlist)
+            // 2. Identify Orphans (Shares that are ONLY in this watchlist) vs Safe Shares
             const orphans = [];
             const safeShares = [];
 
             for (const share of sharesInWatchlist) {
-                // Check if this share name exists in ANY other watchlist
-                // We exclude the current share ID from the check
-                const existsElsewhere = allShares.some(s =>
-                    s.shareName === share.shareName &&
-                    s.id !== share.id &&
-                    s.watchlistId !== id
-                );
+                // Check membership count
+                // New Architecture: Check watchlistIds array length
+                // Legacy Fallback: If no array, assume it's the only one (Orphan) unless we find duplicates (Old Method - deprecated but safe to ignore if migrated)
 
-                if (existsElsewhere) {
-                    safeShares.push(share);
+                let isOrphan = true;
+                if (Array.isArray(share.watchlistIds)) {
+                    // 2b. ROBUST ORPHAN DETECTION (Fixes "Ghost Share" Bug)
+                    // A share is ONLY "Safe" if it exists in another VALID, ACTIVE watchlist.
+
+                    // Build Valid ID Set (Active User Lists + System Lists)
+                    const validWatchlistIds = new Set((AppState.data.watchlists || []).map(w => w.id));
+                    validWatchlistIds.add('portfolio');
+                    validWatchlistIds.add('ALL');
+                    validWatchlistIds.add('CASH');
+                    validWatchlistIds.add('DASHBOARD');
+
+                    // Filter active memberships: 
+                    // 1. Must NOT be the current list (id)
+                    // 2. Must be a VALID known watchlist (validWatchlistIds)
+                    const activeMemberships = share.watchlistIds.filter(wid =>
+                        wid !== id &&
+                        validWatchlistIds.has(wid)
+                    );
+
+                    if (activeMemberships.length > 0) {
+                        isOrphan = false; // It has a home!
+                    } else {
+                        isOrphan = true; // No valid home elsewhere -> Orphan
+                    }
                 } else {
+                    // Legacy: Check if exists elsewhere by name (Double Up logic)
+                    const existsElsewhere = allShares.some(s =>
+                        s.shareName === share.shareName &&
+                        s.id !== share.id &&
+                        s.watchlistId !== id
+                    );
+                    if (existsElsewhere) isOrphan = false;
+                }
+
+                if (isOrphan) {
                     orphans.push(share);
+                } else {
+                    safeShares.push(share);
                 }
             }
 
             // Build confirmation message
             let message = `You are about to delete watchlist "${watchlist.name}".\n\n`;
             if (orphans.length > 0) {
-                message = `The following shares will be PERMANENTLY DELETED:\n`;
+                message += `The following shares will be PERMANENTLY DELETED (they are not in any other list):\n`;
                 message += orphans.map(s => `- ${s.shareName}`).join('\n');
                 message += `\n\n`;
-
-
             }
 
-
-
             if (safeShares.length > 0) {
-                message += `The following shares will not be deleted from other watch lists:\n`;
+                message += `The following shares will remain in their other watchlists:\n`;
                 message += safeShares.map(s => `- ${s.shareName}`).join('\n');
                 message += `\n\n`;
             }
@@ -2385,73 +2415,27 @@ export class AppController {
                 if (orphans.length > 0) {
                     console.log(`Deleting ${orphans.length} orphan shares...`);
                     for (const share of orphans) {
-                        // Use deleteShareRecord for orphans (Safe to cascade delete if truly orphan, but stick to ID)
-                        // Actually, appService.deleteShareRecord cascades based on Name.
-                        // Since we verified they are orphans, cascading is technically fine (only itself exists),
-                        // BUT to be architectural clean, we should just delete this document.
                         await this.appService.deleteShareRecord(id, share.id);
                     }
                 }
 
-                // 4. Delete Safe Shares (Just remove this specific link/doc)
-                // We must perform this cleanup because currently shares are documents.
-                // If we don't delete them, they become "Ghosts" (orphaned documents pointing to a non-existent watchlist).
-                // AppService.deleteShareRecord logic (cascade) might be dangerous here if not careful.
-                // Let's check AppService.deleteShareRecord again.
-                // It deletes ALL siblings. THIS IS THE BUG for preserved shares.
-                // SOLUTION: We need to use userStore directly or add a new method.
-                // Since I cannot edit AppService right now easily without risking side effects,
-                // I will use userStore via AppService (if exposed) or assume AppService.deleteShareRecord needs fixing.
-                // Wait, I can't fix AppService in this step.
-                // I will assume for now I should iterate and delete specific documents using a safer method if available.
-                // Actually, let's look at `deleteDocument` in AppService... it's not exposed directly.
-                // But `deleteShareRecord` uses `deleteDocument` internally.
-
-                // CRITICAL FIX: To avoid cascading delete on "Safe Shares", we must NOT use `deleteShareRecord` for them if it cascades.
-                // However, I verified `deleteShareRecord` DOES cascade.
-                // So for SAFE shares, we need to delete ONLY their specific document ID.
-                // I will use `userStore.deleteDocument` directly if I can access it, but `userStore` is internal to AppService.
-                // `AppController` has access to `this.appService.userStore`? No, it exports `userStore` instance in `AppService.js`.
-                // Checking imports... `import { AppService } from '../data/AppService.js';`
-                // `AppService` is a class.
-                // `DataService.js` exports `userStore`.
-                // Let's use `deleteShareRecord` but we need to modify AppService to support "Single Delete".
-                // Since I can't modify AppService here, I will rely on the fact that I am modifying AppController 
-                // and I can import `userStore` from `DataService.js` (it is exported there).
-                // Checking imports in AppController: `import { DataService } from '../data/DataService.js';`
-                // BUT `DataService.js` exports `userStore`.
-                // I need to update imports? 
-                // `AppController.js` lines 8-9:
-                // import { DataService } from '../data/DataService.js';
-                // import { AppService } from '../data/AppService.js';
-
-                // I will import `userStore` from `../data/UserStore.js` (via DataService export or direct).
-                // Actually, `AppService.deleteShareRecord` is the one causing the bug. 
-                // I should fix `AppService.deleteShareRecord` to NOT cascade. 
-                // But the user complained about "Warning explains...".
-                // If I fix the warning, I still need to fix the deletion mechanics.
-
-                // For now, I will use `this.appService.deleteShareRecord` for orphans.
-                // For SAFE shares, I'll iterate and use a new `deleteSafe` approach or `deleteShareRecord` if I fix it.
-                // I WILL FIX APPSERVICE.JS IN THE NEXT STEP.
-                // So here, I will just call `deleteShareRecord` for ALL shares in this watchlist (both orphans and safe).
-                // AND I will rely on my upcoming fix to `AppService.js` to handle the `watchlistId` scoping correctly.
-
+                // 4. Unlink Safe Shares (Remove ID from Array)
                 if (safeShares.length > 0) {
-                    console.log(`Removing ${safeShares.length} preserved shares from this watchlist...`);
+                    console.log(`Unlinking ${safeShares.length} shared shares from this watchlist...`);
                     for (const share of safeShares) {
-                        await this.appService.deleteShareRecord(id, share.id);
+                        // Use new "Unlink" method
+                        await this.appService.removeShareFromWatchlist(id, share.id);
                     }
                 }
 
-                // 4. Delete Watchlist
+                // 5. Delete Watchlist
                 await this.appService.deleteWatchlist(id);
 
                 // Refresh is automatic via subscription
                 // Enhanced Toast Feedback
                 let toastMsg = `Watchlist "${watchlist.name}" deleted.`;
                 if (orphans.length > 0) toastMsg += ` ${orphans.length} deleted.`;
-                if (safeShares.length > 0) toastMsg += ` ${safeShares.length} preserved.`;
+                if (safeShares.length > 0) toastMsg += ` ${safeShares.length} unlinked.`;
                 ToastManager.success(toastMsg);
 
             } catch (err) {
