@@ -318,9 +318,9 @@ export class ViewRenderer {
         }
 
         // Gradient Background Logic
-        let gradeClass = 'dashboard-grade-neutral'; // Default: coffee/amber
-        if (changePercent > 0) gradeClass = 'dashboard-grade-up';
-        else if (changePercent < 0) gradeClass = 'dashboard-grade-down';
+        let gradeClass = CSS_CLASSES.DASHBOARD_GRADE_NEUTRAL; // Default: coffee/amber
+        if (changePercent > 0) gradeClass = CSS_CLASSES.DASHBOARD_GRADE_UP;
+        else if (changePercent < 0) gradeClass = CSS_CLASSES.DASHBOARD_GRADE_DOWN;
 
         return `
             <tr data-id="${item.id}" data-code="${item.code}" class="${trendClass} ${gradeClass}">
@@ -369,9 +369,9 @@ export class ViewRenderer {
             const displayChangeValue = item.dayChangeValue || 0;
 
             // Gradient Background Logic
-            let gradeClass = 'dashboard-grade-neutral'; // Default: coffee/amber
-            if (changePercent > 0) gradeClass = 'dashboard-grade-up';
-            else if (changePercent < 0) gradeClass = 'dashboard-grade-down';
+            let gradeClass = CSS_CLASSES.DASHBOARD_GRADE_NEUTRAL; // Default: coffee/amber
+            if (changePercent > 0) gradeClass = CSS_CLASSES.DASHBOARD_GRADE_UP;
+            else if (changePercent < 0) gradeClass = CSS_CLASSES.DASHBOARD_GRADE_DOWN;
 
             return `
                 <div class="${CSS_CLASSES.CARD} ${trendClass} ${gradeClass} ${ghostClass}" data-id="${item.id}" data-code="${item.code}">
@@ -457,9 +457,9 @@ export class ViewRenderer {
                 </div>` : '';
 
             // Gradient Background Logic
-            let gradeClass = 'dashboard-grade-neutral'; // Default: coffee/amber
-            if (changePercent > 0) gradeClass = 'dashboard-grade-up';
-            else if (changePercent < 0) gradeClass = 'dashboard-grade-down';
+            let gradeClass = CSS_CLASSES.DASHBOARD_GRADE_NEUTRAL; // Default: coffee/amber
+            if (changePercent > 0) gradeClass = CSS_CLASSES.DASHBOARD_GRADE_UP;
+            else if (changePercent < 0) gradeClass = CSS_CLASSES.DASHBOARD_GRADE_DOWN;
 
             return `
                 <div class="${CSS_CLASSES.CARD} ${trendClass} ${gradeClass} ${CSS_CLASSES.PB_4PX}" data-id="${item.id}" data-code="${item.code}">
@@ -496,9 +496,9 @@ export class ViewRenderer {
             }
 
             // Gradient Background Logic
-            let gradeClass = 'dashboard-grade-neutral'; // Default: coffee
-            if (changePercent > 0) gradeClass = 'dashboard-grade-up';
-            else if (changePercent < 0) gradeClass = 'dashboard-grade-down';
+            let gradeClass = CSS_CLASSES.DASHBOARD_GRADE_NEUTRAL; // Default: coffee
+            if (changePercent > 0) gradeClass = CSS_CLASSES.DASHBOARD_GRADE_UP;
+            else if (changePercent < 0) gradeClass = CSS_CLASSES.DASHBOARD_GRADE_DOWN;
 
             return `
                 <div class="${CSS_CLASSES.CARD} ${trendClass} ${gradeClass}" data-id="${item.id}" data-code="${item.code}" data-view="compact">
@@ -520,9 +520,9 @@ export class ViewRenderer {
         } else {
             // Snapshot View
             // Gradient Background Logic
-            let gradeClass = 'dashboard-grade-neutral'; // Default: coffee/amber
-            if (changePercent > 0) gradeClass = 'dashboard-grade-up';
-            else if (changePercent < 0) gradeClass = 'dashboard-grade-down';
+            let gradeClass = CSS_CLASSES.DASHBOARD_GRADE_NEUTRAL; // Default: coffee/amber
+            if (changePercent > 0) gradeClass = CSS_CLASSES.DASHBOARD_GRADE_UP;
+            else if (changePercent < 0) gradeClass = CSS_CLASSES.DASHBOARD_GRADE_DOWN;
 
             return `
                 <div class="${CSS_CLASSES.CARD} ${trendClass} ${gradeClass}" data-id="${item.id}" data-code="${item.code}" data-view="snapshot">
@@ -547,8 +547,8 @@ export class ViewRenderer {
         // Note: Styles for .portfolio-summary should be in CSS, not JS.
 
         // Gradient classes for summary cards
-        const totalGainGrade = metrics.totalReturn > 0 ? 'dashboard-grade-up' :
-            metrics.totalReturn < 0 ? 'dashboard-grade-down' : 'dashboard-grade-neutral';
+        const totalGainGrade = metrics.totalReturn > 0 ? CSS_CLASSES.DASHBOARD_GRADE_UP :
+            metrics.totalReturn < 0 ? CSS_CLASSES.DASHBOARD_GRADE_DOWN : CSS_CLASSES.DASHBOARD_GRADE_NEUTRAL;
 
         const isTotalPos = metrics.totalReturn >= 0;
 
@@ -560,15 +560,15 @@ export class ViewRenderer {
         const dayGain = Number(rawGain);
         const dayLoss = Math.abs(Number(rawLoss));
 
-        let dayChangeClass = 'dashboard-grade-neutral';
+        let dayChangeClass = CSS_CLASSES.DASHBOARD_GRADE_NEUTRAL;
 
         // Logic: Whichever is larger determines the Top-Left color (Dominant Side)
         if (dayGain >= dayLoss) {
             // Gain Dominant (Matches Market Pulse 'Low to High') -> Green Top-Left
-            dayChangeClass = 'trend-mixed-desc-bg';
+            dayChangeClass = CSS_CLASSES.TREND_MIXED_DESC_BG;
         } else {
             // Loss Dominant (Matches Market Pulse 'High to Low') -> Red Top-Left
-            dayChangeClass = 'trend-mixed-asc-bg';
+            dayChangeClass = CSS_CLASSES.TREND_MIXED_ASC_BG;
         }
 
         // Static Gradients (Needed for other cards)
@@ -692,7 +692,7 @@ export class ViewRenderer {
         const sectorName = stock.sector || FALLBACK_SECTOR_MAP[stock.code] || '';
 
         const colorClass = isPos ? CSS_CLASSES.PREVIEW_CHANGE_POS : (isNeg ? CSS_CLASSES.PREVIEW_CHANGE_NEG : CSS_CLASSES.NEUTRAL);
-        const trendBgClass = isPos ? 'trend-up-bg' : (isNeg ? 'trend-down-bg' : 'trend-neutral-bg');
+        const trendBgClass = isPos ? CSS_CLASSES.TREND_UP_BG : (isNeg ? CSS_CLASSES.TREND_DOWN_BG : CSS_CLASSES.TREND_NEUTRAL_BG);
 
         const modal = document.createElement('div');
         modal.id = IDS.STOCK_DETAILS_MODAL;

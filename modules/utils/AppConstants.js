@@ -511,6 +511,16 @@ export const CSS_CLASSES = {
     TREND_DOWN: 'trend-down',
     TREND_NEUTRAL: 'trend-neutral',
 
+    // Trend Background Gradients (Constitution Compliance)
+    TREND_UP_BG: 'trend-up-bg',
+    TREND_DOWN_BG: 'trend-down-bg',
+    TREND_NEUTRAL_BG: 'trend-neutral-bg',
+    TREND_MIXED_DESC_BG: 'trend-mixed-desc-bg',  // Green Top-Left → Red Bottom-Right (Gains Dominant)
+    TREND_MIXED_ASC_BG: 'trend-mixed-asc-bg',    // Red Top-Left → Green Bottom-Right (Losses Dominant)
+    DASHBOARD_GRADE_UP: 'dashboard-grade-up',
+    DASHBOARD_GRADE_DOWN: 'dashboard-grade-down',
+    DASHBOARD_GRADE_NEUTRAL: 'dashboard-grade-neutral',
+
     // Text Colors
     TEXT_POSITIVE: 'text-positive',
     TEXT_NEGATIVE: 'text-negative',

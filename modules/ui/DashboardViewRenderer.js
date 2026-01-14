@@ -216,9 +216,9 @@ export class DashboardViewRenderer {
         else if (pctChange < 0) sentimentClass = CSS_CLASSES.DASHBOARD_ROW_NEGATIVE;
 
         // Gradient Background Class
-        let gradeClass = 'dashboard-grade-neutral'; // Default: coffee/amber
-        if (pctChange > 0) gradeClass = 'dashboard-grade-up';
-        else if (pctChange < 0) gradeClass = 'dashboard-grade-down';
+        let gradeClass = CSS_CLASSES.DASHBOARD_GRADE_NEUTRAL; // Default: coffee/amber
+        if (pctChange > 0) gradeClass = CSS_CLASSES.DASHBOARD_GRADE_UP;
+        else if (pctChange < 0) gradeClass = CSS_CLASSES.DASHBOARD_GRADE_DOWN;
 
         // Market Status Calculation
         const isOpen = this._isMarketOpen(code);

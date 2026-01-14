@@ -2646,7 +2646,7 @@ export class AppController {
                     title = 'Current Value';
                     filteredShares = [...shares].sort((a, b) => (b.value || 0) - (a.value || 0));
                     valueField = 'value';
-                    trendClass = 'trend-neutral-bg'; // Value is neutral
+                    trendClass = CSS_CLASSES.TREND_NEUTRAL_BG; // Value is neutral
                     break;
                 case SUMMARY_TYPES.DAY_CHANGE:
                     title = 'Day Change';
@@ -2662,14 +2662,14 @@ export class AppController {
                         return val < 0 ? acc + val : acc;
                     }, 0));
                     // Gains dominant = Green Top-Left, Losses dominant = Red Top-Left
-                    trendClass = dayGains >= dayLosses ? 'trend-mixed-desc-bg' : 'trend-mixed-asc-bg';
+                    trendClass = dayGains >= dayLosses ? CSS_CLASSES.TREND_MIXED_DESC_BG : CSS_CLASSES.TREND_MIXED_ASC_BG;
                     break;
                 case SUMMARY_TYPES.WINNERS:
                     title = 'Day Change Winners';
                     filteredShares = shares.filter(s => (s.dayChangeValue || 0) > 0)
                         .sort((a, b) => (b.dayChangeValue || 0) - (a.dayChangeValue || 0));
                     valueField = 'dayChangeValue';
-                    trendClass = 'trend-up-bg';
+                    trendClass = CSS_CLASSES.TREND_UP_BG;
                     break;
                 case SUMMARY_TYPES.LOSERS:
                     title = 'Day Change Losers';
@@ -2677,14 +2677,14 @@ export class AppController {
                     filteredShares = shares.filter(s => (s.dayChangeValue || 0) < 0)
                         .sort((a, b) => (a.dayChangeValue || 0) - (b.dayChangeValue || 0));
                     valueField = 'dayChangeValue';
-                    trendClass = 'trend-down-bg';
+                    trendClass = CSS_CLASSES.TREND_DOWN_BG;
                     break;
                 case SUMMARY_TYPES.CAPITAL_GAIN:
                     title = 'Capital Gain';
                     filteredShares = [...shares].sort((a, b) => (b.capitalGain || 0) - (a.capitalGain || 0));
                     valueField = 'capitalGain';
                     const totalCapGain = shares.reduce((acc, s) => acc + (s.capitalGain || 0), 0);
-                    trendClass = totalCapGain >= 0 ? 'trend-up-bg' : 'trend-down-bg';
+                    trendClass = totalCapGain >= 0 ? CSS_CLASSES.TREND_UP_BG : CSS_CLASSES.TREND_DOWN_BG;
                     break;
                 default:
                     console.warn('Unknown summary type:', type);

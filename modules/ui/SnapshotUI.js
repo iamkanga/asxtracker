@@ -208,11 +208,11 @@ export class SnapshotUI {
         // Dynamic Background Logic
         const content = modal.querySelector('.snapshot-content');
         if (content) {
-            content.classList.remove('trend-up-bg', 'trend-down-bg', 'trend-mixed-desc-bg', 'trend-mixed-asc-bg');
+            content.classList.remove(CSS_CLASSES.TREND_UP_BG, CSS_CLASSES.TREND_DOWN_BG, CSS_CLASSES.TREND_MIXED_DESC_BG, CSS_CLASSES.TREND_MIXED_ASC_BG);
             if (this._currentSort === 'desc') {
-                content.classList.add('trend-mixed-desc-bg'); // Green Top -> Red Bottom
+                content.classList.add(CSS_CLASSES.TREND_MIXED_DESC_BG); // Green Top -> Red Bottom
             } else {
-                content.classList.add('trend-mixed-asc-bg'); // Red Top -> Green Bottom
+                content.classList.add(CSS_CLASSES.TREND_MIXED_ASC_BG); // Red Top -> Green Bottom
             }
         }
 
