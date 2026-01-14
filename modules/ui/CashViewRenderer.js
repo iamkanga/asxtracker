@@ -170,7 +170,10 @@ export class CashViewRenderer {
             .find(c => c.id === asset.category);
 
         card.innerHTML = `
-            <div class="cash-grid-category">${(catObj ? catObj.label : (asset.category || 'Cash').replace(/^user_/i, '').replace(/_/g, ' ')).toUpperCase()}</div>
+            <div class="cash-grid-category">
+                ${(catObj ? catObj.label : (asset.category || 'Cash').replace(/^user_/i, '').replace(/_/g, ' ')).toUpperCase()}
+                ${hasComments ? `<i class="fas ${UI_ICONS.COMMENTS} cash-comment-indicator" style="font-size: 10px; opacity: 0.4; margin-left: 6px;" title="Comments available"></i>` : ''}
+            </div>
             <div class="cash-grid-name">
                 ${asset.name}
                 ${asset.category === 'other' ? `<span style="font-size: 9px; color: #aaa; margin-left: 5px;">[${asset.color || 'NO-CLR'}]</span>` : ''}
@@ -180,7 +183,6 @@ export class CashViewRenderer {
                 ${formatCurrency(asset.balance)}
             </div>
             <div class="cash-grid-actions">
-                ${hasComments ? `<i class="fas ${UI_ICONS.COMMENTS} cash-comment-indicator" title="Comments available"></i>` : ''}
                 <button class="${CSS_CLASSES.ICON_BTN_GHOST} ${CSS_CLASSES.CASH_EYE_BTN}" title="${asset.isHidden ? "Show Asset" : "Hide Asset"}">
                     <i class="fas ${asset.isHidden ? UI_ICONS.EYE_SLASH : UI_ICONS.EYE}"></i>
                 </button>
