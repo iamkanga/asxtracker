@@ -798,6 +798,8 @@ i:focus {
     padding: 12px;
     border-bottom: 1px solid var(--border-color);
     border-left-width: 0;
+    overflow: visible !important;
+    /* Allow popouts */
     border-left-style: none;
     border-left-color: transparent;
     align-items: center;
@@ -1732,7 +1734,84 @@ h1#dynamicWatchlistTitle.active {
     font-weight: 600;
     color: var(--accent-color, #a49393);
     cursor: pointer;
-    margin-top: 2px;
+    margin-top: 4px;
+}
+
+/* Dashboard Sparkline (52W Range) */
+.dashboard-spark-container {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    overflow: visible !important;
+    /* Allow marker to poke out */
+}
+
+.range-label {
+    font-weight: 600;
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    width: 25px;
+}
+
+.dashboard-range-data-group {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.range-low,
+.range-high {
+    font-family: monospace;
+    font-size: 0.75rem;
+    opacity: 0.8;
+}
+
+.spark-rail {
+    flex: 1;
+    height: 16px;
+    /* Taller track as requested */
+    background-color: rgba(255, 255, 255, 0.15);
+    /* Slightly lighter for visibility */
+    border-radius: 8px;
+    /* Rounded track */
+    position: relative;
+    margin: 0 4px;
+}
+
+.spark-marker {
+    box-shadow: none !important;
+    background-color: transparent !important;
+    color: var(--color-accent);
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    overflow: visible !important;
+}
+
+.spark-marker svg {
+    display: block !important;
+    width: 100% !important;
+    height: 100% !important;
+    fill: currentColor !important;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
+}
+
+.dashboard-grade-up .spark-marker {
+    color: var(--color-positive) !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+}
+
+.dashboard-grade-down .spark-marker {
+    color: var(--color-negative) !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
 }
 
 /* --- Sidebar --- */

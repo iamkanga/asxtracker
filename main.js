@@ -4,10 +4,10 @@
  * Bootstraps the AppController.
  */
 
-import { AppController } from './modules/controllers/AppController.js?v=1040';
+import { AppController } from './modules/controllers/AppController.js?v=1080';
 import { SplashScreen } from './modules/ui/SplashScreen.js';
 
-console.log('%c [MAIN] APPLICATION VERSION 1040 LOADED ', 'background: #222; color: #bada55');
+console.log('%c [MAIN] APPLICATION VERSION 1080 WIDE TRACK ', 'background: #222; color: #bada55');
 
 const app = new AppController();
 const splash = new SplashScreen();

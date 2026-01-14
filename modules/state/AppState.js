@@ -259,7 +259,8 @@ export const AppState = {
                 colorSeed: this.preferences.colorSeed || 0,
                 dailyEmail: this.preferences.dailyEmail || false,
                 alertEmailRecipients: this.preferences.alertEmailRecipients || '',
-                gradientStrength: this.preferences.gradientStrength ?? 0.6
+                gradientStrength: this.preferences.gradientStrength ?? 0.6,
+                customWatchlistNames: this.preferences.customWatchlistNames || {}
             };
             // console.log('[AppState] Triggering Sync with payload:', payload);
             this.onPersistenceUpdate(payload);

@@ -4,7 +4,7 @@
  * Displays market indices and commodities in a high-density stacked card view.
  */
 import { formatCurrency, formatPercent } from '../utils/formatters.js';
-import { IDS, CSS_CLASSES, DASHBOARD_SYMBOLS, STORAGE_KEYS, DASHBOARD_LINKS, UI_ICONS } from '../utils/AppConstants.js?v=1029';
+import { IDS, CSS_CLASSES, DASHBOARD_SYMBOLS, STORAGE_KEYS, DASHBOARD_LINKS, UI_ICONS, KANGAROO_ICON_SVG } from '../utils/AppConstants.js?v=1031';
 import { AppState } from '../state/AppState.js';
 import { DashboardFilterModal } from './DashboardFilterModal.js';
 import { LinkHelper } from '../utils/LinkHelper.js';
@@ -197,8 +197,18 @@ export class DashboardViewRenderer {
         const live = liveData ? liveData.live : (item.live || 0);
         const pctChange = liveData ? liveData.pctChange : (item.pctChange || 0);
         const valueChange = liveData ? liveData.change : (item.valueChange || 0);
-        const high52 = liveData?.high || item.high || 0;
-        const low52 = liveData?.low || item.low || 0;
+        const high52 = [liveData?.high, item.high].find(v => v > 0) || 0;
+        const low52 = [liveData?.low, item.low].find(v => v > 0) || 0;
+
+        // CALCULATE RANGE PERCENTAGE (Consolidated for consistency)
+        const markerPct = this._calculateRangePercent(live, low52, high52);
+        // Robust positioning style - ensuring z-index and overflow are handled
+        const markerStyle = `left: ${markerPct}% !important; position: absolute !important; top: 50% !important; transform: translate(-50%, -50%) !important; z-index: 1000 !important; width: 28px !important; height: 28px !important; display: flex !important; justify-content: center !important; align-items: center !important; pointer-events: none;`;
+
+        // DEBUG: Trace positioning values (remove after fix)
+        if (index < 5 || code.includes('IXIC') || code.includes('NASDAQ')) {
+            console.log(`[SPARK 1080 DEBUG] ${code}: pct=${markerPct.toFixed(1)}%, left=${markerPct.toFixed(1)}%`);
+        }
 
         // Sentiment class for border color (3-way: positive/negative/neutral)
         let sentimentClass = 'neutral';
@@ -301,14 +311,18 @@ export class DashboardViewRenderer {
                     </div>
                 </div>
                 ${high52 > 0 ? `
-                    <div class="${CSS_CLASSES.DASHBOARD_SPARK_CONTAINER}">
-                        <span class="${CSS_CLASSES.RANGE_LABEL}">52W</span>
-                        <div class="dashboard-range-data-group">
-                            <span class="${CSS_CLASSES.RANGE_LOW}">${low52.toFixed(2)}</span>
-                            <div class="${CSS_CLASSES.SPARK_RAIL}">
-                                <div class="${CSS_CLASSES.SPARK_MARKER}" style="left: ${this._calculateRangePercent(live, low52, high52)}%;"></div>
+                    <div class="${CSS_CLASSES.DASHBOARD_SPARK_CONTAINER}" style="width: 100% !important; display: flex !important; align-items: center !important; gap: 10px !important;">
+                        <span class="${CSS_CLASSES.RANGE_LABEL}" style="flex-shrink: 0 !important; width: auto !important; min-width: 30px !important; font-weight: bold !important;">52W</span>
+                        <div class="dashboard-range-data-group" style="flex: 1 !important; display: flex !important; align-items: center !important; gap: 8px !important; width: 100% !important;">
+                            <span class="${CSS_CLASSES.RANGE_LOW}" style="flex-shrink: 0 !important;">${low52.toFixed(2)}</span>
+                            <div class="${CSS_CLASSES.SPARK_RAIL}" style="flex: 1 !important; height: 4px !important; border-radius: 2px !important; background: rgba(255,255,255,0.15) !important; position: relative !important; overflow: visible !important; margin: 0 5px !important;">
+                                <div class="${CSS_CLASSES.SPARK_MARKER}" style="${markerStyle}">
+                                    <svg viewBox="0 0 122.88 78.88" fill="currentColor" style="width: 100% !important; height: 100% !important; display: block !important; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.8)) !important;">
+                                        <path d="M75.88,44l-4.71-.7L53.93,67.5h3.66A10.08,10.08,0,0,1,60,68,142.7,142.7,0,0,0,75.88,44Zm19,3.86,4.79-11,7.93-8.6a16.29,16.29,0,0,1,3-.17c4.13.32,4.23.66,5.42,1.19a7.11,7.11,0,0,0,3.93.6,2.15,2.15,0,0,0,1.81-1.62c1.77-1.7,1.54-3.36-.3-5L118,20.52a5.26,5.26,0,0,0-2.94-5.65c2.25-5.1.66-9.35-2-13.27-.9-1.32-1.15-2.33-2.57-.9a7.7,7.7,0,0,0-1.35,2c3.07,2.8,5,6,5.09,9.69,0,.76.16,3.21-.59,3.46-1.45.49-1.48-1.49-1.5-2.25-.09-5.29-2.94-8.65-7.3-10.94-.67-.35-1.77-1.06-2.51-.67-.56.3-.92,1.49-1.12,2.08A11.11,11.11,0,0,0,100.67,8a11.35,11.35,0,0,0,1.27,4.7L104.13,15l-5.69,5c-3,1.55-6.06.91-9.16-2.11-8.2-7.47-16.45-10.7-27.86-10.16a30.81,30.81,0,0,0-15.83,5.62c-7.7,5.2-11.59,9.73-14.76,18.36a140.78,140.78,0,0,0-4.79,17c-1.67,6.75-3,17.51-8.86,21.66A14.22,14.22,0,0,1,7.54,72.7l-5.17-.36c-1.32-.15-2.11.14-2.3.91-1,4.06,8.12,5.39,10.83,5.59a18.52,18.52,0,0,0,14.22-5.57C31.79,66.5,35.74,48.73,42.2,43.08l2.67,1.65,2.68,1.66c1.79.93,2.25,1.42,1.21,3.6l-7.09,16.7c-1.36,2.73-1.52,7,.78,9.34a2.67,2.67,0,0,0,2.34.76H63c3.29-2.11-.25-7.33-5.54-7.76H50.81C57.49,60,64,50.59,70.28,40.82c5.23,1.55,12.94,1.74,18.51,1.37a17.52,17.52,0,0,1-3.19,7.06c-2.94.27-4.58,2.43-3.25,4.65,1.14,1.9,2.7,2,4.94,1.32a17,17,0,0,0,2.08-.71c1-.44,2.26-.68,3-1.53.51-.57.59-1.67,1-2.37a25.12,25.12,0,0,0,1.43-2.79ZM120.2,24.28A1.13,1.13,0,1,1,119,25.37a1.13,1.13,0,0,1,1.18-1.09Zm-8.27-6.61a2.44,2.44,0,0,1,1.93,2.76c-1.49.52-2.54-1.55-1.93-2.76ZM65.1,76.89h6.54c0-8-4.93-8.21-9.84-8.09a8.15,8.15,0,0,1,3.62,3.88,4.55,4.55,0,0,1,.17,3.26,4.08,4.08,0,0,1-.49,1Z"/>
+                                    </svg>
+                                </div>
                             </div>
-                            <span class="${CSS_CLASSES.RANGE_HIGH}">${high52.toFixed(2)}</span>
+                            <span class="${CSS_CLASSES.RANGE_HIGH}" style="flex-shrink: 0 !important;">${high52.toFixed(2)}</span>
                         </div>
                     </div>
                 ` : ''}

@@ -21,7 +21,7 @@ import { SnapshotUI } from '../ui/SnapshotUI.js'; // Added
 import { SettingsUI } from '../ui/SettingsUI.js?v=55';
 import { FavoriteLinksUI } from '../ui/FavoriteLinksUI.js';
 import { notificationStore } from '../state/NotificationStore.js';
-import { DashboardViewRenderer } from '../ui/DashboardViewRenderer.js?v=1040';
+import { DashboardViewRenderer } from '../ui/DashboardViewRenderer.js?v=1075';
 import { ModalController } from './ModalController.js?v=1040';
 import { CashController } from './CashController.js';
 import { SecurityController } from './SecurityController.js';
@@ -913,6 +913,18 @@ export class AppController {
                         AppState.hiddenSortOptions = restored;
                         localStorage.setItem(STORAGE_KEYS.HIDDEN_SORT_OPTIONS, JSON.stringify(prefs.hiddenSortOptions));
                         needsRender = true;
+                    }
+
+                    // 8.1 Sync Custom Watchlist Names
+                    if (prefs.customWatchlistNames) {
+                        AppState.preferences.customWatchlistNames = prefs.customWatchlistNames;
+                        localStorage.setItem('ASX_NEXT_customWatchlistNames', JSON.stringify(prefs.customWatchlistNames));
+                        // Force Title Update immediately if current watchlist is affected
+                        const currentId = AppState.watchlist.id;
+                        if (currentId && prefs.customWatchlistNames[currentId]) {
+                            AppState.watchlist.name = prefs.customWatchlistNames[currentId];
+                            needsRender = true;
+                        }
                     }
 
                     // 9. Sync User Categories (Merge Strategy)
