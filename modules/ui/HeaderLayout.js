@@ -7,7 +7,7 @@ import { AppState } from '../state/AppState.js';
 import { ToastManager } from './ToastManager.js';
 
 // Custom Event Names removed (Registry Rule)
-import { EVENTS, UI_ICONS, IDS, WATCHLIST_NAMES, ALL_SHARES_ID, PORTFOLIO_ID, CASH_WATCHLIST_ID, DASHBOARD_WATCHLIST_ID } from '../utils/AppConstants.js';
+import { EVENTS, UI_ICONS, IDS, WATCHLIST_NAMES, ALL_SHARES_ID, PORTFOLIO_ID, CASH_WATCHLIST_ID, DASHBOARD_WATCHLIST_ID, STORAGE_KEYS } from '../utils/AppConstants.js';
 import { navManager } from '../utils/NavigationManager.js';
 
 export class HeaderLayout {
@@ -269,6 +269,7 @@ export class HeaderLayout {
         this._bindSidebarSearch();
         this._bindNotificationEvents();
         this._bindWatchlistTitle(); // Constitutional Bind
+        this._bindDisplaySettings(); // Relocated from GeneralSettings
     }
 
     _bindSidebarSearch() {
@@ -575,6 +576,7 @@ export class HeaderLayout {
 
             // Register with NavigationManager
             this._navActive = true;
+            this._updateSidebarSettingsUI(); // Sync coloring state on open
             navManager.pushState(() => {
                 if (this.sidebarState) {
                     this._navActive = false; // Prevent popStateSilently in next step
@@ -738,5 +740,72 @@ export class HeaderLayout {
                 });
             }
         }
+    }
+
+    /**
+     * Relocated Display Coloring Settings (Formerly in GeneralSettingsUI)
+     */
+    _bindDisplaySettings() {
+        const toggleBtn = document.getElementById('btn-sidebar-coloring-toggle');
+        const container = document.getElementById('sidebar-coloring-container');
+
+        if (toggleBtn && container) {
+            toggleBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation(); // Prevent Sidebar Close
+                const isExpanded = container.classList.toggle('expanded');
+                toggleBtn.setAttribute('aria-expanded', isExpanded);
+            });
+        }
+
+        const listContainer = document.querySelector('.sidebar-vertical-list');
+        if (!listContainer) return;
+
+        listContainer.querySelectorAll('.sidebar-list-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation(); // Prevent Sidebar Close
+
+                const val = parseFloat(item.dataset.value);
+                const tint = item.dataset.tint || '0%';
+
+                // Update UI state
+                listContainer.querySelectorAll('.sidebar-list-item').forEach(p => p.classList.toggle('active', p === item));
+
+                // Apply CSS Variables Immediately
+                document.documentElement.style.setProperty('--gradient-strength', val);
+                document.documentElement.style.setProperty('--gradient-tint', tint);
+
+                // Persist to AppState & LocalStorage
+                AppState.preferences.gradientStrength = val;
+                localStorage.setItem(STORAGE_KEYS.GRADIENT_STRENGTH, val);
+
+                // Trigger Sync
+                if (AppState.triggerSync) AppState.triggerSync();
+            });
+        });
+    }
+
+    _updateSidebarSettingsUI() {
+        const val = AppState.preferences.gradientStrength || 0.6;
+        const listContainer = document.querySelector('.sidebar-vertical-list');
+        if (!listContainer) return;
+
+        // Update Active Item
+        listContainer.querySelectorAll('.sidebar-list-item').forEach(item => {
+            const pVal = parseFloat(item.dataset.value);
+            // Use approximate equality for floats
+            item.classList.toggle('active', Math.abs(pVal - val) < 0.01);
+        });
+    }
+
+    static _getStrengthLabel(val) {
+        val = parseFloat(val);
+        if (val === 0) return 'None';
+        if (val <= 0.125) return 'Muted';
+        if (val <= 0.25) return 'Subtle';
+        if (val <= 0.4) return 'Light';
+        if (val <= 0.6) return 'Medium';
+        return 'Strong';
     }
 }

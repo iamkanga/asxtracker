@@ -9302,8 +9302,115 @@ body.dashboard-active .sidebar {
     font-weight: 700;
 }
 
-.cash-total-amount {
-    font-size: 1.8rem;
+/* --- Sidebar Configuration (Display Tone) --- */
+.sidebar-accordion-btn {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    width: 100%;
+    padding: 12px 0;
+    /* Match .sidebar-btn padding exactly */
+    background: transparent;
+    border: none;
+    color: var(--text-color);
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s, padding-left 0.2s;
+    /* Match hover transition */
+    border-radius: 0;
+    /* Match .sidebar-btn */
+    margin: 0;
+    /* Match .sidebar-btn spacing structure usually implies margin-bottom: 2px */
+    margin-bottom: 2px;
+    gap: 12px;
+    /* Match .sidebar-btn gap */
+    font-size: 1rem;
+    /* Match .sidebar-btn font size */
+    text-transform: none;
+    /* Ensure no unwanted transform */
+}
+
+.sidebar-accordion-btn i {
+    width: 20px;
+    /* Standard icon width */
+    text-align: center;
+    margin-right: 0;
+    /* Use gap instead */
+    color: var(--color-accent);
+    /* Match icon color if needed, or inherit */
+}
+
+.sidebar-accordion-btn:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+    color: var(--primary-color);
+    padding-left: 8px;
+    /* Match .sidebar-btn hover shift */
+}
+
+.sidebar-accordion-btn[aria-expanded="true"] {
+    background: transparent;
+    /* No background highlight */
+    color: var(--color-accent);
+    /* Only text color changes */
+}
+
+/* Remove all sidebar separators */
+.sidebar-section {
+    border: none !important;
+    border-bottom: none !important;
+    box-shadow: none !important;
+}
+
+/* Remove all sidebar separators */
+.sidebar-section {
+    border: none !important;
+    border-bottom: none !important;
+    box-shadow: none !important;
+}
+
+.sidebar-accordion-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease, backdrop-filter 0.4s ease;
+    opacity: 0;
+    background: rgba(var(--color-accent-rgb), 0.03);
+    backdrop-filter: blur(0px);
+    border-radius: 0 0 12px 12px;
+    margin: 0 4px;
+}
+
+.sidebar-accordion-content.expanded {
+    max-height: 250px;
+    opacity: 1;
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(var(--color-accent-rgb), 0.1);
+    border-top: none;
+    padding-bottom: 10px;
+}
+
+.sidebar-vertical-list {
+    display: flex;
+    flex-direction: column;
+    padding: 5px 0;
+}
+
+.sidebar-list-item {
+    padding: 10px 15px;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-left: 2px solid transparent;
+}
+
+.sidebar-list-item:hover {
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--text-color);
+}
+
+.sidebar-list-item.active {
+    color: var(--color-accent) !important;
     font-weight: 600;
-    color: var(--text-inverse);
+    text-decoration: underline;
+    background: rgba(var(--color-accent-rgb), 0.05);
+    border-left: 2px solid var(--color-accent);
 }
