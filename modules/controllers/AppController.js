@@ -143,6 +143,10 @@ export class AppController {
             GeneralSettingsUI.showModal(this);
         });
 
+        // DEBUG: Create Debug Status Indicator
+        this._createDebugIndicator();
+
+
         // 3. LIVE READ-ONLY CHECK (On Resume/Re-Focus)
         // If we have data but no user, remind them they are in Read-Only mode
         // 3. LIVE READ-ONLY CHECK (On Resume/Re-Focus)
@@ -150,19 +154,24 @@ export class AppController {
         // Android sleeping disconnects WS, needs time to handshake.
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'visible') {
+                this._updateDebugStatus('Waking Up...', 'warn');
                 if (AppState.data.shares.length > 0) {
                     setTimeout(() => {
                         // Double check: Still no user after 3s grace?
                         if (!AppState.user) {
                             if (this.headerLayout) this.headerLayout.updateConnectionStatus(false);
+                            this._updateDebugStatus('Timeout: Offline', 'err');
                         } else {
                             // Recovered! Ensure we show connected.
                             if (this.headerLayout) this.headerLayout.updateConnectionStatus(true);
+                            this._updateDebugStatus('Resumed OK', 'ok');
                             // Optional: Silent refresh to ensure token is fresh
                             AuthService.refreshSession();
                         }
                     }, 3000);
                 }
+            } else {
+                this._updateDebugStatus('Sleeping...', 'warn');
             }
         });
 
@@ -414,6 +423,34 @@ export class AppController {
         }, 250); // 250ms debounce
     }
 
+    _createDebugIndicator() {
+        const div = document.createElement('div');
+        div.id = 'debug-auth-status';
+        div.innerHTML = '<span>Init...</span>';
+        document.body.appendChild(div);
+        this._updateDebugStatus('Init', 'wait');
+    }
+
+    _updateDebugStatus(msg, state = 'ok') {
+        const el = document.getElementById('debug-auth-status');
+        if (!el) return;
+        el.className = ''; // Reset
+
+        let icon = '🟢';
+        let colorClass = 'status-ok';
+
+        if (state === 'warn') { icon = '🟡'; colorClass = 'status-warn'; }
+        if (state === 'err') { icon = '🔴'; colorClass = 'status-err'; }
+
+        el.classList.add(colorClass);
+        // Add timestamp for "liveness" proof
+        const time = new Date().toLocaleTimeString().split(' ')[0];
+        el.innerHTML = `
+            <div style="font-size:1.1em; margin-bottom:2px;">${icon} <strong>${msg}</strong></div>
+            <div style="opacity:0.7; font-size:0.9em;">Last Check: ${time}</div>
+        `;
+    }
+
     /* ==========================================================================
        HELPER METHODS
        ========================================================================== */
@@ -524,6 +561,10 @@ export class AppController {
             // Update Status Indicator (Universal)
             if (this.headerLayout) {
                 this.headerLayout.updateConnectionStatus(!!user);
+            }
+
+            if (user) {
+                this._updateDebugStatus('Connected', 'ok');
             }
 
             // INIT GATE: Keep splash screen VISIBLE until prefs are loaded
@@ -929,9 +970,15 @@ export class AppController {
         } else {
             // DELAY: Don't show red flag immediately on boot.
             // Give the "Resume Guard" or "Silent Login" a chance to fire first.
+
+            this._updateDebugStatus('Checking...', 'warn');
+
             setTimeout(() => {
-                if (!AppState.user && this.headerLayout) {
-                    this.headerLayout.updateConnectionStatus(false);
+                if (!AppState.user) {
+                    if (this.headerLayout) this.headerLayout.updateConnectionStatus(false);
+                    this._updateDebugStatus('Disconnected', 'err');
+                } else {
+                    this._updateDebugStatus('Restored', 'ok');
                 }
             }, 1500);
 

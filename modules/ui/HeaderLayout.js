@@ -697,10 +697,9 @@ export class HeaderLayout {
         const sidebarBadge = document.getElementById('sidebar-badge');
 
         if (sidebarBadge) {
-            // Respect User Preference for Badges
-            const showBadges = AppState.preferences?.showBadges !== false;
 
-            if (totalCount > 0 && showBadges) {
+
+            if (totalCount > 0) {
                 sidebarBadge.innerText = `All ${totalCount > 99 ? '99+' : totalCount}`;
                 sidebarBadge.classList.remove(CSS_CLASSES.HIDDEN);
                 sidebarBadge.classList.remove(CSS_CLASSES.APP_BADGE_HIDDEN);

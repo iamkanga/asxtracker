@@ -150,9 +150,11 @@ export const AuthService = {
     async refreshSession() {
         if (!auth || !auth.currentUser) return false;
         try {
-            // Force refresh of the token
-            await auth.currentUser.getIdToken(true);
-            console.log('[AuthService] Session refreshed silently.');
+            // RELAXED: Don't force network refresh (true) unless necessary.
+            // Using standard getIdToken() checks cache validity first.
+            // This reduces 403 errors if the API Key is restricted.
+            await auth.currentUser.getIdToken();
+            // console.log('[AuthService] Session token verified.');
             return true;
         } catch (e) {
             console.warn('[AuthService] Session refresh failed:', e);

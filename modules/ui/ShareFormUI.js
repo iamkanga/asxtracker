@@ -45,7 +45,7 @@ export class ShareFormUI {
         // We do this after binding inputs but before user interaction.
         // We use a timeout to let any dynamic value setting settle (though synchronous is better).
         setTimeout(() => {
-            const initialState = this._extractShareData(modal);
+            const initialState = this._extractShareData(modal, true); // Suppress toasts for initial capture
             modal._initialFormJSON = JSON.stringify(initialState);
             // safe-guard: if extract fails (validation), we might disable save anyway.
             this._validateForm(modal);
@@ -56,7 +56,7 @@ export class ShareFormUI {
         const deleteBtn = modal.querySelector(`#${IDS.DELETE_BTN}`);
 
         saveBtn.addEventListener('click', () => {
-            const data = this._extractShareData(modal);
+            const data = this._extractShareData(modal); // Show toasts on explicit save
             if (!data) return; // Validation failed
 
             // UI Feedback
@@ -69,6 +69,7 @@ export class ShareFormUI {
                 saveBtn.innerHTML = originalIcon;
             });
         });
+
 
         if (shareData && shareData.id) {
             deleteBtn.classList.remove(CSS_CLASSES.HIDDEN);
@@ -990,19 +991,19 @@ export class ShareFormUI {
         });
     }
 
-    static _extractShareData(modal) {
+    static _extractShareData(modal, suppressToasts = false) {
         const getVal = (id) => modal.querySelector(`#${id}`)?.value.trim();
         const getNum = (id) => parseFloat(modal.querySelector(`#${id}`)?.value) || 0;
 
         const code = getVal(IDS.SHARE_NAME).toUpperCase();
         if (!code) {
-            ToastManager.error(USER_MESSAGES.VALIDATION_CODE);
+            if (!suppressToasts) ToastManager.error(USER_MESSAGES.VALIDATION_CODE);
             return null;
         }
 
         const selectedWatchlists = [...modal.querySelectorAll('input[name="watchlist"]:checked')].map(cb => cb.value);
         if (selectedWatchlists.length === 0) {
-            ToastManager.error("Please select at least one watchlist.");
+            if (!suppressToasts) ToastManager.error("Please select at least one watchlist.");
             return null;
         }
 
@@ -1018,7 +1019,7 @@ export class ShareFormUI {
         }
 
         if (isDuplicate) {
-            ToastManager.error(USER_MESSAGES.SHARE_DUPLICATE.replace('{0}', code));
+            if (!suppressToasts) ToastManager.error(USER_MESSAGES.SHARE_DUPLICATE.replace('{0}', code));
             return null;
         }
 
