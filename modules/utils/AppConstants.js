@@ -18,7 +18,7 @@ export const DASHBOARD_SYMBOLS = [
 export const DASHBOARD_LINKS = {
     'NICKEL': 'https://au.finance.yahoo.com/quote/NICKEL=F',
     'TIO=F': 'https://www.marketindex.com.au/commodities',
-    'YAP=F': 'https://au.investing.com/indices/australia-200-futures'
+    'YAP=F': 'https://m.au.investing.com/portfolio/portfolioPage/?portfolioid=MjM3ZGM8YzxlMmFuNG9jZg=='
 };
 export const PORTFOLIO_ID = 'portfolio';
 export const SEARCH_WATCHLIST_ID = 'search';
