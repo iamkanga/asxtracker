@@ -724,11 +724,11 @@ export class HeaderLayout {
 
         if (isConnected) {
             el.classList.remove('visible');
-            el.classList.remove('status-disconnected');
+            el.classList.remove(CSS_CLASSES.STATUS_DISCONNECTED);
             // Allow pointer events to fall through when hidden
         } else {
             el.classList.add('visible');
-            el.classList.add('status-disconnected');
+            el.classList.add(CSS_CLASSES.STATUS_DISCONNECTED);
 
             // Re-bind click handler here or in init, ensuring it prompts login.
             // Since this is a view update, the actual logic binding should ideally be in controller,

@@ -335,14 +335,14 @@ export class BriefingUI {
         const footer = modal.querySelector('#briefing-market-pulse');
         if (footer) {
             // Make Footer Container General Click
-            footer.classList.add('clickable-footer');
+            footer.classList.add(CSS_CLASSES.CLICKABLE_FOOTER);
             footer.title = "View Market Notifications";
 
             // Apply Sentiment Background Class (Dynamic Theming)
-            footer.classList.remove('footer-bg-positive', 'footer-bg-negative', 'footer-bg-neutral');
-            if (sentiment === 'Bullish') footer.classList.add('footer-bg-positive');
-            else if (sentiment === 'Bearish') footer.classList.add('footer-bg-negative');
-            else footer.classList.add('footer-bg-neutral');
+            footer.classList.remove(CSS_CLASSES.FOOTER_BG_POSITIVE, CSS_CLASSES.FOOTER_BG_NEGATIVE, CSS_CLASSES.FOOTER_BG_NEUTRAL);
+            if (sentiment === 'Bullish') footer.classList.add(CSS_CLASSES.FOOTER_BG_POSITIVE);
+            else if (sentiment === 'Bearish') footer.classList.add(CSS_CLASSES.FOOTER_BG_NEGATIVE);
+            else footer.classList.add(CSS_CLASSES.FOOTER_BG_NEUTRAL);
 
             // General Click (Opens Notification Center)
             footer.onclick = (e) => {

@@ -1577,10 +1577,10 @@ export class NotificationUI {
         const isHidden = (AppState.preferences.showBadges === false);
 
         if (isHidden) {
-            wrapper.classList.remove('is-slashed');
+            wrapper.classList.remove(CSS_CLASSES.IS_SLASHED);
             dismissBtn.title = "Show Desktop Icon";
         } else {
-            wrapper.classList.add('is-slashed');
+            wrapper.classList.add(CSS_CLASSES.IS_SLASHED);
             dismissBtn.title = "Hide Desktop Icon";
         }
 

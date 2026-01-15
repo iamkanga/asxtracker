@@ -61,7 +61,6 @@ export class ViewRenderer {
         // Resetting class names more aggressively to ensure only relevant ones are applied
         this.container.className = '';
         this.container.id = IDS.CONTENT_CONTAINER; // Ensure ID is always correct
-        // this.container.classList.add(CSS_CLASSES.CONTENT_CONTAINER); // Removed: CSS_CLASSES.CONTENT_CONTAINER is undefined
 
         // 2a. Render Summary (ONLY for Portfolio)
         // User Logic: if (currentWatchlistName === 'Portfolio') { renderSummary(); }
@@ -156,7 +155,6 @@ export class ViewRenderer {
             // 2. Standard Table (Desktop View)
             const table = document.createElement('table');
             table.className = CSS_CLASSES.TABLE;
-            // table.style.display = 'table'; // REMOVED: This overrides CSS media queries and forces table on mobile.
 
             // Check for Generic Watchlist (Not Portfolio/Cash/All Shares usually treated as generic)
             // But user said "Watchlists". Usually 'ALL' is a watchlist too.
@@ -751,9 +749,9 @@ export class ViewRenderer {
                                                 <span>Investment</span>
                                                 ${sectorName ? `<span class="${CSS_CLASSES.TEXT_SM} ${CSS_CLASSES.TEXT_MUTED} ${CSS_CLASSES.GHOSTED} ${CSS_CLASSES.ITALIC} ${CSS_CLASSES.FONT_NORMAL} ${CSS_CLASSES.MT_NEG_2PX}">${sectorName}</span>` : ''}
                                             </div>
-                                            <div class="kangaroo-wrapper ${stock.muted ? 'is-muted' : ''}"
+                                            <div class="kangaroo-wrapper ${stock.muted ? CSS_CLASSES.IS_MUTED : ''}"
                                                  title="${stock.muted ? 'Unmute Share' : 'Mute Share'}"
-                                                 onclick="event.stopPropagation(); this.classList.toggle('is-muted'); document.dispatchEvent(new CustomEvent('${EVENTS.TOGGLE_SHARE_MUTE}', { detail: { id: '${stock.id}' } }))">
+                                                 onclick="event.stopPropagation(); this.classList.toggle('${CSS_CLASSES.IS_MUTED}'); document.dispatchEvent(new CustomEvent('${EVENTS.TOGGLE_SHARE_MUTE}', { detail: { id: '${stock.id}' } }))">
                                                 <img src="${KANGAROO_ICON_SRC}" class="kangaroo-icon-img" />
                                             </div>
                                         </div>
@@ -1769,10 +1767,10 @@ export class ViewRenderer {
         const headerRow = modal.querySelector('#sortEditHeaders');
         if (headerRow) {
             if (this.isSortEditMode) {
-                headerRow.classList.add('is-active');
+                headerRow.classList.add(CSS_CLASSES.IS_ACTIVE);
                 headerRow.classList.remove(CSS_CLASSES.HIDDEN);
             } else {
-                headerRow.classList.remove('is-active');
+                headerRow.classList.remove(CSS_CLASSES.IS_ACTIVE);
                 headerRow.classList.add(CSS_CLASSES.HIDDEN);
             }
         }
@@ -1955,7 +1953,7 @@ export class ViewRenderer {
             // CREATE DOM ELEMENT (Robust Approach)
             const div = document.createElement('div');
             // Set attributes
-            const activeClass = this.isSortEditMode ? 'is-active' : '';
+            const activeClass = this.isSortEditMode ? CSS_CLASSES.IS_ACTIVE : '';
             div.className = `${rowClasses} ${extraClass} ${activeClass}`;
             div.draggable = this.isSortEditMode; // CRITICAL: Enable Native Drag
 

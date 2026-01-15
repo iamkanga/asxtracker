@@ -1,4 +1,4 @@
-/**
+﻿/**
  * NotificationStore.js
  * Manages fetching, filtering, and persistence of Local and Global alerts.
  * Implements "Zero-Cost" architecture by reading central daily documents
@@ -79,7 +79,7 @@ export class NotificationStore {
 
         // LOGIC HARDENING: Null guard for userStore
         if (!userStore) {
-            console.warn('[NotificationStore] userStore is unavailable – skipping preferences subscription.');
+            console.warn('[NotificationStore] userStore is unavailable â€“ skipping preferences subscription.');
             return;
         }
 
@@ -102,7 +102,6 @@ export class NotificationStore {
                             : null // Preserve 'null' for "All Sectors"
                     };
 
-                    // console.log('[NotificationStore] Live Preferences Updated. Rules:', this.scannerRules);
                     this._notifyCountChange();
                 }
             });
@@ -273,7 +272,6 @@ export class NotificationStore {
                     excludePortfolio: config.excludePortfolio !== false, // Capture Override Toggle
                     hiloEnabled: data.hiloEnabled // Capture 52-Week Toggle
                 };
-                // console.log('[NotificationStore] Scanner Rules Refreshed:', this.scannerRules);
             }
         } catch (e) {
             console.error('[NotificationStore] Error fetching rules:', e);
@@ -429,7 +427,6 @@ export class NotificationStore {
                 if (activeFilters.length === 0) return false;
 
                 if (ind && !activeFilters.includes(ind)) {
-                    // console.log(`[NotificationStore] Filtering out ${hit.code} (Industry: ${ind}) – Not in whitelist.`);
                     return false;
                 }
             }
@@ -488,7 +485,6 @@ export class NotificationStore {
                 // --- CROSS-DEVICE SYNC OF READ STATE ---
                 // DISABLED: Session-Only Notifications requested.
                 // if (data.lastViewedAlerts && data.lastViewedAlerts > this.lastViewedTime) {
-                //    console.log(`[NotificationStore] Syncing lastViewedTime from Firestore: ${data.lastViewedAlerts}`);
                 //    this.lastViewedTime = data.lastViewedAlerts;
                 //    localStorage.setItem(STORAGE_KEYS.LAST_VIEWED_ALERTS, this.lastViewedTime.toString());
                 // }
@@ -560,7 +556,6 @@ export class NotificationStore {
         const rules = this.getScannerRules();
         if (rules.personalEnabled === false) {
             clientTargets = clientTargets.filter(t => t.intent !== 'target');
-            // console.log('[NotificationStore] Personal Alerts OFF: Suppressed Targets. Keeping Movers/HiLo.');
         }
 
         // MERGE FIX: Deduplicate Server vs Client Hits.
@@ -637,7 +632,6 @@ export class NotificationStore {
             const debugHitPrice = Number(hit.price || hit.last || 0);
 
             // if (code === 'BHP' || code === 'CBA' || price < 1.0) { // Filter noise
-            // console.log(`[NotificationStore] Filtering ${code} | Price: $${debugHitPrice} | Override: ${debugOverride} | MinPrice: $${debugMinPrice}`);
             // }
 
             // --- EXCLUDE DASHBOARD SYMBOLS ---
@@ -766,7 +760,6 @@ export class NotificationStore {
                 // "Ignore stocks below..." rule.
                 const minPrice = rules.minPrice || 0;
                 if (!overrideOn && minPrice > 0 && price < minPrice) {
-                    // console.log(`[NotificationStore] Dropping Watchlist Mover ${ code }: Price $${ price } < Min $${minPrice}`);
                     return false;
                 }
 
@@ -774,7 +767,6 @@ export class NotificationStore {
                 const metPct = (thresholdPct > 0 && pct >= thresholdPct);
                 const metDol = (thresholdDol > 0 && dol >= thresholdDol);
                 if (!metPct && !metDol) {
-                    // console.log(`[NotificationStore] Dropping Watchlist Mover ${ code }: Pct ${ pct }% < ${thresholdPct}%, Dol $${ dol } < $${thresholdDol}`);
                     return false;
                 }
             }
@@ -1233,22 +1225,22 @@ export class NotificationStore {
      */
     testGlobalAlerts() {
         console.clear();
-        console.group("%c 🧪 GLOBAL ALERTS SELF-TEST ", "background: #222; color: #bada55; font-size: 14px; padding: 4px;");
+        console.group("%c ðŸ§ª GLOBAL ALERTS SELF-TEST ", "background: #222; color: #bada55; font-size: 14px; padding: 4px;");
 
         if (!AppState.livePrices || AppState.livePrices.size === 0) {
-            console.error("❌ ABORT: No Live Price Data to test against.");
+            console.error("âŒ ABORT: No Live Price Data to test against.");
             console.groupEnd();
             return;
         }
 
         const prices = Array.from(AppState.livePrices.values());
-        console.log(`📊 Data Source: Scanning ${prices.length} live instruments.`);
+        console.log(`ðŸ“Š Data Source: Scanning ${prices.length} live instruments.`);
 
         // --- TEST SCENARIO ---
         const TEST_MIN_PRICE = 0.50;
         const TEST_PCT_THRESHOLD = 3.0;
 
-        console.log(`⚙️  Test Rules: Price > $${TEST_MIN_PRICE}, Move > ${TEST_PCT_THRESHOLD}% `);
+        console.log(`âš™ï¸  Test Rules: Price > $${TEST_MIN_PRICE}, Move > ${TEST_PCT_THRESHOLD}% `);
 
         // 1. MANUAL CALCULATION (Control Group)
         const controlUp = prices.filter(p => {
@@ -1289,9 +1281,9 @@ export class NotificationStore {
 
             // Count Check
             if (control.length !== system.length) {
-                console.error(`❌ COUNT MISMATCH: Expected ${control.length}, Got ${system.length} `);
+                console.error(`âŒ COUNT MISMATCH: Expected ${control.length}, Got ${system.length} `);
             } else {
-                console.log(`✅ Count Matching: ${system.length} items.`);
+                console.log(`âœ… Count Matching: ${system.length} items.`);
             }
 
             // Content Check (Sample Top 3)
@@ -1300,7 +1292,7 @@ export class NotificationStore {
                 const sysItem = system[i];
                 const ctrlItem = control[i];
                 if (sysItem.code !== ctrlItem.code) {
-                    console.error(`❌ ORDER / CONTENT FAIL at #${i + 1}: Expected ${ctrlItem.code} (${ctrlItem.pctChange}%), Got ${sysItem.code} (${sysItem.pct}%)`);
+                    console.error(`âŒ ORDER / CONTENT FAIL at #${i + 1}: Expected ${ctrlItem.code} (${ctrlItem.pctChange}%), Got ${sysItem.code} (${sysItem.pct}%)`);
                 } else {
                     console.log(`   OK #${i + 1}: ${sysItem.code} @${sysItem.pct}% `);
                 }
@@ -1313,17 +1305,17 @@ export class NotificationStore {
                 const next = Math.abs(system[i + 1].pct);
                 // Magnitude should descend
                 if (curr < next) {
-                    console.warn(`⚠️ SORT WARN at #${i}: ${curr}% < ${next}% `);
+                    console.warn(`âš ï¸ SORT WARN at #${i}: ${curr}% < ${next}% `);
                     sortOk = false;
                 }
             }
-            if (sortOk && system.length > 0) console.log("✅ Sorting Valid (Biggest magnitude first)");
+            if (sortOk && system.length > 0) console.log("âœ… Sorting Valid (Biggest magnitude first)");
 
             console.groupEnd();
         };
 
-        check("📈 TEST: Global Gainers", controlUp, systemUp, 'desc');
-        check("📉 TEST: Global Losers", controlDown, systemDown, 'asc');
+        check("ðŸ“ˆ TEST: Global Gainers", controlUp, systemUp, 'desc');
+        check("ðŸ“‰ TEST: Global Losers", controlDown, systemDown, 'asc');
 
         // 4. 52 WEEK HIGH/LOW CHECK
         // Control:
@@ -1348,7 +1340,7 @@ export class NotificationStore {
         // Note: hydrated.high is ALREADY sorted by pctChange.
         // We just need to check if minPrice filter worked.
 
-        check("🚀 TEST: 52 Week Highs", controlHigh, systemHigh, 'desc');
+        check("ðŸš€ TEST: 52 Week Highs", controlHigh, systemHigh, 'desc');
 
         // 5. 52 WEEK LOW CHECK
         const controlLow = prices.filter(p => {
@@ -1363,7 +1355,7 @@ export class NotificationStore {
             .slice(0, 100);
 
         const systemLow = this.filterHits(hydrated.low, { minPrice: TEST_MIN_PRICE }, false);
-        check("🔻 TEST: 52 Week Lows", controlLow, systemLow, 'asc');
+        check("ðŸ”» TEST: 52 Week Lows", controlLow, systemLow, 'asc');
 
         console.log("%c TEST COMPLETE ", "background: #222; color: #bada55");
         console.log(`User ID: ${this.userId} `);
@@ -1671,7 +1663,7 @@ export class NotificationStore {
 
                         // Check High
                         if (high52 > 0 && price >= (high52 - tolerance) && !isStatic && !isPhantom) {
-                            if (code === 'GAP') console.warn("⚠️ GAP PUSHED HIGH ALERT");
+                            if (code === 'GAP') console.warn("âš ï¸ GAP PUSHED HIGH ALERT");
                             const key = `${code} -hilo - high`;
                             alerts.push({
                                 userId: this.userId,
@@ -1690,7 +1682,7 @@ export class NotificationStore {
 
                         // Check Low
                         if (low52 > 0 && price <= (low52 + tolerance) && !isStatic && !isPhantom) {
-                            if (code === 'GAP') console.warn("⚠️ GAP PUSHED LOW ALERT");
+                            if (code === 'GAP') console.warn("âš ï¸ GAP PUSHED LOW ALERT");
                             const key = `${code} -hilo - low`;
                             alerts.push({
                                 userId: this.userId,
@@ -1755,7 +1747,6 @@ export class NotificationStore {
                             const moverType = pctChange >= 0 ? 'up' : 'down';
                             const key = `${code} -mover - ${moverType} `;
 
-                            // console.log(`[NotificationStore] Custom Mover Hit: ${ code } ${ moverType } ${ pctChange }% $${ dolChange } `);
                             // DEBUG: Trace Generation
                             console.log(`[NotificationStore] Generated Watchlist Mover: ${code}, Type: ${moverType}, Pct: ${pctChange}%, Threshold: ${thresholdPct}% `);
                             alerts.push({
@@ -1798,20 +1789,20 @@ export class NotificationStore {
      */
     debugMissingMovers(minPrice = 0, minPct = 0) {
         console.clear();
-        console.group("%c 🕵️ DEBUG OBSERVER: Missing Movers Analysis ", "background: #000; color: #0f0; font-size: 14px; padding: 4px;");
+        console.group("%c ðŸ•µï¸ DEBUG OBSERVER: Missing Movers Analysis ", "background: #000; color: #0f0; font-size: 14px; padding: 4px;");
 
         if (!AppState.livePrices || AppState.livePrices.size === 0) {
-            console.error("❌ ABORT: No Live Price Data available.");
+            console.error("âŒ ABORT: No Live Price Data available.");
             console.groupEnd();
             return;
         }
 
         const prices = Array.from(AppState.livePrices.values());
-        console.log(`📊 Scanning ${prices.length} live instruments against criteria: > $${minPrice} AND > ${minPct}% `);
+        console.log(`ðŸ“Š Scanning ${prices.length} live instruments against criteria: > $${minPrice} AND > ${minPct}% `);
 
         // Fetch Current Rules
         const rules = this.getScannerRules() || {};
-        console.log("⚙️  Current Store Rules:", JSON.parse(JSON.stringify(rules)));
+        console.log("âš™ï¸  Current Store Rules:", JSON.parse(JSON.stringify(rules)));
 
         let candidates = 0;
         let passed = 0;
@@ -1838,7 +1829,7 @@ export class NotificationStore {
             const direction = pct >= 0 ? 'up' : 'down';
             const ruleSet = rules[direction] || {};
 
-            console.groupCollapsed(`🔍 Investigating ${code} (${pct.toFixed(2)}%, $${price.toFixed(3)})`);
+            console.groupCollapsed(`ðŸ” Investigating ${code} (${pct.toFixed(2)}%, $${price.toFixed(3)})`);
 
             // Simulation of filterHits logic
             let blockedReason = null;
@@ -1894,16 +1885,16 @@ export class NotificationStore {
             }
 
             if (blockedReason) {
-                console.warn(`❌ BLOCKED: ${blockedReason} `);
+                console.warn(`âŒ BLOCKED: ${blockedReason} `);
                 failed++;
             } else {
-                console.log(`✅ PASSED: Should be visible in ${direction.toUpperCase()} list.`);
+                console.log(`âœ… PASSED: Should be visible in ${direction.toUpperCase()} list.`);
                 passed++;
             }
             console.groupEnd();
         });
 
-        console.log(`🏁 Analysis Complete.Candidates: ${candidates}, Valid: ${passed}, Blocked: ${failed} `);
+        console.log(`ðŸ Analysis Complete.Candidates: ${candidates}, Valid: ${passed}, Blocked: ${failed} `);
         console.groupEnd();
     }
 }
@@ -1975,6 +1966,4 @@ function normalizeHits(list, fallbackTime = null) {
 
 
 export const notificationStore = new NotificationStore();
-// DEBUG ACCESS
-window.notificationStore = notificationStore;
 

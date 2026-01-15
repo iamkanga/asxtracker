@@ -445,9 +445,9 @@ export class WatchlistUI {
             }
             if (headerRow) {
                 headerRow.classList.remove(CSS_CLASSES.HIDDEN);
-                headerRow.classList.add('is-active');
+                headerRow.classList.add(CSS_CLASSES.IS_ACTIVE);
             }
-            modal.querySelector(`.${CSS_CLASSES.MODAL_CONTENT}`).classList.add('edit-mode');
+            modal.querySelector(`.${CSS_CLASSES.MODAL_CONTENT}`).classList.add(CSS_CLASSES.EDIT_MODE);
         } else {
             if (chevron) {
                 chevron.style.transform = 'rotate(0deg)';
@@ -455,9 +455,9 @@ export class WatchlistUI {
             }
             if (headerRow) {
                 headerRow.classList.add(CSS_CLASSES.HIDDEN);
-                headerRow.classList.remove('is-active');
+                headerRow.classList.remove(CSS_CLASSES.IS_ACTIVE);
             }
-            modal.querySelector(`.${CSS_CLASSES.MODAL_CONTENT}`).classList.remove('edit-mode');
+            modal.querySelector(`.${CSS_CLASSES.MODAL_CONTENT}`).classList.remove(CSS_CLASSES.EDIT_MODE);
         }
 
         // --- Toggle Button Visibility (Hide in Reorder Mode) ---
@@ -536,7 +536,7 @@ export class WatchlistUI {
             div.className = CSS_CLASSES.WATCHLIST_ITEM;
             div.style.touchAction = 'none'; // CRITICAL for Windows Hybrid
             div.dataset.id = it.id; // CRITICAL for Reordering Persistence
-            if (this.isEditMode) div.classList.add('edit-mode');
+            if (this.isEditMode) div.classList.add(CSS_CLASSES.EDIT_MODE);
             if (isActive && !this.isEditMode) div.classList.add(CSS_CLASSES.SELECTED);
 
             // Inner Content

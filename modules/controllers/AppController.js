@@ -1,4 +1,4 @@
-/**
+﻿/**
  * AppController.js
  * Main Application Orchestrator.
  * Coordinates Services, State, and UI.
@@ -139,7 +139,6 @@ export class AppController {
         });
         // General App Settings (Formerly Security/Data) - REINSTATED
         document.addEventListener(EVENTS.OPEN_GENERAL_SETTINGS, () => {
-            // console.log('[AppController] Opening General Settings...');
             GeneralSettingsUI.showModal(this);
         });
 
@@ -176,18 +175,15 @@ export class AppController {
         });
 
         document.addEventListener(EVENTS.OPEN_SETTINGS, () => {
-            // console.log('[AppController] Opening Scanner Settings...');
             SettingsUI.showModal(AppState.user?.uid);
         });
         document.addEventListener(EVENTS.OPEN_FAVORITE_LINKS, () => {
-            // console.log('[AppController] Opening Favorite Links...');
             FavoriteLinksUI.showModal();
         });
         document.addEventListener(EVENTS.SHOW_DAILY_BRIEFING, () => BriefingUI.show());
 
         // CUSTOM NAVIGATION EVENTS (Briefing / External)
         document.addEventListener('open-portfolio-view', () => {
-            // console.log('[AppController] Navigation request: Portfolio View');
             // Check if we are in Dashboard view or Watchlist view?
             // Force switch to 'portfolio' watchlist
             if (this.watchlistUI) {
@@ -313,7 +309,6 @@ export class AppController {
 
         // Sort Toggle Listener (Chevron in Title Bar)
         document.addEventListener(EVENTS.TOGGLE_SORT_DIRECTION, () => {
-            // console.log('[AppController] TOGGLE_SORT_DIRECTION Event Received.');
             this._handleSortToggle();
         });
 
@@ -383,7 +378,6 @@ export class AppController {
         // Schedule sync
         this._syncTimeout = setTimeout(async () => {
             try {
-                // console.log('[AppController] Executing Outbound Sync. Base Prefs:', prefs);
                 // REFRESH DATA (Directive 025):
                 // To prevent "Stale Snapshot Race Conditions", we explicitly read fresh state 
                 // for critical fields that might have been hydrated during the debounce window.
@@ -400,10 +394,8 @@ export class AppController {
                 };
 
                 if (freshPrefs.userCategories) {
-                    // console.log('[AppController] Syncing Preferences (incl. Categories):', freshPrefs.userCategories.map(c => c.label));
                 }
                 // if (freshPrefs.hiddenAssets) {
-                //     console.log('[AppController] 🐛 OUTBOUND SYNC: Saving hiddenAssets:', freshPrefs.hiddenAssets);
                 // }
                 await this.appService.saveUserPreferences(freshPrefs);
 
@@ -436,11 +428,11 @@ export class AppController {
         if (!el) return;
         el.className = ''; // Reset
 
-        let icon = '🟢';
+        let icon = 'ðŸŸ¢';
         let colorClass = 'status-ok';
 
-        if (state === 'warn') { icon = '🟡'; colorClass = 'status-warn'; }
-        if (state === 'err') { icon = '🔴'; colorClass = 'status-err'; }
+        if (state === 'warn') { icon = 'ðŸŸ¡'; colorClass = 'status-warn'; }
+        if (state === 'err') { icon = 'ðŸ”´'; colorClass = 'status-err'; }
 
         el.classList.add(colorClass);
         // Add timestamp for "liveness" proof
@@ -466,13 +458,11 @@ export class AppController {
         const now = Date.now();
         const FIVE_MINUTES = 5 * 60 * 1000;
         if (!force && AppState.lastGlobalFetch && (now - AppState.lastGlobalFetch < FIVE_MINUTES)) {
-            // console.log('Global Price Seed: Cache is fresh (within 5 mins). Skipping fetch.');
             return;
         }
 
         // 2. CONCURRENCY LOCK: Prevent overlapping fetches
         if (AppState._isFetching) {
-            // console.log('Global Price Seed: Fetch already in progress. Skipping.');
             return;
         }
 
@@ -573,9 +563,8 @@ export class AppController {
             if (loginBtn) loginBtn.classList.add(CSS_CLASSES.HIDDEN);
             document.body.classList.add(CSS_CLASSES.LOGGED_IN);
 
-            // ⚠️ SECURITY GATE ⚠️
+            // âš ï¸ SECURITY GATE âš ï¸
             // Intercept normal flow to show Privacy Lock
-            // console.log('[AppController] Security Gate - Waiting for Cloud Prefs...');
             this.handleSecurityLock();
 
             // CRITICAL: Only Unsub/Resub if user CHANGED.
@@ -609,7 +598,6 @@ export class AppController {
                                 return; // Wait for the next sync refire
                             }
                         } else {
-                            // console.log('[AppController] Onboarding Gate triggered, but waiting for cloud preferences sync...');
                         }
                     }
 
@@ -619,7 +607,6 @@ export class AppController {
                     // === GLOBAL PRICE SEEDING (DEBOUNCED) ===
                     if (this._bootSeedTimer) clearTimeout(this._bootSeedTimer);
                     this._bootSeedTimer = setTimeout(() => {
-                        // console.log('Global Price Seed: Firestore settled. Triggering fetch.');
                         this._refreshAllPrices(AppState.data.shares || []);
                     }, 800);
 
@@ -634,7 +621,6 @@ export class AppController {
                             savedWatchlistId === 'portfolio';
 
                         if (!isSystemId && (!userData.watchlists || userData.watchlists.length === 0)) {
-                            // console.log('Watchlists loading... skipping restoration validation for now.');
                             return;
                         }
 
@@ -642,11 +628,9 @@ export class AppController {
                             (userData.watchlists && userData.watchlists.find(w => w.id === savedWatchlistId));
 
                         if (isValidId) {
-                            // console.log('Restoring saved watchlist:', savedWatchlistId);
                             this.handleSwitchWatchlist(savedWatchlistId, true); // Pass true for isBoot
                             return;
                         } else if (userData.watchlists && userData.watchlists.length > 0) {
-                            // console.log('Saved watchlist no longer exists, clearing:', savedWatchlistId);
                             this.handleSwitchWatchlist('portfolio', true); // Pass true for isBoot
                         }
                     }
@@ -656,7 +640,6 @@ export class AppController {
                         !['ALL', 'CASH', 'DASHBOARD', 'portfolio'].includes(AppState.watchlist.id) &&
                         userData.watchlists &&
                         !userData.watchlists.find(w => w.id === AppState.watchlist.id)) {
-                        // console.log('Current watchlist deleted, falling back to portfolio');
                         this.handleSwitchWatchlist('portfolio', true); // Pass true for isBoot
                         return;
                     }
@@ -704,19 +687,16 @@ export class AppController {
                     // 1. If we have a local sync timer active, ignore the cloud (our write is pending).
                     // 2. If the snapshot has pending writes (local echo), or if it's from cache while online.
                     if (this._syncTimeout) {
-                        // console.log('[AppController] Sync Guard: Local sync timer active. Ignoring cloud update.');
                         return;
                     }
 
                     if (metadata && (metadata.hasPendingWrites || metadata.fromCache)) {
-                        // console.log(`[AppController [V3]]: Sync Guard: Skipping update (Pending: ${metadata.hasPendingWrites}, Cache: ${metadata.fromCache})`);
                         return;
                     }
 
                     // Mark as loaded before processing specific updates so handleSecurityLock works
                     this._cloudPrefsLoaded = true;
 
-                    // console.log('[AppController] INBOUND SYNC RECEIVED:', prefs); 
 
                     let needsRender = false;
 
@@ -765,7 +745,6 @@ export class AppController {
                     if (prefs.colorSeed !== undefined && prefs.colorSeed !== null) {
                         const newSeed = parseInt(prefs.colorSeed);
                         if (!isNaN(newSeed) && newSeed !== AppState.preferences.colorSeed) {
-                            // console.log('[AppController] AppsState Color Seed updated via Cloud Sync:', newSeed);
                             AppState.preferences.colorSeed = newSeed;
                             localStorage.setItem('ASX_NEXT_colorSeed', newSeed);
                             needsRender = true;
@@ -854,7 +833,6 @@ export class AppController {
 
                         // LIVE UPDATE: If modal is open, refresh it
                         if (!document.getElementById(IDS.MODAL_FAVORITE_LINKS).classList.contains(CSS_CLASSES.HIDDEN)) {
-                            // console.log('[AppController] Live Updating Favorite Links Modal');
                             import('../ui/FavoriteLinksUI.js').then(module => {
                                 const event = new CustomEvent(EVENTS.FAVORITE_LINKS_UPDATED);
                                 window.dispatchEvent(event);
@@ -953,7 +931,6 @@ export class AppController {
                         const mergedIds = mergedList.map(c => c.id).sort().join(',');
 
                         if (remoteIds !== mergedIds) {
-                            // console.log('[AppController] User Category Write-Back: Merged list differs from Cloud. Triggering strict save.');
                             this._syncPreferencesWithDebounce({
                                 ...prefs,
                                 userCategories: mergedList
@@ -962,7 +939,6 @@ export class AppController {
                     }
 
                     if (needsRender) {
-                        // console.log('[AppController] Applying External Cloud Preferences...');
                         this.updateDataAndRender(false);
                     }
 
@@ -1024,7 +1000,6 @@ export class AppController {
             // 4. HARD RELOAD (Close App Environment)
             // Fix: Only reload if we were actually logged in (prevents loop on boot-up)
             if (wasLoggedIn) {
-                // console.log('AppController: Logout transition detected. Reloading environment...');
                 setTimeout(() => {
                     window.location.reload();
                 }, 800); // Short delay for splash visual feedback
@@ -1046,7 +1021,6 @@ export class AppController {
 
         // 2. CONCURRENCY GUARD: If modal is already showing, don't trigger again.
         if (this._lockModalActive) {
-            // console.log('AppController: Security modal already active, ignoring request.');
             return;
         }
 
@@ -1054,7 +1028,6 @@ export class AppController {
         // SECURITY GATE: 
         // If we haven't loaded Cloud Prefs yet, we MUST wait (Default Secure).
         if (!this._cloudPrefsLoaded && AppState.user) {
-            // console.log('AppController: Security Gate - Waiting for Cloud Prefs...');
             AppState.isLocked = true; // Force Lock visual until we know for sure
             return;
         }
@@ -1193,7 +1166,6 @@ export class AppController {
             linkedAssets.forEach(asset => {
                 // Only update memory (Display Only) - Prevents DB write thrashing
                 if (asset.balance !== currentPortfolioValue) {
-                    // console.log(`[AppController] Auto-updating Linked Asset '${asset.name}' to ${currentPortfolioValue}`);
                     asset.balance = currentPortfolioValue;
                 }
             });

@@ -9,6 +9,7 @@ import { navManager } from '../utils/NavigationManager.js';
 import { userStore } from '../data/DataService.js';
 import { AppState } from '../state/AppState.js';
 import { ToastManager } from './ToastManager.js';
+import { notificationStore } from '../state/NotificationStore.js';
 
 export class SettingsUI {
     static showModal(userId) {
@@ -837,12 +838,12 @@ export class SettingsUI {
 
                 if (isOn) {
                     indEl.style.opacity = '1';
-                    indEl.classList.add('always-on');
+                    indEl.classList.add(CSS_CLASSES.ALWAYS_ON);
                     // Ensure legacy classes don't override
                     indEl.classList.remove(CSS_CLASSES.STATUS_OFF);
                 } else {
                     indEl.style.opacity = '0.2'; // Ghosted
-                    indEl.classList.remove('always-on');
+                    indEl.classList.remove(CSS_CLASSES.ALWAYS_ON);
                     indEl.classList.add(CSS_CLASSES.STATUS_OFF);
                 }
 
@@ -1317,8 +1318,8 @@ export class SettingsUI {
                             input.value = nextVal;
 
                             // SYNC FIX: Explicitly trigger badge update in main UI
-                            if (window.notificationStore) {
-                                window.notificationStore.recalculateBadges();
+                            if (notificationStore) {
+                                notificationStore.recalculateBadges();
                             }
 
                             triggerUpdate('immediate', `Badge Scope set to ${nextVal}`);
@@ -1339,9 +1340,9 @@ export class SettingsUI {
                     if (section) {
                         section.scrollIntoView({ behavior: 'smooth', block: 'start' });
                         // Visual feedback flash
-                        section.classList.remove('section-flash');
+                        section.classList.remove(CSS_CLASSES.SECTION_FLASH);
                         void section.offsetWidth; // Trigger reflow
-                        section.classList.add('section-flash');
+                        section.classList.add(CSS_CLASSES.SECTION_FLASH);
                     }
                     return;
                 }
@@ -1352,7 +1353,7 @@ export class SettingsUI {
             if (kangaroo) {
                 // Open Notifications Logic
                 // Only if visible (opacity > 0.2 approx, or class status-on/always-on)
-                const isVisible = kangaroo.classList.contains('status-on') || kangaroo.classList.contains('always-on') || getComputedStyle(kangaroo).opacity > 0.5;
+                const isVisible = kangaroo.classList.contains('status-on') || kangaroo.classList.contains(CSS_CLASSES.ALWAYS_ON) || getComputedStyle(kangaroo).opacity > 0.5;
 
                 if (isVisible) {
                     // Dispatch standard Open Event
@@ -1405,8 +1406,8 @@ export class SettingsUI {
                         Array.from(container.children).forEach(p => p.classList.toggle('active', p === pill));
 
                         // SYNC FIX: If scope changed via pill, update badge instantly
-                        if (targetId === IDS.PREF_BADGE_SCOPE && window.notificationStore) {
-                            window.notificationStore.recalculateBadges();
+                        if (targetId === IDS.PREF_BADGE_SCOPE && notificationStore) {
+                            notificationStore.recalculateBadges();
                         }
 
                         triggerUpdate('fast', contextMsg); // Fast Save (Skip heavy sector sweep)
@@ -1443,7 +1444,7 @@ export class SettingsUI {
 
             // C. Sector-Level Bulk Action - OPTIMIZED
             const bulkBtn = e.target.closest('.bulk-btn');
-            if (bulkBtn && !bulkBtn.classList.contains('master-pill-segment')) {
+            if (bulkBtn && !bulkBtn.classList.contains(CSS_CLASSES.MASTER_PILL_SEGMENT)) {
                 const action = bulkBtn.dataset.action;
                 const isAll = action === 'all';
                 const item = bulkBtn.closest('.filter-accordion-item');

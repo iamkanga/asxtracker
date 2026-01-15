@@ -996,6 +996,24 @@ export const CSS_CLASSES = {
     SLIDER_ROUND: 'slider round',
     TEXT_ACCENT: 'text-accent',
 
+    // UI States (Constitution Compliance)
+    IS_ACTIVE: 'is-active',
+    EDIT_MODE: 'edit-mode',
+    IS_MUTED: 'is-muted',
+    IS_SLASHED: 'is-slashed',
+    ALWAYS_ON: 'always-on',
+    SECTION_FLASH: 'section-flash',
+    STATUS_DISCONNECTED: 'status-disconnected',
+
+    // Footer Styles (Constitution Compliance)
+    CLICKABLE_FOOTER: 'clickable-footer',
+    FOOTER_BG_POSITIVE: 'footer-bg-positive',
+    FOOTER_BG_NEGATIVE: 'footer-bg-negative',
+    FOOTER_BG_NEUTRAL: 'footer-bg-neutral',
+
+    // Component Classes (Constitution Compliance)
+    MASTER_PILL_SEGMENT: 'master-pill-segment',
+
     // Status Classes
     STATUS_PREFIX: 'status-',
 

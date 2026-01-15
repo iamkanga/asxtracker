@@ -258,7 +258,7 @@ export class FavoriteLinksUI {
 
             return `
                 <div class="favorite-manage-row" data-index="${index}">
-                    <div class="manage-row-content" onclick="FavoriteLinksUI._editLinkDetails(${index})">
+                    <div class="manage-row-content" data-action="edit" data-index="${index}">
                         <img src="${iconSrc}" class="link-favicon" alt="" style="width: 32px; height: 32px;">
                         <span class="manage-link-name">
                             ${link.name}
@@ -268,28 +268,53 @@ export class FavoriteLinksUI {
                     
                     <div class="manage-controls">
                         <!-- Upload Custom Icon -->
-                        <button class="btn-upload-icon" onclick="FavoriteLinksUI._handleIconUpload(${index})" title="Upload Custom Icon">
+                        <button class="btn-upload-icon" data-action="upload" data-index="${index}" title="Upload Custom Icon">
                             <i class="fas fa-camera"></i>
                         </button>
 
                         <!-- Reorder Up -->
-                        <button class="btn-reorder" onclick="FavoriteLinksUI._moveLink(${index}, -1)" ${index === 0 ? 'disabled' : ''}>
+                        <button class="btn-reorder" data-action="move" data-index="${index}" data-direction="-1" ${index === 0 ? 'disabled' : ''}>
                             <i class="fas fa-chevron-up"></i>
                         </button>
                         
                         <!-- Reorder Down -->
-                        <button class="btn-reorder" onclick="FavoriteLinksUI._moveLink(${index}, 1)" ${index === links.length - 1 ? 'disabled' : ''}>
+                        <button class="btn-reorder" data-action="move" data-index="${index}" data-direction="1" ${index === links.length - 1 ? 'disabled' : ''}>
                             <i class="fas fa-chevron-down"></i>
                         </button>
 
                         <!-- Delete -->
-                        <button class="btn-delete" onclick="FavoriteLinksUI._deleteLink(${index})">
+                        <button class="btn-delete" data-action="delete" data-index="${index}">
                             <i class="fas fa-trash-alt"></i>
                         </button>
                     </div>
                 </div>
             `;
         }).join('');
+
+        // Event delegation for all actions
+        container.onclick = (e) => {
+            const target = e.target.closest('[data-action]');
+            if (!target) return;
+
+            const action = target.dataset.action;
+            const index = parseInt(target.dataset.index, 10);
+
+            switch (action) {
+                case 'edit':
+                    this._editLinkDetails(index);
+                    break;
+                case 'upload':
+                    this._handleIconUpload(index);
+                    break;
+                case 'move':
+                    const direction = parseInt(target.dataset.direction, 10);
+                    this._moveLink(index, direction);
+                    break;
+                case 'delete':
+                    this._deleteLink(index);
+                    break;
+            }
+        };
     }
 
     static _handleIconUpload(index) {
@@ -376,5 +401,4 @@ export class FavoriteLinksUI {
     }
 }
 
-// Expose to window for inline HTML event handlers
-window.FavoriteLinksUI = FavoriteLinksUI;
+// Global assignment removed - use ES module import instead
