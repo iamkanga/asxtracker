@@ -87,8 +87,8 @@ export class NotificationUI {
         // Normalize count
         const validCount = Math.max(0, parseInt(count) || 0);
 
-        const bell = document.getElementById('floating-bell');
-        const container = document.getElementById('floating-bell-container');
+        const bell = document.getElementById(IDS.FLOATING_BELL);
+        const container = document.getElementById(IDS.FLOATING_BELL_CONTAINER);
 
         // --- PREFERENCE CHECK (LOGIC HARDENING: strict optional chaining) ---
         const showBadges = AppState?.preferences?.showBadges !== false;
@@ -137,7 +137,7 @@ export class NotificationUI {
         this._prevCount = validCount;
 
         // Robust badge selection (might be delay in rendering)
-        const badge = bell.querySelector('.notification-badge');
+        const badge = bell.querySelector(`.${CSS_CLASSES.NOTIFICATION_BADGE}`);
         if (!badge) {
             // console.warn('[NotificationUI] updateBadgeCount: Badge element NOT found in bell. Trying again in 100ms...');
             // setTimeout(() => this.updateBadgeCount(validCount), 100);
@@ -279,7 +279,7 @@ export class NotificationUI {
                     svgContent = svgContent.replace(/width=".*?"/g, 'width="100%"').replace(/height=".*?"/g, 'height="100%"');
 
                     // 7. Inject Dismiss Icon with Better Styling
-                    const dismissWrapper = modal.querySelector('.dismiss-icon-wrapper');
+                    const dismissWrapper = modal.querySelector(`.${CSS_CLASSES.DISMISS_ICON_WRAPPER}`);
                     if (dismissWrapper) {
                         dismissWrapper.innerHTML = svgContent;
                         // Target the SVG directly to force size
@@ -359,17 +359,17 @@ export class NotificationUI {
                 <div class="${CSS_CLASSES.MODAL_HEADER}">
                     <h2 class="${CSS_CLASSES.MODAL_TITLE}">Notifications</h2>
                     <div style="margin-left: auto; display: flex; gap: 15px; align-items: center;">
-                        <button id="btn-daily-briefing" title="Daily Brief" style="background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem;">
+                        <button id="${IDS.BTN_DAILY_BRIEFING}" title="Daily Brief" style="background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem;">
                             <i class="fas fa-coffee"></i>
                         </button>
-                        <button id="btn-market-pulse" title="Market Pulse" style="background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem;">
+                        <button id="${IDS.BTN_MARKET_PULSE}" title="Market Pulse" style="background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem;">
                             <i class="fas fa-heartbeat"></i>
                         </button>
-                        <button id="notif-settings-btn" title="Notification Settings" style="background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem;">
+                        <button id="${IDS.NOTIF_SETTINGS_BTN}" title="Notification Settings" style="background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem;">
                             <i class="fas ${UI_ICONS.PEN}"></i>
                         </button>
-                        <button id="notif-mark-read-btn" title="Dismiss Badge" style="background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem;">
-                             <div class="dismiss-icon-wrapper" style="width: 32px; height: 32px; display: inline-block;"></div>
+                        <button id="${IDS.NOTIF_MARK_READ_BTN}" title="Dismiss Badge" style="background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem;">
+                             <div class="${CSS_CLASSES.DISMISS_ICON_WRAPPER}" style="width: 32px; height: 32px; display: inline-block;"></div>
                         </button>
                         <button class="${CSS_CLASSES.MODAL_CLOSE_BTN}" title="Close">
                             <i class="fas ${UI_ICONS.CLOSE}"></i>
@@ -378,27 +378,27 @@ export class NotificationUI {
                 </div>
 
                 <!-- Unified Control Surface (Command Bar) -->
-                <div class="notif-header-surface">
+                <div class="${CSS_CLASSES.NOTIF_HEADER_SURFACE}">
                     <!-- 1. Filter Chips Header -->
-                    <div class="filter-chips-container" id="filterChips">
+                    <div class="${CSS_CLASSES.FILTER_CHIPS_CONTAINER}" id="${IDS.FILTER_CHIPS_CONTAINER}">
                         <!-- Dynamic Chips -->
                     </div>
 
                     <!-- System Status Bar (Unified Reference V2 - Stacked) -->
-                    <div id="system-status-bar" class="system-status-bar" title="Tap to open settings">
-                        <div id="status-title-row" class="status-title-row"></div>
-                        <div id="status-monitors-row" class="status-monitors-row"></div>
+                    <div id="${IDS.SYSTEM_STATUS_BAR}" class="${CSS_CLASSES.SYSTEM_STATUS_BAR}" title="Tap to open settings">
+                        <div id="${CSS_CLASSES.STATUS_TITLE_ROW}" class="${CSS_CLASSES.STATUS_TITLE_ROW}"></div>
+                        <div id="${CSS_CLASSES.STATUS_MONITORS_ROW}" class="${CSS_CLASSES.STATUS_MONITORS_ROW}"></div>
                     </div>
                 </div>
 
                 <!-- 2. Dashboard Content (Scrolling) -->
-                <div class="${CSS_CLASSES.MODAL_BODY} ${CSS_CLASSES.SCROLLABLE_BODY}" id="notificationList" style="flex: 1; padding: 10px; padding-top: 0; position: relative; overflow-y: auto;">
-                    <div id="notif-timestamp" style="text-align: right; font-size: 0.65rem; color: var(--text-muted); padding: 5px 10px; font-style: italic;"></div>
+                <div class="${CSS_CLASSES.MODAL_BODY} ${CSS_CLASSES.SCROLLABLE_BODY}" id="${IDS.NOTIFICATION_LIST}" style="flex: 1; padding: 10px; padding-top: 0; position: relative; overflow-y: auto;">
+                    <div id="${IDS.NOTIF_TIMESTAMP}" style="text-align: right; font-size: 0.65rem; color: var(--text-muted); padding: 5px 10px; font-style: italic;"></div>
                     <!-- Accordion Sections -->
                 </div>
 
                 <!-- Intelligence Report Overlay (Deep Dive) -->
-                <div id="intelligence-report" class="intelligence-report-overlay"></div>
+                <div id="${IDS.INTELLIGENCE_REPORT_OVERLAY}" class="${CSS_CLASSES.INTELLIGENCE_REPORT_OVERLAY}"></div>
             </div>
         `;
 
@@ -462,7 +462,7 @@ export class NotificationUI {
         if (overlay) overlay.addEventListener('click', closeHandler);
 
         // Daily Briefing Button
-        const briefingBtn = modal.querySelector('#btn-daily-briefing');
+        const briefingBtn = modal.querySelector(`#${IDS.BTN_DAILY_BRIEFING}`);
         if (briefingBtn) {
             briefingBtn.addEventListener('click', () => {
 
@@ -471,7 +471,7 @@ export class NotificationUI {
         }
 
         // Market Pulse Button
-        const marketPulseBtn = modal.querySelector('#btn-market-pulse');
+        const marketPulseBtn = modal.querySelector(`#${IDS.BTN_MARKET_PULSE}`);
         if (marketPulseBtn) {
             marketPulseBtn.addEventListener('click', () => {
 
@@ -480,7 +480,7 @@ export class NotificationUI {
         }
 
         // Edit/Settings Button
-        const settingsBtn = modal.querySelector('#notif-settings-btn');
+        const settingsBtn = modal.querySelector(`#${IDS.NOTIF_SETTINGS_BTN}`);
         if (settingsBtn) {
             settingsBtn.addEventListener('click', () => {
 
@@ -490,7 +490,7 @@ export class NotificationUI {
         }
 
         // Mark as Read Button (Now Toggle Kangaroo / Dismiss Badge)
-        const markReadBtn = modal.querySelector('#notif-mark-read-btn');
+        const markReadBtn = modal.querySelector(`#${IDS.NOTIF_MARK_READ_BTN}`);
         if (markReadBtn) {
             markReadBtn.addEventListener('click', async () => {
                 // 1. Get Current State (Global Preference)
@@ -528,7 +528,7 @@ export class NotificationUI {
         }
 
         // Accordion Toggle Delegation (Card Clicks)
-        const list = modal.querySelector('#notificationList');
+        const list = modal.querySelector(`#${IDS.NOTIFICATION_LIST}`);
         if (list) {
             list.addEventListener('click', (e) => {
                 // 1. Pin/Unpin Delegation
@@ -577,15 +577,15 @@ export class NotificationUI {
     }
 
     static _updateList(modal) {
-        const list = modal.querySelector('#notificationList');
-        const chips = modal.querySelector('#filterChips');
+        const list = modal.querySelector(`#${IDS.NOTIFICATION_LIST}`);
+        const chips = modal.querySelector(`#${IDS.FILTER_CHIPS_CONTAINER}`);
         if (!list || !chips) return;
 
         list.innerHTML = '';
         chips.innerHTML = '';
 
         // Update Time
-        const timeArea = modal.querySelector('#notif-timestamp');
+        const timeArea = modal.querySelector(`#${IDS.NOTIF_TIMESTAMP}`);
         const lastUpd = notificationStore.lastUpdated ? new Date(notificationStore.lastUpdated).toLocaleTimeString() : 'Never';
         if (timeArea) timeArea.textContent = `Last synced: ${lastUpd}`;
 
@@ -750,11 +750,11 @@ export class NotificationUI {
         // Render Summary Dashboard (V3 Grid)
         // 1. "Dashboard" Tile (Master View) - First in Row 1
         const openAllChip = document.createElement('div');
-        openAllChip.className = `${CSS_CLASSES.FILTER_CHIP} chip-neutral`; // Default to closed (inactive)
+        openAllChip.className = `${CSS_CLASSES.FILTER_CHIP} ${CSS_CLASSES.CHIP_NEUTRAL}`; // Default to closed (inactive)
         openAllChip.dataset.target = 'open-all';
         openAllChip.innerHTML = `
-            <span class="chip-badge">${totalRendered}</span>
-            <span class="chip-label">Dashboard Open</span>
+            <span class="${CSS_CLASSES.CHIP_BADGE}">${totalRendered}</span>
+            <span class="${CSS_CLASSES.CHIP_LABEL}">Dashboard Open</span>
         `;
         chips.appendChild(openAllChip);
 
@@ -777,8 +777,8 @@ export class NotificationUI {
                 // Currently they act as anchors.
 
                 chip.innerHTML = `
-                    <span class="chip-badge">${itemCount}</span>
-                    <span class="chip-label">${section.chipLabel}</span>
+                    <span class="${CSS_CLASSES.CHIP_BADGE}">${itemCount}</span>
+                    <span class="${CSS_CLASSES.CHIP_LABEL}">${section.chipLabel}</span>
                 `;
 
                 // Quick Filter / Scroll logic
@@ -1392,7 +1392,7 @@ export class NotificationUI {
             // Apply truncation and ghosted styling as requested
             // Grid Column 1 / -1 ensures it spans the full width (like a footer)
             sectorHtml = `
-            <div class="notif-cell-sector ${CSS_CLASSES.GHOSTED}" style="grid-column: 1 / -1; font-size: 0.85rem; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-muted);">
+            <div class="${CSS_CLASSES.NOTIF_CELL_SECTOR} ${CSS_CLASSES.GHOSTED}" style="grid-column: 1 / -1; font-size: 0.85rem; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-muted);">
                 ${sector}
             </div>`;
         }
@@ -1402,16 +1402,16 @@ export class NotificationUI {
         return `
             <div class="${CSS_CLASSES.NOTIFICATION_CARD_GRID} ${cardClass}" data-code="${code}">
                 <!-- R1: CODE | PRICE -->
-                <div class="notif-cell-code">${code}</div>
-                <div class="notif-cell-price">${price}</div>
+                <div class="${CSS_CLASSES.NOTIF_CELL_CODE}">${code}</div>
+                <div class="${CSS_CLASSES.NOTIF_CELL_PRICE}">${price}</div>
 
                 <!-- R2: NAME | CHANGE -->
-                <div class="notif-cell-name">${name}</div>
-                <div class="notif-cell-change ${changeClass}">${changeFormatted}</div>
+                <div class="${CSS_CLASSES.NOTIF_CELL_NAME}">${name}</div>
+                <div class="${CSS_CLASSES.NOTIF_CELL_CHANGE} ${changeClass}">${changeFormatted}</div>
 
                 <!-- R3: EXPLAINER | RANGE (Optional) -->
-                <div class="notif-cell-explainer">${explainerText}</div>
-                <div class="notif-cell-range">${explainerRange}</div>
+                <div class="${CSS_CLASSES.NOTIF_CELL_EXPLAINER}">${explainerText}</div>
+                <div class="${CSS_CLASSES.NOTIF_CELL_RANGE}">${explainerRange}</div>
                 
                 <!-- R4: SECTOR (Full Width) -->
                 ${sectorHtml}

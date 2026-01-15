@@ -8,11 +8,12 @@ import { AppState } from '../state/AppState.js';
 import { CSS_CLASSES, IDS, UI_ICONS, EVENTS } from '../utils/AppConstants.js';
 import { navManager } from '../utils/NavigationManager.js';
 import { formatCurrency, formatPercent } from '../utils/formatters.js';
+import { AppController } from '../controllers/AppController.js';
 
 export class SnapshotUI {
 
     static show() {
-        if (document.getElementById('snapshot-modal-container')) return;
+        if (document.getElementById(IDS.SNAPSHOT_MODAL_CONTAINER)) return;
 
         // V322 FIX: DO NOT HIDE Briefing Modal.
         // We layer Snapshot (z-index 1010) on TOP of Briefing (z-index 1001).
@@ -52,12 +53,12 @@ export class SnapshotUI {
 
     static _renderModal() {
         const modal = document.createElement('div');
-        modal.id = 'snapshot-modal-container';
+        modal.id = IDS.SNAPSHOT_MODAL_CONTAINER;
         modal.className = `${CSS_CLASSES.MODAL} ${CSS_CLASSES.MODAL_FULLSCREEN} ${CSS_CLASSES.HIDDEN}`;
 
         modal.innerHTML = `
             <div class="${CSS_CLASSES.MODAL_OVERLAY}"></div>
-            <div class="${CSS_CLASSES.MODAL_CONTENT} snapshot-content" style="max-height: 90vh; display: flex; flex-direction: column;">
+            <div class="${CSS_CLASSES.MODAL_CONTENT} ${CSS_CLASSES.SNAPSHOT_CONTENT}" style="max-height: 90vh; display: flex; flex-direction: column;">
                 <div class="${CSS_CLASSES.MODAL_HEADER}">
                     <div style="display: flex; flex-direction: column; justify-content: center;">
                         <h2 class="${CSS_CLASSES.MODAL_TITLE}" style="margin-bottom: 0;">
@@ -73,29 +74,29 @@ export class SnapshotUI {
                 
                 <!-- NUCLEAR STYLES for Toggle -->
                 <style>
-                    #snapshot-toggle-btn {
+                    #${IDS.SNAPSHOT_TOGGLE_BTN} {
                         border: none !important;
                         outline: none !important;
                         box-shadow: none !important;
                         background: transparent !important;
                     }
-                    #snapshot-toggle-btn:focus, #snapshot-toggle-btn:active {
+                    #${IDS.SNAPSHOT_TOGGLE_BTN}:focus, #${IDS.SNAPSHOT_TOGGLE_BTN}:active {
                         border: none !important;
                         outline: none !important;
                     }
-                    .snapshot-controls {
+                    .${CSS_CLASSES.SNAPSHOT_CONTROLS} {
                         border: none !important;
                         box-shadow: none !important;
                     }
                 </style>
 
-                <div class="snapshot-controls" style="padding: 0 15px 2px 15px !important; border-bottom: none !important; display: flex; justify-content: center;">
+                <div class="${CSS_CLASSES.SNAPSHOT_CONTROLS}" style="padding: 0 15px 2px 15px !important; border-bottom: none !important; display: flex; justify-content: center;">
                     <div class="${CSS_CLASSES.SEGMENTED_CONTROL}" style="width: 100%; max-width: 300px; border: none !important; background: transparent !important; box-shadow: none !important;">
-                        <button type="button" class="${CSS_CLASSES.SEGMENTED_BUTTON} w-full" id="snapshot-toggle-btn">
+                        <button type="button" class="${CSS_CLASSES.SEGMENTED_BUTTON} w-full" id="${IDS.SNAPSHOT_TOGGLE_BTN}">
                             <div class="${CSS_CLASSES.W_FULL} ${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.ALIGN_CENTER}" style="justify-content: center;">
-                                <i class="fas fa-sort" id="snapshot-toggle-icon" style="margin-right: 15px;"></i>
-                                <span class="${CSS_CLASSES.FONT_BOLD}" id="snapshot-toggle-text">High to Low</span>
-                                <i class="fas fa-sort" id="snapshot-toggle-icon-2" style="margin-left: 15px;"></i>
+                                <i class="fas fa-sort" id="${IDS.SNAPSHOT_TOGGLE_ICON}" style="margin-right: 15px;"></i>
+                                <span class="${CSS_CLASSES.FONT_BOLD}" id="${IDS.SNAPSHOT_TOGGLE_TEXT}">High to Low</span>
+                                <i class="fas fa-sort" id="${IDS.SNAPSHOT_TOGGLE_ICON_2}" style="margin-left: 15px;"></i>
                             </div>
                         </button>
                     </div>
@@ -126,7 +127,7 @@ export class SnapshotUI {
     static _bindEvents(modal) {
         const closeBtn = modal.querySelector(`.${CSS_CLASSES.MODAL_CLOSE_BTN}`);
         const overlay = modal.querySelector(`.${CSS_CLASSES.MODAL_OVERLAY}`);
-        const toggleBtn = modal.querySelector('#snapshot-toggle-btn');
+        const toggleBtn = modal.querySelector(`#${IDS.SNAPSHOT_TOGGLE_BTN}`);
 
         const closeHandler = () => this._close(modal);
         if (closeBtn) closeBtn.addEventListener('click', closeHandler);
@@ -135,15 +136,8 @@ export class SnapshotUI {
         const updateToggleUI = () => {
             const isDesc = this._currentSort === 'desc';
             const icon = modal.querySelectorAll('.fas.fa-sort, .fas.fa-caret-up, .fas.fa-caret-down');
-            const text = modal.querySelector('#snapshot-toggle-text');
+            const text = modal.querySelector(`#${IDS.SNAPSHOT_TOGGLE_TEXT}`);
 
-            // Logic: If currently Descending (High -> Low), Button should say 'Low to High' (Target) 
-            // OR should it say Current State? 
-            // User requested: "One disappears and displays the other". Usually implies displaying the TARGET.
-            // Let's stick to the Notifications Pattern: Display the TARGET state.
-
-            // If current is DESC (High to Low) -> Show "Low to High" option.
-            const targetSort = isDesc ? 'asc' : 'desc';
             const label = isDesc ? 'Low to High' : 'High to Low';
             const iconClass = isDesc ? 'fa-caret-down' : 'fa-caret-up';
             const color = isDesc ? 'var(--color-negative)' : 'var(--color-positive)';
@@ -153,8 +147,8 @@ export class SnapshotUI {
                 i.className = `fas ${iconClass}`;
                 i.style.color = color;
                 i.style.marginRight = '15px'; // Reset styles just in case
-                if (i.id.includes('2')) i.style.marginRight = '0'; // Right icon
-                if (i.id.includes('2')) i.style.marginLeft = '15px';
+                if (i.id === IDS.SNAPSHOT_TOGGLE_ICON_2) i.style.marginRight = '0'; // Right icon
+                if (i.id === IDS.SNAPSHOT_TOGGLE_ICON_2) i.style.marginLeft = '15px';
             });
         };
 
@@ -177,28 +171,9 @@ export class SnapshotUI {
         modal.addEventListener('click', (e) => {
             const card = e.target.closest(`.${CSS_CLASSES.SNAPSHOT_CARD}`);
             if (card && card.dataset.code) {
-                // Determine source watchlist if possible, or just default behavior
-                // The main app expects ASX_CODE_CLICK to handle navigation or modals
                 document.dispatchEvent(new CustomEvent(EVENTS.ASX_CODE_CLICK, { detail: { code: card.dataset.code } }));
-                // Optional: Close snapshot on selection? User said "selection tool... display... ASX Code".
-                // Usually a snapshot is for browsing. Let's keep it open unless they drill down deep.
-                // But ASX_CODE_CLICK usually opens a modal on top. That's fine.
             }
         });
-    }
-
-    static _close(modal) {
-        modal.classList.remove(CSS_CLASSES.SHOW);
-        modal.classList.add(CSS_CLASSES.HIDDEN);
-
-        setTimeout(() => {
-            if (modal.parentElement) modal.remove();
-        }, 300);
-
-        if (modal._navActive) {
-            modal._navActive = false;
-            navManager.popStateSilently();
-        }
     }
 
     static _updateGrid(modal) {
@@ -206,7 +181,7 @@ export class SnapshotUI {
         if (!grid) return;
 
         // Dynamic Background Logic
-        const content = modal.querySelector('.snapshot-content');
+        const content = modal.querySelector(`.${CSS_CLASSES.SNAPSHOT_CONTENT}`);
         if (content) {
             content.classList.remove(CSS_CLASSES.TREND_UP_BG, CSS_CLASSES.TREND_DOWN_BG, CSS_CLASSES.TREND_MIXED_DESC_BG, CSS_CLASSES.TREND_MIXED_ASC_BG);
             if (this._currentSort === 'desc') {
@@ -217,8 +192,6 @@ export class SnapshotUI {
         }
 
         const data = this._prepareData(); // Get Aggregated Data
-
-
 
         if (data.length === 0) {
             grid.innerHTML = `
@@ -265,64 +238,15 @@ export class SnapshotUI {
     }
 
     static _prepareData() {
-        const allItems = new Map();
-
-        // 1. Iterate ALL Watchlists
-        const watchlists = AppState.data.watchlists || [];
-        // Include System Watchlists if they have stored data? 
-        // Actually, AppState.data.shares contains EVERYTHING usually, keyed by ID. 
-        // But we want to ensure we get everything *visible* to the user in lists.
-        // Simplest: Iterate AppState.data.shares. This is the master list of all tracking.
-
-        const masterList = AppState.data.shares || [];
-
-
-        if (masterList.length > 0) {
-
-        }
-
-        masterList.forEach(share => {
-            // Support both 'code' and 'shareName' (legacy/firebase mix)
-            const code = share.code || share.shareName || share.symbol;
-
-            if (!code) return;
-
-            // Deduplication: Only take the first instance (or merge logic if needed)
-            if (!allItems.has(code)) {
-                // Enrich with Live Data if available
-                let livePrice = share.currentPrice || share.price || 0;
-                let dayChangePct = share.dayChangePercent || share.changePercent || 0;
-                let dayChangeVal = share.dayChangePerShare || share.dayChange || share.change || 0;
-
-                // Try Live Map Override (Real-time pulse)
-                // AppState.livePrices is a Map<Code, {live, change, pctChange...}>
-                if (AppState.livePrices && AppState.livePrices.has(code)) {
-                    const liveData = AppState.livePrices.get(code);
-                    livePrice = liveData.live || livePrice;
-                    dayChangePct = liveData.pctChange || dayChangePct;
-                    dayChangeVal = liveData.change || dayChangeVal;
-                }
-
-                allItems.set(code, {
-                    code: code,
-                    price: parseFloat(livePrice) || 0,
-                    pctChange: parseFloat(dayChangePct) || 0,
-                    valChange: parseFloat(dayChangeVal) || 0,
-                    high: parseFloat(share.high || (AppState.livePrices.get(code)?.high) || 0),
-                    low: parseFloat(share.low || (AppState.livePrices.get(code)?.low) || 0),
-                    name: share.name
-                });
-            }
-        });
-
-        return Array.from(allItems.values());
+        if (!AppController.instance) return [];
+        return AppController.instance.getSnapshotData();
     }
 
     static _renderCard(item) {
         const isPos = item.pctChange > 0;
         const isNeg = item.pctChange < 0;
 
-        let colorClass = 'snapshot-neutral';
+        let colorClass = CSS_CLASSES.SNAPSHOT_NEUTRAL;
         let textClass = '';
 
         if (isPos) {
@@ -412,9 +336,6 @@ export class SnapshotUI {
 
         const startHandler = (e) => {
             hasTriggered = false;
-
-            // We depend on the fact that bindTrigger is only called for the Portfolio Value Card.
-            // If the card exists and this handler is attached, we are good to go.
 
             // Ignore buttons/links
             if (e.target.closest('button') || e.target.closest('a')) return;

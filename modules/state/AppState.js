@@ -126,9 +126,9 @@ export const AppState = {
         containerBorders: (() => {
             try {
                 const stored = localStorage.getItem(STORAGE_KEYS.BORDER_PREFS);
-                return stored ? JSON.parse(stored) : { sides: [0, 0, 0, 0], thickness: 1 };
+                return stored ? JSON.parse(stored) : { sides: [0, 0, 0, 1], thickness: 3 };
             } catch (e) {
-                return { sides: [0, 0, 0, 0], thickness: 1 };
+                return { sides: [0, 0, 0, 1], thickness: 3 };
             }
         })()
     },
@@ -269,7 +269,7 @@ export const AppState = {
                 alertEmailRecipients: this.preferences.alertEmailRecipients || '',
                 gradientStrength: this.preferences.gradientStrength ?? 0.6,
                 customWatchlistNames: this.preferences.customWatchlistNames || {},
-                containerBorders: this.preferences.containerBorders || { sides: [0, 0, 0, 0], thickness: 1 }
+                containerBorders: this.preferences.containerBorders || { sides: [0, 0, 0, 1], thickness: 3 }
             };
             // console.log('[AppState] Triggering Sync with payload:', payload);
             this.onPersistenceUpdate(payload);

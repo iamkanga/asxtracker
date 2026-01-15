@@ -37,6 +37,7 @@ import { navManager } from '../utils/NavigationManager.js';
 export class AppController {
 
     constructor() {
+        AppController.instance = this;
         // Services
         this.dataService = new DataService();
         this.appService = new AppService();
@@ -2844,6 +2845,176 @@ export class AppController {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+    }
+
+    /**
+     * Calculates data for the Daily Briefing modal.
+     * Decouples heavy processing from BriefingUI.
+     */
+    calculateBriefingDigest() {
+        const shares = AppState.data.shares || [];
+        const livePrices = AppState.livePrices || new Map();
+
+        // 1. Portfolio Calculation
+        const portfolioItems = shares.filter(s => {
+            const units = parseFloat(s.portfolioShares) || parseFloat(s.units) || 0;
+            return units > 0;
+        });
+
+        let totalDayChangeVal = 0;
+        let totalValue = 0;
+        let prevValue = 0;
+
+        portfolioItems.forEach(s => {
+            const units = parseFloat(s.portfolioShares) || parseFloat(s.units) || 0;
+            const code = s.code || s.shareName || s.symbol || '???';
+            // Clean Code for map lookup
+            const cleanCode = code.replace(/\.AX$/i, '').trim().toUpperCase();
+
+            const liveData = livePrices.get(cleanCode) || livePrices.get(code) || {};
+            const live = liveData.live || Number(s.purchasePrice) || 0;
+
+            // Prev Close Calculation
+            let prevClose = liveData.prevClose;
+            if ((!prevClose || prevClose === 0) && liveData.change) {
+                prevClose = live - liveData.change;
+            }
+            if (!prevClose || prevClose === 0) prevClose = live;
+
+            const valNow = units * live;
+            const valPrev = units * prevClose;
+
+            totalValue += valNow;
+            totalDayChangeVal += (valNow - valPrev);
+            prevValue += valPrev;
+        });
+
+        let totalPctChange = 0;
+        if (prevValue > 0) {
+            totalPctChange = ((totalValue - prevValue) / prevValue) * 100;
+        }
+
+        // 2. Portfolio Highlights
+        const pfMovers = portfolioItems.map(s => {
+            const cleanCode = (s.code || s.shareName || '').replace(/\.AX$/i, '').trim().toUpperCase();
+            const data = livePrices.get(cleanCode);
+            if (!data) return null;
+            return {
+                code: cleanCode,
+                live: data.live || 0,
+                change: data.change || 0,
+                pctChange: data.pctChange || (data.changePercent) || 0,
+                name: data.name || ''
+            };
+        }).filter(Boolean);
+
+        pfMovers.sort((a, b) => {
+            const pAR = Math.round((a.pctChange || 0) * 100);
+            const pBR = Math.round((b.pctChange || 0) * 100);
+            if (pBR !== pAR) return pBR - pAR;
+            return Math.abs(b.change || 0) - Math.abs(a.change || 0);
+        });
+
+        // 3. Watchlist Highlights
+        const watchedCodes = new Set(shares.map(s => (s.code || s.shareName || s.symbol || '').toUpperCase()).filter(Boolean));
+        const userMovers = Array.from(watchedCodes).map(rawCode => {
+            let cleanCode = rawCode.replace(/\.AX$/i, '').trim().toUpperCase();
+            const data = livePrices.get(cleanCode) || livePrices.get(rawCode);
+            if (!data) return null;
+            return {
+                code: cleanCode,
+                live: data.live || 0,
+                change: data.change || 0,
+                pctChange: data.pctChange || (data.changePercent) || 0,
+                name: data.name || ''
+            };
+        }).filter(Boolean);
+
+        userMovers.sort((a, b) => {
+            const pAR = Math.round((a.pctChange || 0) * 100);
+            const pBR = Math.round((b.pctChange || 0) * 100);
+            if (pBR !== pAR) return pBR - pAR;
+            return Math.abs(b.change || 0) - Math.abs(a.change || 0);
+        });
+
+        // 4. Market Sentiment
+        const pulse = notificationStore.getPulseCounts();
+        const upCount = pulse.gainers;
+        const downCount = pulse.losers;
+
+        let sentiment = 'Neutral';
+        if (upCount > downCount * 1.5) sentiment = 'Bullish';
+        else if (downCount > upCount * 1.5) sentiment = 'Bearish';
+
+        // 5. Market Pulse Top 3
+        const allAlerts = [
+            ...(pulse._global.movers?.up || []),
+            ...(pulse._global.movers?.down || []),
+            ...(pulse._global.hilo?.high || []),
+            ...(pulse._global.hilo?.low || [])
+        ];
+        allAlerts.sort((a, b) => {
+            const pA = Math.abs(a.pctChange || a.pct || 0);
+            const pB = Math.abs(b.pctChange || b.pct || 0);
+            if (pB !== pA) return pB - pA;
+            return Math.abs(b.change || 0) - Math.abs(a.change || 0);
+        });
+
+        return {
+            portfolio: {
+                totalValue,
+                totalDayChangeVal,
+                totalPctChange,
+                isUp: totalDayChangeVal >= 0
+            },
+            highlights: {
+                portfolio: pfMovers.slice(0, 3),
+                watchlists: userMovers.slice(0, 3),
+                market: allAlerts.slice(0, 3)
+            },
+            marketSentiment: {
+                sentiment,
+                pulse
+            }
+        };
+    }
+
+    /**
+     * Aggregates and prepares data for the Market Snapshot.
+     */
+    getSnapshotData() {
+        const allItems = new Map();
+        const masterList = AppState.data.shares || [];
+
+        masterList.forEach(share => {
+            const code = share.code || share.shareName || share.symbol;
+            if (!code) return;
+
+            if (!allItems.has(code)) {
+                let livePrice = share.currentPrice || share.price || 0;
+                let dayChangePct = share.dayChangePercent || share.changePercent || 0;
+                let dayChangeVal = share.dayChangePerShare || share.dayChange || share.change || 0;
+
+                if (AppState.livePrices && AppState.livePrices.has(code)) {
+                    const liveData = AppState.livePrices.get(code);
+                    livePrice = liveData.live || livePrice;
+                    dayChangePct = liveData.pctChange || dayChangePct;
+                    dayChangeVal = liveData.change || dayChangeVal;
+                }
+
+                allItems.set(code, {
+                    code: code,
+                    price: parseFloat(livePrice) || 0,
+                    pctChange: parseFloat(dayChangePct) || 0,
+                    valChange: parseFloat(dayChangeVal) || 0,
+                    high: parseFloat(share.high || (AppState.livePrices.get(code)?.high) || 0),
+                    low: parseFloat(share.low || (AppState.livePrices.get(code)?.low) || 0),
+                    name: share.name
+                });
+            }
+        });
+
+        return Array.from(allItems.values());
     }
 
     /**

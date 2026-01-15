@@ -493,6 +493,8 @@ export class AppService {
                 lastWatchlistId: 'ALL', // Default to All Shares on first load
                 onboarded: true,
                 // NEW USER DEFAULTS (Requested Jan 2026)
+                gradientStrength: 0.25, // Classic Style: 0.25
+                containerBorders: { sides: [0, 0, 0, 1], thickness: 3 }, // Classic Style: Left border only, 3px
                 badgeScope: 'all', // Badge Count: Set to ALL by default
                 excludePortfolio: true, // Watchlist Override: ON
                 scanner: {

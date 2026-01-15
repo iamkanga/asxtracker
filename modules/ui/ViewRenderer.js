@@ -747,10 +747,10 @@ export class ViewRenderer {
                                                 <span>Investment</span>
                                                 ${sectorName ? `<span class="${CSS_CLASSES.TEXT_SM} ${CSS_CLASSES.TEXT_MUTED} ${CSS_CLASSES.GHOSTED} ${CSS_CLASSES.ITALIC} ${CSS_CLASSES.FONT_NORMAL} ${CSS_CLASSES.MT_NEG_2PX}">${sectorName}</span>` : ''}
                                             </div>
-                                            <div class="kangaroo-wrapper ${stock.muted ? CSS_CLASSES.IS_MUTED : ''}"
+                                            <div class="${CSS_CLASSES.KANGAROO_WRAPPER} ${stock.muted ? CSS_CLASSES.IS_MUTED : ''}"
                                                  title="${stock.muted ? 'Unmute Share' : 'Mute Share'}"
                                                  onclick="event.stopPropagation(); this.classList.toggle('${CSS_CLASSES.IS_MUTED}'); document.dispatchEvent(new CustomEvent('${EVENTS.TOGGLE_SHARE_MUTE}', { detail: { id: '${stock.id}' } }))">
-                                                <img src="${KANGAROO_ICON_SRC}" class="kangaroo-icon-img" />
+                                                <img src="${KANGAROO_ICON_SRC}" class="${CSS_CLASSES.KANGAROO_ICON_IMG}" />
                                             </div>
                                         </div>
                                     </h3>
