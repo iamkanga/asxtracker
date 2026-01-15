@@ -36,22 +36,7 @@ export class GeneralSettingsUI {
                 
                 <div class="${CSS_CLASSES.MODAL_BODY}">
                     
-                    <!-- 1. DISPLAY SECTION -->
-                    <div class="${CSS_CLASSES.SETTINGS_SECTION}" style="margin-bottom: 50px;">
-                        <h4 class="${CSS_CLASSES.SIDEBAR_SECTION_TITLE}" style="margin-bottom: 15px; color: var(--color-accent); font-size: 0.85rem; letter-spacing: 1.5px; text-transform: uppercase; border-bottom: 1px solid rgba(var(--color-accent-rgb), 0.2); padding-bottom: 8px; font-weight: 800;">Display</h4>
-                        
-                        <!-- Border Selection Trigger -->
-                        <div class="${CSS_CLASSES.SETTING_ROW}" id="gen-border-selector-row" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between; padding: 12px 0;">
-                            <div>
-                                <div class="${CSS_CLASSES.FONT_BOLD}" style="font-size: 0.95rem;">Container Borders</div>
-                                <div class="${CSS_CLASSES.TEXT_SM} ${CSS_CLASSES.TEXT_MUTED}">Customise card edges and thickness</div>
-                            </div>
-                            <div style="display: flex; align-items: center; gap: 10px;">
-                                <i class="fas fa-chevron-right ${CSS_CLASSES.TEXT_MUTED}"></i>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- 2. SECURITY SECTION -->
+                     <!-- 1. SECURITY SECTION -->
                     <div class="${CSS_CLASSES.SETTINGS_SECTION}" style="margin-bottom: 50px;">
                         <h4 class="${CSS_CLASSES.SIDEBAR_SECTION_TITLE}" style="margin-bottom: 15px; color: var(--color-accent); font-size: 0.85rem; letter-spacing: 1.5px; text-transform: uppercase; border-bottom: 1px solid rgba(var(--color-accent-rgb), 0.2); padding-bottom: 8px; font-weight: 800;">Security</h4>
                         
@@ -135,16 +120,6 @@ export class GeneralSettingsUI {
         };
         modal.querySelector(`.${CSS_CLASSES.MODAL_CLOSE_BTN}`).addEventListener('click', close);
         modal.querySelector(`.${CSS_CLASSES.MODAL_OVERLAY}`).addEventListener('click', close);
-
-
-        // --- DISPLAY ---
-        // Open Border Selector
-        const borderRow = modal.querySelector('#gen-border-selector-row');
-        if (borderRow) {
-            borderRow.addEventListener('click', () => {
-                this._renderBorderSelector();
-            });
-        }
 
 
         // --- SECURITY ---
@@ -322,6 +297,10 @@ export class GeneralSettingsUI {
                     visual.style.background = currentSides[sideIdx] ? 'var(--color-accent)' : 'rgba(255,255,255,0.08)';
                 }
                 edge.classList.toggle('active', currentSides[sideIdx] === 1);
+
+                // Immediate Update (USER REQUEST)
+                AppState.saveBorderPreferences({ sides: currentSides, thickness: currentThickness });
+                document.dispatchEvent(new CustomEvent(EVENTS.REFRESH_WATCHLIST));
             });
         });
 
@@ -331,12 +310,16 @@ export class GeneralSettingsUI {
                 thicknessOpts.forEach(o => o.classList.remove('active'));
                 opt.classList.add('active');
                 currentThickness = parseInt(opt.dataset.value);
+
+                // Immediate Update (USER REQUEST)
+                AppState.saveBorderPreferences({ sides: currentSides, thickness: currentThickness });
+                document.dispatchEvent(new CustomEvent(EVENTS.REFRESH_WATCHLIST));
             });
         });
 
-        // Save
+        // Save/Done
         modal.querySelector('#save-borders-btn').addEventListener('click', () => {
-            AppState.saveBorderPreferences({ sides: currentSides, thickness: currentThickness });
+            // Already saved live on each click
             ToastManager.success("Border settings applied.");
 
             // Close both modals
@@ -348,7 +331,6 @@ export class GeneralSettingsUI {
 
             modal.remove();
             navManager.popStateSilently(); // Pop state for border selector
-            document.dispatchEvent(new CustomEvent(EVENTS.REFRESH_WATCHLIST));
         });
 
         // Close

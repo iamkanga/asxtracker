@@ -296,7 +296,8 @@ export class AppController {
             onViewToggle: () => this._handleViewToggle(),
             onSort: () => this._handleSortClick(),
             onCarouselPrev: () => this._handleCarousel(-1),
-            onCarouselNext: () => this._handleCarousel(1)
+            onCarouselNext: () => this._handleCarousel(1),
+            onOpenCalculator: (mode) => this.calculatorUI.open(mode)
         });
         this.headerLayout.init();
 
@@ -383,7 +384,9 @@ export class AppController {
                     watchlistOrder: AppState.preferences.watchlistOrder,
                     dashboardOrder: AppState.preferences.dashboardOrder, // Fresh Read
                     dashboardHidden: AppState.preferences.dashboardHidden, // Fresh Read
-                    userCategories: AppState.preferences.userCategories || []
+                    userCategories: AppState.preferences.userCategories || [],
+                    gradientStrength: AppState.preferences.gradientStrength, // Fresh Read (USER REQUEST)
+                    containerBorders: AppState.preferences.containerBorders // Fresh Read (USER REQUEST)
                 };
 
                 if (freshPrefs.userCategories) {
@@ -1793,6 +1796,13 @@ export class AppController {
                 }
             });
         }
+
+        // --- STYLING PERSISTENCE (USER REQUEST) ---
+        // Listens for border or intensity changes to trigger immediate UI re-render
+        document.addEventListener(EVENTS.REFRESH_WATCHLIST, () => {
+            console.log('[AppController] Refreshing UI for styling updates...');
+            this.updateDataAndRender(false); // Render current state without fetching
+        });
     }
 
     /**
@@ -2003,12 +2013,8 @@ export class AppController {
         // Deprecated: btn-security-settings (Moved to General Settings)
         // Kept comments for reference or removal if cleaner.
 
-        document.getElementById(IDS.BTN_OPEN_CALCULATOR)?.addEventListener('click', () => {
-            if (this.headerLayout) this.headerLayout.closeSidebar();
-            setTimeout(() => {
-                this.calculatorUI.open();
-            }, 150);
-        });
+        // Calculator UI now handled via HeaderLayout callbacks for integrated sidebar UX
+
 
 
 

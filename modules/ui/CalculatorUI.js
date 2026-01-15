@@ -20,13 +20,7 @@ export default class CalculatorUI {
 
     init() {
         // Note: Sidebar Button binding moved to AppController.js for centralized transition delay control.
-
-        // Bind Modal Tabs
-        const tabDiv = document.getElementById(IDS.CALC_TAB_DIVIDEND);
-        const tabSimple = document.getElementById(IDS.CALC_TAB_SIMPLE);
-
-        if (tabDiv) tabDiv.addEventListener('click', () => this.switchTab('dividend'));
-        if (tabSimple) tabSimple.addEventListener('click', () => this.switchTab('simple'));
+        // Tabs removed per USER REQUEST to centralize navigation in sidebar.
 
         // Bind Modal Close
         const modal = document.getElementById(IDS.CALCULATOR_MODAL);
@@ -98,13 +92,6 @@ export default class CalculatorUI {
 
     switchTab(mode) {
         this.currentMode = mode;
-
-        // Update Tabs
-        document.querySelectorAll(`#${IDS.CALC_TAB_DIVIDEND}, #${IDS.CALC_TAB_SIMPLE}`).forEach(btn => {
-            btn.classList.remove(CSS_CLASSES.ACTIVE);
-        });
-        const activeTab = document.getElementById(mode === 'dividend' ? IDS.CALC_TAB_DIVIDEND : IDS.CALC_TAB_SIMPLE);
-        if (activeTab) activeTab.classList.add(CSS_CLASSES.ACTIVE);
 
         // Update Content
         const divContent = document.getElementById(IDS.CALC_CONTENT_DIVIDEND);

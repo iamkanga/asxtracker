@@ -9,6 +9,7 @@ import { ToastManager } from './ToastManager.js';
 // Custom Event Names removed (Registry Rule)
 import { EVENTS, UI_ICONS, IDS, WATCHLIST_NAMES, ALL_SHARES_ID, PORTFOLIO_ID, CASH_WATCHLIST_ID, DASHBOARD_WATCHLIST_ID, STORAGE_KEYS } from '../utils/AppConstants.js';
 import { navManager } from '../utils/NavigationManager.js';
+import { GeneralSettingsUI } from './GeneralSettingsUI.js';
 
 export class HeaderLayout {
     /**
@@ -271,6 +272,7 @@ export class HeaderLayout {
         this._bindWatchlistTitle(); // Constitutional Bind
         this._bindDisplaySettings(); // Relocated from GeneralSettings
         this._bindMarketIntel(); // New Market Intel Dropdown
+        this._bindCalculators(); // New Calculators Dropdown
     }
 
     _bindSidebarSearch() {
@@ -589,6 +591,15 @@ export class HeaderLayout {
             this.sidebarOverlay.classList.add(CSS_CLASSES.HIDDEN); // Legacy cleanup
             this.sidebarOverlay.classList.remove(CSS_CLASSES.ACTIVE); // Explicit State
 
+            // AUTO-COLLAPSE: Close all accordions when sidebar closes (USER REQUEST)
+            this.sidebar.querySelectorAll('.sidebar-accordion-content').forEach(container => {
+                container.classList.add('collapsed');
+                container.classList.remove('expanded');
+            });
+            this.sidebar.querySelectorAll('.sidebar-accordion-btn').forEach(btn => {
+                btn.setAttribute('aria-expanded', 'false');
+            });
+
             // If we closed it manually, we need to pop from history
             if (this._navActive) {
                 this._navActive = false;
@@ -795,7 +806,24 @@ export class HeaderLayout {
         const listContainer = document.querySelector('#sidebar-coloring-container .sidebar-vertical-list');
         if (!listContainer) return;
 
-        listContainer.querySelectorAll('.sidebar-list-item').forEach(item => {
+        // 1. Border Settings Trigger
+        const borderBtn = document.getElementById('sidebar-border-settings-btn');
+        if (borderBtn) {
+            borderBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                // Close sidebar first (USER REQUEST)
+                this._toggleSidebar(false);
+
+                // standard 150ms delay for history stabilization
+                setTimeout(() => {
+                    GeneralSettingsUI._renderBorderSelector();
+                }, 150);
+            });
+        }
+
+        // 2. Tone Intensity Handlers
+        listContainer.querySelectorAll('.sidebar-list-item[data-value]').forEach(item => {
             item.addEventListener('click', (e) => {
                 e.preventDefault();
                 e.stopPropagation(); // Prevent Sidebar Close
@@ -818,20 +846,138 @@ export class HeaderLayout {
                 if (AppState.triggerSync) AppState.triggerSync();
             });
         });
+
+        // 3. Innovative Style Presets
+        listContainer.querySelectorAll('.sidebar-preset-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+
+                const preset = item.dataset.preset;
+                this._applyStylePreset(preset);
+
+                // Update UI state
+                listContainer.querySelectorAll('.sidebar-list-item').forEach(p => p.classList.toggle('active', p === item));
+
+                ToastManager.success(`Style: ${preset.charAt(0).toUpperCase() + preset.slice(1)} applied.`);
+            });
+        });
+    }
+
+    _applyStylePreset(preset) {
+        let gradientStrength = 0.25;
+        let borderPrefs = { sides: [0, 0, 0, 0], thickness: 1 };
+
+        switch (preset) {
+            case 'minimal':
+                gradientStrength = 0.0;
+                borderPrefs = { sides: [0, 0, 0, 1], thickness: 3 }; // Left border only, 3px
+                break;
+            case 'classic':
+                gradientStrength = 0.25;
+                borderPrefs = { sides: [0, 0, 0, 1], thickness: 3 }; // Left border only, 3px
+                break;
+            case 'rich':
+                gradientStrength = 0.85;
+                borderPrefs = { sides: [1, 1, 1, 1], thickness: 2 }; // All borders, slightly thicker
+                break;
+        }
+
+        // Apply immediately
+        document.documentElement.style.setProperty('--gradient-strength', gradientStrength);
+
+        // Persist and Refresh
+        AppState.preferences.gradientStrength = gradientStrength;
+        localStorage.setItem(STORAGE_KEYS.GRADIENT_STRENGTH, gradientStrength);
+
+        AppState.saveBorderPreferences(borderPrefs);
+
+        // Notify app to re-render rows with new borders
+        document.dispatchEvent(new CustomEvent(EVENTS.REFRESH_WATCHLIST));
+    }
+
+    /**
+     * TOGGLE: Calculators Sidebar Dropdown
+     */
+    _bindCalculators() {
+        const toggleBtn = document.getElementById('btn-calculators-toggle');
+        const container = document.getElementById('calculators-container');
+
+        if (toggleBtn && container) {
+            toggleBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation(); // Prevent Sidebar Close
+                const isExpanded = container.classList.toggle('expanded');
+                toggleBtn.setAttribute('aria-expanded', isExpanded);
+            });
+        }
+
+        // Sub-item: Standard Calculator
+        const simpleBtn = document.getElementById('sidebar-calc-simple-btn');
+        if (simpleBtn) {
+            simpleBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.closeSidebar();
+                if (this.callbacks.onOpenCalculator) {
+                    setTimeout(() => this.callbacks.onOpenCalculator('simple'), 150);
+                }
+            });
+        }
+
+        // Sub-item: Dividend Calculator
+        const dividendBtn = document.getElementById('sidebar-calc-dividend-btn');
+        if (dividendBtn) {
+            dividendBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.closeSidebar();
+                if (this.callbacks.onOpenCalculator) {
+                    setTimeout(() => this.callbacks.onOpenCalculator('dividend'), 150);
+                }
+            });
+        }
     }
 
     _updateSidebarSettingsUI() {
-        const val = AppState.preferences.gradientStrength || 0.6;
+        const val = AppState.preferences.gradientStrength || 0.25;
+        const borders = AppState.preferences.containerBorders || { sides: [0, 0, 0, 0], thickness: 1 };
+
         // FIXED SELECTOR: Limit to #sidebar-coloring-container
         const listContainer = document.querySelector('#sidebar-coloring-container .sidebar-vertical-list');
         if (!listContainer) return;
 
+        // Determine if a preset is active
+        let activePreset = null;
+        const sidesSum = (borders.sides || []).reduce((a, b) => a + b, 0);
+
+        if (Math.abs(val - 0.0) < 0.01 && sidesSum === 1 && borders.sides[3] === 1 && borders.thickness === 3) {
+            activePreset = 'minimal';
+        } else if (Math.abs(val - 0.25) < 0.01 && sidesSum === 1 && borders.sides[3] === 1 && borders.thickness === 3) {
+            activePreset = 'classic';
+        } else if (Math.abs(val - 0.85) < 0.01 && sidesSum === 4 && borders.thickness === 2) {
+            activePreset = 'rich';
+        }
+
         // Update Active Item
         listContainer.querySelectorAll('.sidebar-list-item').forEach(item => {
-            const pVal = parseFloat(item.dataset.value);
-            // Use approximate equality for floats
-            item.classList.toggle('active', Math.abs(pVal - val) < 0.01);
+            if (item.dataset.value !== undefined) {
+                const pVal = parseFloat(item.dataset.value);
+                item.classList.toggle('active', Math.abs(pVal - val) < 0.01);
+            } else if (item.dataset.preset !== undefined) {
+                item.classList.toggle('active', item.dataset.preset === activePreset);
+            }
         });
+
+        // Update Button Label (Innovation)
+        const labelEl = document.getElementById('active-visual-style-label');
+        if (labelEl) {
+            if (activePreset) {
+                labelEl.textContent = activePreset.charAt(0).toUpperCase() + activePreset.slice(1);
+                labelEl.style.color = 'var(--color-accent)';
+            } else {
+                labelEl.textContent = HeaderLayout._getStrengthLabel(val);
+                labelEl.style.color = '';
+            }
+        }
     }
 
     static _getStrengthLabel(val) {
