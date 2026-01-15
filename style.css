@@ -2654,6 +2654,10 @@ h1#dynamicWatchlistTitle.active {
     /* Remove full border */
     border: none;
     border-left: none !important;
+    overflow: visible !important;
+    /* Allow marker to float */
+    z-index: 100;
+    /* Ensure card is above background layers */
     /* Removed Left Trend Indicator */
     /* Default neutral */
     border-radius: 4px;
@@ -9116,16 +9120,26 @@ body.dark-theme .calc-result-card {
 
 
 /* --- Watchlist Picker Refactor (Unified Edit Mode) --- */
+/* STRATEGY: EXPLICIT HEIGHT (Scrollable Box) */
+
+#watchlistPickerModal .modal-content {
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    /* Lock Parent */
+    max-height: 90vh !important;
+    height: auto !important;
+}
 
 .watchlist-picker-list {
-    flex: 1;
-    overflow-y: auto;
+    display: block !important;
+    height: 60vh !important;
+    /* Forces a specific scrollable window */
+    overflow-y: auto !important;
+    /* Forces scrollbar inside this box */
     -webkit-overflow-scrolling: touch;
-    /* Valid Mobile Scroll */
-    max-height: 60vh;
-    /* Safety Cap */
-    min-height: 100px;
-    padding-bottom: 20px;
+    touch-action: pan-y !important;
+    padding-bottom: 50px;
 }
 
 

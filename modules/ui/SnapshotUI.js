@@ -351,9 +351,9 @@ export class SnapshotUI {
 
             sparklineHtml = `
                 <div style="font-size: 0.75rem; color: var(--text-muted); margin-right: 6px;">${low.toFixed(2)}</div>
-                <div class="${CSS_CLASSES.DASHBOARD_SPARK_CONTAINER}" style="margin: 0; width: 60px; min-width: 60px;">
-                    <div class="${CSS_CLASSES.SPARK_RAIL}" style="height: 3px; background-color: var(--border-color); position: relative; width: 100%;">
-                        <div class="${CSS_CLASSES.SPARK_MARKER}" style="position: absolute; left: ${rangePercent}%; top: 50%; transform: translate(-50%, -50%); width: 6px; height: 6px; background-color: ${colorClass === CSS_CLASSES.SNAPSHOT_POSITIVE ? 'var(--color-positive)' : (colorClass === CSS_CLASSES.SNAPSHOT_NEGATIVE ? 'var(--color-negative)' : 'var(--color-accent)')}; border-radius: 50%;"></div>
+                <div class="${CSS_CLASSES.DASHBOARD_SPARK_CONTAINER}" style="margin: 0; width: 60px; min-width: 60px; overflow: visible !important;">
+                    <div class="${CSS_CLASSES.SPARK_RAIL}" style="height: 3px; background-color: transparent; position: relative; width: 100%; overflow: visible !important; pointer-events: none;">
+                        <div class="${CSS_CLASSES.SPARK_MARKER}" style="position: absolute; left: ${rangePercent}%; top: 50%; transform: translate(-50%, -50%); width: 8px; height: 8px; background-color: #a49393 !important; border-radius: 50%; z-index: 20000; box-shadow: 0 0 0 1px #fff, 0 2px 4px rgba(0,0,0,0.3);"></div>
                     </div>
                 </div>
                 <div style="font-size: 0.75rem; color: var(--text-muted); margin-left: 6px;">${high.toFixed(2)}</div>

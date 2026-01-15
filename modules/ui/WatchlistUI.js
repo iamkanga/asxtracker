@@ -431,8 +431,57 @@ export class WatchlistUI {
     renderWatchlistDropdown() {
         const listContainer = document.getElementById(IDS.WATCHLIST_PICKER_LIST);
         const modal = document.getElementById(IDS.WATCHLIST_PICKER_MODAL);
-        if (!listContainer || !modal) return;
         listContainer.innerHTML = '';
+
+        // [MOBILE FIX] GLOBAL GOD-MODE SHIM
+        // We attach to the DOCUMENT to bypass any and all local event blocking.
+        // This is the "Nuclear Option" for event handling.
+
+        // 1. Ensure we don't duplicate the global listener
+        if (!window._watchlistShimActive) {
+            let globalStartY = 0;
+            let globalStartTop = 0;
+            let activeList = null;
+
+            // Capture Touch Start globally
+            document.addEventListener('touchstart', (e) => {
+                // Check if we are touching the watchlist list
+                const list = e.target.closest(`#${IDS.WATCHLIST_PICKER_LIST}`);
+
+                if (list) {
+                    activeList = list;
+                    globalStartY = e.touches[0].clientY;
+                    globalStartTop = list.scrollTop;
+
+                    // Force styles just in case
+                    list.style.touchAction = 'none';
+                    list.style.overflowY = 'hidden'; // Disable native scroll conflict
+                } else {
+                    activeList = null;
+                }
+            }, { passive: false });
+
+            // Capture Touch Move globally
+            document.addEventListener('touchmove', (e) => {
+                const dbg = document.querySelector('#watchlistModalTitle span');
+                if (!activeList) return;
+
+                const dy = e.touches[0].clientY - globalStartY;
+
+                if (activeList.scrollHeight > activeList.clientHeight) {
+                    if (dbg) dbg.style.color = 'lime'; // Global Scroll Executing
+                    e.stopPropagation();
+                    if (e.cancelable) e.preventDefault();
+                    activeList.scrollTop = globalStartTop - dy;
+                } else {
+                    if (dbg) dbg.style.color = 'orange'; // Layout Error
+                }
+            }, { passive: false }); // Must be passive: false to preventDefault
+
+            window._watchlistShimActive = true;
+        }
+
+        listContainer._hasTouchShim = true; // Mark local as handled
 
         // 1. Handle Chevron & Headers
         const chevron = modal.querySelector('.modal-title-chevron');
@@ -534,9 +583,14 @@ export class WatchlistUI {
 
             // Base class
             div.className = CSS_CLASSES.WATCHLIST_ITEM;
-            div.style.touchAction = 'none'; // CRITICAL for Windows Hybrid
-            div.dataset.id = it.id; // CRITICAL for Reordering Persistence
-            if (this.isEditMode) div.classList.add(CSS_CLASSES.EDIT_MODE);
+            // div.style.touchAction = 'none'; // Deleted
+            div.dataset.id = it.id;
+            if (this.isEditMode) {
+                div.classList.add(CSS_CLASSES.EDIT_MODE);
+                div.draggable = true;
+            } else {
+                div.draggable = false; // Explicitly disable dragging
+            }
             if (isActive && !this.isEditMode) div.classList.add(CSS_CLASSES.SELECTED);
 
             // Inner Content

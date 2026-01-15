@@ -540,6 +540,8 @@ export const CSS_CLASSES = {
     VIEW_TABLE: 'view-table',
     VIEW_COMPACT: 'view-compact',
     VIEW_SNAPSHOT: 'view-snapshot',
+    SNAPSHOT_POSITIVE: 'snapshot-positive',
+    SNAPSHOT_NEGATIVE: 'snapshot-negative',
 
     // Layout Component Classes
     HAMBURGER_BTN: 'hamburger-btn',
