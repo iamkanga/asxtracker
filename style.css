@@ -9117,6 +9117,18 @@ body.dark-theme .calc-result-card {
 
 /* --- Watchlist Picker Refactor (Unified Edit Mode) --- */
 
+.watchlist-picker-list {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    /* Valid Mobile Scroll */
+    max-height: 60vh;
+    /* Safety Cap */
+    min-height: 100px;
+    padding-bottom: 20px;
+}
+
+
 .watchlist-edit-headers {
     display: flex;
     justify-content: space-between;
