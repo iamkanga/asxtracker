@@ -7054,46 +7054,6 @@ body.dark-theme .share-card.trend-down {
     }
 }
 
-/* --- DEBUG AUTH INDICATOR (BOTTOM RIGHT) --- */
-#debug-auth-status {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    background: rgba(0, 0, 0, 0.9);
-    border: 1px solid #333;
-    padding: 8px 12px;
-    border-radius: 8px;
-    color: #888;
-    font-family: monospace;
-    font-size: 12px;
-    z-index: 9999;
-    pointer-events: none;
-    /* Let clicks pass through */
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-}
-
-#debug-auth-status strong {
-    color: #fff;
-    font-weight: bold;
-}
-
-#debug-auth-status.status-ok {
-    border-color: #00e676;
-    color: #00e676;
-}
-
-#debug-auth-status.status-warn {
-    border-color: #ffea00;
-    color: #ffea00;
-}
-
-#debug-auth-status.status-err {
-    border-color: #ff1744;
-    color: #ff1744;
-}
 
 /* -------------------------------------------------------------------------- */
 /*                                7. MEDIA QUERIES                            */
