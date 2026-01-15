@@ -444,20 +444,31 @@ export class UserStore {
      * @param {number} price 
      * @param {string} timestamp 
      */
-    async addStock(userId, watchlistId, symbol, price, timestamp) {
+    async addStock(userId, watchlistId, symbol, price, timestamp, explicitDocId = null) {
         if (!userId || !watchlistId || !symbol) return;
 
         // FIX: Check for existing share first to prevent duplicates (Link Mode)
         const shares = AppState.data.shares || [];
-        const existing = shares.find(s => s.shareName === symbol);
 
-        if (existing) {
-            console.log(`[UserStore] Linking existing share ${symbol} (${existing.id}) to ${watchlistId}`);
-            const ref = doc(db, `artifacts/${APP_ID}/users/${userId}/shares`, existing.id);
+        let existingId = explicitDocId;
+        let existing = null;
+
+        if (existingId) {
+            console.log(`[UserStore] Using explicit ID for linking: ${existingId}`);
+            // Verify it exists in memory for legacy check (optional but good for consistency)
+            existing = shares.find(s => s.id === existingId);
+        } else {
+            existing = shares.find(s => s.shareName === symbol);
+            if (existing) existingId = existing.id;
+        }
+
+        if (existingId) {
+            console.log(`[UserStore] Linking existing share ${symbol} (${existingId}) to ${watchlistId}`);
+            const ref = doc(db, `artifacts/${APP_ID}/users/${userId}/shares`, existingId);
 
             // Migration: Ensure the legacy singular 'watchlistId' is included in the new array
             const idsToUnion = [watchlistId];
-            if (existing.watchlistId) idsToUnion.push(existing.watchlistId);
+            if (existing && existing.watchlistId) idsToUnion.push(existing.watchlistId);
 
             try {
                 await updateDoc(ref, {

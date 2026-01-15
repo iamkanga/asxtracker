@@ -73,13 +73,19 @@ export class ModalController {
         let initialData = null;
         let stockCode = null;
 
-        if (typeof input === 'string') {
+        // Determine Mode based on Input Type
+        // String or Number (ID) -> Edit Mode
+        // Object -> Pre-Fill Mode
+        if (input && (typeof input === 'string' || typeof input === 'number')) {
             // EDIT MODE (shareId)
-            console.log('[ModalController] Opening in Edit Mode. ID:', input);
-            const targetShare = AppState.data.shares.find(s => s.id === input);
+            const inputId = String(input);
+            console.log('[ModalController] Opening in Edit Mode. ID:', inputId);
+
+            // Loose lookup to handle String/Number mismatch in data
+            const targetShare = AppState.data.shares.find(s => String(s.id) === inputId);
 
             if (!targetShare) {
-                console.error('[ModalController] Share NOT found for ID:', input);
+                console.error('[ModalController] Share NOT found for ID:', inputId);
                 console.log('[ModalController] Available IDs:', AppState.data.shares.slice(0, 5).map(s => s.id));
                 ToastManager.error(USER_MESSAGES.SHARE_NOT_FOUND);
                 return;
@@ -95,11 +101,11 @@ export class ModalController {
             // 1. Find explicit share documents (Legacy & Mixed Schema)
             AppState.data.shares.filter(s => (s.shareName || '').toUpperCase() === (stockCode || '').toUpperCase()).forEach(s => {
                 const wId = s.watchlistId || 'portfolio';
-                existingMemberships.set(wId, s.id);
+                existingMemberships.set(String(wId), s.id);
 
                 // FIX: Check Array memberships too
                 if (Array.isArray(s.watchlistIds)) {
-                    s.watchlistIds.forEach(id => existingMemberships.set(id, s.id));
+                    s.watchlistIds.forEach(id => existingMemberships.set(String(id), s.id));
                 }
             });
 
@@ -107,17 +113,51 @@ export class ModalController {
             (AppState.data.watchlists || []).forEach(wl => {
                 if (wl.stocks && Array.isArray(wl.stocks)) {
                     if (wl.stocks.some(code => code.toUpperCase() === stockCode.toUpperCase())) {
-                        if (!existingMemberships.has(wl.id)) {
+                        if (!existingMemberships.has(String(wl.id))) {
                             // Mark as present (id null means no specific share doc found for this watchlist yet)
-                            existingMemberships.set(wl.id, null);
+                            existingMemberships.set(String(wl.id), null);
                         }
                     }
                 }
             });
         } else if (typeof input === 'object' && input !== null) {
-            // PRE-FILL MODE (New Share)
+            // PRE-FILL MODE (New Share or Recovery)
             initialData = input;
-            stockCode = input.shareName;
+            stockCode = input.shareName || input.code; // Robustness
+
+            // FIX: Scan for existing memberships (Ghost Shares) even in Pre-fill Mode
+            // This ensures that if we are recovering a share that lost its ID (Ghost),
+            // or adding a share that is already in a watchlist array, the boxes are checked.
+            if (stockCode) {
+                // console.log('[ModalController] Pre-fill Scan for Ghost Memberships:', stockCode);
+
+                // 1. Find explicit share documents (Legacy & Mixed Schema)
+                const matchingShares = AppState.data.shares.filter(s => (s.shareName || '').toUpperCase() === stockCode.toUpperCase());
+                console.log('[ModalController] Scan: Matching Shares Found:', matchingShares.length);
+
+                matchingShares.forEach(s => {
+                    const wId = s.watchlistId || 'portfolio';
+                    existingMemberships.set(String(wId), s.id);
+                    if (Array.isArray(s.watchlistIds)) {
+                        s.watchlistIds.forEach(id => existingMemberships.set(String(id), s.id));
+                    }
+                });
+
+                // 2. Find implicit memberships in Watchlist 'stocks' arrays (New Schema)
+                (AppState.data.watchlists || []).forEach(wl => {
+                    if (wl.stocks && Array.isArray(wl.stocks)) {
+                        if (wl.stocks.some(code => code.toUpperCase() === stockCode.toUpperCase())) {
+                            // console.log('[ModalController] Scan: Found in Watchlist (Array):', wl.name, wl.id);
+                            if (!existingMemberships.has(String(wl.id))) {
+                                existingMemberships.set(String(wl.id), null);
+                            }
+                        }
+                    }
+                });
+                console.log('[ModalController] Scan Complete. Active Watchlists:', Array.from(existingMemberships.keys()));
+            } else {
+                console.warn('[ModalController] Pre-fill Scan Skipped: No Stock Code');
+            }
         }
 
         const activeWatchlistIds = Array.from(existingMemberships.keys());
@@ -128,7 +168,6 @@ export class ModalController {
         // 2. Open Modal via View Layer
         ShareFormUI.showShareModal({
             watchlists: watchlistsForUI,
-            activeWatchlistIds: activeWatchlistIds,
             activeWatchlistIds: activeWatchlistIds,
             shareData: initialData,
             initialSection: initialSection,
@@ -182,55 +221,75 @@ export class ModalController {
                         // FIX: Use explicit PORTFOLIO_ID instead of null for visibility
                         const persistenceId = (wid === PORTFOLIO_ID || wid === 'main') ? PORTFOLIO_ID : wid;
 
-                        if (!shareExists) {
-                            // CASE A: FIRST CREATION (Master Record)
-                            // We use the full formData to create the definitive "Shared" document.
-                            const priceData = AppState.livePrices?.get(lookupKey);
-                            const entryPrice = priceData ? (parseFloat(priceData.live) || 0) : 0;
-                            const purchaseDate = new Date().toISOString();
+                        // FLAT LOGIC: Resolve Target ID, then Link. If no ID, Create.
+                        const lookupKey = String(formData.shareName).trim().toUpperCase();
 
-                            const dataToAdd = {
-                                ...formData,
-                                // ENSURE SCHEMA COMPATIBILITY for Multi-Add Scenario
-                                code: lookupKey,
-                                shareName: lookupKey,
-                                watchlistId: persistenceId, // Set primary context
-                                enteredPrice: entryPrice,
-                                purchaseDate: purchaseDate,
-                                entryDate: purchaseDate, // Legacy fallback
-                                watchlistIds: newWatchlists // FIX: Persist membership array
-                            };
-                            delete dataToAdd.watchlists;
+                        // 1. Resolve Target Document ID
+                        // Check inputs + Global State
+                        let targetDocId = formData.id;
 
+                        if (!targetDocId) {
+                            const found = AppState.data.shares.find(s => (s.shareName || '').toUpperCase() === lookupKey);
+                            if (found && found.id) targetDocId = found.id;
+                        }
+
+                        if (targetDocId && targetDocId !== 'OPTIMISTIC_LOCK' && !targetDocId.startsWith('temp_')) {
+                            // PATH A: LINK EXISTING
                             try {
-                                console.log(`[ModalController] Creating Primary Share Record for ${lookupKey} in ${wid}`);
-                                await appService.addBaseShareRecord(dataToAdd);
+                                console.log(`[ModalController] Linking Existing Share ${targetDocId} to ${wid}`);
+                                const resultId = await appService.addStock(lookupKey, persistenceId, null, null, targetDocId);
+
+                                // Ghost Recovery check (if UserStore created a new ID)
+                                if (resultId && resultId !== targetDocId) {
+                                    console.warn(`[ModalController] Ghost ID ${targetDocId} replaced by ${resultId}`);
+                                    targetDocId = resultId; // Update local var for next iteration
+
+                                    // Update AppState
+                                    const inState = AppState.data.shares.find(s => s.id === targetDocId); // old ID might be gone
+                                    if (inState) inState.id = resultId;
+                                }
                                 successCount++;
-
-                                // *** OPTIMISTIC INJECTION ***
-                                // Immediately "Fake" the share in AppState so the NEXT iteration finds it.
-                                // This prevents the loop from creating duplicates.
-                                AppState.data.shares.push({
-                                    shareName: lookupKey,
-                                    id: 'OPTIMISTIC_LOCK', // Temporary ID, sufficient for existence checks
-                                    watchlistId: persistenceId
-                                });
-                                shareExists = true; // Flag as existing for next loop
-
                             } catch (err) {
-                                console.error(`Failed to add to ${wid}:`, err);
+                                console.error(`Failed to link ${wid}:`, err);
                                 errors.push(wid);
                             }
                         } else {
-                            // CASE B: LINKING (Share already exists / Just created)
-                            // We use `addStock` which performs a "Link" (ArrayUnion) to the watchlist
-                            // because it finds the share in AppState (thanks to Injection).
+                            // PATH B: CREATE NEW (Master Record)
                             try {
-                                console.log(`[ModalController] Linking ${lookupKey} to Watchlist ${wid}`);
-                                await appService.addStock(lookupKey, persistenceId); // Uses 'addStock' logic (Link)
+                                console.log(`[ModalController] Creating New Share ${lookupKey} for ${wid}`);
+                                const priceData = AppState.livePrices?.get(lookupKey);
+                                const entryPrice = priceData ? (parseFloat(priceData.live) || 0) : 0;
+                                const purchaseDate = new Date().toISOString();
+
+                                const dataToAdd = {
+                                    ...formData,
+                                    code: lookupKey,
+                                    shareName: lookupKey,
+                                    watchlistId: persistenceId,
+                                    enteredPrice: entryPrice,
+                                    purchaseDate: purchaseDate,
+                                    entryDate: purchaseDate,
+                                    watchlistIds: newWatchlists
+                                };
+                                delete dataToAdd.watchlists;
+
+                                const newId = await appService.addBaseShareRecord(dataToAdd);
+                                targetDocId = newId; // Update for next iteration (So subsequent list items LINK to this new doc)
                                 successCount++;
+
+                                // Optimistic Injection
+                                const shareNowInState = AppState.data.shares.find(s => s.id === newId || (s.shareName || '').toUpperCase() === lookupKey);
+                                if (shareNowInState) {
+                                    if (!shareNowInState.id) shareNowInState.id = newId;
+                                } else {
+                                    AppState.data.shares.push({
+                                        shareName: lookupKey,
+                                        id: newId,
+                                        watchlistId: persistenceId
+                                    });
+                                }
                             } catch (err) {
-                                console.error(`Failed to link to ${wid}:`, err);
+                                console.error(`Failed to create for ${wid}:`, err);
                                 errors.push(wid);
                             }
                         }
@@ -241,8 +300,57 @@ export class ModalController {
                     for (const wid of toUpdate) {
                         const docId = existingMemberships.get(wid);
                         if (!docId) {
-                            // Linked Share (No dedicated document for this watchlist).
-                            // The Master Document (usually in Portfolio) will be updated in its own iteration.
+                            // GHOST RECOVERY IN UPDATE LOOP
+                            // The user "kept" this share in the watchlist, but it has no ID (Ghost).
+                            // We must Resurrect it (Create/Link).
+                            // console.log(`[ModalController] Resurrecting Ghost Share ${formData.shareName} in ${wid}`);
+                            try {
+                                const lookupKey = String(formData.shareName).trim().toUpperCase();
+                                // Reuse the "Link/Create" logic from addStock
+                                const persistenceId = (wid === PORTFOLIO_ID || wid === 'main') ? PORTFOLIO_ID : wid;
+
+                                // We use price from formData if available
+                                const entryPrice = formData.enteredPrice || 0;
+                                const purchaseDate = formData.purchaseDate || new Date().toISOString();
+
+                                const dataToAdd = {
+                                    ...formData,
+                                    code: lookupKey,
+                                    shareName: lookupKey,
+                                    watchlistId: persistenceId,
+                                    enteredPrice: entryPrice,
+                                    purchaseDate: purchaseDate,
+                                    entryDate: purchaseDate,
+                                    watchlistIds: newWatchlists
+                                };
+                                delete dataToAdd.watchlists;
+
+                                const newId = await appService.addBaseShareRecord(dataToAdd);
+                                successCount++;
+
+                                // Update Injection
+                                // Update Injection
+                                // RE-CHECK: Snapshot might have arrived during await
+                                const shareNowInState = AppState.data.shares.find(s => s.id === newId || (s.shareName || '').toUpperCase() === lookupKey);
+
+                                if (shareNowInState) {
+                                    // Snapshot beat us to it, or we found the ghost.
+                                    // Just ensure ID is correct if it was a ghost.
+                                    if (!shareNowInState.id) shareNowInState.id = newId;
+                                    shareExists = true;
+                                } else {
+                                    // Truly missing, safe to inject
+                                    AppState.data.shares.push({
+                                        shareName: lookupKey,
+                                        id: newId,
+                                        watchlistId: persistenceId
+                                    });
+                                    shareExists = true;
+                                }
+                            } catch (err) {
+                                console.error(`Failed to resurrect ghost in ${wid}:`, err);
+                                errors.push(wid);
+                            }
                             continue;
                         }
 
@@ -265,7 +373,8 @@ export class ModalController {
                     const toRemove = previousWatchlists.filter(w => !newWatchlists.includes(w));
                     for (const wid of toRemove) {
                         const docId = existingMemberships.get(wid);
-                        const code = formData.shareName;
+                        // FIX: Use Original Name for removal if renamed
+                        const code = formData.originalShareName || formData.shareName;
 
                         if (!docId) {
                             // CASE A: Removing a LINK (Array Entry)
@@ -317,8 +426,10 @@ export class ModalController {
                         if (this.updateCallback) await this.updateCallback();
                         const code = formData.shareName || 'Share';
 
-                        // Fire Refresh for Details Modal if open
-                        document.dispatchEvent(new CustomEvent(EVENTS.REQUEST_REFRESH_DETAILS, { detail: { code: formData.shareName } }));
+                        // Fire Refresh for Details Modal if open (or just Close it to force reload)
+                        // Simple "Fix Stale UI" strategy: Close the view modal.
+                        const detailsModal = document.getElementById(IDS.STOCK_DETAILS_MODAL);
+                        if (detailsModal) detailsModal.remove();
 
                         ToastManager.success(`${code} saved.`);
                         document.querySelector(`#${IDS.ADD_SHARE_MODAL} .${CSS_CLASSES.MODAL_CLOSE_BTN}`)?.click();

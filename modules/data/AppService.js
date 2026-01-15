@@ -236,7 +236,7 @@ export class AppService {
         if (!user) {
             throw new Error(USER_MESSAGES.AUTH_ERROR_SIGNED_IN);
         }
-        await userStore.addShare(user.uid, shareData);
+        return await userStore.addShare(user.uid, shareData);
     }
 
     /**
@@ -258,7 +258,7 @@ export class AppService {
         await userStore.updateDocument(user.uid, 'shares', shareId, shareData);
     }
 
-    async addStock(symbol, watchlistId, price = null, date = null) {
+    async addStock(symbol, watchlistId, price = null, date = null, explicitDocId = null) {
         const user = AppState.user;
         if (!user) {
             ToastManager.error(USER_MESSAGES.AUTH_REQUIRED_MANAGE);
@@ -269,7 +269,7 @@ export class AppService {
         const resolvedPrice = price !== null ? price : (priceData ? (parseFloat(priceData.live) || 0) : 0);
         const resolvedDate = date !== null ? date : new Date().toISOString();
 
-        await userStore.addStock(user.uid, watchlistId, symbol, resolvedPrice, resolvedDate);
+        return await userStore.addStock(user.uid, watchlistId, symbol, resolvedPrice, resolvedDate, explicitDocId);
     }
 
     /**
@@ -349,9 +349,28 @@ export class AppService {
         // This was causing data loss when deleting a watchlist or removing a duplicate.
         // V3 Fix: Delete ONLY the specific document ID requested.
 
-        await userStore.deleteDocument(user.uid, 'shares', shareId);
+        // 1. Get Share Data to find Code (needed for Watchlist Scrub)
+        let shareCode = null;
+        try {
+            const share = (AppState.data.shares || []).find(s => s.id === shareId);
+            if (share) shareCode = share.shareName || share.code;
+        } catch (e) { console.warn('Could not lookup share code for scrub:', e); }
 
+        // 2. Delete the Document
+        await userStore.deleteDocument(user.uid, 'shares', shareId);
         console.log(`[AppService] Deleted share document: ${shareId}`);
+
+        // 3. SCRUB References (Prevent Zombie Resurrection)
+        // If the share code remains in a watchlist array, "Ghost Recovery" will resurrect it.
+        // We must remove the code from ALL watchlists.
+        if (shareCode) {
+            const watchlists = AppState.data.watchlists || [];
+            console.log(`[AppService] Scrubbing references for ${shareCode}...`);
+            const scrubPromises = watchlists.map(w =>
+                userStore.removeStock(user.uid, w.id, shareCode).catch(e => console.warn(`Scrub failed for ${w.id}:`, e))
+            );
+            await Promise.all(scrubPromises);
+        }
     }
 
     /**

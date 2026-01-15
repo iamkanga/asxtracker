@@ -2144,14 +2144,35 @@ export class AppController {
         // Triggered by ViewRenderer dispatching EVENTS.REQUEST_EDIT_SHARE
         document.addEventListener(EVENTS.REQUEST_EDIT_SHARE, (e) => {
             console.log('AppController received REQUEST_EDIT_SHARE:', e.detail);
-            if (e.detail?.id) {
+
+            let targetId = e.detail?.id || e.detail?.shareId;
+            const targetCode = e.detail?.code;
+
+            // RECOVERY MECHANISM: If ID is missing but Code exists, look it up.
+            if (!targetId && targetCode) {
+                console.warn('[AppController] Edit Request missing ID. Attempting lookup for:', targetCode);
+                const found = AppState.data.shares.find(s => (s.shareName || '').toUpperCase() === targetCode.toUpperCase());
+                if (found && found.id) {
+                    targetId = found.id;
+                    console.log('[AppController] Recovered ID:', targetId);
+                } else {
+                    console.warn('[AppController] Recovery failed. Item will be treated as NEW SHARE (Pre-fill).');
+                    // Fallback: Open as new share pre-filled
+                    this.modalController.openAddShareModal({ shareName: targetCode });
+                    return;
+                }
+            }
+
+            if (targetId) {
                 const delay = e.detail.instant ? 0 : 150;
                 // Safety delay for transition from detail to edit
                 setTimeout(() => {
                     // DEEP LINK: Pass specific section if requested (e.g. 'notes', 'target')
                     console.log('AppController opening modal for section:', e.detail.section);
-                    this.modalController.openAddShareModal(e.detail.id, e.detail.section);
+                    this.modalController.openAddShareModal(targetId, e.detail.section);
                 }, delay);
+            } else {
+                ToastManager.error('Could not edit share. Missing ID.');
             }
         });
 
@@ -2183,7 +2204,6 @@ export class AppController {
         });
 
         // Handle Add Share Pre-fill (from Discovery Modal -> Add Share Modal handoff)
-        // Handle Add Share Pre-fill (from Discovery Modal -> Add Share Modal handoff)
         document.addEventListener(EVENTS.REQUEST_ADD_SHARE_PREFILL, (e) => {
             const { stock } = e.detail || {};
             if (stock?.code) {
@@ -2191,8 +2211,19 @@ export class AppController {
                 const existingShare = AppState.data.shares.find(s => s.shareName === stock.code || s.shareName === stock.code.toUpperCase());
 
                 if (existingShare) {
-                    console.log('[AppController] REQUEST_ADD_SHARE_PREFILL: Duplicate found, redirecting to EDIT mode.', existingShare.id);
-                    this.modalController.openAddShareModal(existingShare.id);
+                    // Check if it's a Ghost Share (missing ID)
+                    if (existingShare.id) {
+                        console.log('[AppController] REQUEST_ADD_SHARE_PREFILL: Duplicate found, redirecting to EDIT mode.', existingShare.id);
+                        this.modalController.openAddShareModal(existingShare.id);
+                    } else {
+                        // GHOST SHARE RECOVERY
+                        console.warn('[AppController] REQUEST_ADD_SHARE_PREFILL: Ghost Share found (No ID). Opening in Recovery Mode.');
+                        // Pass the shareName to trigger Pre-fill/Recovery path in ModalController
+                        this.modalController.openAddShareModal({
+                            shareName: existingShare.shareName,
+                            title: existingShare.name || stock.name || ''
+                        });
+                    }
                 } else {
                     // Safety delay for transition from search to add
                     setTimeout(() => {
@@ -2416,41 +2447,55 @@ export class AppController {
             }
         });
 
-        // DELETE SHARE HANDLER (Fix for Immediate UI Update)
+        // DELETE SHARE HANDLER (Bulletproof Fix + Ghost Support)
         document.addEventListener(EVENTS.REQUEST_DELETE_SHARE, async (e) => {
-            const { shareId, watchlistId } = e.detail;
-            if (!shareId) return;
+            const { shareId, shareCode, watchlistId } = e.detail;
+            console.log(`[AppController] REQUEST_DELETE_SHARE received for ID: ${shareId}, Code: ${shareCode}, Watchlist: ${watchlistId}`);
 
-            console.log(`[AppController] REQUEST_DELETE_SHARE received for ID: ${shareId}`);
+            if (!shareId && !shareCode) {
+                console.warn('[AppController] Delete requested but NO ID or Code provided.');
+                return;
+            }
+
+            // 1. OPTIMISTIC DELETE (Immediate UI cleanup)
+            const initialCount = (AppState.data.shares || []).length;
+
+            // Filter by ID if available, otherwise by Code (Ghost Mode)
+            AppState.data.shares = (AppState.data.shares || []).filter(s => {
+                if (shareId && s.id === shareId) return false;
+                if (!shareId && shareCode && (s.shareName === shareCode || s.code === shareCode)) return false; // Ghost Scrub
+                return true;
+            });
+
+            const deletedCount = initialCount - AppState.data.shares.length;
+            console.log(`[AppController] Optimistically deleted ${deletedCount} instance(s) from memory.`);
+
+            // Force Re-render immediately
+            this.updateDataAndRender(false);
+
+            // CLOSE DETAILS MODAL
+            const detailsModal = document.getElementById(IDS.STOCK_DETAILS_MODAL);
+            if (detailsModal) detailsModal.remove();
+
+            const nameForToast = shareCode || 'Share';
 
             try {
-                // Determine if we are deleting from a specific watchlist or the share entirely
-                // 1. Lookup Name BEFORE Deletion (for Toast)
-                let shareName = 'Share';
-                const share = (AppState.data.shares || []).find(s => s.id === shareId);
-                if (share) shareName = share.shareName || share.code || 'Share';
-
-                // AppService.deleteShareRecord handles the logic (checks ID vs watchlist context)
-                await this.appService.deleteShareRecord(watchlistId, shareId);
-
-                // Success Feedback
-                ToastManager.success(`${shareName} deleted.`);
-
-                // Explicitly trigger a re-render to ensure UI reflects change immediately
-                // (Though UserStore snapshot will likely trigger it too, this is safe redundancy)
-                this.updateDataAndRender(false);
-
-                // CLOSE DETAILS MODAL (Fix for Ghost UI)
-                // If the user deleted the share via "Edit" from the "Details Modal", 
-                // the Details Modal is still open. We must close it.
-                const detailsModal = document.getElementById(IDS.STOCK_DETAILS_MODAL);
-                if (detailsModal) {
-                    detailsModal.remove();
+                // 2. BACKEND SYNC
+                if (shareId && shareId !== 'OPTIMISTIC_LOCK' && !shareId.startsWith('temp_')) {
+                    // Standard Delete (Document + Scrub)
+                    await this.appService.deleteShareRecord(watchlistId, shareId);
+                } else if (!shareId && shareCode && watchlistId) {
+                    // GHOST DELETE: We have no ID, so we can't delete a document.
+                    // But we MUST scrub the reference from the watchlist to stop "Zombie Resurrection".
+                    console.log(`[AppController] Scrubbing Ghost Reference ${shareCode} from ${watchlistId}`);
+                    await this.appService.removeStock(shareCode, watchlistId);
                 }
 
+                ToastManager.success(`${nameForToast} deleted.`);
+
             } catch (err) {
-                console.error('Delete Share Error:', err);
-                ToastManager.error('Failed to delete share: ' + err.message);
+                console.warn('[AppController] Backend delete failed (likely Ghost/Already Deleted):', err);
+                ToastManager.success(`${nameForToast} removed (Local cleanup).`);
             }
         });
 

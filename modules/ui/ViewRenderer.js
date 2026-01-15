@@ -304,9 +304,11 @@ export class ViewRenderer {
                 starsHtml = `<div class="${CSS_CLASSES.STAR_RATING} ${CSS_CLASSES.JUSTIFY_CENTER}" title="Rating: ${rating}/5">${starsHtml}</div>`;
             }
 
+
             // Notes Logic
             const hasNotes = item.comments && item.comments.length > 0;
-            const notesHtml = hasNotes ? `<i class="fas ${UI_ICONS.CHECK}" style="color: var(--color-accent);"></i>` : '';
+            // User Request: Change Tick to Chat Symbol
+            const notesHtml = hasNotes ? `<i class="fas ${UI_ICONS.COMMENTS}" style="color: var(--color-accent); font-size: 0.9rem;" title="${item.comments.length} Note(s)"></i>` : '';
 
             extraCells = `
                 <td>${targetHtml}</td>
@@ -1004,6 +1006,7 @@ export class ViewRenderer {
                     const event = new CustomEvent(EVENTS.REQUEST_DELETE_SHARE, {
                         detail: {
                             shareId: stock.id,
+                            shareCode: stock.code || stock.shareName,
                             watchlistId: stock.watchlistId || 'portfolio'
                         }
                     });
@@ -1021,6 +1024,13 @@ export class ViewRenderer {
         const editBtn = modal.querySelector(`#${IDS.BTN_EDIT_SHARE}`);
         if (editBtn) {
             editBtn.addEventListener('click', () => {
+                console.log('[ViewRenderer] Edit Pencil Clicked for:', stock.code, stock.id);
+
+                if (!stock.id) {
+                    // console.warn('[ViewRenderer] Stock ID is missing on Edit Click. Attempting recovery via Code:', stock.code);
+                    // Do NOT return. Let AppController attempt to find it or treat as Add.
+                }
+
                 // REMOVED close() to allow stacking and "Step Back" support.
                 // Details modal stays open, Edit modal pushes on top.
 

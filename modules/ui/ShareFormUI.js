@@ -23,9 +23,19 @@ export class ShareFormUI {
     static showShareModal({ watchlists, activeWatchlistId, activeWatchlistIds = [], onSave, onDelete, shareData = null, onLookupPrice, initialSection = null }) {
         // Standardize input: activeWatchlistIds should be an array
         // FORCE WATCHLIST SELECTION (Directive: 1. No default watchlist for ADD)
-        // If we are in ADD mode (no shareData.id), we force empty selection.
+        // If we are in ADD mode (no shareData.id), we normally force empty.
+        // BUT: If activeWatchlistIds is explicitly provided (e.g. Ghost Share Recovery or Pre-fill), respect it.
         const isAddMode = !shareData || !shareData.id;
-        const currentMemberships = isAddMode ? [] : (Array.isArray(activeWatchlistIds) ? activeWatchlistIds : (activeWatchlistId ? [activeWatchlistId] : []));
+
+        let currentMemberships = [];
+        if (Array.isArray(activeWatchlistIds) && activeWatchlistIds.length > 0) {
+            currentMemberships = activeWatchlistIds;
+            console.log('[ShareFormUI] Using Explicit Watchlist IDs:', currentMemberships);
+        } else if (activeWatchlistId) {
+            currentMemberships = [activeWatchlistId];
+        } else if (isAddMode) {
+            currentMemberships = []; // Explicitly clear for fresh Add
+        }
 
         // 1. Generate HTML
         const modal = this._renderCleanAddShareModal(watchlists, currentMemberships, shareData);
@@ -64,7 +74,13 @@ export class ShareFormUI {
             const originalIcon = saveBtn.innerHTML;
             saveBtn.innerHTML = `<i class="fas ${UI_ICONS.SPINNER}"></i>`;
 
-            onSave(data).catch(() => {
+            onSave(data).then(() => {
+                // Success usually closes modal, but if not (partial success), we must stop spinner.
+                if (modal && document.body.contains(modal)) {
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = originalIcon;
+                }
+            }).catch(() => {
                 saveBtn.disabled = false;
                 saveBtn.innerHTML = originalIcon;
             });
@@ -432,16 +448,49 @@ export class ShareFormUI {
         const existingModal = document.getElementById(IDS.ADD_SHARE_MODAL);
         if (existingModal) existingModal.remove();
 
-        const currentMemberships = Array.isArray(activeWatchlistIds) ? activeWatchlistIds : [activeWatchlistIds];
+        // HARDENING 1: Ensure all IDs are strings
+        const rawMemberships = Array.isArray(activeWatchlistIds) ? activeWatchlistIds : [activeWatchlistIds];
+        const stringMemberships = rawMemberships.map(id => String(id));
+
+        // HARDENING 2: Filter Ghost IDs (IDs that are not in the valid watchlists map)
+        // This prevents "2 Selected" label when only 1 checkbox is visible
+        const validWatchlistIds = new Set(Object.values(watchlists).map(w => String(w.id)));
+        const currentMemberships = stringMemberships.filter(id => validWatchlistIds.has(id));
+
+        console.log('[ShareFormUI] Rendering Modal', {
+            raw: rawMemberships,
+            normalized: stringMemberships,
+            filtered: currentMemberships,
+            validIds: Array.from(validWatchlistIds)
+        });
 
         const modal = document.createElement('div');
         modal.id = IDS.ADD_SHARE_MODAL;
         modal.className = `${CSS_CLASSES.MODAL} ${CSS_CLASSES.HIDDEN}`;
 
+        // Determine Title: If we have shareData and are recovering (implied by content), call it "Edit Share"
+        // Logic: Add Mode usually implies no shareData.id. 
+        // But Ghost Shares also have no ID.
+        // So if shareData.shareName (or code) exists, we treat it as "Edit Share" for the title.
+        let modalTitle = 'Add Share';
+        const hasCode = shareData && (shareData.shareName || shareData.code);
+        const hasId = shareData && shareData.id;
+
+        if (hasId) {
+            modalTitle = 'Edit Share';
+        } else if (hasCode && currentMemberships.length > 0) {
+            // "Ghost Share Recovery" - treating as edit
+            modalTitle = 'Edit Share';
+        }
+
         // Watchlist Rows
         const watchlistRows = Object.values(watchlists).map(wl => {
             if (wl.id === 'cash_assets_id' || wl.id === 'all_shares_id') return '';
-            const isChecked = currentMemberships.includes(wl.id);
+
+            // STRICT STRING COMPARISON
+            const wIdStr = String(wl.id);
+            const isChecked = currentMemberships.includes(wIdStr);
+
             const rowClass = isChecked ? `${CSS_CLASSES.WATCHLIST_ROW} ${CSS_CLASSES.SELECTED}` : CSS_CLASSES.WATCHLIST_ROW;
             const checkState = isChecked ? 'checked' : '';
             return `
@@ -454,13 +503,15 @@ export class ShareFormUI {
         }).join('');
 
         const primaryId = currentMemberships[0];
-        const activeName = Object.values(watchlists).find(w => w.id === primaryId)?.name || 'Select Watchlists...';
+        // Use filtered specific ID to look up name
+        const activeName = Object.values(watchlists).find(w => String(w.id) === primaryId)?.name || 'Select Watchlists...';
         const initialLabel = currentMemberships.length > 0 ? (currentMemberships.length === 1 ? activeName : `${currentMemberships.length} Selected`) : 'Select Watchlists...';
 
         // Check if this is an EDIT (existing record) or ADD (new record, possibly pre-filled)
         const isEdit = shareData && shareData.id;
 
-        const headerTitleText = isEdit ? 'Edit Share' : 'Add Share';
+        // Use modalTitle derived earlier (covers Ghost Share Recovery case)
+        const headerTitleText = modalTitle || (isEdit ? 'Edit Share' : 'Add Share');
 
         // Note: Pre-filling values would happen here if shareData is provided. 
         // For brevity/focus on refactor, I will assume empty state or simple pre-fill logic if needed.
@@ -478,6 +529,8 @@ export class ShareFormUI {
         modal.innerHTML = `
             <div class="${CSS_CLASSES.MODAL_OVERLAY}"></div>
             <div class="${CSS_CLASSES.MODAL_CONTENT} modal-content-medium scrollable-modal" style="height: 85vh; max-height: 85vh; display: flex; flex-direction: column;">
+                <input type="hidden" id="shareId" value="${shareData?.id || ''}">
+                <input type="hidden" id="originalShareName" value="${shareData?.shareName || ''}">
                 
                 <!-- HEADER (FIXED) -->
                 <div class="${CSS_CLASSES.MODAL_HEADER}">
@@ -1033,9 +1086,16 @@ export class ShareFormUI {
             }
         });
 
+        // DEBUG: Trace ID Extraction
+        const rawId = getVal('shareId');
+        const dataId = currentData?.id;
+        const resolvedId = rawId || dataId || null;
+        console.log(`[ShareFormUI] Extracting Share Data. InputID="${rawId}", DataID="${dataId}" -> ResolvedID="${resolvedId}"`);
+
         return {
-            id: currentData?.id || null, // CRITICAL: Preserve ID for Updates vs Creates
+            id: resolvedId, // CRITICAL: Preserve ID for Updates vs Creates
             shareName: code,
+            originalShareName: getVal('originalShareName') || currentData?.shareName || null,
             targetPrice: getNum(IDS.TARGET_PRICE),
             targetDirection: getVal(IDS.TARGET_DIRECTION_INPUT) || 'below',
             buySell: getVal(IDS.BUY_SELL_INPUT) || 'buy',
