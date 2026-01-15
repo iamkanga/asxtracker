@@ -150,7 +150,7 @@ export class CashViewRenderer {
 
         // Apply Styles
         // Dynamic "Hue on Black" Background Effect
-        const borderStyle = this._getBorderStyles();
+        const borderStyle = this._getBorderStyles(colorVal);
         card.setAttribute('style', `${borderStyle} background: linear-gradient(135deg, color-mix(in srgb, ${colorVal} 60%, black), color-mix(in srgb, ${colorVal} 5%, black)) !important;`);
 
         // Handle Ghosting
@@ -235,21 +235,23 @@ export class CashViewRenderer {
 
     /**
      * Internal helper to calculate border style string based on prefs.
-     * Cash items always use var(--color-accent) (Coffee).
+     * Uses the provided asset color instead of a hardcoded default.
+     * @param {String} color - The effective color of the asset/card.
      */
-    _getBorderStyles() {
+    _getBorderStyles(color) {
         const prefs = AppState.preferences.containerBorders;
         if (!prefs || !prefs.sides || prefs.sides.every(s => s === 0)) return '';
 
-        let color = 'var(--color-accent)';
+        // Fallback if no color provided, though createCashCard should always provide one.
+        const borderCol = color || 'var(--color-accent)';
         const t = `${prefs.thickness}px`;
         const s = prefs.sides;
 
         let shadows = [];
-        if (s[0]) shadows.push(`inset 0 ${t} 0 0 ${color}`); // Top
-        if (s[1]) shadows.push(`inset -${t} 0 0 0 ${color}`); // Right
-        if (s[2]) shadows.push(`inset 0 -${t} 0 0 ${color}`); // Bottom
-        if (s[3]) shadows.push(`inset ${t} 0 0 0 ${color}`); // Left
+        if (s[0]) shadows.push(`inset 0 ${t} 0 0 ${borderCol}`); // Top
+        if (s[1]) shadows.push(`inset -${t} 0 0 0 ${borderCol}`); // Right
+        if (s[2]) shadows.push(`inset 0 -${t} 0 0 ${borderCol}`); // Bottom
+        if (s[3]) shadows.push(`inset ${t} 0 0 0 ${borderCol}`); // Left
 
         return shadows.length ? `box-shadow: ${shadows.join(', ')} !important; border-radius: 0 !important;` : '';
     }

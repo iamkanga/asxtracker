@@ -1,0 +1,36 @@
+/* -------------------------------------------------------------------------- */
+/*                                SIDEBAR LIST ITEMS (Added via Fix)          */
+/* -------------------------------------------------------------------------- */
+
+.sidebar-vertical-list {
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    margin: 0;
+}
+
+.sidebar-list-item {
+    padding: 10px 16px 10px 32px;
+    /* Indented like nested items */
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    border-left: 3px solid transparent;
+}
+
+.sidebar-list-item:hover {
+    background-color: rgba(255, 255, 255, 0.03);
+    color: var(--text-color);
+}
+
+.sidebar-list-item.active {
+    color: var(--color-accent) !important;
+    /* Coffee Color */
+    font-weight: 600;
+    text-decoration: underline;
+    text-decoration-color: var(--color-accent) !important;
+    background-color: rgba(164, 147, 147, 0.05);
+    /* Subtle background tint */
+    border-left-color: var(--color-accent);
+}

@@ -270,6 +270,7 @@ export class HeaderLayout {
         this._bindNotificationEvents();
         this._bindWatchlistTitle(); // Constitutional Bind
         this._bindDisplaySettings(); // Relocated from GeneralSettings
+        this._bindMarketIntel(); // New Market Intel Dropdown
     }
 
     _bindSidebarSearch() {
@@ -680,6 +681,20 @@ export class HeaderLayout {
             });
         }
 
+        // Sidebar Market Pulse Entry (New)
+        this.btnMarketPulse = document.getElementById('sidebar-market-pulse-btn');
+        if (this.btnMarketPulse) {
+            this.btnMarketPulse.addEventListener('click', () => {
+                this._toggleSidebar(false);
+                setTimeout(() => {
+                    // console.log('HeaderLayout: Dispatching OPEN_MARKET_PULSE');
+                    // Note: Dispatching a placeholder event or re-using SHOW_DAILY_BRIEFING if synonymous, 
+                    // but assuming it maps to a specific view. For now, we'll dispatch a custom event.
+                    document.dispatchEvent(new CustomEvent('open-market-pulse'));
+                }, 150);
+            });
+        }
+
         // Sidebar Favorite Links Entry
         this.btnFavoriteLinks = document.getElementById(IDS.BTN_FAVORITE_LINKS);
         if (this.btnFavoriteLinks) {
@@ -743,6 +758,24 @@ export class HeaderLayout {
     }
 
     /**
+     * TOGGLE: Market Intel Sidebar Dropdown
+     */
+    _bindMarketIntel() {
+        const toggleBtn = document.getElementById('btn-market-intel-toggle');
+        const container = document.getElementById('market-intel-container');
+
+        if (toggleBtn && container) {
+            toggleBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation(); // Prevent Sidebar Close
+                const isExpanded = container.classList.toggle('expanded');
+                toggleBtn.setAttribute('aria-expanded', isExpanded);
+                // Optional: Add chevron rotation if we add a chevron icon later
+            });
+        }
+    }
+
+    /**
      * Relocated Display Coloring Settings (Formerly in GeneralSettingsUI)
      */
     _bindDisplaySettings() {
@@ -758,7 +791,8 @@ export class HeaderLayout {
             });
         }
 
-        const listContainer = document.querySelector('.sidebar-vertical-list');
+        // FIXED SELECTOR: Limit to #sidebar-coloring-container to avoid matching Market Intel list
+        const listContainer = document.querySelector('#sidebar-coloring-container .sidebar-vertical-list');
         if (!listContainer) return;
 
         listContainer.querySelectorAll('.sidebar-list-item').forEach(item => {
@@ -788,7 +822,8 @@ export class HeaderLayout {
 
     _updateSidebarSettingsUI() {
         const val = AppState.preferences.gradientStrength || 0.6;
-        const listContainer = document.querySelector('.sidebar-vertical-list');
+        // FIXED SELECTOR: Limit to #sidebar-coloring-container
+        const listContainer = document.querySelector('#sidebar-coloring-container .sidebar-vertical-list');
         if (!listContainer) return;
 
         // Update Active Item
