@@ -340,6 +340,9 @@ export class ShareFormUI {
         const avgPriceInput = modal.querySelector(`#${IDS.PORTFOLIO_AVG_PRICE}`);
         if (avgPriceInput) avgPriceInput.value = existingShare.portfolioAvgPrice || '';
 
+        const shareSightCodeInput = modal.querySelector(`#${IDS.SHARE_SIGHT_CODE}`);
+        if (shareSightCodeInput) shareSightCodeInput.value = existingShare.shareSightCode || '';
+
         const dateInput = modal.querySelector(`#${IDS.PURCHASE_DATE}`);
         if (dateInput && (existingShare.purchaseDate || existingShare.entryDate)) {
             dateInput.type = 'date';
@@ -599,6 +602,10 @@ export class ShareFormUI {
                                     <input type="number" id="${IDS.PORTFOLIO_AVG_PRICE}" step="0.01" class="${CSS_CLASSES.FORM_CONTROL}" placeholder="0.00" value="${shareData?.portfolioAvgPrice || ''}">
                                 </div>
                                 <div class="${CSS_CLASSES.FORM_GROUP}">
+                                    <label for="${IDS.SHARE_SIGHT_CODE}">Sharesight Code <span class="${CSS_CLASSES.TEXT_MUTED} ${CSS_CLASSES.ITALIC}" style="font-size: 0.8em;">(Optional)</span></label>
+                                    <input type="text" id="${IDS.SHARE_SIGHT_CODE}" class="${CSS_CLASSES.FORM_CONTROL} validate-trigger" placeholder="e.g. 12345" value="${shareData?.shareSightCode || ''}">
+                                </div>
+                                <div class="${CSS_CLASSES.FORM_GROUP}">
                                     <label for="${IDS.PURCHASE_DATE}">Last Purchase</label>
                                     <input type="${shareData?.purchaseDate || shareData?.entryDate ? 'date' : 'text'}" 
                                            id="${IDS.PURCHASE_DATE}" 
@@ -773,6 +780,7 @@ export class ShareFormUI {
                         control.querySelectorAll(`.${CSS_CLASSES.TOGGLE_OPTION}`).forEach(o => o.classList.remove(CSS_CLASSES.ACTIVE));
                         opt.classList.add(CSS_CLASSES.ACTIVE);
                         input.value = opt.dataset.value;
+                        ShareFormUI._validateForm(modal); // TRIGGER DIRTY CHECK
                     });
                 });
             }
@@ -796,9 +804,19 @@ export class ShareFormUI {
                     starControl.querySelectorAll(`.${CSS_CLASSES.STAR_ITEM}`).forEach(s =>
                         s.classList.toggle(CSS_CLASSES.ACTIVE, parseInt(s.dataset.value) <= newVal)
                     );
+                    ShareFormUI._validateForm(modal); // TRIGGER DIRTY CHECK
                 });
             });
         }
+
+        // 3. GENERIC INPUT BINDINGS (Date, Shares, Price, Dividends, etc)
+        // This handles "dirty check" logic for all standard inputs not covered by specific handlers.
+        // We add the 'validate-trigger' class in the HTML or just query generically here.
+        const genericInputs = modal.querySelectorAll(`input:not([type="checkbox"]):not([type="hidden"])`);
+        genericInputs.forEach(input => {
+            input.addEventListener('input', () => ShareFormUI._validateForm(modal));
+            input.addEventListener('change', () => ShareFormUI._validateForm(modal));
+        });
     }
 
     static _bindCommentsLogic(modal, shareData = null) {
@@ -817,6 +835,14 @@ export class ShareFormUI {
             }
 
             area.appendChild(div);
+            // Trigger Dirty Check when adding a note
+            if (modal) ShareFormUI._validateForm(modal);
+
+            // Bind listener to the textarea for content changes
+            const newTextarea = div.querySelector('textarea');
+            if (newTextarea) {
+                newTextarea.addEventListener('input', () => ShareFormUI._validateForm(modal));
+            }
         };
 
         if (btn) btn.addEventListener('click', () => addNote());
@@ -1102,6 +1128,7 @@ export class ShareFormUI {
             starRating: parseInt(getVal(IDS.STAR_RATING_INPUT)) || 0,
             portfolioShares: getNum(IDS.PORTFOLIO_SHARES),
             portfolioAvgPrice: getNum(IDS.PORTFOLIO_AVG_PRICE),
+            shareSightCode: getVal(IDS.SHARE_SIGHT_CODE) || '',
             purchaseDate: getVal(IDS.PURCHASE_DATE) || '',
             entryDate: getVal(IDS.PURCHASE_DATE) || '', // Keep for legacy compatibility
             dividendAmount: getNum(IDS.DIVIDEND_AMOUNT),

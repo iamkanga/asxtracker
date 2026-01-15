@@ -1198,6 +1198,7 @@ export const IDS = {
     PORTFOLIO_AVG_PRICE: 'portfolioAvgPrice',
     DIVIDEND_AMOUNT: 'dividendAmount',
     FRANKING_CREDITS: 'frankingCredits',
+    SHARE_SIGHT_CODE: 'shareSightCode',
     UNFRANKED_YIELD: 'unfrankedYield',
     FRANKED_YIELD: 'frankedYield',
     DYNAMIC_COMMENTS_AREA: 'dynamicCommentsArea',

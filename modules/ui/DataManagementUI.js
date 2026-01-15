@@ -430,6 +430,10 @@ export class DataManagementUI {
                 updateData.purchaseDate = match.dateStr || new Date().toISOString().split('T')[0];
                 updateData.portfolioAvgPrice = match.price.toString();
             }
+            // Update Sharesight Code if present in CSV
+            if (match.shareSightCode) {
+                updateData.shareSightCode = match.shareSightCode;
+            }
             return userStore.updateShare(userId, match.shareId, updateData);
         });
 
@@ -442,7 +446,8 @@ export class DataManagementUI {
                 portfolioAvgPrice: (ns.price || 0).toString(),
                 purchaseDate: ns.dateStr || new Date().toISOString().split('T')[0],
                 watchlistIds: [PORTFOLIO_ID], // Default to portfolio
-                updatedAt: new Date()
+                updatedAt: new Date(),
+                shareSightCode: ns.shareSightCode || ''
             });
         });
 

@@ -792,7 +792,7 @@ export class ViewRenderer {
                                         <div class="${CSS_CLASSES.WATCHLIST_MEMBERSHIP} ${CSS_CLASSES.GHOSTED} ${CSS_CLASSES.TEXT_SM} ${CSS_CLASSES.TEXT_MUTED} ${CSS_CLASSES.OPACITY_70} ${CSS_CLASSES.ITALIC} ${CSS_CLASSES.TEXT_LEFT}">
                                             ${watchlistsText}
                                         </div>
-                                        <a href="https://portfolio.sharesight.com/" target="_blank" class="${CSS_CLASSES.ICON_BTN_GHOST}" title="Open in Sharesight" style="font-size: 1.1rem;" onclick="event.stopPropagation()">
+                                        <a href="https://portfolio.sharesight.com/${stock.shareSightCode ? `holdings/${stock.shareSightCode}` : ''}" target="_blank" class="${CSS_CLASSES.ICON_BTN_GHOST}" title="Open in Sharesight" style="font-size: 1.1rem;" onclick="event.stopPropagation()">
                                             <i class="fas fa-chart-pie ${CSS_CLASSES.TEXT_COFFEE}" style="opacity: 1;"></i>
                                         </a>
                                     </div>

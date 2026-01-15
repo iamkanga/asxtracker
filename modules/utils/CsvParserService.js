@@ -52,7 +52,8 @@ export const CsvParserService = {
             type: ['type', 'transaction type', 'action', 'direction', 'side'],
             quantity: ['quantity', 'qty', 'units', 'shares', 'number', 'no.', 'vol', 'volume'],
             price: ['price', 'buy price', 'cost', 'cost base', 'avg price', 'rate', 'unit price', 'amount'],
-            total: ['total', 'value', 'market value', 'market', 'balance']
+            total: ['total', 'value', 'market value', 'market', 'balance'],
+            url: ['url', 'link', 'sharesight url', 'sharesight link']
         };
 
         // Helper to normalize a header string
@@ -130,6 +131,21 @@ export const CsvParserService = {
             if (bestMap.quantity !== undefined) row['Quantity'] = values[bestMap.quantity];
             if (bestMap.price !== undefined) row['Price'] = values[bestMap.price];
             if (bestMap.total !== undefined) row['Market Value'] = values[bestMap.total];
+
+            // Sharesight Code Extraction
+            if (bestMap.url !== undefined) {
+                const urlVal = values[bestMap.url];
+                if (urlVal) {
+                    // Extract ID from URL (e.g. .../holdings/12345) or take as is if number
+                    // Robust regex to find the last numeric segment
+                    const match = urlVal.match(/\/holdings\/(\d+)/) || urlVal.match(/(\d+)$/);
+                    if (match) {
+                        row['ShareSight Code'] = match[1];
+                    } else if (/^\d+$/.test(urlVal)) {
+                        row['ShareSight Code'] = urlVal;
+                    }
+                }
+            }
 
             // Also keep original headers just in case other logic needs them (fallback)
             rawHeaders.forEach((h, i) => {
@@ -210,8 +226,16 @@ export const CsvParserService = {
                     type: type || 'Buy',
                     quantity,
                     price,
-                    costBase
+                    price,
+                    costBase,
+                    shareSightCode: row['ShareSight Code'] || ''
                 });
+            } else {
+                // UPDATE EXISTING ENTRY if new one has data we want (like code)
+                const existing = latest.get(code);
+                if (!existing.shareSightCode && row['ShareSight Code']) {
+                    existing.shareSightCode = row['ShareSight Code'];
+                }
             }
         });
 
@@ -239,6 +263,7 @@ export const CsvParserService = {
             holdings.set(code, {
                 code,
                 quantity,
+                shareSightCode: row['ShareSight Code'] || '',
                 isHoldingsOnly: true // Flag to indicate no price/date data
             });
         });
