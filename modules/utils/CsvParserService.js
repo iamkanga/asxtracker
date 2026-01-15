@@ -50,10 +50,19 @@ export const CsvParserService = {
             market: ['market', 'exchange', 'exch'],
             date: ['date', 'purchase date', 'trade date', 'transaction date', 'dt', 'time'],
             type: ['type', 'transaction type', 'action', 'direction', 'side'],
-            quantity: ['quantity', 'qty', 'units', 'shares', 'number', 'no.', 'vol', 'volume'],
-            price: ['price', 'buy price', 'cost', 'cost base', 'avg price', 'rate', 'unit price', 'amount'],
+            quantity: ['quantity', 'qty', 'units', 'shares', 'number', 'no.', 'vol', 'volume', 'units held'],
+            price: ['price', 'buy price', 'cost', 'cost base', 'avg price', 'rate', 'unit price', 'amount', 'average cost price'],
             total: ['total', 'value', 'market value', 'market', 'balance'],
-            url: ['url', 'link', 'sharesight url', 'sharesight link']
+            url: ['url', 'link', 'sharesight url', 'sharesight link'],
+            ssid: ['sharesight code', 'sharesight id', 'ssid'],
+            brokerage: ['brokerage', 'fee', 'commission'],
+            rating: ['rating', 'star rating', 'score'],
+            target: ['target price', 'target', 'goal price'],
+            strategy: ['strategy', 'buy sell'],
+            direction: ['direction', 'above below', 'target direction'],
+            dividend: ['dividend amount', 'dividend', 'div amount'],
+            franking: ['franking credits', 'franking', 'credits'],
+            notes: ['notes', 'comments', 'remarks']
         };
 
         // Helper to normalize a header string
@@ -132,18 +141,23 @@ export const CsvParserService = {
             if (bestMap.price !== undefined) row['Price'] = values[bestMap.price];
             if (bestMap.total !== undefined) row['Market Value'] = values[bestMap.total];
 
-            // Sharesight Code Extraction
-            if (bestMap.url !== undefined) {
+            // Extended Fields
+            if (bestMap.ssid !== undefined) row['ShareSight Code'] = values[bestMap.ssid];
+            if (bestMap.brokerage !== undefined) row['Brokerage'] = values[bestMap.brokerage];
+            if (bestMap.rating !== undefined) row['Rating'] = values[bestMap.rating];
+            if (bestMap.target !== undefined) row['Target Price'] = values[bestMap.target];
+            if (bestMap.strategy !== undefined) row['Strategy'] = values[bestMap.strategy];
+            if (bestMap.direction !== undefined) row['Direction'] = values[bestMap.direction];
+            if (bestMap.dividend !== undefined) row['Dividend Amount'] = values[bestMap.dividend];
+            if (bestMap.franking !== undefined) row['Franking Credits'] = values[bestMap.franking];
+            if (bestMap.notes !== undefined) row['Notes'] = values[bestMap.notes];
+
+            // Sharesight URL Extraction (Legacy SSID source fallback)
+            if (!row['ShareSight Code'] && bestMap.url !== undefined) {
                 const urlVal = values[bestMap.url];
                 if (urlVal) {
-                    // Extract ID from URL (e.g. .../holdings/12345) or take as is if number
-                    // Robust regex to find the last numeric segment
                     const match = urlVal.match(/\/holdings\/(\d+)/) || urlVal.match(/(\d+)$/);
-                    if (match) {
-                        row['ShareSight Code'] = match[1];
-                    } else if (/^\d+$/.test(urlVal)) {
-                        row['ShareSight Code'] = urlVal;
-                    }
+                    if (match) row['ShareSight Code'] = match[1];
                 }
             }
 
@@ -228,7 +242,15 @@ export const CsvParserService = {
                     price,
                     price,
                     costBase,
-                    shareSightCode: row['ShareSight Code'] || ''
+                    shareSightCode: row['ShareSight Code'] || '',
+                    brokerage: row['Brokerage'] || '',
+                    rating: row['Rating'] || '',
+                    targetPrice: row['Target Price'] || '',
+                    buySell: row['Strategy'] || 'buy',
+                    targetDirection: row['Direction'] || 'below',
+                    dividendAmount: row['Dividend Amount'] || '',
+                    frankingCredits: row['Franking Credits'] || '',
+                    notes: row['Notes'] || ''
                 });
             } else {
                 // UPDATE EXISTING ENTRY if new one has data we want (like code)
@@ -264,6 +286,14 @@ export const CsvParserService = {
                 code,
                 quantity,
                 shareSightCode: row['ShareSight Code'] || '',
+                brokerage: row['Brokerage'] || '',
+                rating: row['Rating'] || '',
+                targetPrice: row['Target Price'] || '',
+                buySell: row['Strategy'] || 'buy',
+                targetDirection: row['Direction'] || 'below',
+                dividendAmount: row['Dividend Amount'] || '',
+                frankingCredits: row['Franking Credits'] || '',
+                notes: row['Notes'] || '',
                 isHoldingsOnly: true // Flag to indicate no price/date data
             });
         });

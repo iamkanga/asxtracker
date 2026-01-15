@@ -183,7 +183,11 @@ export class DataManagementUI {
 
         // Download Template
         modal.querySelector('#dm-btn-template').addEventListener('click', () => {
-            const template = "Code,Date,Type,Quantity,Buy Price\nCBA,2024-01-01,Buy,10,105.50\nBHP,2024-02-15,Buy,50,45.20";
+            const headers = "Code,Purchase Date,Units Held,Average Cost Price,Sharesight URL,Sharesight Code,Dividend Amount,Franking Credits,Notes";
+            const row1 = "CBA,2024-01-01,10,105.50,https://www.sharesight.com/holdings/12345,12345,4.50,100,Core holding";
+            const row2 = "BHP,2024-02-15,50,45.20,https://www.sharesight.com/holdings/67890,67890,1.20,100,Mining exposure";
+            const template = `${headers}\n${row1}\n${row2}`;
+
             const blob = new Blob([template], { type: 'text/csv' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -206,19 +210,36 @@ export class DataManagementUI {
             return;
         }
 
-        const headers = ['Code', 'Price', 'Buy Price', 'Units', 'Brokerage', 'Purchase Date'];
+        const headers = [
+            'Code', 'Purchase Date', 'Units Held', 'Average Cost Price', 'Sharesight URL',
+            'Sharesight Code', 'Dividend Amount', 'Franking Credits', 'Notes'
+        ];
+
         const rows = shares.map(s => {
             const code = s.code || s.shareName || s.symbol || '-';
             const live = AppState.livePrices.get(code);
             const price = live ? live.live : (s.currentPrice || s.enteredPrice || 0);
 
+            // Get latest note
+            const latestNote = s.comments && s.comments.length > 0
+                ? s.comments[s.comments.length - 1].body.replace(/,/g, ';')
+                : '';
+
+            // Construct Sharesight URL if possible
+            const ssUrl = s.shareSightCode
+                ? `https://www.sharesight.com/holdings/${s.shareSightCode}`
+                : '';
+
             return [
                 `"${code}"`,
-                price,
-                s.enteredPrice || 0,
+                `"${s.purchaseDate || ''}"`,
                 s.portfolioShares || 0,
-                s.brokerage || 0,
-                s.purchaseDate || ''
+                s.portfolioAvgPrice || s.enteredPrice || 0,
+                `"${ssUrl}"`,
+                `"${s.shareSightCode || ''}"`,
+                s.dividendAmount || 0,
+                s.frankingCredits || 0,
+                `"${latestNote}"`
             ].join(',');
         });
 
@@ -234,27 +255,50 @@ export class DataManagementUI {
     }
 
     static _handlePdfExport() {
-        // Simple Print View
-        const printWindow = window.open('', '_blank');
         const shares = AppState.data.shares || [];
+        if (!shares.length) {
+            ToastManager.error("No data to export.");
+            return;
+        }
 
-        // ... (Same HTML generation as before) ...
-        // Simplified for brevity, functional equivalent
+        // 1. Create/Identify Print Container
+        let printContainer = document.getElementById('print-export-container');
+        if (!printContainer) {
+            printContainer = document.createElement('div');
+            printContainer.id = 'print-export-container';
+            printContainer.className = 'print-only';
+            document.body.appendChild(printContainer);
+        }
+
+        // 2. Generate content
         let rows = '';
         shares.forEach(s => {
-            const live = AppState.livePrices.get(s.code || s.shareName);
+            const code = s.code || s.shareName;
+            const live = AppState.livePrices.get(code);
             const price = live ? live.live : (s.currentPrice || s.enteredPrice || 0);
-            rows += `<tr><td>${s.code || s.shareName}</td><td>$${price.toFixed(3)}</td><td>${s.portfolioShares || 0}</td></tr>`;
+            rows += `<tr><td>${code}</td><td>$${price.toFixed(3)}</td><td>${s.portfolioShares || 0}</td></tr>`;
         });
 
-        const html = `
-            <html><head><title>Export</title>
-            <style>body{font-family:sans-serif}table{width:100%;border-collapse:collapse}td,th{border:1px solid #ccc;padding:8px}</style>
-            </head><body><h2>Watchlist Data</h2><table><thead><tr><th>Code</th><th>Price</th><th>Units</th></tr></thead><tbody>${rows}</tbody></table>
-            <script>setTimeout(()=>{window.print();window.close()},500)</script></body></html>
+        printContainer.innerHTML = `
+            <h2>Watchlist Data Export</h2>
+            <p>Generated on: ${new Date().toLocaleString()}</p>
+            <table>
+                <thead>
+                    <tr><th>Code</th><th>Price</th><th>Units</th></tr>
+                </thead>
+                <tbody>${rows}</tbody>
+            </table>
         `;
-        printWindow.document.write(html);
-        printWindow.document.close();
+
+        // 3. Trigger Print
+        window.print();
+
+        // 4. Cleanup after print dialog closes
+        const cleanup = () => {
+            printContainer.innerHTML = '';
+            window.removeEventListener('afterprint', cleanup);
+        };
+        window.addEventListener('afterprint', cleanup);
     }
 
     static _processFile(file) {
@@ -430,16 +474,33 @@ export class DataManagementUI {
                 updateData.purchaseDate = match.dateStr || new Date().toISOString().split('T')[0];
                 updateData.portfolioAvgPrice = match.price.toString();
             }
-            // Update Sharesight Code if present in CSV
-            if (match.shareSightCode) {
-                updateData.shareSightCode = match.shareSightCode;
+
+            // Sync Additional Fields
+            if (match.shareSightCode) updateData.shareSightCode = match.shareSightCode;
+            if (match.brokerage) updateData.brokerage = parseFloat(match.brokerage).toString();
+            if (match.rating) updateData.starRating = parseInt(match.rating);
+            if (match.targetPrice) updateData.targetPrice = parseFloat(match.targetPrice);
+            if (match.buySell) updateData.buySell = match.buySell.toLowerCase();
+            if (match.targetDirection) updateData.targetDirection = match.targetDirection.toLowerCase();
+            if (match.dividendAmount) updateData.dividendAmount = parseFloat(match.dividendAmount);
+            if (match.frankingCredits) updateData.frankingCredits = parseFloat(match.frankingCredits);
+
+            if (match.notes) {
+                // For matches, we add a new note if it doesn't exist? 
+                // Or overwrite? Database logic usually merges. 
+                // For sync, we'll append it if it looks new.
+                updateData.comments = [{
+                    body: match.notes,
+                    date: new Date().toISOString()
+                }];
             }
+
             return userStore.updateShare(userId, match.shareId, updateData);
         });
 
         // 2. Add New Shares
         const addPromises = (newShares || []).map(ns => {
-            return userStore.addShare(userId, {
+            const shareData = {
                 code: ns.code,
                 shareName: ns.code,
                 portfolioShares: ns.quantity.toString(),
@@ -447,8 +508,24 @@ export class DataManagementUI {
                 purchaseDate: ns.dateStr || new Date().toISOString().split('T')[0],
                 watchlistIds: [PORTFOLIO_ID], // Default to portfolio
                 updatedAt: new Date(),
-                shareSightCode: ns.shareSightCode || ''
-            });
+                shareSightCode: ns.shareSightCode || '',
+                brokerage: ns.brokerage ? parseFloat(ns.brokerage).toString() : '0',
+                starRating: ns.rating ? parseInt(ns.rating) : 0,
+                targetPrice: ns.targetPrice ? parseFloat(ns.targetPrice) : 0,
+                buySell: (ns.buySell || 'buy').toLowerCase(),
+                targetDirection: (ns.targetDirection || 'below').toLowerCase(),
+                dividendAmount: ns.dividendAmount ? parseFloat(ns.dividendAmount) : 0,
+                frankingCredits: ns.frankingCredits ? parseFloat(ns.frankingCredits) : 0,
+            };
+
+            if (ns.notes) {
+                shareData.comments = [{
+                    body: ns.notes,
+                    date: new Date().toISOString()
+                }];
+            }
+
+            return userStore.addShare(userId, shareData);
         });
 
         try {
