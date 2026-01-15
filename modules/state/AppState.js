@@ -122,7 +122,15 @@ export const AppState = {
         })(),
         dailyEmail: localStorage.getItem(STORAGE_KEYS.DAILY_EMAIL) === 'true',
         alertEmailRecipients: localStorage.getItem(STORAGE_KEYS.EMAIL_RECIPIENTS) || '',
-        gradientStrength: parseFloat(localStorage.getItem(STORAGE_KEYS.GRADIENT_STRENGTH)) || 0.25
+        gradientStrength: parseFloat(localStorage.getItem(STORAGE_KEYS.GRADIENT_STRENGTH)) || 0.25,
+        containerBorders: (() => {
+            try {
+                const stored = localStorage.getItem(STORAGE_KEYS.BORDER_PREFS);
+                return stored ? JSON.parse(stored) : { sides: [0, 0, 0, 0], thickness: 1 };
+            } catch (e) {
+                return { sides: [0, 0, 0, 0], thickness: 1 };
+            }
+        })()
     },
 
     // Security Runtime State
@@ -260,13 +268,20 @@ export const AppState = {
                 dailyEmail: this.preferences.dailyEmail || false,
                 alertEmailRecipients: this.preferences.alertEmailRecipients || '',
                 gradientStrength: this.preferences.gradientStrength ?? 0.6,
-                customWatchlistNames: this.preferences.customWatchlistNames || {}
+                customWatchlistNames: this.preferences.customWatchlistNames || {},
+                containerBorders: this.preferences.containerBorders || { sides: [0, 0, 0, 0], thickness: 1 }
             };
             // console.log('[AppState] Triggering Sync with payload:', payload);
             this.onPersistenceUpdate(payload);
         } else {
             console.warn('[AppState] _triggerSync called but no onPersistenceUpdate handler connected.');
         }
+    },
+
+    saveBorderPreferences(newPrefs) {
+        this.preferences.containerBorders = { ...this.preferences.containerBorders, ...newPrefs };
+        localStorage.setItem(STORAGE_KEYS.BORDER_PREFS, JSON.stringify(this.preferences.containerBorders));
+        this._triggerSync();
     },
 
     // Internal helper to persist all preferences under a single key

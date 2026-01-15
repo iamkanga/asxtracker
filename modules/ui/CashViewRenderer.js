@@ -150,11 +150,8 @@ export class CashViewRenderer {
 
         // Apply Styles
         // Dynamic "Hue on Black" Background Effect
-        // Uses color-mix to blend the category color with black. 
-        // We need a stronger blend (e.g. 60% color) to match the 'dashboard-grade' opacity look (approx 0.6).
-        // Using "color-mix(in srgb, ${colorVal} 60%, black)" gives 60% color, 40% black.
-        // We start with strong color, fade to almost black.
-        card.setAttribute('style', `border-left: none !important; border-right: none !important; background: linear-gradient(135deg, color-mix(in srgb, ${colorVal} 60%, black), color-mix(in srgb, ${colorVal} 5%, black)) !important;`);
+        const borderStyle = this._getBorderStyles();
+        card.setAttribute('style', `${borderStyle} background: linear-gradient(135deg, color-mix(in srgb, ${colorVal} 60%, black), color-mix(in srgb, ${colorVal} 5%, black)) !important;`);
 
         // Handle Ghosting
         if (asset.isHidden) {
@@ -234,5 +231,26 @@ export class CashViewRenderer {
         const index = Math.abs(hash) % ASSET_CUSTOM_COLORS.length;
         const c = ASSET_CUSTOM_COLORS[index];
         return c;
+    }
+
+    /**
+     * Internal helper to calculate border style string based on prefs.
+     * Cash items always use var(--color-accent) (Coffee).
+     */
+    _getBorderStyles() {
+        const prefs = AppState.preferences.containerBorders;
+        if (!prefs || !prefs.sides || prefs.sides.every(s => s === 0)) return '';
+
+        let color = 'var(--color-accent)';
+        const t = `${prefs.thickness}px`;
+        const s = prefs.sides;
+
+        let shadows = [];
+        if (s[0]) shadows.push(`inset 0 ${t} 0 0 ${color}`); // Top
+        if (s[1]) shadows.push(`inset -${t} 0 0 0 ${color}`); // Right
+        if (s[2]) shadows.push(`inset 0 -${t} 0 0 ${color}`); // Bottom
+        if (s[3]) shadows.push(`inset ${t} 0 0 0 ${color}`); // Left
+
+        return shadows.length ? `box-shadow: ${shadows.join(', ')} !important; border-radius: 0 !important;` : '';
     }
 }

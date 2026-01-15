@@ -260,9 +260,12 @@ export class DashboardViewRenderer {
         const clickableClass = url ? 'clickable' : '';
         const dataUrlAttr = url ? `data-url="${url}"` : '';
 
+        // BORDER LOGIC
+        const borderStyle = this._getBorderStyles(pctChange);
+
         if (viewMode === 'COMPACT' || viewMode === 'SNAPSHOT') {
             return `
-                <div class="${CSS_CLASSES.DASHBOARD_ROW} ${sentimentClass} ${gradeClass} ${clickableClass} ${this.reorderMode ? CSS_CLASSES.REORDER_ACTIVE : ''}" ${dataUrlAttr}>
+                <div class="${CSS_CLASSES.DASHBOARD_ROW} ${sentimentClass} ${gradeClass} ${clickableClass} ${this.reorderMode ? CSS_CLASSES.REORDER_ACTIVE : ''}" ${dataUrlAttr} style="${borderStyle}">
                     ${this.reorderMode ? `
                         <div class="${CSS_CLASSES.DASHBOARD_REORDER_CONTROLS}">
                             ${index > 0 ? `<button class="${CSS_CLASSES.REORDER_BTN}" data-code="${code}" data-dir="up"><i class="fas fa-chevron-up"></i></button>` : '<div style="height:24px"></div>'}
@@ -286,7 +289,7 @@ export class DashboardViewRenderer {
 
         // DEFAULT / TABLE VIEW
         return `
-            <div class="${CSS_CLASSES.DASHBOARD_ROW} ${sentimentClass} ${gradeClass} ${clickableClass} ${this.reorderMode ? CSS_CLASSES.REORDER_ACTIVE : ''}" ${dataUrlAttr}>
+            <div class="${CSS_CLASSES.DASHBOARD_ROW} ${sentimentClass} ${gradeClass} ${clickableClass} ${this.reorderMode ? CSS_CLASSES.REORDER_ACTIVE : ''}" ${dataUrlAttr} style="${borderStyle}">
                 ${this.reorderMode ? `
                     <div class="${CSS_CLASSES.DASHBOARD_REORDER_CONTROLS}">
                         ${index > 0 ? `<button class="${CSS_CLASSES.REORDER_BTN}" data-code="${code}" data-dir="up"><i class="fas fa-chevron-up"></i></button>` : '<div style="height:24px"></div>'}
@@ -518,5 +521,29 @@ export class DashboardViewRenderer {
             });
         });
         return processed;
+    }
+
+    /**
+     * Internal helper to calculate border style string based on prefs and performance.
+     */
+    _getBorderStyles(changePercent) {
+        const prefs = AppState.preferences.containerBorders;
+        if (!prefs || !prefs.sides || prefs.sides.every(s => s === 0)) return '';
+
+        let color = 'var(--color-accent)'; // Coffee default
+        if (changePercent > 0) color = 'var(--color-positive)';
+        else if (changePercent < 0) color = 'var(--color-negative)';
+
+        const t = `${prefs.thickness}px`;
+        const s = prefs.sides;
+
+        let shadows = [];
+        // Use inset box-shadow to achieve 90-degree square corners (no mitering)
+        if (s[0]) shadows.push(`inset 0 ${t} 0 0 ${color}`); // Top
+        if (s[1]) shadows.push(`inset -${t} 0 0 0 ${color}`); // Right
+        if (s[2]) shadows.push(`inset 0 -${t} 0 0 ${color}`); // Bottom
+        if (s[3]) shadows.push(`inset ${t} 0 0 0 ${color}`); // Left
+
+        return shadows.length ? `box-shadow: ${shadows.join(', ')} !important; border-radius: 0 !important;` : '';
     }
 }

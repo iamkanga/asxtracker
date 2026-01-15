@@ -322,8 +322,10 @@ export class ViewRenderer {
         if (changePercent > 0) gradeClass = CSS_CLASSES.DASHBOARD_GRADE_UP;
         else if (changePercent < 0) gradeClass = CSS_CLASSES.DASHBOARD_GRADE_DOWN;
 
+        const borderStyle = this._getBorderStyles(changePercent);
+
         return `
-            <tr data-id="${item.id}" data-code="${item.code}" class="${trendClass} ${gradeClass}">
+            <tr data-id="${item.id}" data-code="${item.code}" class="${trendClass} ${gradeClass}" style="${borderStyle}">
                 <td class="${CSS_CLASSES.CODE_CELL} ${CSS_CLASSES.FONT_BOLD}">${item.code}</td>
                 <td>${formatCurrency(price)}</td>
                 <td class="${CSS_CLASSES.DESKTOP_ONLY} ${changeValue >= 0 ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE} ${CSS_CLASSES.CHANGE_VALUE}">
@@ -359,22 +361,23 @@ export class ViewRenderer {
             showIcon = false;
         }
 
+        let gradeClass = CSS_CLASSES.DASHBOARD_GRADE_NEUTRAL;
+        if (changePercent > 0) gradeClass = CSS_CLASSES.DASHBOARD_GRADE_UP;
+        else if (changePercent < 0) gradeClass = CSS_CLASSES.DASHBOARD_GRADE_DOWN;
+
+        const borderStyle = this._getBorderStyles(changePercent);
+
         if (type === PORTFOLIO_ID) {
             const value = item.value || 0;
             const capitalGain = item.capitalGain || 0;
-            const ghostClass = item.isHidden ? CSS_CLASSES.GHOSTED : '';
+            const ghostClass = item.isGhost ? CSS_CLASSES.GHOSTED : '';
             const eyeIcon = item.isHidden ? UI_ICONS.EYE_SLASH : UI_ICONS.EYE;
 
             // For the new Portfolio Card, always use TOTAL holding change
             const displayChangeValue = item.dayChangeValue || 0;
 
-            // Gradient Background Logic
-            let gradeClass = CSS_CLASSES.DASHBOARD_GRADE_NEUTRAL; // Default: coffee/amber
-            if (changePercent > 0) gradeClass = CSS_CLASSES.DASHBOARD_GRADE_UP;
-            else if (changePercent < 0) gradeClass = CSS_CLASSES.DASHBOARD_GRADE_DOWN;
-
             return `
-                <div class="${CSS_CLASSES.CARD} ${trendClass} ${gradeClass} ${ghostClass}" data-id="${item.id}" data-code="${item.code}">
+                <div class="${CSS_CLASSES.CARD} ${trendClass} ${gradeClass} ${ghostClass}" data-id="${item.id}" data-code="${item.code}" style="${borderStyle}">
                     <div class="${CSS_CLASSES.CARD_HEADER_ROW} ${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.JUSTIFY_BETWEEN} ${CSS_CLASSES.ALIGN_START} ${CSS_CLASSES.W_FULL} ${CSS_CLASSES.MB_2PX} ${CSS_CLASSES.BORDER_NONE}">
                         <div class="${CSS_CLASSES.CARD_HEADER_LEFT} ${CSS_CLASSES.FLEX_COLUMN} ${CSS_CLASSES.ALIGN_START} ${CSS_CLASSES.GAP_SMALL}">
                             <span class="${CSS_CLASSES.CARD_CODE}" data-code="${item.code}">${item.code}</span>
@@ -456,13 +459,8 @@ export class ViewRenderer {
                     </div>
                 </div>` : '';
 
-            // Gradient Background Logic
-            let gradeClass = CSS_CLASSES.DASHBOARD_GRADE_NEUTRAL; // Default: coffee/amber
-            if (changePercent > 0) gradeClass = CSS_CLASSES.DASHBOARD_GRADE_UP;
-            else if (changePercent < 0) gradeClass = CSS_CLASSES.DASHBOARD_GRADE_DOWN;
-
             return `
-                <div class="${CSS_CLASSES.CARD} ${trendClass} ${gradeClass} ${CSS_CLASSES.PB_4PX}" data-id="${item.id}" data-code="${item.code}">
+                <div class="${CSS_CLASSES.CARD} ${trendClass} ${gradeClass} ${CSS_CLASSES.PB_4PX}" data-id="${item.id}" data-code="${item.code}" style="${borderStyle}">
                     <div class="${CSS_CLASSES.CARD_HEADER_ROW} ${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.JUSTIFY_BETWEEN} ${CSS_CLASSES.ALIGN_START} ${CSS_CLASSES.W_FULL} ${CSS_CLASSES.MB_2PX}">
                         <div class="${CSS_CLASSES.CARD_HEADER_LEFT} ${CSS_CLASSES.FLEX_COLUMN} ${CSS_CLASSES.ALIGN_START}">
                             <span class="${CSS_CLASSES.CARD_CODE}" data-code="${item.code}">${item.code}</span>
@@ -495,13 +493,8 @@ export class ViewRenderer {
                 }
             }
 
-            // Gradient Background Logic
-            let gradeClass = CSS_CLASSES.DASHBOARD_GRADE_NEUTRAL; // Default: coffee
-            if (changePercent > 0) gradeClass = CSS_CLASSES.DASHBOARD_GRADE_UP;
-            else if (changePercent < 0) gradeClass = CSS_CLASSES.DASHBOARD_GRADE_DOWN;
-
             return `
-                <div class="${CSS_CLASSES.CARD} ${trendClass} ${gradeClass}" data-id="${item.id}" data-code="${item.code}" data-view="compact">
+                <div class="${CSS_CLASSES.CARD} ${trendClass} ${gradeClass}" data-id="${item.id}" data-code="${item.code}" data-view="compact" style="${borderStyle}">
                     ${iconHtml}
                     <div class="${CSS_CLASSES.CARD_HEADER} ${CSS_CLASSES.FLEX_COLUMN} ${CSS_CLASSES.ALIGN_START} ${CSS_CLASSES.W_FULL}">
                         <span class="${CSS_CLASSES.CARD_CODE} ${CSS_CLASSES.TEXT_LG} ${CSS_CLASSES.CODE_PILL} ${CSS_CLASSES.JUSTIFY_START}" data-code="${item.code}">${item.code}</span>
@@ -518,14 +511,8 @@ export class ViewRenderer {
                 </div>
             `;
         } else {
-            // Snapshot View
-            // Gradient Background Logic
-            let gradeClass = CSS_CLASSES.DASHBOARD_GRADE_NEUTRAL; // Default: coffee/amber
-            if (changePercent > 0) gradeClass = CSS_CLASSES.DASHBOARD_GRADE_UP;
-            else if (changePercent < 0) gradeClass = CSS_CLASSES.DASHBOARD_GRADE_DOWN;
-
             return `
-                <div class="${CSS_CLASSES.CARD} ${trendClass} ${gradeClass}" data-id="${item.id}" data-code="${item.code}" data-view="snapshot">
+                <div class="${CSS_CLASSES.CARD} ${trendClass} ${gradeClass}" data-id="${item.id}" data-code="${item.code}" data-view="snapshot" style="${borderStyle}">
                     <div class="${CSS_CLASSES.CARD_HEADER} ${CSS_CLASSES.FLEX_COLUMN} ${CSS_CLASSES.ALIGN_START} ${CSS_CLASSES.W_FULL}">
                         <span class="${CSS_CLASSES.CARD_CODE} ${CSS_CLASSES.TEXT_LG} ${CSS_CLASSES.CODE_PILL} ${CSS_CLASSES.JUSTIFY_START}" data-code="${item.code}">${item.code}</span>
                         <span class="${CSS_CLASSES.CARD_PRICE} ${CSS_CLASSES.PRIMARY_TEXT} ${CSS_CLASSES.TEXT_LG} ${CSS_CLASSES.MT_TINY} ${CSS_CLASSES.TEXT_LEFT}">${formatCurrency(price)}</span>
@@ -577,10 +564,18 @@ export class ViewRenderer {
         const redGradient = 'linear-gradient(90deg, rgba(180, 0, 0, var(--gradient-strength, 0.6)) 0%, rgba(20, 20, 20, 1) 50%, rgba(180, 0, 0, var(--gradient-strength, 0.6)) 100%)';
         const capitalGainGradient = isTotalPos ? greenGradient : redGradient;
 
+        // BORDER LOGIC for Summary Cards
+        const valueBorderStyle = this._getBorderStyles(0); // Value is neutral
+        const changeBorderStyle = this._getBorderStyles(metrics.dayChangeValue);
+
+        const gainBorderStyle = this._getBorderStyles(1); // Gain is positive
+        const lossBorderStyle = this._getBorderStyles(-1); // Loss is negative
+        const returnBorderStyle = this._getBorderStyles(metrics.totalReturn);
+
         // 3. Construct HTML (Card Layout with Inline Percentages and Gradients)
         container.innerHTML = `
             <div class="${CSS_CLASSES.SUMMARY_CARD} ${CSS_CLASSES.CLICKABLE}" 
-                 style="background: ${neutralGradient} !important;"
+                 style="background: ${neutralGradient} !important; ${valueBorderStyle}"
                  data-type="${SUMMARY_TYPES.VALUE}">
                 <span class="${CSS_CLASSES.METRIC_LABEL}">Portfolio Value</span>
                 <div class="${CSS_CLASSES.METRIC_ROW}">
@@ -589,6 +584,7 @@ export class ViewRenderer {
             </div>
 
             <div class="${CSS_CLASSES.SUMMARY_CARD} ${CSS_CLASSES.CLICKABLE} ${dayChangeClass}" 
+                 style="${changeBorderStyle}"
                  data-type="${SUMMARY_TYPES.DAY_CHANGE}">
                 <span class="${CSS_CLASSES.METRIC_LABEL}">Day Change</span>
                 <div class="${CSS_CLASSES.METRIC_ROW}">
@@ -602,7 +598,7 @@ export class ViewRenderer {
             </div>
 
             <div class="${CSS_CLASSES.SUMMARY_CARD} ${CSS_CLASSES.CLICKABLE}" 
-                 style="background: ${greenGradient} !important;"
+                 style="background: ${greenGradient} !important; ${gainBorderStyle}"
                  data-type="${SUMMARY_TYPES.WINNERS}">
                 <span class="${CSS_CLASSES.METRIC_LABEL}">Day Gain</span>
                 <div class="${CSS_CLASSES.METRIC_ROW}">
@@ -616,7 +612,7 @@ export class ViewRenderer {
             </div>
 
             <div class="${CSS_CLASSES.SUMMARY_CARD} ${CSS_CLASSES.CLICKABLE}" 
-                 style="background: ${redGradient} !important;"
+                 style="background: ${redGradient} !important; ${lossBorderStyle}"
                  data-type="${SUMMARY_TYPES.LOSERS}">
                 <span class="${CSS_CLASSES.METRIC_LABEL}">Day Loss</span>
                 <div class="${CSS_CLASSES.METRIC_ROW}">
@@ -630,7 +626,7 @@ export class ViewRenderer {
             </div>
 
             <div class="${CSS_CLASSES.SUMMARY_CARD} ${CSS_CLASSES.CLICKABLE}" 
-                 style="background: ${capitalGainGradient} !important;"
+                 style="background: ${capitalGainGradient} !important; ${returnBorderStyle}"
                  data-type="${SUMMARY_TYPES.CAPITAL_GAIN}">
                 <span class="${CSS_CLASSES.METRIC_LABEL}">Total Capital Gain</span>
                 <div class="${CSS_CLASSES.METRIC_ROW}">
@@ -2293,5 +2289,29 @@ export class ViewRenderer {
     hideLoadingOverlay() {
         const overlay = document.getElementById('app-loading-overlay');
         if (overlay) overlay.remove();
+    }
+
+    /**
+     * Internal helper to calculate border style string based on prefs and performance.
+     */
+    _getBorderStyles(changePercent) {
+        const prefs = AppState.preferences.containerBorders;
+        if (!prefs || !prefs.sides || prefs.sides.every(s => s === 0)) return '';
+
+        let color = 'var(--color-accent)'; // Coffee default
+        if (changePercent > 0) color = 'var(--color-positive)';
+        else if (changePercent < 0) color = 'var(--color-negative)';
+
+        const t = `${prefs.thickness}px`;
+        const s = prefs.sides;
+
+        let shadows = [];
+        // Use inset box-shadow to achieve 90-degree square corners (no mitering)
+        if (s[0]) shadows.push(`inset 0 ${t} 0 0 ${color}`); // Top
+        if (s[1]) shadows.push(`inset -${t} 0 0 0 ${color}`); // Right
+        if (s[2]) shadows.push(`inset 0 -${t} 0 0 ${color}`); // Bottom
+        if (s[3]) shadows.push(`inset ${t} 0 0 0 ${color}`); // Left
+
+        return shadows.length ? `box-shadow: ${shadows.join(', ')} !important; border-radius: 0 !important;` : '';
     }
 }

@@ -74,7 +74,8 @@ export const STORAGE_KEYS = {
     DAILY_EMAIL: 'ASX_NEXT_dailyEmail',
     EMAIL_RECIPIENTS: 'ASX_NEXT_emailRecipients',
     BADGE_SCOPE: 'ASX_NEXT_badgeScope',
-    GRADIENT_STRENGTH: 'ASX_NEXT_gradientStrength'
+    GRADIENT_STRENGTH: 'ASX_NEXT_gradientStrength',
+    BORDER_PREFS: 'ASX_NEXT_borderPrefs'
 };
 
 export const EVENTS = {
@@ -139,7 +140,8 @@ export const EVENTS = {
     FIREBASE_DATA_LOADED: 'firebase-data-loaded', // Splash Screen Trigger
     OPEN_FAVORITE_LINKS: 'open-favorite-links',
     FAVORITE_LINKS_UPDATED: 'favorite-links-updated',
-    TOGGLE_SORT_DIRECTION: 'toggle-sort-direction'
+    TOGGLE_SORT_DIRECTION: 'toggle-sort-direction',
+    SAVE_BORDER_PREFS: 'save-border-prefs'
 };
 
 export const SORT_OPTIONS = {
