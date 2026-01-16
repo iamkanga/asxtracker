@@ -546,10 +546,7 @@ export class AppController {
                     this.updateDataAndRender(false);
                 }
 
-                // FIX: Notify store that prices have updated so Client-Side Alerts can regenerate
-                if (notificationStore) {
-                    notificationStore._notifyCountChange();
-                }
+                // Redundant call removed - handled by REQUEST_RENDER_WATCHLIST listener in NotificationStore
             }
         } catch (err) {
             console.warn('Global Price Seed failed:', err);
@@ -1060,6 +1057,28 @@ export class AppController {
                     window.location.reload();
                 }, 800); // Short delay for splash visual feedback
             }
+        }
+    }
+
+    /**
+     * Updates the technical connection status for debug logging and UI feedback.
+     * @param {string} msg - The status message
+     * @param {string} mode - 'ok' | 'warn' | 'err'
+     */
+    _updateDebugStatus(msg, mode) {
+        const colors = {
+            'ok': 'color: #28a745;',
+            'warn': 'color: #ffc107;',
+            'err': 'color: #dc3545;'
+        };
+
+        console.log(`%c[AUTH-STATUS] ${msg.toUpperCase()}`, colors[mode] || '');
+
+        // Optional: Update a hidden technical status field if needed for power-user support
+        const debugNode = document.getElementById('debug-conn-status');
+        if (debugNode) {
+            debugNode.textContent = msg;
+            debugNode.className = `technical-status ${mode}`;
         }
     }
 

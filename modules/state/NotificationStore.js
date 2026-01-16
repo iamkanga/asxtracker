@@ -30,6 +30,7 @@ export class NotificationStore {
         this.unsubscribePrefs = null; // Subscription handle
         this.userId = null;
         this.alertTimestampCache = new Map(); // Session-based timestamp cache
+        this._hiloSeenSet = new Set(); // SUPPRESSION: Tracks 52-week alerts shown this session
         this.isReady = false; // LOGIC HARDENING: Race condition guard
     }
 
@@ -279,32 +280,22 @@ export class NotificationStore {
     }
 
     /**
-     * Retrieves Scanner Rules.
-     * PRIORITY: AppState (Live Preview) > Internal Store > Empty
+     * Internal helper to retrieve scanner rules from AppState for filtering.
      */
     getScannerRules() {
-        // 1. Try Live AppState (Reactive Preview from Settings)
-        if (AppState.preferences && AppState.preferences.scannerRules) {
-            // Ensure we merge with activeFilters if stored separately in scanner.activeFilters
-            const rules = { ...AppState.preferences.scannerRules };
-
-            // FIX: Merge Top-Level Override Preference (Critical: UserStore stores this at root, not in scannerRules)
-            if (AppState.preferences.excludePortfolio !== undefined) {
-                rules.excludePortfolio = AppState.preferences.excludePortfolio;
-            }
-
-            if (AppState.preferences.scanner && AppState.preferences.scanner.activeFilters !== undefined) {
-                const raw = AppState.preferences.scanner.activeFilters;
-                rules.activeFilters = Array.isArray(raw) ? raw.map(f => f.toUpperCase()) : raw;
-            } else if (this.scannerRules && this.scannerRules.activeFilters !== undefined) {
-                rules.activeFilters = this.scannerRules.activeFilters;
-            } else {
-                rules.activeFilters = null; // Default to All
-            }
-            return rules;
-        }
-        // 2. Fallback to Internal Store (persisted)
-        return this.scannerRules || {};
+        const rules = (AppState.preferences && AppState.preferences.scannerRules) ? AppState.preferences.scannerRules : {};
+        // Ensure robust return of all fields
+        return {
+            up: rules.up || {},
+            down: rules.down || {},
+            minPrice: (rules.minPrice !== undefined && rules.minPrice !== null) ? Number(rules.minPrice) : 0,
+            hiloMinPrice: (rules.hiloMinPrice !== undefined && rules.hiloMinPrice !== null) ? Number(rules.hiloMinPrice) : 0,
+            moversEnabled: rules.moversEnabled !== false,
+            hiloEnabled: rules.hiloEnabled !== false,
+            personalEnabled: rules.personalEnabled !== false,
+            excludePortfolio: AppState.preferences.excludePortfolio !== false,
+            activeFilters: this.scannerRules.activeFilters // Use the normalized one from store
+        };
     }
 
     /**
@@ -329,9 +320,13 @@ export class NotificationStore {
 
         // Use Defaults for Comparison (0 if null/undefined)
         // logic allows 0 to match >0.
-        const tPct = (rules.percentThreshold === null || rules.percentThreshold === undefined) ? null : rules.percentThreshold;
-        const tDol = (rules.dollarThreshold === null || rules.dollarThreshold === undefined) ? null : rules.dollarThreshold;
-        const minPrice = (rules.minPrice === null || rules.minPrice === undefined) ? null : rules.minPrice;
+        // FIX: Strict Number Casting to avoid "0" (string) !== 0 (number) issues.
+        const rulePct = rules.percentThreshold;
+        const ruleDol = rules.dollarThreshold;
+
+        const tPct = (rulePct === null || rulePct === undefined || rulePct === '') ? null : Number(rulePct);
+        const tDol = (ruleDol === null || ruleDol === undefined || ruleDol === '') ? null : Number(ruleDol);
+        const minPrice = (rules.minPrice === null || rules.minPrice === undefined) ? null : Number(rules.minPrice);
 
         // NEW LOGIC: Blank = Off for ALL containers.
         // For Increase/Decrease: 0 = Off.
@@ -353,7 +348,7 @@ export class NotificationStore {
             });
         }
 
-        return hits.filter(hit => {
+        const result = hits.filter(hit => {
             // CONSTANTS & BYPASS LOGIC (Moved to Top for Reference Safety)
             // HARDENED: null = "All Sectors" - do NOT convert to empty array
             const activeFilters = rules.activeFilters; // Can be null (All), [] (None), or [...industries]
@@ -439,15 +434,42 @@ export class NotificationStore {
                 }
             }
 
+            // 2f. 52-WEEK MILESTONE SUPPRESSION (Global Fix)
+            // REMOVED: Suppressing in filterHits causes it to disappear from the list immediately.
+            // Requirement was likely for Badge/Notification persistence.
+            /*
+            if (rules.isHilo && hit.code) {
+                const dateKey = new Date().toISOString().split('T')[0];
+                const seenKey = `${hit.code}|${hit.intent || 'hilo'}|${dateKey}`;
+                if (this._hiloSeenSet.has(seenKey)) return false;
+                this._hiloSeenSet.add(seenKey);
+            }
+            */
+
             // 3. Threshold Check
             // EXCEPTION: Targets and 52-Week Hi/Lo hits are explicit events. They bypass generic movement thresholds.
-            // EXCEPTION: If Override is ON (shouldBypass), we ignore the numeric threshold checks.
-            if (isTarget || rules.isHilo || shouldBypass) return true;
+            // FIXED: "Override" (shouldBypass) strictly applies to FILTERS (Sector, Min Price), not thresholds.
+            // Watchlist items MUST still meet the %/$ requirements to prevent noise.
+            if (isTarget || rules.isHilo) return true;
 
-            // OR LOGIC:
-            // Use the 'has' flags defined above.
-            const valPct = Math.abs(Number(hit.pct) || 0);
-            const valDol = Math.abs(Number(hit.change) || 0);
+            // TRUTH OVERRIDE: Use LIVE price data for threshold comparison
+            // Backend data can be stale (e.g., -5% when live shows -1.8%)
+            let valPct = Math.abs(Number(hit.pct) || 0);
+            let valDol = Math.abs(Number(hit.change) || 0);
+
+            // Check for fresher live data
+            if (hit.code && AppState.livePrices instanceof Map) {
+                const live = AppState.livePrices.get(hit.code);
+                if (live) {
+                    const livePct = Number(live.pctChange ?? live.changeInPercent ?? live.pct ?? live.dayChangePercent ?? 0);
+                    const liveDol = Number(live.change ?? live.dayChange ?? live.c ?? 0);
+                    // Only use live if we have valid data (price > 0 proves it's real)
+                    if (Number(live.live || live.price || live.last || 0) > 0) {
+                        valPct = Math.abs(livePct);
+                        valDol = Math.abs(liveDol);
+                    }
+                }
+            }
 
             if (hasTPct && hasTDol) {
                 return (valPct >= (tPct || 0)) || (valDol >= (tDol || 0));
@@ -457,9 +479,11 @@ export class NotificationStore {
                 return valDol >= (tDol || 0);
             }
 
-            // If strictMode is OFF (bypass), and no thresholds set -> Show All (passed via boolean Logic above)
             return true;
         });
+
+
+        return result;
     }
 
     async _fetchDoc(docName) {
@@ -591,8 +615,42 @@ export class NotificationStore {
             });
         }
 
-        // --- MOVER LOGIC CONTINUE ---
-        const myHits = rawHits.filter(hit => {
+        // DATA INTEGRITY FIX:
+        // Server Hits might be stale (e.g. PrevClose mismatch).
+        // If we have fresher data in AppState.livePrices, OVERWRITE the hit stats.
+        const verifiedHits = rawHits.map(h => {
+            // Clone to avoid mutation side-effects
+            const hit = { ...h };
+            if (hit.code && AppState.livePrices instanceof Map && AppState.livePrices.has(hit.code)) {
+                const fresh = AppState.livePrices.get(hit.code);
+                // Only overwrite if we have valid numbers
+                if (fresh.live > 0 && fresh.prevClose > 0) {
+                    hit.live = fresh.live;
+                    hit.prevClose = fresh.prevClose;
+                    hit.change = fresh.change;
+                    hit.pct = fresh.pctChange;
+                    // Re-calculate direction based on fresh data
+                    hit.direction = hit.change > 0 ? 'up' : (hit.change < 0 ? 'down' : 'neutral');
+                }
+            }
+            return hit;
+        });
+
+        // 2. Apply Filters (Rules, Muted, Pinned)
+        return this.filterLocalHits(verifiedHits, rules, mutedCodes, this.pinnedAlerts);
+    }
+
+    /**
+     * Filters a list of raw hits based on user preferences and rules.
+     * This function is used by both `getGlobalAlerts` and `getLocalAlerts`.
+     * @param {Array<Object>} rawHits - The unfiltered list of alert hits.
+     * @param {Object} rules - The scanner rules from user preferences.
+     * @param {Set<string>} mutedCodes - A set of uppercase stock codes that are muted.
+     * @param {Array<Object>} pinnedAlerts - The list of pinned alerts.
+     * @returns {Array<Object>} The filtered list of alert hits.
+     */
+    filterLocalHits(rawHits, rules, mutedCodes, pinnedAlerts) {
+        const filtered = rawHits.filter(hit => {
             const match = String(hit.userId) === String(this.userId);
             if (!match) return false;
 
@@ -623,7 +681,7 @@ export class NotificationStore {
 
             // --- MUTE FILTER (Custom Triggers Early Exit) - OPTIMIZED O(1) ---
             const code = hit.code || hit.shareName || hit.symbol;
-            if (code && mutedCodes.has(code.toUpperCase())) return false;
+            if (code && mutedCodes && typeof mutedCodes.has === 'function' && mutedCodes.has(code.toUpperCase())) return false;
 
             // DEBUG: Watchlist Override / Threshold Trace
             const debugRules = this.getScannerRules() || {};
@@ -679,26 +737,61 @@ export class NotificationStore {
                 }
             }
 
-            // --- STRICT FILTER FOR 52-WEEK HI/LO ---
-            if (hit.intent === 'high' || hit.intent === 'low' || hit.intent === 'hilo') {
-                // 1. Global Feature Toggle
-                if (rules.hiloEnabled === false) return false;
+            // --- UNIFIED PRICE AUTHORITY: Cross-Check Reported Data vs Live Data ---
+            const live = (AppState.livePrices instanceof Map) ? AppState.livePrices.get(hit.code) : null;
+            if (live) {
+                const livePrice = Number(live.live || live.price || live.last || 0);
+                const prevClose = Number(live.prevClose || live.close || 0);
 
-                // 2. Override Logic
-                // If Override is ON, we bypass Price thresholds.
-                if (overrideOn) return true;
+                // Re-calculate verified change using live prices ONLY
+                const verifiedChange = (prevClose > 0) ? (livePrice - prevClose) : 0;
+                const verifiedPct = (prevClose > 0) ? ((verifiedChange / prevClose) * 100) : 0;
 
-                // 3. Price Threshold (if Override OFF)
-                const hiloMinPrice = rules.hiloMinPrice || 0;
-                let price = Number(hit.price || hit.lastPrice || 0);
-
-                // JIT Enrichment (if price missing)
-                if (price === 0 && hit.code && AppState.livePrices) {
-                    const live = AppState.livePrices.get(hit.code);
-                    if (live) price = Number(live.price || live.last || 0);
+                // 1. DIRECTION LOCKING: If reported direction (~hit.pct) contradicts actual live trend, block it.
+                // This stops "dual directional alerts" if the backend is stale.
+                const reportedPct = Number(hit.pct || 0);
+                if (Math.abs(reportedPct) > 0.05 && Math.abs(verifiedPct) > 0.05) {
+                    const sameDirection = (reportedPct > 0 && verifiedPct > 0) || (reportedPct < 0 && verifiedPct < 0);
+                    if (!sameDirection) {
+                        console.warn(`[NotificationStore] Blocked Dual Direction: ${hit.code} (Reported ${reportedPct}% vs Live ${verifiedPct}%)`);
+                        return false;
+                    }
                 }
 
-                if (hiloMinPrice > 0 && price < hiloMinPrice) return false;
+                // 2. PHANTOM DATA CHECK: If reporting a massive move but live data shows no move, block it.
+                const isPhantom = Math.abs(reportedPct) > 1.0 && Math.abs(verifiedPct) < 0.1;
+                if (isPhantom) {
+                    console.warn(`[NotificationStore] Blocked Phantom Data: ${hit.code} (Reported ${reportedPct}% vs Live ${verifiedPct}%)`);
+                    hit._isPhantom = true; // Mark for UI health check
+                    return false;
+                }
+
+                // Update hit with verified values to ensure UI matches reality
+                hit.live = livePrice;
+                hit.change = verifiedChange;
+                hit.pct = verifiedPct;
+            }
+
+            // --- 52-WEEK MILESTONE SUPPRESSION ---
+            if (hit.intent === 'high' || hit.intent === 'low' || hit.intent === 'hilo') {
+                // JIT Enrichment (if price missing)
+                let price = Number(hit.live || hit.price || hit.last || 0);
+                if (price === 0 && hit.code && AppState.livePrices) {
+                    const liveData = AppState.livePrices.get(hit.code);
+                    if (liveData) price = Number(liveData.live || liveData.price || liveData.last || 0);
+                }
+
+                if (rules.hiloMinPrice > 0 && price < rules.hiloMinPrice) return false;
+
+                // --- SUPPRESSION: Re-evaluating Once-per-day ---
+                // If we suppress here, it disappears from the list after one render.
+                // We'll keep it visible for the remainder of the day/session.
+                /*
+                const dateKey = new Date().toISOString().split('T')[0];
+                const seenKey = `${hit.code}|${hit.intent}|${dateKey}`;
+                if (this._hiloSeenSet.has(seenKey)) return false;
+                this._hiloSeenSet.add(seenKey);
+                */
             }
 
             // --- STRICT FILTER FOR PERSONAL MOVERS (RMD FIX) ---
@@ -799,8 +892,8 @@ export class NotificationStore {
             const code = hit.code || hit.shareName;
             if (!code) return;
 
-            // MUTE FILTER (Custom Triggers)
-            if (mutedCodes.has(code)) return;
+            // MUTE FILTER (Redundant - already filtered in step 1)
+            // if (mutedCodes.has(code)) return;
 
             if (!consolidated.has(code)) {
                 // First entry: Clone it and init matches
@@ -813,7 +906,7 @@ export class NotificationStore {
             }
         };
 
-        myHits.forEach(addOrMerge); // myHits comes from logic below, but we need to ensure IT respects mute too?
+        filtered.forEach(addOrMerge);
         // Actually, myHits is filtered below. Let's look at `myHits` construction. 
         // `myHits` filters `rawHits`. `rawHits` combines `uniqueServerHits` and `clientTargets`.
 
@@ -972,7 +1065,7 @@ export class NotificationStore {
         const isBackendSparse = (rawGlobalUp.length + rawGlobalDown.length) < 20;
 
         if (isBackendSparse) {
-            // Backend data sparse (< 20). Triggering Client-Side Hydration (Silent).
+            // Backend data sparse (<20). Triggering Client-Side Hydration (Silent).
             const hydrated = this._hydrateFromClientCache();
             if (hydrated.up.length > 0) rawGlobalUp = hydrated.up;
             if (hydrated.down.length > 0) rawGlobalDown = hydrated.down;
@@ -983,7 +1076,17 @@ export class NotificationStore {
             if (hydrated.low.length > 0) rawGlobalLow = hydrated.low;
         }
 
+
+
         const rules = this.getScannerRules() || {};
+
+        // OPTIMIZATION: Pre-calculate Muted Set for Global usage too
+        const mutedCodes = new Set();
+        if (AppState.data && AppState.data.shares) {
+            AppState.data.shares.forEach(s => {
+                if (s.muted) mutedCodes.add((s.shareName || '').toUpperCase());
+            });
+        }
 
         // 2. Get Local Data (Portfolio/Watchlist)
         // We want to merge "Movers" from local into Global Lists.
@@ -1051,7 +1154,7 @@ export class NotificationStore {
 
             const allSectors = Object.values(SECTOR_INDUSTRY_MAP).flat().map(s => s.toUpperCase());
             const userFilters = rules.activeFilters; // Can be null (All) or [] (None)
-            const resolveFilters = (f) => (f === null || f === undefined) ? allSectors : f;
+            const resolveFilters = (f) => (f === null || f === undefined) ? null : f;
 
             const upRules = {
                 ...(rules.up || {}),
@@ -1066,8 +1169,13 @@ export class NotificationStore {
                 excludePortfolio: false // GLOBAL MOVER RULES: Always respect filters (ignore watchlist override)
             };
 
-            movers.up = this.filterHits(mergedUp, upRules, strictMode);
-            movers.down = this.filterHits(mergedDown, downRules, strictMode);
+            // Fix Argument Mismatch: filterHits(rawHits, rules, strictMode)
+            // filterHits returns an ARRAY (not an object with .fresh)
+            const upResult = this.filterHits(mergedUp, upRules, strictMode);
+            const downResult = this.filterHits(mergedDown, downRules, strictMode);
+
+            movers.up = Array.isArray(upResult) ? upResult : [];
+            movers.down = Array.isArray(downResult) ? downResult : [];
         }
 
         // Filter Hi/Lo
@@ -1098,7 +1206,7 @@ export class NotificationStore {
         // Treat Null activeFilters as Show All.
         const allSectorsHilo = Object.values(SECTOR_INDUSTRY_MAP).flat().map(s => s.toUpperCase());
         const userFiltersHilo = rules.activeFilters;
-        const resolveFiltersHilo = (f) => (f === null || f === undefined) ? allSectorsHilo : f;
+        const resolveFiltersHilo = (f) => (f === null || f === undefined) ? null : f;
 
         const hiloRules = {
             percentThreshold: 0,
@@ -1116,17 +1224,38 @@ export class NotificationStore {
                     if (live) {
                         if (live.high > 0) hit.high = live.high;
                         if (live.low > 0) hit.low = live.low;
-                        hit.high52 = hit.high;
-                        hit.low52 = hit.low;
+                        // DO NOT overwrite high52/low52 with daily high/low!
+                        // They are distinct values.
                     }
                 }
                 return hit;
             });
         };
 
+        // filterHits returns an ARRAY (not an object with .fresh)
+        const hiloHighResult = hiloEnabled ? this.filterHits(enrichHilo(mergedHigh), hiloRules, strictMode) : [];
+        const hiloLowResult = hiloEnabled ? this.filterHits(enrichHilo(mergedLow), hiloRules, strictMode) : [];
+
+        // FRESHNESS FILTER: Remove stale 52w items (0% movement = not a current hit)
+        const filterFresh = (items) => {
+            return items.filter(item => {
+                let pct = 0;
+                if (item.code && AppState.livePrices instanceof Map) {
+                    const live = AppState.livePrices.get(item.code);
+                    if (live) {
+                        pct = Math.abs(Number(live.dayChangePercent ?? live.pctChange ?? live.pct ?? 0));
+                    }
+                }
+                if (pct === 0) {
+                    pct = Math.abs(Number(item.pct ?? item.pctChange ?? 0));
+                }
+                return pct > 0; // Only keep items with movement
+            });
+        };
+
         const hilo = {
-            high: hiloEnabled ? this.filterHits(enrichHilo(mergedHigh), hiloRules, false) : [],
-            low: hiloEnabled ? this.filterHits(enrichHilo(mergedLow), hiloRules, false) : []
+            high: Array.isArray(hiloHighResult) ? filterFresh(hiloHighResult) : [],
+            low: Array.isArray(hiloLowResult) ? filterFresh(hiloLowResult) : []
         };
 
         // FINAL SAFETY SORT: Enforce strict order on output
@@ -1134,22 +1263,24 @@ export class NotificationStore {
         // FIX: Use parseFloat to handle potential string inputs (e.g. "0.5%") which Number() chokes on.
         // ENHANCED FIX: Look up Live Data if missing, AND ENFORCE SIGN to match UI.
         const getDisplayPct = (i, type) => {
-            let val = parseFloat(i.pct || i.pctChange || i.changeInPercent || i.changeP || i.changePercent || 0);
+            let val = 0;
 
-            // JIT Enrichment for Sorting (Match UI Logic)
-            if (val === 0 && i.code && AppState.livePrices && AppState.livePrices instanceof Map) {
-                // UI LOGIC MATCH: Clean Code (.AX removal)
+            // ALWAYS try live data FIRST (Truth Override)
+            if (i.code && AppState.livePrices && AppState.livePrices instanceof Map) {
                 const code = String(i.code).toUpperCase();
                 const cleanCode = code.replace(/\.AX$/i, '').trim();
-
                 const live = AppState.livePrices.get(cleanCode) || AppState.livePrices.get(code);
 
                 if (live) {
-                    val = parseFloat(live.dayChangePercent || live.changeInPercent || live.pct || live.pctChange || 0);
-                    // CRITICAL: Write back to object so TEST and UI use the same enriched value
+                    val = parseFloat(live.dayChangePercent ?? live.changeInPercent ?? live.pctChange ?? live.pct ?? 0);
+                    // Write back so UI and tests use same value
                     i.pct = val;
-                    if (i.pctChange === 0 || i.pctChange === undefined) i.pctChange = val;
                 }
+            }
+
+            // Fallback to backend value if no live data
+            if (val === 0) {
+                val = parseFloat(i.pct || i.pctChange || i.changeInPercent || i.changeP || i.changePercent || 0);
             }
 
             val = isNaN(val) ? 0 : val;
@@ -1171,47 +1302,85 @@ export class NotificationStore {
             return val;
         };
 
+        // Helper to get live $ change
+        const getLiveChangeDol = (item) => {
+            let dol = Math.abs(Number(item.change || item.c || 0));
+            if (item.code && AppState.livePrices instanceof Map) {
+                const live = AppState.livePrices.get(item.code);
+                if (live && Number(live.live || live.price || 0) > 0) {
+                    dol = Math.abs(Number(live.change ?? live.dayChange ?? live.c ?? dol));
+                }
+            }
+            return dol;
+        };
+
+        // Get thresholds from rules
+        const pctThresh = Number(rules.up?.percentThreshold ?? 0);
+        const dolThresh = Number(rules.up?.dollarThreshold ?? 0);
+
         const sortDesc = (type) => (a, b) => {
-            const valA = getDisplayPct(a, type);
-            const valB = getDisplayPct(b, type);
+            const valA = Math.abs(getDisplayPct(a, type));
+            const valB = Math.abs(getDisplayPct(b, type));
+            const dolA = getLiveChangeDol(a);
+            const dolB = getLiveChangeDol(b);
 
-            // Primary: Percentage High to Low (Magnitude) - MATCH UI PRECISION
-            // We round to 2 decimals to ensure 5.001% and 5.004% are treated as "Equal" (5.00%)
-            // so that the Dollar Value sort takes precedence for the user.
-            const pA = Math.round(Math.abs(valA) * 100);
-            const pB = Math.round(Math.abs(valB) * 100);
+            // Determine if each met % threshold
+            const aMetPct = valA >= pctThresh && pctThresh > 0;
+            const bMetPct = valB >= pctThresh && pctThresh > 0;
 
-            if (pB !== pA) return valB - valA;
+            // Group: % threshold items first, then $ only items
+            if (aMetPct && !bMetPct) return -1;
+            if (!aMetPct && bMetPct) return 1;
 
-            // Secondary: Dollar Value High to Low (Magnitude)
-            const chgA = Math.abs(Number(a.change || a.c || 0));
-            const chgB = Math.abs(Number(b.change || b.c || 0));
-            return chgB - chgA;
+            // Within same group:
+            if (aMetPct && bMetPct) {
+                // Both met % - sort by % (highest first)
+                return valB - valA;
+            } else {
+                // Both only met $ - sort by $ (highest first)
+                return dolB - dolA;
+            }
         };
+
         const sortAsc = (type) => (a, b) => {
-            const valA = getDisplayPct(a, type);
-            const valB = getDisplayPct(b, type);
+            const valA = Math.abs(getDisplayPct(a, type));
+            const valB = Math.abs(getDisplayPct(b, type));
+            const dolA = getLiveChangeDol(a);
+            const dolB = getLiveChangeDol(b);
 
-            // Primary: Percentage Low to High (Most Negative First)
-            const pA = Math.round(valA * 100);
-            const pB = Math.round(valB * 100);
+            // For losers, use down thresholds
+            const losePctThresh = Number(rules.down?.percentThreshold ?? 0);
+            const loseDolThresh = Number(rules.down?.dollarThreshold ?? 0);
 
-            if (pA !== pB) return valA - valB;
+            const aMetPct = valA >= losePctThresh && losePctThresh > 0;
+            const bMetPct = valB >= losePctThresh && losePctThresh > 0;
 
-            // Secondary: Dollar Value High to Low (Magnitude)
-            const chgA = Math.abs(Number(a.change || a.c || 0));
-            const chgB = Math.abs(Number(b.change || b.c || 0));
-            return chgB - chgA;
+            if (aMetPct && !bMetPct) return -1;
+            if (!aMetPct && bMetPct) return 1;
+
+            if (aMetPct && bMetPct) {
+                return valB - valA;
+            } else {
+                return dolB - dolA;
+            }
         };
 
-        if (movers.up) movers.up.sort(sortDesc('up'));
-        if (movers.down) movers.down.sort(sortAsc('down'));
-        if (hilo.high) hilo.high.sort(sortDesc('high'));
-        if (hilo.low) hilo.low.sort(sortAsc('low'));
+        if (movers.up && Array.isArray(movers.up)) movers.up.sort(sortDesc('up'));
+        if (movers.down && Array.isArray(movers.down)) movers.down.sort(sortAsc('down'));
+
+        // HILO SORT: Simple % magnitude sort (highest first) using live data
+        const sortHilo = (a, b) => {
+            const valA = Math.abs(getDisplayPct(a, 'high'));
+            const valB = Math.abs(getDisplayPct(b, 'high'));
+            return valB - valA; // Highest % first
+        };
+        if (hilo.high && Array.isArray(hilo.high)) hilo.high.sort(sortHilo);
+        if (hilo.low && Array.isArray(hilo.low)) hilo.low.sort(sortHilo);
+
 
         return {
-            movers,
-            hilo
+            movers: { up: movers.up || [], down: movers.down || [] },
+            hilo: { high: hilo.high || [], low: hilo.low || [] }
         };
     }
 
@@ -1720,8 +1889,8 @@ export class NotificationStore {
 
                         const r = pctChange >= 0 ? upRules : downRules;
 
-                        const thresholdPct = r.percentThreshold;
-                        const thresholdDol = r.dollarThreshold;
+                        const thresholdPct = Number(r.percentThreshold);
+                        const thresholdDol = Number(r.dollarThreshold);
 
                         let isHit = false;
 
@@ -1747,8 +1916,7 @@ export class NotificationStore {
                             const moverType = pctChange >= 0 ? 'up' : 'down';
                             const key = `${code} -mover - ${moverType} `;
 
-                            // DEBUG: Trace Generation
-                            console.log(`[NotificationStore] Generated Watchlist Mover: ${code}, Type: ${moverType}, Pct: ${pctChange}%, Threshold: ${thresholdPct}% `);
+                            // --- TRACE LOG REMOVED ---
                             alerts.push({
                                 userId: this.userId,
                                 code: code,
