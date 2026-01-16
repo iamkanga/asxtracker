@@ -270,7 +270,9 @@ export const AppState = {
                 alertEmailRecipients: this.preferences.alertEmailRecipients || '',
                 gradientStrength: this.preferences.gradientStrength ?? 0.6,
                 customWatchlistNames: this.preferences.customWatchlistNames || {},
-                containerBorders: this.preferences.containerBorders || { sides: [0, 0, 0, 1], thickness: 3 }
+                containerBorders: this.preferences.containerBorders || { sides: [0, 0, 0, 1], thickness: 3 },
+                badgeScope: this.preferences.badgeScope || 'all',
+                showBadges: this.preferences.showBadges !== false
             };
             // console.log('[AppState] Triggering Sync with payload:', payload);
             this.onPersistenceUpdate(payload);

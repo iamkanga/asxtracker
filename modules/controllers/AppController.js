@@ -464,7 +464,9 @@ export class AppController {
                     dashboardHidden: AppState.preferences.dashboardHidden, // Fresh Read
                     userCategories: AppState.preferences.userCategories || [],
                     gradientStrength: AppState.preferences.gradientStrength, // Fresh Read (USER REQUEST)
-                    containerBorders: AppState.preferences.containerBorders // Fresh Read (USER REQUEST)
+                    containerBorders: AppState.preferences.containerBorders, // Fresh Read (USER REQUEST)
+                    badgeScope: AppState.preferences.badgeScope, // Fresh Read
+                    showBadges: AppState.preferences.showBadges  // Fresh Read
                 };
 
                 if (freshPrefs.userCategories) {
@@ -770,6 +772,16 @@ export class AppController {
                     if (prefs.showBadges !== undefined) {
                         AppState.preferences.showBadges = prefs.showBadges !== false;
                         needsRender = true;
+                    }
+                    if (prefs.badgeScope !== undefined) {
+                        AppState.preferences.badgeScope = prefs.badgeScope || 'all';
+                        localStorage.setItem(STORAGE_KEYS.BADGE_SCOPE, AppState.preferences.badgeScope);
+                        needsRender = true;
+
+                        // Ensure badge updates immediately if scope changed via cloud sync
+                        if (typeof notificationStore !== 'undefined' && notificationStore._notifyCountChange) {
+                            notificationStore._notifyCountChange();
+                        }
                     }
                     if (prefs.alertEmailRecipients !== undefined) {
                         AppState.preferences.alertEmailRecipients = prefs.alertEmailRecipients || '';
