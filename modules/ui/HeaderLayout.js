@@ -92,7 +92,7 @@ export class HeaderLayout {
                         <span>Read Only</span>
                     </div>
                     <button id="${IDS.LIVE_REFRESH_BTN}" class="live-refresh-btn" aria-label="Refresh Prices" title="Refresh Live Prices">
-                        <i class="fas ${UI_ICONS.SYNC} ${CSS_CLASSES.MR_2PX}"></i><span id="${IDS.LIVE_REFRESH_TIME}">--:--:--</span>
+                        <span id="connection-dot" class="connection-dot connected"></span><span id="${IDS.LIVE_REFRESH_TIME}">--:--:--</span>
                     </button>
                  </div>
             </div>
@@ -745,25 +745,32 @@ export class HeaderLayout {
      * @param {boolean} isConnected - True if authenticated
      */
     updateConnectionStatus(isConnected) {
-        const el = document.getElementById('connection-status');
-        if (!el) return;
+        const dot = document.getElementById('connection-dot');
+        if (dot) {
+            if (isConnected) {
+                dot.classList.add('connected');
+                dot.title = 'Connected to Live Updates';
+            } else {
+                dot.classList.remove('connected');
+                dot.title = 'Disconnected - Click to Reconnect';
+            }
+        }
 
-        if (isConnected) {
-            el.classList.remove('visible');
-            el.classList.remove(CSS_CLASSES.STATUS_DISCONNECTED);
-            // Allow pointer events to fall through when hidden
-        } else {
-            el.classList.add('visible');
-            el.classList.add(CSS_CLASSES.STATUS_DISCONNECTED);
-
-            // Re-bind click handler here or in init, ensuring it prompts login.
-            // Since this is a view update, the actual logic binding should ideally be in controller,
-            // or wired once in init. Let's assume controller listens to click via delegation or direct bind.
-            if (!el._hasBind) {
-                el._hasBind = true;
-                el.addEventListener('click', () => {
-                    document.dispatchEvent(new CustomEvent('auth-reconnect-needed'));
-                });
+        // Legacy fallback (maintain if element still exists elsewhere)
+        const oldEl = document.getElementById('connection-status');
+        if (oldEl) {
+            if (isConnected) {
+                oldEl.classList.remove('visible');
+                oldEl.classList.remove(CSS_CLASSES.STATUS_DISCONNECTED);
+            } else {
+                oldEl.classList.add('visible');
+                oldEl.classList.add(CSS_CLASSES.STATUS_DISCONNECTED);
+                if (!oldEl._hasBind) {
+                    oldEl._hasBind = true;
+                    oldEl.addEventListener('click', () => {
+                        document.dispatchEvent(new CustomEvent('auth-reconnect-needed'));
+                    });
+                }
             }
         }
     }
