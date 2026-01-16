@@ -534,9 +534,6 @@ export class ViewRenderer {
         // Note: Styles for .portfolio-summary should be in CSS, not JS.
 
         // Gradient classes for summary cards
-        const totalGainGrade = metrics.totalReturn > 0 ? CSS_CLASSES.DASHBOARD_GRADE_UP :
-            metrics.totalReturn < 0 ? CSS_CLASSES.DASHBOARD_GRADE_DOWN : CSS_CLASSES.DASHBOARD_GRADE_NEUTRAL;
-
         const isTotalPos = metrics.totalReturn >= 0;
 
         // 2. Proportional Sentiment Logic (Dynamic Gradient) - Value-based
@@ -547,21 +544,21 @@ export class ViewRenderer {
         const dayGain = Number(rawGain);
         const dayLoss = Math.abs(Number(rawLoss));
 
-        let dayChangeClass = CSS_CLASSES.DASHBOARD_GRADE_NEUTRAL;
-
-        // Logic: Whichever is larger determines the Top-Left color (Dominant Side)
-        if (dayGain >= dayLoss) {
-            // Gain Dominant (Matches Market Pulse 'Low to High') -> Green Top-Left
-            dayChangeClass = CSS_CLASSES.TREND_MIXED_DESC_BG;
-        } else {
-            // Loss Dominant (Matches Market Pulse 'High to Low') -> Red Top-Left
-            dayChangeClass = CSS_CLASSES.TREND_MIXED_ASC_BG;
-        }
-
-        // Static Gradients (Needed for other cards)
+        // Static Gradients (Needed for all cards)
         const neutralGradient = 'linear-gradient(90deg, rgba(164, 147, 147, var(--gradient-strength, 0.6)) 0%, rgba(20, 20, 20, 1) 50%, rgba(164, 147, 147, var(--gradient-strength, 0.6)) 100%)';
         const greenGradient = 'linear-gradient(90deg, rgba(0, 180, 0, var(--gradient-strength, 0.6)) 0%, rgba(20, 20, 20, 1) 50%, rgba(0, 180, 0, var(--gradient-strength, 0.6)) 100%)';
         const redGradient = 'linear-gradient(90deg, rgba(180, 0, 0, var(--gradient-strength, 0.6)) 0%, rgba(20, 20, 20, 1) 50%, rgba(180, 0, 0, var(--gradient-strength, 0.6)) 100%)';
+
+        // Day Change Mixed Gradient Logic (Proportional Scenario)
+        const totalMovement = dayGain + dayLoss;
+        const gainRatio = totalMovement > 0 ? (dayGain / totalMovement) : 0.5;
+        const midpoint = Math.min(Math.max(Math.round(gainRatio * 100), 10), 90); // Constrain for aesthetics
+
+        const dayChangeGradient = `linear-gradient(135deg, 
+            rgba(20, 160, 20, var(--gradient-strength, 0.6)) 0%, 
+            rgba(20, 20, 20, 1) ${midpoint}%, 
+            rgba(180, 20, 20, var(--gradient-strength, 0.6)) 100%)`;
+
         const capitalGainGradient = isTotalPos ? greenGradient : redGradient;
 
         // BORDER LOGIC for Summary Cards
@@ -574,28 +571,28 @@ export class ViewRenderer {
 
         // 3. Construct HTML (Card Layout with Inline Percentages and Gradients)
         container.innerHTML = `
-            <div class="${CSS_CLASSES.SUMMARY_CARD} ${CSS_CLASSES.CLICKABLE}" 
-                 style="background: ${neutralGradient} !important; ${valueBorderStyle}"
-                 data-type="${SUMMARY_TYPES.VALUE}">
-                <span class="${CSS_CLASSES.METRIC_LABEL}">Portfolio Value</span>
-                <div class="${CSS_CLASSES.METRIC_ROW}">
-                    <span class="${CSS_CLASSES.METRIC_VALUE_LARGE}">${formatCurrency(metrics.totalValue)}</span>
-                </div>
-            </div>
-
-            <div class="${CSS_CLASSES.SUMMARY_CARD} ${CSS_CLASSES.CLICKABLE} ${dayChangeClass}" 
-                 style="${changeBorderStyle}"
-                 data-type="${SUMMARY_TYPES.DAY_CHANGE}">
-                <span class="${CSS_CLASSES.METRIC_LABEL}">Day Change</span>
-                <div class="${CSS_CLASSES.METRIC_ROW}">
-                    <span class="${CSS_CLASSES.METRIC_VALUE_LARGE} ${(metrics.dayChangeValue >= 0) ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}">
-                        ${formatCurrency(metrics.dayChangeValue)}
-                    </span>
-                    <span class="${CSS_CLASSES.METRIC_PERCENT_SMALL} ${(metrics.dayChangePercent >= 0) ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}">
-                        ${formatPercent(metrics.dayChangePercent)}
-                    </span>
-                </div>
-            </div>
+             <div class="${CSS_CLASSES.SUMMARY_CARD} ${CSS_CLASSES.CLICKABLE}" 
+                  style="background: ${neutralGradient} !important; ${valueBorderStyle}"
+                  data-type="${SUMMARY_TYPES.VALUE}">
+                 <span class="${CSS_CLASSES.METRIC_LABEL}">Portfolio Value</span>
+                 <div class="${CSS_CLASSES.METRIC_ROW}">
+                     <span class="${CSS_CLASSES.METRIC_VALUE_LARGE}">${formatCurrency(metrics.totalValue)}</span>
+                 </div>
+             </div>
+ 
+             <div class="${CSS_CLASSES.SUMMARY_CARD} ${CSS_CLASSES.CLICKABLE}" 
+                  style="background: ${dayChangeGradient} !important; ${changeBorderStyle}"
+                  data-type="${SUMMARY_TYPES.DAY_CHANGE}">
+                 <span class="${CSS_CLASSES.METRIC_LABEL}">Day Change</span>
+                 <div class="${CSS_CLASSES.METRIC_ROW}">
+                     <span class="${CSS_CLASSES.METRIC_VALUE_LARGE} ${(metrics.dayChangeValue >= 0) ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}">
+                         ${formatCurrency(metrics.dayChangeValue)}
+                     </span>
+                     <span class="${CSS_CLASSES.METRIC_PERCENT_SMALL} ${(metrics.dayChangePercent >= 0) ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}">
+                         ${formatPercent(metrics.dayChangePercent)}
+                     </span>
+                 </div>
+             </div>
 
             <div class="${CSS_CLASSES.SUMMARY_CARD} ${CSS_CLASSES.CLICKABLE}" 
                  style="background: ${greenGradient} !important; ${gainBorderStyle}"
