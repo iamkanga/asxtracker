@@ -38,6 +38,7 @@ export class AppController {
 
     constructor() {
         AppController.instance = this;
+        AppState.controller = this; // Register global controller for UI modules
         // Services
         this.dataService = new DataService();
         this.appService = new AppService();
@@ -209,36 +210,112 @@ export class AppController {
         // Mute Toggle Listener
         document.addEventListener(EVENTS.TOGGLE_SHARE_MUTE, async (e) => {
             if (!AppState.user) return;
-            const { id } = e.detail;
-            const share = AppState.data.shares.find(s => s.id === id);
+            let { id, code } = e.detail;
 
-            if (share) {
-                const newStatus = !share.muted;
-                await this.appService.updateShareRecord(id, { muted: newStatus });
+            // GHOST RESURRECTION: If ID is null OR is a temp ID, treat as needing sync before setting prefs
+            const isTempId = id && String(id).startsWith('temp_');
+            if ((!id || isTempId) && code) {
+                // GUARD: Prevent double-tap resurrection
+                if (this._resurrectionGuard && this._resurrectionGuard.has(code)) {
+                    console.warn(`AppController: Resurrection already in progress for ${code}. Ignoring.`);
+                    return;
+                }
 
-                // Force Notification Re-evaluation
+                // Init Guard
+                if (!this._resurrectionGuard) this._resurrectionGuard = new Set();
+                this._resurrectionGuard.add(code);
+
+                console.warn(`AppController: Toggle Mute - ID missing or temp for ${code}. Attempting sync/resurrection...`);
+
+                try {
+                    // LAST-SECOND CHECK: Maybe the ID just arrived in a snapshot or update?
+                    const codeUpper = code.toUpperCase();
+                    const existingReal = AppState.data.shares.find(s => (s.shareName || s.code || '').toUpperCase() === codeUpper && s.id && !String(s.id).startsWith('temp_'));
+
+                    // Also check the Guarded ID Registry
+                    const guardedId = AppState.data.optimisticIds ? AppState.data.optimisticIds.get(codeUpper) : null;
+
+                    if (existingReal || guardedId) {
+                        id = existingReal ? existingReal.id : guardedId;
+                        console.log(`AppController: ID for ${code} found in ${existingReal ? 'snapshot' : 'Optimistic Guard'}: ${id}`);
+                    } else {
+                        // 1. Resolve Best Local Reference
+                        const candidates = AppState.data.shares.filter(s => (s.shareName || s.code || '').toUpperCase() === codeUpper);
+                        const localShare = candidates.sort((a, b) => (b.id ? 1 : 0) - (a.id ? 1 : 0))[0];
+                        const watchlistId = localShare ? (localShare.watchlistId || 'portfolio') : 'portfolio';
+
+                        // 2. Create/Link (Resurrect)
+                        id = await this.appService.addStock(code, watchlistId, 0, new Date().toISOString());
+
+                        if (id) {
+                            // SUCCESS: Update localized memory
+                            if (localShare) localShare.id = id;
+                            candidates.forEach(s => { if (!s.id) s.id = id; });
+
+                            // POPULATE GUARD: Ensure this ID survives snapshot refreshes
+                            if (AppState.data.optimisticIds) {
+                                AppState.data.optimisticIds.set(codeUpper, id);
+                            }
+
+                            console.log(`AppController: Resurrection success. New ID: ${id}`);
+                            this.updateDataAndRender(false);
+                        }
+                    }
+                } catch (err) {
+                    console.error('AppController: Resurrection failed during Mute:', err);
+                    ToastManager.error('Could not sync share settings. Please refresh.');
+                    this._resurrectionGuard.delete(code);
+                    return;
+                } finally {
+                    this._resurrectionGuard.delete(code);
+                }
+            }
+
+            // Source of Truth: Prioritize Event Detail (from DOM Render) over potentially stale AppState
+            let currentMuted = false;
+            if (e.detail.muted !== undefined) {
+                currentMuted = e.detail.muted === true || e.detail.muted === 'true';
+            } else {
+                const share = AppState.data.shares.find(s => s.id === id);
+                currentMuted = share ? !!share.muted : false;
+            }
+
+            const shareToUpdate = AppState.data.shares.find(s => s.id === id);
+
+            if (shareToUpdate || id) {
+                const newStatus = !currentMuted;
+
+                // OPTIMISTIC UPDATE: Update local state IMMEDIATELY
+                if (shareToUpdate) {
+                    shareToUpdate.muted = newStatus;
+                    if (this.notificationStore) this.notificationStore.recalculateBadges();
+                    this.updateDataAndRender(false);
+                }
+
+                // Fire and Forget
+                try {
+                    await this.appService.updateShareRecord(id, { muted: newStatus });
+                } catch (err) {
+                    console.error('Mute Toggle Failed:', err);
+                    if (shareToUpdate) {
+                        shareToUpdate.muted = !newStatus;
+                        this.updateDataAndRender(false);
+                    }
+                    ToastManager.error('Failed to update mute status.');
+                    return;
+                }
+
+                // 3. User Feedback
+                const statusText = newStatus ? 'Muted' : 'Unmuted';
+                ToastManager.info(`${shareToUpdate ? (shareToUpdate.code || 'Share') : 'Share'} is now ${statusText}.`);
+
                 if (this.notificationStore) {
                     this.notificationStore.recalculateBadges();
                 }
-
-                // Show Toast
-                // Use robust property access for code
-                const shareCode = share.code || share.shareName || share.symbol || 'Share';
-
-                const msg = newStatus
-                    ? `Notifications paused for ${shareCode}`
-                    : `Notifications active for ${shareCode}`;
-
-                // DEBOUNCE GUARD: Prevent double toasts
-                const now = Date.now();
-                if (!share._lastToast || (now - share._lastToast > 500)) {
-                    share._lastToast = now;
-                    ToastManager.show(msg, 'success', newStatus ? 'Muted' : 'Unmuted');
-                }
-            } else {
-                console.warn('AppController: Toggle Mute - Share not found for ID:', id);
             }
         });
+
+
 
         // 2. RECONNECTION SAFETY NET
         // If UserStore detects a write failure (permission-denied), it fires this event.
@@ -2953,9 +3030,54 @@ export class AppController {
             ...(pulse._global.hilo?.high || []),
             ...(pulse._global.hilo?.low || [])
         ];
-        allAlerts.sort((a, b) => {
-            const pA = Math.abs(a.pctChange || a.pct || 0);
-            const pB = Math.abs(b.pctChange || b.pct || 0);
+
+        // Hydrate from Live Prices to ensure we have BOTH $ and % change
+        const hydratedMarket = allAlerts.map(alert => {
+            const code = alert.code || alert.symbol;
+            if (!code) return null;
+
+            const cleanCode = code.replace(/\.AX$/i, '').trim().toUpperCase();
+            const data = livePrices.get(cleanCode);
+            if (!data) return { ...alert, pctChange: alert.pct || 0 }; // Fallback
+
+            // Calculate missing values if possible
+            let change = data.change || 0;
+            let pct = data.pctChange || data.changePercent || 0;
+
+            // Auto-fix discrepancies (User Report: $0 change but 8% move, or 18c change but 0% move)
+            // Case 1: Has Change, No Pct
+            if (change !== 0 && pct === 0 && data.live > 0) {
+                const prev = data.live - change;
+                if (prev !== 0) pct = (change / prev) * 100;
+            }
+            // Case 2: Has Pct, No Change
+            if (pct !== 0 && change === 0 && data.live > 0) {
+                const prev = data.live / (1 + (pct / 100));
+                change = data.live - prev;
+            }
+
+            return {
+                code: cleanCode,
+                live: data.live || 0,
+                change: change,
+                pctChange: pct,
+                name: data.name || ''
+            };
+        }).filter(Boolean);
+
+        // Deduplicate by Code
+        const uniqueMarket = [];
+        const seen = new Set();
+        hydratedMarket.forEach(item => {
+            if (!seen.has(item.code)) {
+                seen.add(item.code);
+                uniqueMarket.push(item);
+            }
+        });
+
+        uniqueMarket.sort((a, b) => {
+            const pA = Math.abs(a.pctChange || 0);
+            const pB = Math.abs(b.pctChange || 0);
             if (pB !== pA) return pB - pA;
             return Math.abs(b.change || 0) - Math.abs(a.change || 0);
         });
@@ -2970,7 +3092,7 @@ export class AppController {
             highlights: {
                 portfolio: pfMovers.slice(0, 3),
                 watchlists: userMovers.slice(0, 3),
-                market: allAlerts.slice(0, 3)
+                market: uniqueMarket.slice(0, 3)
             },
             marketSentiment: {
                 sentiment,

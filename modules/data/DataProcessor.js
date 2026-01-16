@@ -5,6 +5,7 @@
  */
 
 import { UserStore } from './UserStore.js';
+import { AppState } from '../state/AppState.js';
 
 // Instantiate strictly for helper methods (stateless usage of getWatchlistData)
 const userStore = new UserStore();
@@ -64,10 +65,51 @@ export function processShares(allShares, watchlistId, livePrices, sortConfig, hi
         return { mergedData: [], summaryMetrics: null };
     }
 
-    // 2. Merge Data (Per-Share Calculations)
-    const mergedData = filteredShares.map(share => {
+    // 2. Merge Data (Per-Share Calculations) & De-Duplication
+    const processedMap = new Map();
+
+    filteredShares.forEach(share => {
         // STRICT LOOKUP: Trim and Uppercase to match DataService keys
-        const lookupKey = String(share.shareName).trim().toUpperCase();
+        const lookupKey = String(share.shareName || share.code || '').trim().toUpperCase();
+        if (!lookupKey) return;
+
+        // AUTOREPAIR: If ID is missing (Ghost), try to find it in the master list
+        if (!share.id) {
+            const masterRecord = allShares.find(s => s.shareName === share.shareName && s.id);
+            if (masterRecord) {
+                share.id = masterRecord.id;
+            }
+        }
+        // OPTIMISTIC ID PROTECTION: 
+        // If we have a protected Real ID for this code, and current share is Ghost or Temp, upgrade it.
+        const codeKey = (share.code || share.shareName || '').toUpperCase();
+        if (AppState.data.optimisticIds && AppState.data.optimisticIds.has(codeKey)) {
+            const guardedId = AppState.data.optimisticIds.get(codeKey);
+            // Only upgrade if we are moving UP the quality ladder
+            if (!share.id || String(share.id).startsWith('temp_')) {
+                share.id = guardedId;
+            }
+        }
+
+        // DE-DUPLICATION LOGIC
+        if (processedMap.has(lookupKey)) {
+            const existing = processedMap.get(lookupKey);
+
+            // Helper to rank ID quality: 2 = Real, 1 = Temp, 0 = Ghost
+            const getRank = (s) => {
+                if (!s.id) return 0;
+                if (String(s.id).startsWith('temp_')) return 1;
+                return 2;
+            };
+
+            // If the EXISTING one is better or equal, skip this one.
+            // Otherwise, overwrite with the better version.
+            if (getRank(existing) >= getRank(share)) {
+                return;
+            }
+            console.log(`[DataProcessor] Upgrading ${lookupKey}: ${getRank(existing)} -> ${getRank(share)}`);
+        }
+
         let priceData = livePrices.get(lookupKey);
 
         // Fallback: Try appending .AX if not found
@@ -110,17 +152,15 @@ export function processShares(allShares, watchlistId, livePrices, sortConfig, hi
         const capitalGain = value - cost;
         const capitalGainPercent = cost !== 0 ? (capitalGain / cost) * 100 : 0;
 
-        return {
+        const processedShare = {
             ...share,
             // Robust Link: Usage of 'shareName' (Legacy) vs 'code' (New Schema)
-            // We ensure we have a valid code string for display/logic
             code: share.shareName || share.code,
-            // We also ensure shareName is backfilled if missing, to satisfy legacy consumers downstream
             shareName: share.shareName || share.code,
             currentPrice: currentPrice,
             dayChangePercent: dayChangePercent,
-            dayChangeValue: dayChangeValue, // Total value change for portfolio
-            dayChangePerShare: dayChangePerShare, // Per-share change for watchlists
+            dayChangeValue: dayChangeValue,
+            dayChangePerShare: dayChangePerShare,
             units: units,
             value: value,
             costBasis: cost,
@@ -128,14 +168,17 @@ export function processShares(allShares, watchlistId, livePrices, sortConfig, hi
             enteredPrice: enteredPrice,
             capitalGain: capitalGain,
             capitalGainPercent: capitalGainPercent,
-            capitalGain: capitalGain,
-            capitalGainPercent: capitalGainPercent,
             comments: normalizeComments(share.comments),
             isHidden: hiddenAssets.has(String(share.id)),
             sector: priceData ? priceData.sector : (share.sector || ''),
             industry: priceData ? priceData.industry : (share.industry || '')
         };
+
+        processedMap.set(lookupKey, processedShare);
     });
+
+    // Convert Map back to Array
+    const mergedData = Array.from(processedMap.values());
 
     // DEBUG: Log match rate
     const liveCount = mergedData.filter(m => m.currentPrice > 0).length;

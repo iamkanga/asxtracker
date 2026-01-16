@@ -182,8 +182,9 @@ export class FavoriteLinksUI {
             return true;
         });
 
-        // AUTO-MERGE: Inject Critical Investor Portals if missing (User Request)
-        // This ensures existing users get the new links without wiping their custom ones.
+        // AUTO-MERGE REMOVED (User Request: Allow deletion of these links)
+        // Previous logic forced these links back if missing, preventing deletion.
+        /*
         const crucialLinks = [
             { name: 'InvestorServe', url: 'https://www.investorserve.com.au/' },
             { name: 'Automic Investor', url: 'https://automic.com.au' },
@@ -206,6 +207,8 @@ export class FavoriteLinksUI {
                 modified = true;
             }
         });
+        */
+        let modified = false; // Reset modified since we aren't enforcing additions
 
         // Save back to state if we modified it, so the user sees it permanently
         if (modified) {

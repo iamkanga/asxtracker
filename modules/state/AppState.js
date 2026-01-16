@@ -219,7 +219,8 @@ export const AppState = {
         shares: [],
         cash: [],
         watchlists: [],
-        dashboard: []
+        dashboard: [],
+        optimisticIds: new Map() // Map<Code, RealID> to guard against snapshot overwrites
     },
 
     // Live Data Cache

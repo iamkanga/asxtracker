@@ -273,23 +273,45 @@ export class ModalController {
                                 };
                                 delete dataToAdd.watchlists;
 
+                                // STRICT OPTIMISM: Inject into State with temp ID IMMEDIATELY
+                                const tempId = `temp_${Date.now()}`;
+                                console.log(`[ModalController] Optimistic Injection: ${lookupKey} with ${tempId}`);
+                                AppState.data.shares.push({
+                                    ...dataToAdd,
+                                    id: tempId
+                                });
+                                if (this.updateCallback) await this.updateCallback(); // Force immediate render
+
                                 const newId = await appService.addBaseShareRecord(dataToAdd);
-                                targetDocId = newId; // Update for next iteration (So subsequent list items LINK to this new doc)
+                                console.log(`[ModalController] Success! New ID from DB: ${newId} for ${lookupKey}`);
+
+                                if (!newId) {
+                                    throw new Error(`Failed to create share record for ${wid} (ID was null)`);
+                                }
+                                targetDocId = newId;
                                 successCount++;
 
-                                // Optimistic Injection
-                                const shareNowInState = AppState.data.shares.find(s => s.id === newId || (s.shareName || '').toUpperCase() === lookupKey);
-                                if (shareNowInState) {
-                                    if (!shareNowInState.id) shareNowInState.id = newId;
-                                } else {
-                                    AppState.data.shares.push({
-                                        shareName: lookupKey,
-                                        id: newId,
-                                        watchlistId: persistenceId
-                                    });
+                                // Update TEMP ID with REAL ID
+                                // Fallback: If snapshot replaced the array, find by name
+                                let tempShare = AppState.data.shares.find(s => s.id === tempId);
+                                if (!tempShare) {
+                                    tempShare = AppState.data.shares.find(s => (s.shareName || '').toUpperCase() === lookupKey && !s.id);
+                                }
+
+                                if (tempShare) {
+                                    tempShare.id = newId;
+                                    // POPULATE GUARD: Protect this ID from snapshot overwrites for a few minutes
+                                    if (AppState.data.optimisticIds) {
+                                        AppState.data.optimisticIds.set(lookupKey, newId);
+                                    }
+                                    console.log(`[ModalController] Swapped Temp/Ghost for Real ID ${newId}`);
+                                    if (this.updateCallback) await this.updateCallback(); // RE-RENDER: Important to update DOM with real ID
                                 }
                             } catch (err) {
                                 console.error(`Failed to create for ${wid}:`, err);
+                                // Rollback temp share
+                                AppState.data.shares = AppState.data.shares.filter(s => !String(s.id).startsWith('temp_'));
+                                if (this.updateCallback) await this.updateCallback();
                                 errors.push(wid);
                             }
                         }
@@ -326,9 +348,9 @@ export class ModalController {
                                 delete dataToAdd.watchlists;
 
                                 const newId = await appService.addBaseShareRecord(dataToAdd);
+                                if (!newId) throw new Error(`Ghost Resurrection failed: ID returned null for ${formData.shareName}`);
                                 successCount++;
 
-                                // Update Injection
                                 // Update Injection
                                 // RE-CHECK: Snapshot might have arrived during await
                                 const shareNowInState = AppState.data.shares.find(s => s.id === newId || (s.shareName || '').toUpperCase() === lookupKey);
@@ -339,11 +361,13 @@ export class ModalController {
                                     if (!shareNowInState.id) shareNowInState.id = newId;
                                     shareExists = true;
                                 } else {
+                                    console.log(`[ModalController] Injecting Resurrected Share: ID=${newId}`);
                                     // Truly missing, safe to inject
                                     AppState.data.shares.push({
                                         shareName: lookupKey,
                                         id: newId,
-                                        watchlistId: persistenceId
+                                        watchlistId: persistenceId,
+                                        watchlistIds: [persistenceId]
                                     });
                                     shareExists = true;
                                 }

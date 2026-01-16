@@ -8,7 +8,7 @@ import { AppState } from '../state/AppState.js';
 import { CSS_CLASSES, IDS, UI_ICONS, EVENTS } from '../utils/AppConstants.js';
 import { navManager } from '../utils/NavigationManager.js';
 import { formatCurrency, formatPercent } from '../utils/formatters.js';
-import { AppController } from '../controllers/AppController.js';
+
 
 export class SnapshotUI {
 
@@ -238,8 +238,8 @@ export class SnapshotUI {
     }
 
     static _prepareData() {
-        if (!AppController.instance) return [];
-        return AppController.instance.getSnapshotData();
+        if (!AppState.controller) return [];
+        return AppState.controller.getSnapshotData();
     }
 
     static _renderCard(item) {

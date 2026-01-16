@@ -9494,3 +9494,20 @@ body.dashboard-active .sidebar {
     background: rgba(var(--color-accent-rgb), 0.05);
     border-left: 2px solid var(--color-accent);
 }
+/* Muted State for Kangaroo Icon */
+.kangaroo-icon-wrapper.is-muted {
+    opacity: 0.5;
+    position: relative;
+}
+
+.kangaroo-icon-wrapper.is-muted::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 120%;
+    height: 2px;
+    background-color: var(--color-text-muted);
+    transform: translate(-50%, -50%) rotate(-45deg);
+    pointer-events: none;
+}

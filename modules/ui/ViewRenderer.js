@@ -744,12 +744,33 @@ export class ViewRenderer {
                                     <h3 class="${CSS_CLASSES.DETAIL_LABEL} ${CSS_CLASSES.W_FULL} ${CSS_CLASSES.TEXT_LEFT} ${CSS_CLASSES.START_CENTER_ROW}">
                                         <div class="${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.ALIGN_CENTER} ${CSS_CLASSES.JUSTIFY_BETWEEN} ${CSS_CLASSES.W_FULL}">
                                             <div class="${CSS_CLASSES.FLEX_COLUMN} ${CSS_CLASSES.ALIGN_START}">
-                                                <span>Investment</span>
-                                                ${sectorName ? `<span class="${CSS_CLASSES.TEXT_SM} ${CSS_CLASSES.TEXT_MUTED} ${CSS_CLASSES.GHOSTED} ${CSS_CLASSES.ITALIC} ${CSS_CLASSES.FONT_NORMAL} ${CSS_CLASSES.MT_NEG_2PX}">${sectorName}</span>` : ''}
+                                                <div class="${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.ALIGN_CENTER}">
+                                                    <i class="fas ${UI_ICONS.INVESTMENT}" style="margin-right: 8px;"></i>
+                                                    <span>Investment</span>
+                                                </div>
+                                                ${sectorName ? `<span class="${CSS_CLASSES.TEXT_SM} ${CSS_CLASSES.TEXT_MUTED} ${CSS_CLASSES.GHOSTED} ${CSS_CLASSES.ITALIC} ${CSS_CLASSES.FONT_NORMAL} mt-1px">${sectorName}</span>` : ''}
                                             </div>
                                             <div class="${CSS_CLASSES.KANGAROO_WRAPPER} ${stock.muted ? CSS_CLASSES.IS_MUTED : ''}"
-                                                 title="${stock.muted ? 'Unmute Share' : 'Mute Share'}"
-                                                 onclick="event.stopPropagation(); this.classList.toggle('${CSS_CLASSES.IS_MUTED}'); document.dispatchEvent(new CustomEvent('${EVENTS.TOGGLE_SHARE_MUTE}', { detail: { id: '${stock.id}' } }))">
+                                                 title="${stock.id ? (stock.muted ? 'Unmute Share' : 'Mute Share') : 'Syncing...'}"
+                                                 style="${!stock.id ? 'opacity: 0.5; cursor: not-allowed;' : 'position: relative; z-index: 50;'}"
+                                                 onclick="
+                                                    event.stopPropagation(); 
+                                                    event.preventDefault(); 
+                                                    const isGhost = !'${stock.id}' || '${stock.id}' === 'null' || '${stock.id}' === 'undefined';
+                                                    const currentlyMuted = this.classList.contains('${CSS_CLASSES.IS_MUTED}');
+                                                    
+                                                    if(isGhost) { 
+                                                        console.warn('Mute dispatching by code for ${stock.code}'); 
+                                                        document.dispatchEvent(new CustomEvent('${EVENTS.TOGGLE_SHARE_MUTE}', { 
+                                                            detail: { id: null, code: '${stock.code}', muted: currentlyMuted } 
+                                                        })); 
+                                                        return; 
+                                                    } 
+                                                    
+                                                    this.classList.toggle('${CSS_CLASSES.IS_MUTED}'); 
+                                                    document.dispatchEvent(new CustomEvent('${EVENTS.TOGGLE_SHARE_MUTE}', { 
+                                                        detail: { id: '${stock.id}', code: '${stock.code}', muted: currentlyMuted } 
+                                                    }))">
                                                 <img src="${KANGAROO_ICON_SRC}" class="${CSS_CLASSES.KANGAROO_ICON_IMG}" />
                                             </div>
                                         </div>

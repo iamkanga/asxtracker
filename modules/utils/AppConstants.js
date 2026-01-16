@@ -318,6 +318,7 @@ export const UI_ICONS = {
     CLOSE: 'fa-times',
     SAVE: 'fa-check',
     ADD: 'fa-plus',
+    INVESTMENT: 'fa-receipt',
     DIVIDENDS: 'fa-coins',
     CHART: 'fa-chart-line',
     WALLET: 'fa-wallet',
@@ -1116,6 +1117,7 @@ export const CSS_CLASSES = {
     SPLASH_EXIT: 'exit',
 
     // Notification UI (Registry Compliance Fix)
+    FILTER_CHIPS_CONTAINER: 'filter-chips-container',
     FILTER_CHIP: 'filter-chip',
     CHIP_NEUTRAL: 'chip-neutral',
     CHIP_GREEN: 'chip-green',
@@ -1225,6 +1227,7 @@ export const CSS_CLASSES = {
     // Snapshot UI (Constitution Compliance)
     SNAPSHOT_CONTENT: 'snapshot-content',
     SNAPSHOT_CONTROLS: 'snapshot-controls',
+    SNAPSHOT_GRID: 'snapshot-grid',
     SNAPSHOT_CARD: 'snapshot-card',
     SNAPSHOT_POSITIVE: 'snapshot-positive',
     SNAPSHOT_NEGATIVE: 'snapshot-negative',
@@ -1233,6 +1236,11 @@ export const CSS_CLASSES = {
     SNAP_CODE: 'snap-code',
     SNAP_COL_RIGHT: 'snap-col-right',
     SNAP_PRICE: 'snap-price',
+    TREND_MIXED_DESC_BG: 'trend-mixed-desc-bg',
+    TREND_MIXED_ASC_BG: 'trend-mixed-asc-bg',
+    TREND_UP_BG: 'trend-up-bg',
+    TREND_DOWN_BG: 'trend-down-bg',
+
 
     // Theme & Utility (Constitution Compliance)
     TINT_GREEN: 'tint-green',
@@ -1392,6 +1400,11 @@ export const IDS = {
     SECURITY_SETTINGS_MODAL: 'securitySettingsModal',
 
     // Dashboard & Status
+    SNAPSHOT_MODAL_CONTAINER: 'snapshot-modal-container',
+    SNAPSHOT_TOGGLE_BTN: 'snapshotToggleBtn',
+    SNAPSHOT_TOGGLE_ICON: 'snapshotToggleIcon',
+    SNAPSHOT_TOGGLE_ICON_2: 'snapshotToggleIcon2',
+    SNAPSHOT_TOGGLE_TEXT: 'snapshotToggleText',
     MARKET_STATUS_DOT: 'marketStatusDot',
     MARKET_STATUS_TEXT: 'marketStatusText',
     PIN_SETUP_MODAL: 'pin-setup-modal',

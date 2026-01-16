@@ -1715,7 +1715,7 @@ input:checked+.slider:before {
     background: linear-gradient(to right,
             rgba(0, 160, 0, var(--gradient-strength, 0.6)) 0%,
             color-mix(in srgb, rgb(0, 160, 0) var(--gradient-tint, 0%), rgb(20, 20, 20)) 100%), rgb(20, 20, 20) !important;
-    border-color: rgba(34, 197, 94, 0.3);
+    border: none !important;
     box-shadow: 0 8px 32px rgba(34, 197, 94, 0.05);
 }
 
@@ -1723,7 +1723,7 @@ input:checked+.slider:before {
     background: linear-gradient(to right,
             rgba(200, 0, 0, var(--gradient-strength, 0.6)) 0%,
             color-mix(in srgb, rgb(200, 0, 0) var(--gradient-tint, 0%), rgb(20, 20, 20)) 100%), rgb(20, 20, 20) !important;
-    border-color: rgba(239, 68, 68, 0.3);
+    border: none !important;
     box-shadow: 0 8px 32px rgba(239, 68, 68, 0.05);
 }
 
@@ -2062,8 +2062,9 @@ input:checked+.slider:before {
     justify-content: center;
     cursor: pointer;
     transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    /* Slight Border */
+    border: none !important;
+    /* Managed by JS/Sidebar selection */
+    /* Light border handled by box-shadow in JS if needed, but removing default right/full border */
     position: relative;
     overflow: hidden;
     min-width: 0;
@@ -2079,14 +2080,14 @@ input:checked+.slider:before {
     background: linear-gradient(to right,
             rgba(0, 160, 0, var(--gradient-strength, 0.6)) 0%,
             color-mix(in srgb, rgb(0, 160, 0) var(--gradient-tint, 0%), rgb(20, 20, 20)) 100%), rgb(20, 20, 20) !important;
-    border: 1px solid rgba(0, 255, 0, 0.15);
+    border: none !important;
 }
 
 .highlight-card.tint-red {
     background: linear-gradient(to right,
             rgba(200, 0, 0, var(--gradient-strength, 0.6)) 0%,
             color-mix(in srgb, rgb(200, 0, 0) var(--gradient-tint, 0%), rgb(20, 20, 20)) 100%), rgb(20, 20, 20) !important;
-    border: 1px solid rgba(255, 0, 0, 0.15);
+    border: none !important;
 }
 
 .highlight-header {
@@ -2293,4 +2294,101 @@ input:checked+.slider:before {
     background: linear-gradient(to right,
             rgba(80, 80, 80, var(--gradient-strength, 0.6)) 0%,
             color-mix(in srgb, rgb(80, 80, 80) var(--gradient-tint, 0%), rgb(20, 20, 20)) 100%), rgb(20, 20, 20) !important;
+}
+
+/* --- Snapshot / Market Pulse Gradients (Ported from style.css) --- */
+.trend-mixed-desc-bg,
+.snapshot-content.trend-mixed-desc-bg {
+    /* Positive: Green top-left -> neutral middle -> red bottom-right */
+    background: linear-gradient(135deg,
+            rgba(20, 160, 20, var(--gradient-strength, 0.6)) 0%,
+            rgba(20, 20, 20, 1) 50%,
+            rgba(180, 20, 20, var(--gradient-strength, 0.6)) 100%) !important;
+    border-color: var(--border-color) !important;
+}
+
+.trend-mixed-asc-bg,
+.snapshot-content.trend-mixed-asc-bg {
+    /* Red top-left -> neutral middle -> green bottom-right */
+    background: linear-gradient(135deg,
+            rgba(180, 20, 20, var(--gradient-strength, 0.6)) 0%,
+            rgba(20, 20, 20, 1) 50%,
+            rgba(20, 160, 20, var(--gradient-strength, 0.6)) 100%) !important;
+    border-color: var(--border-color) !important;
+}
+
+.trend-up-bg,
+.snapshot-content.trend-up-bg {
+    background: linear-gradient(135deg, rgba(37, 51, 37, var(--gradient-strength, 0.6)) 0%, rgba(26, 30, 26, 1) 100%) !important;
+    border-color: var(--color-positive) !important;
+}
+
+.trend-down-bg,
+.snapshot-content.trend-down-bg {
+    background: linear-gradient(135deg, rgba(51, 37, 37, var(--gradient-strength, 0.6)) 0%, rgba(30, 26, 26, 1) 100%) !important;
+    border-color: var(--color-negative) !important;
+}
+
+
+/* --- FIX: Snapshot Modal Layout & Background (Specific Overrides) --- */
+
+/* 1. Force Gradient Backgrounds (ID Specificity to beat !important) */
+#snapshot-modal-container .modal-content.trend-mixed-desc-bg {
+    background: linear-gradient(135deg,
+            rgba(20, 160, 20, var(--gradient-strength, 0.6)) 0%,
+            rgba(20, 20, 20, 1) 50%,
+            rgba(180, 20, 20, var(--gradient-strength, 0.6)) 100%) !important;
+}
+
+#snapshot-modal-container .modal-content.trend-mixed-asc-bg {
+    background: linear-gradient(135deg,
+            rgba(180, 20, 20, var(--gradient-strength, 0.6)) 0%,
+            rgba(20, 20, 20, 1) 50%,
+            rgba(20, 160, 20, var(--gradient-strength, 0.6)) 100%) !important;
+}
+
+#snapshot-modal-container .modal-content.trend-up-bg {
+    background: linear-gradient(135deg, rgba(37, 51, 37, var(--gradient-strength, 0.6)) 0%, rgba(26, 30, 26, 1) 100%) !important;
+}
+
+#snapshot-modal-container .modal-content.trend-down-bg {
+    background: linear-gradient(135deg, rgba(51, 37, 37, var(--gradient-strength, 0.6)) 0%, rgba(30, 26, 26, 1) 100%) !important;
+}
+
+/* 2. Fixed Header Structure */
+#snapshot-modal-container .modal-content {
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+}
+
+/* Header & Controls: Fixed + Transparent (Seamless Gradient) */
+#snapshot-modal-container .modal-header,
+#snapshot-modal-container .snapshot-controls {
+    flex-shrink: 0;
+    z-index: 10;
+    /* Transparent to show parent gradient seamlessly */
+    background: transparent !important;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border-bottom: none !important;
+    box-shadow: none !important;
+    /* Remove any shadow causing lines */
+}
+
+/* Ensure Segmented Control is also transparent */
+#snapshot-modal-container .segmented-control,
+#snapshot-modal-container .segmented-button {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+/* Scrollable Body */
+#snapshot-modal-container .modal-body {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+    padding-top: 10px !important;
+    /* Slight padding so content starts cleaning */
 }

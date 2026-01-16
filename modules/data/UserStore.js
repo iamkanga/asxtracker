@@ -16,6 +16,7 @@ import {
     getDoc,
     getDocs,
     where,
+    limit,
     serverTimestamp,
     arrayUnion,
     arrayRemove,
@@ -185,6 +186,23 @@ export class UserStore {
     async addShare(userId, shareData) {
         if (!userId || !shareData) return null;
         const sharesRef = collection(db, `artifacts/${APP_ID}/users/${userId}/shares`);
+
+        // SERVER-SIDE DEDUPLICATION: Last line of defense against race conditions
+        const symbol = (shareData.code || shareData.shareName || '').trim().toUpperCase();
+        if (symbol) {
+            try {
+                const q = query(sharesRef, where('code', '==', symbol), limit(1));
+                const snap = await getDocs(q);
+                if (!snap.empty) {
+                    const existingDoc = snap.docs[0];
+                    console.warn(`[UserStore] DB-level Deduplication caught ${symbol}: Returning existing ID ${existingDoc.id}`);
+                    return existingDoc.id;
+                }
+            } catch (err) {
+                console.warn(`[UserStore] Deduplication check failed for ${symbol}:`, err.message);
+            }
+        }
+
         try {
             const dataToSave = {
                 ...shareData,
@@ -458,8 +476,17 @@ export class UserStore {
             // Verify it exists in memory for legacy check (optional but good for consistency)
             existing = shares.find(s => s.id === existingId);
         } else {
-            existing = shares.find(s => s.shareName === symbol);
-            if (existing) existingId = existing.id;
+            // FIX: Robust Case-Insensitive Lookup to prevent duplicates
+            const symbolUpper = (symbol || '').trim().toUpperCase();
+            existing = shares.find(s =>
+                (s.shareName || '').trim().toUpperCase() === symbolUpper ||
+                (s.code || '').trim().toUpperCase() === symbolUpper
+            );
+
+            if (existing) {
+                console.log(`[UserStore] Found existing share for ${symbol}: ${existing.id || 'Ghost'}`);
+                existingId = existing.id;
+            }
         }
 
         if (existingId) {

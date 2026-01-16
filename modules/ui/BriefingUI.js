@@ -10,7 +10,7 @@ import { CSS_CLASSES, IDS, UI_ICONS, EVENTS } from '../utils/AppConstants.js';
 import { navManager } from '../utils/NavigationManager.js';
 import { formatCurrency, formatPercent } from '../utils/formatters.js';
 import { SnapshotUI } from './SnapshotUI.js';
-import { AppController } from '../controllers/AppController.js';
+
 
 export class BriefingUI {
 
@@ -108,7 +108,7 @@ export class BriefingUI {
                     
                     <!-- 4. Top Market Movers (Global) -->
                     <div class="${CSS_CLASSES.BRIEFING_SECTION}">
-                         <div class="${CSS_CLASSES.BRIEFING_SECTION_TITLE} clickable-header" id="${IDS.MARKET_PULSE_HEADER}">Market Pulse <i class="fas fa-chevron-right" style="font-size: 0.7em; opacity: 0.5;"></i></div>
+                         <div class="${CSS_CLASSES.BRIEFING_SECTION_TITLE}" id="${IDS.MARKET_PULSE_HEADER}">Market</div>
                          <div class="${CSS_CLASSES.BRIEFING_WATCHLIST_GRID}" id="${IDS.BRIEFING_MARKET_GRID}"></div>
                     </div>
 
@@ -133,12 +133,12 @@ export class BriefingUI {
     }
 
     static _updateDigest(modal) {
-        if (!AppController.instance) {
+        if (!AppState.controller) {
             console.error('[BriefingUI] AppController instance not found.');
             return;
         }
 
-        const data = AppController.instance.calculateBriefingDigest();
+        const data = AppState.controller.calculateBriefingDigest();
         const { portfolio, highlights, marketSentiment } = data;
 
         // Render Hero
@@ -149,7 +149,12 @@ export class BriefingUI {
             const arrow = portfolio.isUp ? '↗' : '↘';
 
             // Dynamic Styling & Branding
+            // Calculate Border Styles based on global preferences
+            const borderStyle = this._getBorderStyles(portfolio.totalPctChange);
+
             heroCard.className = `${CSS_CLASSES.BRIEFING_HERO_CARD} ${bgClass} ${CSS_CLASSES.CLICKABLE_HERO}`;
+            // Apply border style directly. Note: The helper includes !important for box-shadow and border-radius.
+            heroCard.setAttribute('style', `flex: 2; min-width: 250px; ${borderStyle}`);
             heroCard.onclick = () => {
                 this._close(modal);
                 const notifModal = document.getElementById(IDS.NOTIFICATION_MODAL);
@@ -202,12 +207,15 @@ export class BriefingUI {
         const marketGrid = modal.querySelector(`#${IDS.BRIEFING_MARKET_GRID}`);
         if (marketGrid) {
             marketGrid.innerHTML = highlights.market.map(item => this._renderHighlightCard(item)).join('');
+            // Click-through removed as per user request (Reference: Chat 230)
+            /*
             const header = modal.querySelector(`#${IDS.MARKET_PULSE_HEADER}`);
             if (header) {
                 header.onclick = () => {
                     document.dispatchEvent(new CustomEvent('open-market-pulse'));
                 };
             }
+            */
         }
 
         // Render Footer Sentiment
@@ -269,8 +277,10 @@ export class BriefingUI {
         const pctVal = Math.abs(item.pctChange || 0).toFixed(2);
         const dolVal = Math.abs(item.change || 0).toFixed(2);
 
+        const borderStyle = this._getBorderStyles(item.pctChange);
+
         return `
-            <div class="${CSS_CLASSES.HIGHLIGHT_CARD} ${tintClass}" onclick="document.dispatchEvent(new CustomEvent('${EVENTS.ASX_CODE_CLICK}', { detail: { code: '${item.code}' } }))">
+            <div class="${CSS_CLASSES.HIGHLIGHT_CARD} ${tintClass}" style="${borderStyle}" onclick="document.dispatchEvent(new CustomEvent('${EVENTS.ASX_CODE_CLICK}', { detail: { code: '${item.code}' } }))">
                 <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
                     <div class="${CSS_CLASSES.HIGHLIGHT_CODE}">${item.code}</div>
                     <div style="display: flex; flex-direction: column; align-items: flex-end;">
@@ -304,6 +314,34 @@ export class BriefingUI {
                 SnapshotUI.show();
             });
         }
+    }
+
+    /**
+     * Internal helper to calculate border style string based on prefs and performance.
+     * Copied from ViewRenderer for consistency.
+     */
+    static _getBorderStyles(changePercent) {
+        const prefs = AppState.preferences.containerBorders;
+        // Default to empty if no prefs, BUT if user wants square corners generally, strictly speaking this only applies if borders are ON.
+        // However, user complaint implies they HAVE borders enabled.
+        if (!prefs || !prefs.sides || prefs.sides.every(s => s === 0)) return 'border-radius: 0 !important;';
+
+        let color = 'var(--color-accent)';
+        if (changePercent > 0) color = 'var(--color-positive)';
+        else if (changePercent < 0) color = 'var(--color-negative)';
+
+        const t = `${prefs.thickness}px`;
+        const s = prefs.sides;
+
+        let shadows = [];
+        // Use inset box-shadow to achieve 90-degree square corners
+        if (s[0]) shadows.push(`inset 0 ${t} 0 0 ${color}`); // Top
+        if (s[1]) shadows.push(`inset -${t} 0 0 0 ${color}`); // Right
+        if (s[2]) shadows.push(`inset 0 -${t} 0 0 ${color}`); // Bottom
+        if (s[3]) shadows.push(`inset ${t} 0 0 0 ${color}`); // Left
+
+        // Always return border-radius: 0 !important
+        return shadows.length ? `box-shadow: ${shadows.join(', ')} !important; border-radius: 0 !important;` : 'border-radius: 0 !important;';
     }
 
     static _close(modal) {

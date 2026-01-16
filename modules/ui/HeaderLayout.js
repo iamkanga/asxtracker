@@ -978,6 +978,16 @@ export class HeaderLayout {
                 labelEl.style.color = '';
             }
         }
+
+        // Update 'Borders' Title Color (User Request)
+        // Only coffee/accent colored if borders are actually selected
+        const borderBtn = document.getElementById('sidebar-border-settings-btn');
+        if (borderBtn) {
+            const hasBorders = sidesSum > 0;
+            // Assuming the button text or icon should be highlighted
+            borderBtn.style.color = hasBorders ? 'var(--color-accent)' : '';
+            borderBtn.style.fontWeight = hasBorders ? '700' : '';
+        }
     }
 
     static _getStrengthLabel(val) {
