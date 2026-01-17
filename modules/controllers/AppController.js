@@ -400,7 +400,12 @@ export class AppController {
         // 6. Setup Cloud Sync Hook (Outbound)
         // BOOT LOCK: Prevent outbound sync until cloud prefs have been received once.
         // This prevents empty localStorage from overwriting valid cloud data.
+        // 6. Setup Cloud Sync Hook (Outbound)
+        // BOOT LOCK: Prevent outbound sync until cloud prefs have been received once.
+        // This prevents empty localStorage from overwriting valid cloud data.
         this._cloudPrefsLoaded = false;
+        this._userDataLoaded = false; // Race condition guard
+
 
         AppState.onPersistenceUpdate = (prefs) => {
             this._syncPreferencesWithDebounce(prefs);
@@ -497,10 +502,48 @@ export class AppController {
        ========================================================================== */
 
     /**
+     * Checks if new user onboarding is required and executes it.
+     * Handles race conditions between Data and Prefs loading.
+     * @returns {Promise<boolean>} True if onboarding was triggered
+     */
+    async _checkAndTriggerOnboarding() {
+        // Gates: Must have Data AND Prefs loaded
+        if (!this._userDataLoaded || !this._cloudPrefsLoaded) return false;
+
+        // Gates: Must be authenticated and not already triggered
+        if (!AppState.user || this._onboardingTriggered) return false;
+
+        // Check 1: Cloud Pref 'onboarded' flag (Source of Truth)
+        if (AppState.preferences.onboarded) return false;
+
+        // Check 2: Data Emptiness (Double Check)
+        // If shares OR watchlists exist, we assume seasoned user (or partial state)
+        if (AppState.data.shares?.length > 0 || (AppState.data.watchlists?.length > 0)) {
+            return false;
+        }
+
+        console.log('[AppController] New User Detected - Triggering Onboarding defaults...');
+        this._onboardingTriggered = true;
+
+        try {
+            await this.appService.createDefaultOnboardingData(AppState.user.uid);
+
+            // FORCE SWITCH: Align local state with the cloud preference we just wrote ('ALL')
+            // This prevents race conditions where local 'portfolio' state overwrites cloud 'ALL'.
+            this.handleSwitchWatchlist('ALL');
+            return true;
+        } catch (e) {
+            console.error('[AppController] Onboarding failed:', e);
+            return false;
+        }
+    }
+
+    /**
      * Seeds the Live Price cache with ALL user shares.
      * Ensures Search and other views have data even if not visiting a specific watchlist.
      */
     async _refreshAllPrices(shares, force = false) {
+
         let codesToFetch = [...new Set((shares || []).map(s => s.shareName))].filter(Boolean);
 
         // 1. FRESHNESS GUARD: If a full fetch happened in the last 5 minutes, skip.
@@ -619,29 +662,20 @@ export class AppController {
                 // Initialize Notification Store
                 notificationStore.init(user.uid);
 
+                // Reset Data Load (Race Guard)
+                this._userDataLoaded = false;
+
                 // === DATA SUBSCRIPTION ===
                 AppState.unsubscribeStore = this.appService.subscribeToUserData(user.uid, async (userData) => {
                     const codes = (userData.shares || []).map(s => (s.code || s.shareName || s.symbol || '???').toUpperCase());
                     AppState.data = userData;
+                    this._userDataLoaded = true;
 
-                    // ONBOARDING GATE: If new user (no shares, no watchlists), seed defaults.
-                    if (!userData.shares?.length && !userData.watchlists?.length) {
-                        // CRITICAL: Wait for Cloud Prefs to be loaded before deciding to onboard.
-                        // This prevents a race condition after a "Wipe Data" reload.
-                        if (this._cloudPrefsLoaded) {
-                            // Only trigger if we are authenticated, haven't tried seeding yet this session,
-                            // AND the user hasn't already been onboarded (verified via cloud prefs)
-                            if (AppState.user && !this._onboardingTriggered && !AppState.preferences.onboarded) {
-                                this._onboardingTriggered = true;
-                                // CRITICAL FIX: Must await to ensure all 5 stocks are written before snapshot re-fires
-                                await this.appService.createDefaultOnboardingData(AppState.user.uid);
-                                // FORCE SWITCH: Align local state with the cloud preference we just wrote ('ALL')
-                                // This prevents race conditions where local 'portfolio' state overwrites cloud 'ALL'.
-                                this.handleSwitchWatchlist('ALL');
-                                return; // Wait for the next sync refire
-                            }
-                        } else {
-                        }
+
+                    // ONBOARDING GATE: Handles Race Condition between Data and Prefs
+                    // If this returns true, we are waiting for a new snapshot, so return early.
+                    if (await this._checkAndTriggerOnboarding()) {
+                        return;
                     }
 
                     if (this.watchlistUI) this.watchlistUI.renderWatchlistDropdown();
@@ -748,6 +782,12 @@ export class AppController {
                         AppState.preferences.security = { ...AppState.preferences.security, ...prefs.security };
                         this.handleSecurityLock();
                     }
+
+                    // 00. Check Onboarding (Race Fix)
+                    // If Data arrived before Prefs, the check in subscribeToUserData would have been skipped.
+                    // Now that Prefs are here, we verify emptiness and trigger if needed.
+                    this._checkAndTriggerOnboarding();
+
 
                     // 0a. Sync Gradient Preference
                     if (prefs.gradientStrength !== undefined && prefs.gradientStrength !== null) {
