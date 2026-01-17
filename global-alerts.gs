@@ -297,6 +297,188 @@ function runGlobal52WeekScan() {
   }
 }
 
+/**
+ * Handles the 'generateBriefing' action.
+ * Generates a natural language daily briefing based on the user's portfolio context.
+ */
+/**
+ * Handles the 'generateBriefing' action.
+ * Generates a natural language daily briefing based on the user's portfolio context.
+ */
+function handleGenerateBriefing_(payload) {
+  try {
+    const context = payload.context;
+    if (!context) return { ok: false, error: 'Missing context' };
+
+    // 1. Construct Prompt
+    const p = context.portfolio || {};
+    // Ensure we don't send gigantic JSONs that might confuse the model or hit limits (though 1.5 Flash has huge context)
+    const prompt = `
+You are a witty, professional financial analyst for the "ASX Tracker" app. 
+Write a ONE-paragraph (max 3 sentences) daily briefing for the user based on their portfolio performance today.
+
+Portfolio Stats:
+- Day Change: ${p.dayChangePercent}% (${p.dayChangeValue})
+- Total Value: ${p.totalValue}
+- Key Winners: ${JSON.stringify(p.winners || [])}
+- Key Losers: ${JSON.stringify(p.losers || [])}
+- Market Sentiment: ${context.sentiment}
+
+Tone:
+- If up > 1%: Enthusiastic, congratulatory.
+- If down > 1%: Empathetic, "hang in there".
+- If flat: Calm, "steady as she goes".
+- Use emojis sparingly.
+- Focus on the "Why" if possible (e.g. "BHP dragged you down" or "Tech sector rally helped").
+- Do NOT output markdown or bold text, just plain text.
+    `;
+
+    // 2. Call Gemini
+    const result = callGeminiAPI_(prompt);
+    
+    if (result.success) {
+      return { ok: true, text: result.data };
+    } else {
+      return { ok: false, error: result.reason }; 
+    }
+
+  } catch (e) {
+    Logger.log('[Gemini] Error: ' + e);
+    return { ok: false, error: String(e) };
+  }
+}
+
+function callGeminiAPI_(promptText) {
+  const key = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY') || 'AIzaSyC-rU56Q_KI7KbH8efgS_Qp0KFECFp7VkE';
+  if (!key) throw new Error('GEMINI_API_KEY not set');
+
+  // STEP 1: Dynamically find a working model (Self-Healing)
+  const modelResult = discoverBestModel_(key);
+  if (!modelResult.success) {
+    return { success: false, reason: modelResult.error };
+  }
+  
+  const modelName = modelResult.name; // e.g. "models/gemini-1.5-flash"
+  // API URL construction: modelName already includes "models/" prefix from the List API
+  const API_URL = `https://generativelanguage.googleapis.com/v1beta/${modelName}:generateContent?key=${key}`;
+
+  const requestBody = {
+    contents: [{
+      parts: [{ text: promptText }]
+    }],
+    generationConfig: {
+      maxOutputTokens: 800, // Increased from 150 to prevent MAX_TOKENS cutoffs
+      temperature: 0.7
+    }
+  };
+
+  const options = {
+    method: 'post',
+    contentType: 'application/json',
+    payload: JSON.stringify(requestBody),
+    muteHttpExceptions: true
+  };
+
+  try {
+    const response = UrlFetchApp.fetch(API_URL, options);
+    const responseCode = response.getResponseCode();
+    const responseText = response.getContentText();
+
+    if (responseCode === 200) {
+      const json = JSON.parse(responseText);
+      
+      const candidates = json.candidates;
+      // Robust Extraction: Even if MAX_TOKENS, take what we have
+      if (candidates && candidates.length > 0 && candidates[0].content && candidates[0].content.parts && candidates[0].content.parts.length > 0) {
+         const part = candidates[0].content.parts[0];
+         if (part.text) {
+           return { success: true, data: part.text };
+         }
+      }
+      
+      // FAILURE: Analyze why
+      let reason = 'AI returned no text.';
+      
+      // 1. Check Prompt Feedback (Global Block)
+      if (json.promptFeedback) {
+           reason += ` [PromptFeedback: ${JSON.stringify(json.promptFeedback)}]`;
+      }
+      
+      // 2. Check Candidate Details (Finish Reason)
+      if (candidates && candidates.length > 0) {
+          reason += ` [Candidate 0: ${JSON.stringify(candidates[0])}]`;
+      } else {
+          reason += ' [No Candidates returned]';
+      }
+      
+      return { success: false, reason: reason };
+      
+    } else {
+      if (responseCode === 404) {
+         Logger.log(`[Gemini] 404 on confirmed model ${modelName}. API Endpoint might be wrong.`);
+         return { success: false, reason: `Endpoint 404 for ${modelName}` };
+      }
+      return { success: false, reason: `API Error ${responseCode}: ${responseText}` };
+    }
+  } catch (e) {
+    return { success: false, reason: 'Exception: ' + e.toString() };
+  }
+}
+
+/**
+ * Queries the API to ask "What models are actually available to this Key?"
+ * Prevents 404s by using only valid, listed models.
+ */
+function discoverBestModel_(key) {
+  // Cache the discovery to avoid 2 calls every time (Script Properties cache)
+  const CACHE_KEY = 'GEMINI_WORKING_MODEL_NAME';
+  const cached = PropertiesService.getScriptProperties().getProperty(CACHE_KEY);
+  if (cached) return { success: true, name: cached };
+
+  const LIST_URL = `https://generativelanguage.googleapis.com/v1beta/models?key=${key}`;
+  
+  try {
+    const response = UrlFetchApp.fetch(LIST_URL, { muteHttpExceptions: true });
+    if (response.getResponseCode() !== 200) {
+      return { success: false, error: `Model Discovery Failed (${response.getResponseCode()}): ${response.getContentText()}` };
+    }
+    
+    const json = JSON.parse(response.getContentText());
+    if (!json.models) return { success: false, error: 'No models returned by API' };
+
+    // Filter for models that can generate content
+    const viable = json.models.filter(m => 
+      m.supportedGenerationMethods && m.supportedGenerationMethods.includes('generateContent')
+    );
+    
+    if (viable.length === 0) return { success: false, error: 'No generateContent models available' };
+
+    // Priority Sort: Flash 1.5 > Pro 1.5 > Flash 1.0 > Pro 1.0
+    // The 'name' field comes like "models/gemini-pro"
+    viable.sort((a, b) => {
+      const score = (m) => {
+        let s = 0;
+        if (m.name.includes('1.5')) s += 10;
+        if (m.name.includes('flash')) s += 5;
+        if (m.name.includes('pro')) s += 2;
+        return s;
+      };
+      return score(b) - score(a);
+    });
+
+    const best = viable[0].name; // e.g. "models/gemini-1.5-flash"
+    Logger.log(`[Gemini] Discovered best model: ${best}`);
+    
+    // Cache it
+    PropertiesService.getScriptProperties().setProperty(CACHE_KEY, best);
+    
+    return { success: true, name: best };
+
+  } catch (e) {
+    return { success: false, error: 'Discovery Exception: ' + e.toString() };
+  }
+}
+
 function fetchAllAsxData_(spreadsheet) {
   const sheet = spreadsheet.getSheetByName(PRICE_SHEET_NAME);
   if (!sheet) return [];
@@ -1518,6 +1700,14 @@ function doPost(e) {
       }
     } catch (err) {
       payload = {};
+    }
+
+    // 0. SYSTEM ACTIONS (e.g. Gemini AI, Admin ops)
+    // Check for explicit 'action' parameter first
+    const action = payload.action;
+    if (action === 'generateBriefing') {
+      const result = handleGenerateBriefing_(payload);
+       return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
     }
 
     // Accept either { userId } or { userId: '...', settings: {...} }

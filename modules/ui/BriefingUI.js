@@ -166,9 +166,14 @@ export class BriefingUI {
 
             heroCard.innerHTML = `
                 <div class="${CSS_CLASSES.HERO_HEADER_ROW}" style="display: flex; flex-direction: column; align-items: flex-start; gap: 4px;">
-                    <div class="${CSS_CLASSES.HERO_BRAND}">ASX TRACKER</div>
-                    <div class="${CSS_CLASSES.HERO_LABEL}" style="margin-bottom: 0;">My Portfolio</div>
+                    <div class="${CSS_CLASSES.HERO_BRAND}">ASX TRACKER AI</div>
+                    <div class="${CSS_CLASSES.HERO_LABEL}" style="margin-bottom: 0;">Daily Briefing</div>
                 </div>
+                
+                <div id="briefing-ai-summary" style="font-size: 0.95em; line-height: 1.5; color: var(--text-normal); margin: 12px 0 16px 0; min-height: 40px; font-weight: 400;">
+                    <span style="opacity: 0.7; font-size: 0.9em;"><i class="fas fa-circle-notch fa-spin"></i> Analyzing your portfolio...</span>
+                </div>
+
                 <div class="${CSS_CLASSES.HERO_MAIN_STAT} ${colorClass}">
                     ${Math.abs(portfolio.totalPctChange).toFixed(2)}% <span class="hero-arrow">${arrow}</span>
                 </div>
@@ -183,6 +188,49 @@ export class BriefingUI {
                 
                 <div class="${CSS_CLASSES.HERO_CLICK_HINT}">Tap to view full portfolio <i class="fas fa-chevron-right"></i></div>
             `;
+
+            // TRIGGER AI GENERATION (Async)
+            (async () => {
+                try {
+                    const { DataService } = await import('../data/DataService.js');
+                    const ds = new DataService();
+
+                    // Construct minimal context for the AI
+                    const context = {
+                        portfolio: {
+                            dayChangePercent: portfolio.totalPctChange.toFixed(2),
+                            dayChangeValue: formatCurrency(portfolio.totalDayChangeVal),
+                            totalValue: formatCurrency(portfolio.totalValue),
+                            winners: highlights.portfolio.filter(h => h.pctChange > 0).sort((a, b) => b.pctChange - a.pctChange).slice(0, 3).map(h => `${h.code} ${h.pctChange.toFixed(1)}%`),
+                            losers: highlights.portfolio.filter(h => h.pctChange < 0).sort((a, b) => a.pctChange - b.pctChange).slice(0, 3).map(h => `${h.code} ${h.pctChange.toFixed(1)}%`)
+                        },
+                        sentiment: marketSentiment.sentiment
+                    };
+
+                    const result = await ds.generateBriefing(context);
+                    const el = document.getElementById('briefing-ai-summary');
+                    if (el) {
+                        if (result && result.ok && result.text) {
+                            el.innerHTML = result.text;
+                            el.style.animation = 'fadeIn 0.5s ease-in';
+                        } else {
+                            // Debugging Mode: Show detailed error
+                            const err = (result && result.error) ? result.error : 'Unknown Error';
+                            const msg = (err === 'userId required in payload')
+                                ? 'Version Mismatch: App is hitting old code. Please Deploy New Version.'
+                                : err;
+
+                            el.innerHTML = `<span style="color:red; font-size: 0.8em; line-height: 1.2; display:block;"><i class="fas fa-bug"></i> ${msg}</span>`;
+                        }
+                    }
+                } catch (e) {
+                    console.warn('[BriefingUI] AI Gen failed', e);
+                    const el = document.getElementById('briefing-ai-summary');
+                    if (el) {
+                        el.innerHTML = `<span style="color:red; font-size: 0.8em;">Client Exception: ${e.message}</span>`;
+                    }
+                }
+            })();
         }
 
         // Render Highlights

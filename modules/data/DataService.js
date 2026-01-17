@@ -107,6 +107,44 @@ export class DataService {
     }
 
     /**
+     * Generates a daily briefing via the backend AI service.
+     * @param {Object} context - The portfolio context object.
+     * @returns {Promise<string>} - The generated briefing text.
+     */
+    async generateBriefing(context) {
+        try {
+            const url = new URL(API_ENDPOINT);
+            // Append a specific parameter so we could route via GET if needed, but we use POST.
+
+            const payload = {
+                action: 'generateBriefing',
+                context: context
+            };
+
+            // Using 'no-cors' mode would prevent reading the response. 
+            // We assume the GAS Web App is deployed as "Execute as Me" and "Access: Anyone".
+            // Typically this allows simple CORS requests if we don't send custom headers.
+            // We'll send data as text/plain (default) to avoid Preflight, 
+            // enabling the backend to parse E.postData.contents.
+            const response = await fetch(url.toString(), {
+                method: 'POST',
+                body: JSON.stringify(payload)
+                // Do NOT set Content-Type: application/json to avoid preflight
+            });
+
+            if (!response.ok) {
+                return { ok: false, error: `HTTP ${response.status}` };
+            }
+
+            const json = await response.json();
+            return json;
+        } catch (err) {
+            console.error('DataService: Briefing Gen Exception:', err);
+            return { ok: false, error: err.message };
+        }
+    }
+
+    /**
      * Normalizes raw API response into a clean Map.
      * @param {Array|Object} apiResponse 
      * @returns {Map<string, Object>}
