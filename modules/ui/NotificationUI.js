@@ -25,63 +25,84 @@ export class NotificationUI {
     static _restorableModals = []; // Universal stack for hidden modals
 
     static init() {
-        this.renderFloatingBell();
+        try {
+            this.renderFloatingBell();
 
-        // Listen for updates from the Store (Unified Event Bus)
-        document.addEventListener(EVENTS.NOTIFICATION_UPDATE, (e) => {
-            // 1. Update Badge (Floating Bell)
-            // PRIORITY: Use explicit scope from event detail if provided (instant refresh), fallback to AppState
-            const scope = e.detail?.scope || AppState?.preferences?.badgeScope || 'all';
-
-            // If forced, fetch fresh counts from store immediately
-            if (e.detail?.forceBadgeUpdate && notificationStore) {
-                const counts = notificationStore.getBadgeCounts();
-                const count = (scope === 'all') ? counts.total : counts.custom;
-                this.updateBadgeCount(count);
-            } else {
-                const count = (scope === 'all') ? e.detail.totalCount : e.detail.customCount;
-                this.updateBadgeCount(count);
-            }
-
-            // 2. Live Update Open Modal (Resolves "stale list" issue)
-            const modal = document.getElementById(IDS.NOTIFICATION_MODAL);
-            if (modal && !modal.classList.contains(CSS_CLASSES.HIDDEN)) {
-                // console.log('[NotificationUI] Data update received while modal open. Refreshing list...');
-                this._updateList(modal);
-                // 2b. Live Update Status Bar (in case disabled logic changed)
-                this._updateStatusBar(modal);
-
-                // 3. Update Dismiss Button State (Live)
+            // FIX: Immediate Sync (Race Condition Protection)
+            const syncBadge = () => {
                 if (notificationStore) {
-                    const latestCounts = notificationStore.getBadgeCounts();
-                    this._updateDismissState(modal, latestCounts.custom);
+                    try {
+                        // ALWAYS fetch fresh from Store to ensure accuracy
+                        const counts = notificationStore.getBadgeCounts();
+                        // Use fallback if AppState not ready
+                        const scope = AppState?.preferences?.badgeScope || 'all';
+                        const count = (scope === 'all') ? counts.total : counts.custom;
+                        this.updateBadgeCount(count);
+                    } catch (e) {
+                        console.warn('[NotificationUI] Sync failed:', e);
+                        // Only toast critical failures if repeated (managed by poller)
+                    }
                 }
-            }
-        });
+            };
 
-        // Listen for Open Requests (Sidebar/Bell)
-        // Listen for Open Requests (Sidebar/Bell)
-        document.addEventListener(EVENTS.OPEN_NOTIFICATIONS, (e) => {
-            // DUPLICATE PROTECTION: Debounce rapid triggers (e.g. from rapid clicks or potential loops)
-            if (this._openLock) return;
-            this._openLock = true;
-            setTimeout(() => this._openLock = false, 500);
+            syncBadge();
 
-            const source = (e.detail && e.detail.source) ? e.detail.source : 'total';
-            const tab = (e.detail && e.detail.tab) ? e.detail.tab : 'custom';
-            const section = (e.detail && e.detail.section) ? e.detail.section : null;
-            this.showModal(tab, source, section);
-        });
+            // BRUTE FORCE POLLER: Retry every 1s for 15s to guarantee catch
+            let attempts = 0;
+            const poller = setInterval(() => {
+                attempts++;
+                syncBadge();
+                if (attempts >= 15) clearInterval(poller);
+            }, 1000);
 
-        // LOGIC HARDENING: Listen for ready event to auto-refresh loading modal
-        document.addEventListener(EVENTS.NOTIFICATION_READY, () => {
-            const modal = document.getElementById(IDS.NOTIFICATION_MODAL);
-            if (modal && modal.dataset.loading === 'true') {
+            // DATA UPDATE SYNC: Ensure badge updates when new price data arrives
+            document.addEventListener(EVENTS.DATA_UPDATE, () => {
+                setTimeout(syncBadge, 500); // Allow Store time to process
+            });
 
-                this._updateList(modal);
-                modal.dataset.loading = 'false';
-            }
-        });
+            // Listen for updates from the Store (Unified Event Bus)
+            document.addEventListener(EVENTS.NOTIFICATION_UPDATE, (e) => {
+                // IGNORE event payload, force fresh fetch to synchronise with Store state
+                syncBadge();
+
+                // 2. Live Update Open Modal (Resolves "stale list" issue)
+                const modal = document.getElementById(IDS.NOTIFICATION_MODAL);
+                if (modal && !modal.classList.contains(CSS_CLASSES.HIDDEN)) {
+                    this._updateList(modal);
+                    this._updateStatusBar(modal);
+                    if (notificationStore) {
+                        const latestCounts = notificationStore.getBadgeCounts();
+                        this._updateDismissState(modal, latestCounts.custom);
+                    }
+                }
+            });
+
+            // Listen for Open Requests (Sidebar/Bell)
+            document.addEventListener(EVENTS.OPEN_NOTIFICATIONS, (e) => {
+                // DUPLICATE PROTECTION: Debounce rapid triggers
+                if (this._openLock) return;
+                this._openLock = true;
+                setTimeout(() => this._openLock = false, 500);
+
+                const source = (e.detail && e.detail.source) ? e.detail.source : 'total';
+                const tab = (e.detail && e.detail.tab) ? e.detail.tab : 'custom';
+                const section = (e.detail && e.detail.section) ? e.detail.section : null;
+                this.showModal(tab, source, section);
+            });
+
+            // LOGIC HARDENING: Listen for ready event to auto-refresh loading modal
+            document.addEventListener(EVENTS.NOTIFICATION_READY, () => {
+                const modal = document.getElementById(IDS.NOTIFICATION_MODAL);
+                if (modal && modal.dataset.loading === 'true') {
+                    this._updateList(modal);
+                    modal.dataset.loading = 'false';
+                }
+            });
+
+        } catch (initErr) {
+            console.error('[NotificationUI] Init Critical Failure:', initErr);
+            setTimeout(() => ToastManager.show('UI Init Failed: ' + initErr.message, 'error'), 1000);
+        }
     }
 
     static updateBadgeCount(count) {
@@ -134,6 +155,15 @@ export class NotificationUI {
 
         if (container) container.classList.remove(CSS_CLASSES.HIDDEN);
         bell.classList.remove(CSS_CLASSES.HIDDEN);
+
+        // DEBUG: Temporary diagnostics
+        // const currentScope = AppState?.preferences?.badgeScope || 'unknown';
+        // if (validCount > 0 && showBadges) {
+        //    console.log(`[BadgeDebug] Showing. Count: ${validCount}`);
+        // } else {
+        //    console.log(`[BadgeDebug] Hiding. Count: ${validCount}, Pref: ${showBadges}`);
+        // }
+
 
         this._prevCount = validCount;
 
