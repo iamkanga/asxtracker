@@ -22,6 +22,9 @@ export const userStore = new UserStore();
 export { AuthService };
 
 export class DataService {
+    constructor() {
+        this.API_ENDPOINT = API_ENDPOINT;
+    }
     /**
      * Fetches live prices for specific codes or all stocks if no codes provided.
      * @param {string[]} [codesArray] - Optional array of ASX codes (e.g. ['BHP', 'CBA'])
@@ -140,6 +143,87 @@ export class DataService {
             return json;
         } catch (err) {
             console.error('DataService: Briefing Gen Exception:', err);
+            return { ok: false, error: err.message };
+        }
+    }
+
+
+    /**
+     * Calls Gemini AI to roast the user's portfolio.
+     */
+    async roastPortfolio(context) {
+        try {
+            const user = AuthService.getCurrentUser();
+            const userId = user ? user.uid : null;
+
+            if (!userId) {
+                return { ok: false, error: 'User not logged in' };
+            }
+
+            const payload = {
+                action: 'roastPortfolio',
+                userId: userId,
+                context: context
+            };
+
+            const response = await fetch(this.API_ENDPOINT, {
+                method: 'POST',
+                mode: 'cors',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                return { ok: false, error: `HTTP ${response.status}` };
+            }
+
+            const json = await response.json();
+            return json;
+        } catch (err) {
+            console.error('DataService: Roast Gen Exception:', err);
+            return { ok: false, error: err.message };
+        }
+    }
+
+    /**
+     * Ask Gemini (Smart Alerts or Market Chat).
+     * @param {string} mode 'explain' | 'chat'
+     * @param {string} query User question (for chat)
+     * @param {Object} context Portfolio data or stock info
+     */
+    async askGemini(mode, query, context) {
+        try {
+            const user = AuthService.getCurrentUser();
+            const userId = user ? user.uid : null;
+
+            if (!userId) return { ok: false, error: 'User not logged in' };
+
+            const payload = {
+                action: 'geminiQuery',
+                userId: userId,
+                mode: mode,
+                query: query,
+                context: context
+            };
+
+            // console.log('[DataService] Asking Gemini:', mode, query);
+            const response = await fetch(this.API_ENDPOINT, {
+                method: 'POST',
+                mode: 'cors',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                return { ok: false, error: `HTTP ${response.status}` };
+            }
+
+            const json = await response.json();
+            if (!json.ok && json.error) console.warn('[DataService] Gemini Error:', json.error);
+            return json;
+
+        } catch (err) {
+            console.error('DataService: Gemini Query Exception:', err);
             return { ok: false, error: err.message };
         }
     }

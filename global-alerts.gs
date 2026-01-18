@@ -349,7 +349,7 @@ Tone:
 }
 
 function callGeminiAPI_(promptText) {
-  const key = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY') || 'AIzaSyC-rU56Q_KI7KbH8efgS_Qp0KFECFp7VkE';
+  const key = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
   if (!key) throw new Error('GEMINI_API_KEY not set');
 
   // STEP 1: Dynamically find a working model (Self-Healing)
@@ -367,8 +367,8 @@ function callGeminiAPI_(promptText) {
       parts: [{ text: promptText }]
     }],
     generationConfig: {
-      maxOutputTokens: 800, // Increased from 150 to prevent MAX_TOKENS cutoffs
-      temperature: 0.7
+      maxOutputTokens: 2048, // Increased significantly to avoid early cutoffs
+      temperature: 0.9 // Increased for more creative/roasty output
     }
   };
 
@@ -406,7 +406,8 @@ function callGeminiAPI_(promptText) {
       
       // 2. Check Candidate Details (Finish Reason)
       if (candidates && candidates.length > 0) {
-          reason += ` [Candidate 0: ${JSON.stringify(candidates[0])}]`;
+          // Log the raw candidate structure to debug missing 'parts'
+          reason += ` [Candidate 0 Raw: ${JSON.stringify(candidates[0])}]`;
       } else {
           reason += ' [No Candidates returned]';
       }
@@ -1753,45 +1754,201 @@ function doPost(e) {
       }
     } else {
       // No inline settings: read the user's profile settings doc and sync
-      result = syncUserProfileToCentralGlobalSettings(userId);
+     if (payload.action === 'syncGlobalWatchlist') {
+      result = handleSyncGlobalWatchlist_(payload);
+    } else if (payload.action === 'generateBriefing') {
+      result = handleGenerateBriefing_(payload);
+    } else if (payload.action === 'roastPortfolio') {
+      result = handlePortfolioRoast_(payload);
+    } else if (payload.action === 'geminiQuery') {
+      result = handleGeminiQuery_(payload);
+    } else {
+      // Default: sync user settings
+      result = handleSyncUserSettings_(payload);
+    }
+    } // End of outer else
+
+    // Final Output Construction
+    return ContentService.createTextOutput(JSON.stringify(result))
+        .setMimeType(ContentService.MimeType.JSON);
+  } catch (e) {
+    return ContentService.createTextOutput(JSON.stringify({ ok: false, error: e.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+/**
+ * Handles the 'roastPortfolio' action.
+ * Generates a critical, witty "roast" of the user's portfolio.
+ */
+function handlePortfolioRoast_(payload) {
+  try {
+    const context = payload.context;
+    if (!context) return { ok: false, error: 'Missing context' };
+
+    const p = context.portfolio || {};
+    // Construct a spicy prompt
+    const prompt = `
+You are a ruthless, cynical, incredibly witty Wall Street hedge fund manager. 
+You are looking at a user's retail portfolio. ROAST THEM.
+
+Portfolio Stats:
+- Total Value: ${p.totalValue}
+- Day Change: ${p.dayChangePercent}% (${p.dayChangeValue})
+- Key Positions (Top Winners): ${JSON.stringify(p.winners || [])}
+- Key Positions (Top Losers): ${JSON.stringify(p.losers || [])}
+- Market Sentiment: ${context.sentiment}
+
+Instructions:
+1. Write 2 short paragraphs (approx 100 words total).
+2. Be savage but constructive. Make fun of their "diversification" (or lack thereof), their obsession with penny stocks, or their "safe" boomer stocks.
+3. If they are losing money: "Did you pick these by throwing darts?"
+4. If they are winning: "Pure luck. Don't quit your day job."
+5. Use fire emojis 🔥.
+6. Do NOT be polite.
+    `;
+
+    const result = callGeminiAPI_(prompt);
+    
+    if (result.success) {
+      return { ok: true, text: result.data };
+    } else {
+      return { ok: false, error: result.reason }; 
     }
 
-    return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
-  } catch (err) {
-    return ContentService.createTextOutput(JSON.stringify({ ok: false, error: String(err) })).setMimeType(ContentService.MimeType.JSON);
+  } catch (e) {
+    Logger.log('[Gemini] Roast Error: ' + e);
+    return { ok: false, error: String(e) };
+  }
+}
+
+/**
+ * Handles 'geminiQuery' for Smart Alerts and Chat.
+ * Modes: 'explain' (Why is it moving?) | 'chat' (Ask the Market)
+ */
+function handleGeminiQuery_(payload) {
+  try {
+    const { mode, query, context } = payload;
+    let prompt = '';
+
+    if (mode === 'explain') {
+       // SMART ALERT PROMPT
+       // Goal: Plausible market theory without needing live news feed (unless we add it)
+       prompt = `
+Analyze this stock movement:
+Symbol: ${context.symbol || 'Unknown'}
+Change: ${context.change || 'Unknown'}
+Sector: ${context.sector || 'Unknown'}
+Current Market Sentiment: ${context.sentiment || 'Unknown'}
+
+Task: Explain WHY this stock might be moving in 1-2 sentences. 
+- If specific news is unknown, speculate based on the Sector performance and Market Sentiment.
+- use specific financial terminology (e.g. "sector rotation", "taking profits", "correlation with iron ore").
+- DO NOT say "I am an AI without real-time news". Just give the most likely market theory.
+       `;
+    } else if (mode === 'chat') {
+       // ASK THE MARKET PROMPT
+       prompt = `
+You are a helpful ASX financial assistant.
+User Question: "${query}"
+
+User's Portfolio Context:
+${JSON.stringify(context || {})}
+
+Instructions:
+1. Answer the user's question concisely (under 100 words).
+2. If they ask about their portfolio, use the provided context.
+3. If they ask generic market questions, answer based on your training.
+4. Use bullet points for lists.
+       `;
+    } else {
+       return { ok: false, error: 'Invalid mode' };
+    }
+
+    const result = callGeminiAPI_(prompt);
+    
+    if (result.success) {
+      return { ok: true, text: result.data };
+    } else {
+      return { ok: false, error: result.reason };
+    }
+
+  } catch (e) {
+    Logger.log('[Gemini] Query Error: ' + e);
+    return { ok: false, error: String(e) };
   }
 }
 
 
 /**
- * Synchronize a user's settings from Firestore into the legacy Settings sheet (SELF-HEALING).
- *
- * Behavior:
- *  - Firestore is treated as the source of truth for user settings.
- *  - Existing rows are matched by camelCasing column A labels (same normalization
- *    logic as getSettingsFromSheet_). When a key exists, column B is overwritten
- *    with the Firestore value (unless dryRun=true).
- *  - NEW (self-healing): If a Firestore key does NOT exist as a row, the function
- *    will append a new row at the bottom with Column A = the exact key (camelCase)
- *    and Column B = its value. In dryRun mode we do not write, but we report what
- *    would have been created.
- *  - Keys beginning with '_' are treated as metadata and skipped.
- *
- * Returned fields:
- *  ok: success boolean
- *  userId: the resolved user id
- *  dryRun: whether the operation skipped writes
- *  updatedKeys: keys whose existing rows were updated
- *  createdKeys: keys for which new rows were appended (only when dryRun=false)
- *  wouldCreateKeys: keys that would have been created in dryRun mode
- *  skippedKeys: metadata keys ignored (prefix '_')
- *  missingRows: (deprecated) retained for backward compatibility; should be [] now because we self-heal
- *  pathUsed/pathTried: Firestore document path involved
- *  error: present only if ok=false
- *
- * @param {Object=} options { userId: override user id, dryRun: boolean }
- * @return {{ok:boolean,userId?:string,dryRun?:boolean,updatedKeys?:string[],createdKeys?:string[],wouldCreateKeys?:string[],skippedKeys?:string[],missingRows?:string[],pathUsed?:string,pathTried?:string,error?:string}}
+ * Placeholder for the sync handling logic which was accidentally overwritten.
+ * TODO: Restore full sync logic.
  */
+function handleSyncUserSettings_(payload) {
+  // Use payload.userId if available, otherwise it might be passed as argument if refactored.
+  // The original syncUserProfileToCentralGlobalSettings took userId as arg.
+  // doPost calls it as: handleSyncUserSettings_(payload)
+  // Logic below adapts the backup code to use payload.userId or payload directly if it is just a wrapper.
+  
+  const userId = (payload && payload.userId) ? String(payload.userId) : null;
+  
+  if (!userId) return { ok: false, error: 'userId required' };
+  try {
+    // Prefer the canonical profile/settings path but fall back to legacy location for compatibility.
+    const primaryDocPath = ['artifacts', APP_ID, 'users', userId, 'profile', 'settings'];
+    let res = _fetchFirestoreDocument_(primaryDocPath);
+    let pathUsed = primaryDocPath.join('/');
+    if (!res.ok) {
+      if (res.notFound) {
+        // Try legacy fallback path used by older clients
+        const legacyDocPath = ['artifacts', APP_ID, 'users', userId, 'settings', 'general'];
+        const legacyRes = _fetchFirestoreDocument_(legacyDocPath);
+        if (legacyRes.ok) {
+          res = legacyRes;
+          pathUsed = legacyDocPath.join('/');
+        }
+      }
+    }
+    if (!res.ok) {
+      if (res.notFound) return { ok: false, status: 404, error: 'User profile settings not found', pathTried: pathUsed };
+      return { ok: false, status: res.status, error: res.error || 'Failed to fetch user profile settings', pathTried: pathUsed };
+    }
+    const data = res.data || {};
+    // Only copy the expected global keys to avoid crowding central config with user-specific metadata
+    const centralPayload = {
+      globalPercentIncrease: data.globalPercentIncrease != null ? Number(data.globalPercentIncrease) : null,
+      globalDollarIncrease: data.globalDollarIncrease != null ? Number(data.globalDollarIncrease) : null,
+      globalPercentDecrease: data.globalPercentDecrease != null ? Number(data.globalPercentDecrease) : null,
+      globalDollarDecrease: data.globalDollarDecrease != null ? Number(data.globalDollarDecrease) : null,
+      globalMinimumPrice: data.globalMinimumPrice != null ? Number(data.globalMinimumPrice) : null,
+      hiLoMinimumPrice: data.hiLoMinimumPrice != null ? Number(data.hiLoMinimumPrice) : null,
+      hiLoMinimumMarketCap: data.hiLoMinimumMarketCap != null ? Number(data.hiLoMinimumMarketCap) : null,
+      emailAlertsEnabled: (typeof data.emailAlertsEnabled === 'boolean') ? data.emailAlertsEnabled : (data.emailAlertsEnabled != null ? !!data.emailAlertsEnabled : null),
+      alertEmailRecipients: data.alertEmailRecipients != null ? String(data.alertEmailRecipients) : null,
+      // metadata
+      updatedByUserId: userId,
+      updatedAt: new Date()
+    };
+
+    // Remove nulls from payload - commitCentralDoc_ will accept nulls but we prefer explicit nulls for masking
+    // Build an explicit mask covering only the keys we are writing
+    const mask = [
+      'globalPercentIncrease','globalDollarIncrease','globalPercentDecrease','globalDollarDecrease','globalMinimumPrice',
+      'hiLoMinimumPrice','hiLoMinimumMarketCap','emailAlertsEnabled','alertEmailRecipients','updatedByUserId','updatedAt'
+    ];
+
+    const commitRes = commitCentralDoc_(GLOBAL_SETTINGS_DOC_SEGMENTS, centralPayload, mask);
+    if (!commitRes.ok) {
+      // Provide useful diagnostic output for troubleshooting in the execution log
+      Logger.log('[SyncUser->Central] commit failed for user=%s path=%s status=%s error=%s', userId, pathUsed, commitRes.status, commitRes.error);
+      return { ok: false, status: commitRes.status, error: commitRes.error || 'Failed to commit central settings', written: centralPayload };
+    }
+    Logger.log('[SyncUser->Central] commit succeeded for user=%s path=%s status=%s', userId, pathUsed, commitRes.status);
+    return { ok: true, status: commitRes.status, written: centralPayload, pathUsed };
+  } catch (e) {
+    return { ok: false, error: String(e) };
+  }
+}
 // (Legacy syncUserSettingsFromFirestore removed)
 
 // (All temporary sync test harnesses & menu removed for production)

@@ -68,13 +68,37 @@ export class BriefingUI {
                 </div>
 
                 <!-- NEW SHORTCUT: Market Pulse (Understated) -->
-                <div class="${CSS_CLASSES.BRIEFING_SUB_SHORTCUT}" id="${IDS.BRIEFING_PULSE_SHORTCUT}" style="text-align: left; padding: 0 0 4px 24px; margin-top: -5px; cursor: pointer; display: flex; align-items: center; justify-content: flex-start; gap: 6px;">
-                    <span style="font-size: 0.8rem; color: var(--color-accent); letter-spacing: 0.5px; font-weight: 500; display: flex; align-items: center; gap: 6px;">
-                         <i class="fas fa-heartbeat"></i> Market Pulse <i class="fas fa-chevron-right" style="font-size: 0.7em;"></i>
-                    </span>
+                <!-- Top Actions Row: Market Pulse + Roast -->
+                <div class="${CSS_CLASSES.BRIEFING_SUB_SHORTCUT}" style="display: flex; gap: 20px; align-items: center; padding: 0 0 8px 24px; margin-top: -5px;">
+                    
+                    <!-- Market Pulse -->
+                    <div id="${IDS.BRIEFING_PULSE_SHORTCUT}" style="cursor: pointer; display: flex; align-items: center; gap: 6px; transition: opacity 0.2s;">
+                        <span style="font-size: 0.8rem; color: var(--color-accent); letter-spacing: 0.5px; font-weight: 500; display: flex; align-items: center; gap: 6px;">
+                             <i class="fas fa-heartbeat"></i> Market Pulse
+                        </span>
+                    </div>
+
+                    <!-- Roast Portfolio -->
+                    <div id="btn-roast-portfolio" style="margin-left: auto; margin-right: 24px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: opacity 0.2s;">
+                         <span style="font-size: 0.8rem; color: var(--color-negative); letter-spacing: 0.5px; font-weight: 500; display: flex; align-items: center; gap: 6px;">
+                             <i class="fas fa-fire"></i> Roast Portfolio
+                         </span>
+                    </div>
+
                 </div>
 
                 <div class="${CSS_CLASSES.BRIEFING_SCROLL_BODY}">
+                    
+                    <!-- Feature 4: Ask the Market -->
+                    <div style="margin: 0 0 16px 0; padding: 12px 16px; background: rgba(255,255,255,0.02); border-bottom: 1px solid rgba(255,255,255,0.05);">
+                       <div style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 8px;">Ask the Market</div>
+                       <div style="position:relative;">
+                          <input type="text" id="gemini-chat-input" placeholder="e.g. 'How are banks performing?'" style="width:100%; padding: 10px 40px 10px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.3); color: #eee; font-family: inherit; font-size: 0.9em;">
+                          <button id="btn-gemini-ask" style="position:absolute; right:2px; top:2px; bottom:2px; padding:0 12px; background: transparent; border:none; color:var(--color-accent); cursor:pointer;">
+                             <i class="fas fa-paper-plane"></i>
+                          </button>
+                       </div>
+                    </div>
                     
                     <!-- 2. Hero Section: Portfolio + Pulse Partner -->
                     <div class="${CSS_CLASSES.BRIEFING_SECTION}">
@@ -111,6 +135,8 @@ export class BriefingUI {
                          <div class="${CSS_CLASSES.BRIEFING_SECTION_TITLE}" id="${IDS.MARKET_PULSE_HEADER}">Market</div>
                          <div class="${CSS_CLASSES.BRIEFING_WATCHLIST_GRID}" id="${IDS.BRIEFING_MARKET_GRID}"></div>
                     </div>
+
+
 
                 </div>
 
@@ -362,6 +388,109 @@ export class BriefingUI {
                 SnapshotUI.show();
             });
         }
+
+        const roastBtn = modal.querySelector('#btn-roast-portfolio');
+        if (roastBtn) {
+            roastBtn.addEventListener('click', async () => {
+                const heroCard = modal.querySelector(`#${IDS.BRIEFING_PORTFOLIO_HERO}`);
+                if (heroCard) {
+                    heroCard.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#ff4444;font-weight:bold;"><i class="fas fa-fire fa-spin" style="margin-right:8px;"></i> Roasting...</div>';
+                    heroCard.style.background = '#2a0a0a';
+                    heroCard.style.borderColor = '#ff4444';
+                }
+
+                try {
+                    const data = AppState.controller.calculateBriefingDigest();
+                    const context = {
+                        portfolio: data.portfolio,
+                        highlights: data.highlights,
+                        sentiment: data.marketSentiment.sentiment
+                    };
+
+                    const { DataService } = await import('../data/DataService.js');
+                    const ds = new DataService();
+                    const result = await ds.roastPortfolio(context);
+
+                    if (heroCard) {
+                        if (result && result.ok && result.text) {
+                            heroCard.innerHTML = `<div style="padding: 12px; font-size: 0.85em; line-height: 1.5; color: #fff; text-align: left;">${result.text.replace(/\n/g, '<br>')}</div>`;
+                            heroCard.style.background = 'linear-gradient(135deg, #1a0505 0%, #4a0d0d 100%)';
+                        } else {
+                            const err = result ? result.error : 'Unknown';
+                            heroCard.innerHTML = `<span style="color:red;font-size:0.8em">Roast Failed: ${err}</span>`;
+                        }
+                    }
+                } catch (e) {
+                    console.error(e);
+                    if (heroCard) heroCard.innerHTML = `<span style="color:red">Client Error</span>`;
+                }
+            });
+        }
+
+
+        // Feature 4: Gemini Chat
+        const askBtn = modal.querySelector('#btn-gemini-ask');
+        const askInput = modal.querySelector('#gemini-chat-input');
+
+        const handleAsk = async () => {
+            const query = askInput.value.trim();
+            if (!query) return;
+
+            const heroCard = modal.querySelector(`#${IDS.BRIEFING_PORTFOLIO_HERO}`);
+            const summaryEl = document.getElementById('briefing-ai-summary');
+
+            // Feedback State
+            if (summaryEl) {
+                summaryEl.innerHTML = '<span style="color:var(--color-accent)"><i class="fas fa-satellite-dish fa-spin"></i> Asking the market...</span>';
+                const body = modal.querySelector('.briefing-scroll-body');
+                if (body) body.scrollTop = 0;
+            } else if (heroCard) {
+                // Restore if Roasted
+                heroCard.style.background = '';
+                heroCard.innerHTML = `<div id="briefing-ai-summary" style="padding: 12px; font-size: 0.9em; height:100%; display:flex; align-items:center;"><span style="color:var(--color-accent)"><i class="fas fa-satellite-dish fa-spin"></i> Asking the market...</span></div>`;
+                const body = modal.querySelector('.briefing-scroll-body');
+                if (body) body.scrollTop = 0;
+            }
+
+            try {
+                const data = AppState.controller.calculateBriefingDigest();
+                const context = {
+                    portfolio: data.portfolio,
+                    highlights: data.highlights,
+                    sentiment: data.marketSentiment.sentiment
+                };
+
+                const { DataService } = await import('../data/DataService.js');
+                const ds = new DataService();
+                const result = await ds.askGemini('chat', query, context);
+
+                const finalEl = document.getElementById('briefing-ai-summary');
+
+                if (result && result.ok && result.text) { // FIX: Ensure text exists to catch version mismatch
+                    if (finalEl) {
+                        finalEl.innerHTML = `<div style="color:#fff; font-weight:700; margin-bottom:8px; border-bottom:1px solid #333; padding-bottom:4px;">Q: ${query}</div><div style="font-size:0.95em; opacity:0.9; line-height:1.5;">${result.text.replace(/\n/g, '<br>')}</div>`;
+                        // Ensure text alignment is left for reading
+                        finalEl.style.textAlign = 'left';
+                    }
+                    askInput.value = '';
+                } else {
+                    // If result.ok is true but text is missing, it's likely hitting the old backend code (Sync Settings).
+                    const err = (result && result.error)
+                        ? result.error
+                        : 'Backend Version Mismatch: Please Deploy New Script Version';
+
+                    if (finalEl) finalEl.innerHTML = `<span style="color:red; font-size:0.9em;">Error: ${err}</span>`;
+                }
+
+            } catch (e) {
+                console.error(e);
+            }
+        };
+
+        if (askBtn) askBtn.addEventListener('click', handleAsk);
+        if (askInput) askInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') handleAsk();
+        });
     }
 
     /**

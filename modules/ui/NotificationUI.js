@@ -11,6 +11,7 @@ import { navManager } from '../utils/NavigationManager.js';
 import { formatCurrency, formatPercent } from '../utils/formatters.js';
 import { BriefingUI } from './BriefingUI.js?v=327';
 import { SnapshotUI } from './SnapshotUI.js';
+import { ToastManager } from './ToastManager.js';
 
 export class NotificationUI {
 
@@ -526,6 +527,31 @@ export class NotificationUI {
                     if (itemData && notificationStore) {
                         btn.classList.toggle(CSS_CLASSES.ACTIVE);
                     }
+                    return;
+                }
+
+                // 1.5 Smart Alert Delegation (AI)
+                const smartBtn = e.target.closest('.btn-smart-alert');
+                if (smartBtn) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const symbol = smartBtn.dataset.symbol;
+                    const change = smartBtn.dataset.change;
+                    const sector = smartBtn.dataset.sector;
+
+                    ToastManager.show(`Asking Gemini about ${symbol}...`, 'info');
+
+                    import('../data/DataService.js').then(({ DataService }) => {
+                        const ds = new DataService();
+                        // console.log('Asking Gemini explain:', symbol);
+                        ds.askGemini('explain', '', { symbol, change, sector }).then(res => {
+                            if (res.ok) {
+                                alert(`🤖 AI Insight for ${symbol}:\n\n${res.text}`);
+                            } else {
+                                ToastManager.show('Analysis failed: ' + (res.error || 'Unknown error'), 'error');
+                            }
+                        });
+                    });
                     return;
                 }
 
@@ -1382,6 +1408,12 @@ export class NotificationUI {
         }
 
 
+        // --- SMART ALERT BUTTON (AI Integration) ---
+        let smartAlertBtn = '';
+        if (Math.abs(changePct) >= 2.0) {
+            smartAlertBtn = `<button class="btn-smart-alert" title="Ask AI Why" data-symbol="${code}" data-change="${changePct.toFixed(2)}" data-sector="${sector || ''}" style="border:none; background:none; cursor:pointer; font-size:0.85rem; color: #9c27b0; margin-left:8px;">✨ Why?</button>`;
+        }
+
         //GRID LAYOUT IMPLEMENTATION
         return `
             <div class="${CSS_CLASSES.NOTIFICATION_CARD_GRID} ${cardClass}" data-code="${code}">
@@ -1394,7 +1426,10 @@ export class NotificationUI {
                 <div class="${CSS_CLASSES.NOTIF_CELL_CHANGE} ${changeClass}">${changeFormatted}</div>
 
                 <!-- R3: EXPLAINER | RANGE (Optional) -->
-                <div class="${CSS_CLASSES.NOTIF_CELL_EXPLAINER}">${explainerText}</div>
+                <div class="${CSS_CLASSES.NOTIF_CELL_EXPLAINER}">
+                    ${explainerText}
+                    ${smartAlertBtn}
+                </div>
                 <div class="${CSS_CLASSES.NOTIF_CELL_RANGE}">${explainerRange}</div>
                 
                 <!-- R4: SECTOR (Full Width) -->
