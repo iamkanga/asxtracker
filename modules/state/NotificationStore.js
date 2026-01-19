@@ -32,6 +32,7 @@ export class NotificationStore {
         this.alertTimestampCache = new Map(); // Session-based timestamp cache
         this._hiloSeenSet = new Set(); // SUPPRESSION: Tracks 52-week alerts shown this session
         this.isReady = false; // LOGIC HARDENING: Race condition guard
+        this._notificationDebounceTimer = null; // DEBOUNCE: Timer for notification updates
     }
 
     /**
@@ -85,7 +86,8 @@ export class NotificationStore {
         }
 
         try {
-            this.unsubscribePrefs = userStore.subscribeToPreferences(userId, (prefs) => {
+            this.unsubscribePrefs = userStore.subscribeToPreferences(userId, (prefs, metadata) => {
+                console.log(`[NotificationStore] PREFS SNAPSHOT: hasPendingWrites=${metadata?.hasPendingWrites}, fromCache=${metadata?.fromCache}`);
                 if (prefs) {
                     // Update Local Rules
                     const data = prefs.scannerRules || {};
@@ -501,6 +503,9 @@ export class NotificationStore {
 
         const prefRef = doc(db, `artifacts/${APP_ID}/users/${userId}/preferences/config`);
         this.unsubscribePinned = onSnapshot(prefRef, (snap) => {
+            const metadata = snap.metadata;
+            console.log(`[NotificationStore] PINNED SNAPSHOT: hasPendingWrites=${metadata.hasPendingWrites}, fromCache=${metadata.fromCache}`);
+
             if (snap.exists()) {
                 const data = snap.data();
                 this.pinnedAlerts = Array.isArray(data.pinnedAlerts) ? data.pinnedAlerts : [];
@@ -1690,14 +1695,24 @@ export class NotificationStore {
     }
 
     _notifyCountChange() {
-        const counts = this.getBadgeCounts();
-        document.dispatchEvent(new CustomEvent(EVENTS.NOTIFICATION_UPDATE, {
-            detail: {
-                count: counts.total,
-                totalCount: counts.total,
-                customCount: counts.custom
-            }
-        }));
+        // DEBOUNCE: Limit the frequency of expensive badge recalculations and event dispatches.
+        if (this._notificationDebounceTimer) {
+            clearTimeout(this._notificationDebounceTimer);
+        }
+
+        this._notificationDebounceTimer = setTimeout(() => {
+            const counts = this.getBadgeCounts();
+            console.log(`[NotificationStore] Dispatching NOTIFICATION_UPDATE: total=${counts.total}, custom=${counts.custom}`);
+
+            document.dispatchEvent(new CustomEvent(EVENTS.NOTIFICATION_UPDATE, {
+                detail: {
+                    count: counts.total,
+                    totalCount: counts.total,
+                    customCount: counts.custom
+                }
+            }));
+            this._notificationDebounceTimer = null;
+        }, 500); // 500ms debounce
     }
 
     /**

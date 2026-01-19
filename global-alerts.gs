@@ -275,19 +275,25 @@ function runGlobal52WeekScan() {
       Logger.log('[HiLo][DailyHits] Persist error: %s', persistErr && persistErr.message || persistErr);
     }
 
-    // NEW: duplicate portfolio-relevant 52W hits into CUSTOM_TRIGGER_HITS
+    // [FIRESTORE READ OPTIMIZATION] 
+    // The duplication logic below is extremely expensive (listing all user shares).
+    // The frontend NotificationStore already handles this intersection client-side.
+    /*
     try {
       duplicateHiLoHitsIntoCustom_(filteredHighs, filteredLows);
     } catch (dupErr) {
       Logger.log('[HiLo][Dup->Custom] Error: %s', dupErr && dupErr.message || dupErr);
     }
+    */
 
     // Backfill duplicates for users who added shares after earlier hits today (idempotent)
+    /*
     try {
       reconcileCustomDuplicatesFromDailyHits_();
     } catch (reconErr) {
       Logger.log('[HiLo][Recon->Custom] Error: %s', reconErr && reconErr.message || reconErr);
     }
+    */
 
     // Backward-compatible email path removed from frequent scan.
     // The scan now only updates Firestore documents and daily history.
@@ -767,18 +773,22 @@ function runGlobalMoversScan() {
     }
 
     // NEW: duplicate portfolio-relevant movers into CUSTOM_TRIGGER_HITS
+    /*
     try {
       duplicateMoversIntoCustom_(upMovers, downMovers);
     } catch (dupErr) {
       Logger.log('[Movers][Dup->Custom] Error: %s', dupErr && dupErr.message || dupErr);
     }
+    */
 
     // Backfill duplicates for users who added shares after earlier hits today (idempotent)
+    /*
     try {
       reconcileCustomDuplicatesFromDailyHits_();
     } catch (reconErr) {
       Logger.log('[Movers][Recon->Custom] Error: %s', reconErr && reconErr.message || reconErr);
     }
+    */
 
     // Email sending removed from frequent movers scan.
     // Frequent runs should only persist the movers to Firestore.
@@ -2103,6 +2113,9 @@ function sendCombinedDailyDigest_() {
     console.log('[DailyDigest] Day check failed, proceeding cautiously:', dayErr);
   }
 
+  // [FIRESTORE READ OPTIMIZATION] Run custom trigger scan ONCE before generating email to capture any hits
+  try { runCustomTriggersScan(); } catch(e){ Logger.log('[DailyDigest] CustomScan error: %s', e); }
+
   // 2) Master Toggle Check (Central Settings)
   const masterSettingsRes = fetchGlobalSettingsFromFirestore({ noCache: true });
   if (!masterSettingsRes.ok || !masterSettingsRes.data) {
@@ -2291,8 +2304,9 @@ function sendCombinedDailyDigest() {
 
 // Public wrapper for trigger: reconcile daily duplicates periodically
 function reconcileCustomDuplicatesFromDailyHits() {
-  try { reconcileCustomDuplicatesFromDailyHits_(); }
-  catch (e) { console.error('reconcileCustomDuplicatesFromDailyHits wrapper failed:', e); }
+  // Disabled: Extremely expensive (listing all shares) for frequent runs.
+  // try { reconcileCustomDuplicatesFromDailyHits_(); }
+  // catch (e) { console.error('reconcileCustomDuplicatesFromDailyHits wrapper failed:', e); }
 }
 
 // (Legacy alert helpers removed: fetchAllPriceData, fetchAlertRules, getSuppressionLog, processAlerts, sendAlertEmail)
@@ -2351,11 +2365,11 @@ function createTriggers() {
   // Force timezone to Australia/Sydney so this fires correctly regardless of project settings.
   _ensureTimeTrigger_('sendCombinedDailyDigest', b => b.inTimezone(ASX_TIME_ZONE).everyDays(1).atHour(16).nearMinute(15));
 
-  // --- 5) Ensure custom triggers scan runs periodically (idempotent) ---
-  _ensureTimeTrigger_('runCustomTriggersScan', b => b.everyMinutes(15));
-
-  // --- 6) Ensure reconciliation of daily duplicates runs periodically (idempotent) ---
-  _ensureTimeTrigger_('reconcileCustomDuplicatesFromDailyHits', b => b.everyMinutes(30));
+  // --- 5) REPLACED: Custom triggers scan now runs once daily inside daily digest ---
+  // _ensureTimeTrigger_('runCustomTriggersScan', b => b.everyMinutes(15));
+  
+  // --- 6) REPLACED: Reconciliation now disabled as redundant for real-time badges ---
+  // _ensureTimeTrigger_('reconcileCustomDuplicatesFromDailyHits', b => b.everyMinutes(30));
 
   console.log('Triggers ensured (market alerts unchanged; movers ensured; 52W ensured + stale removed).');
 }
