@@ -257,10 +257,12 @@ export class NotificationUI {
             });
         }
 
-        // Push State
-        navManager.pushState(() => {
-            this._close(modal);
-        });
+        // Push State (Only if not already visible to avoid double-pushing history)
+        if (!modal || modal.classList.contains(CSS_CLASSES.HIDDEN)) {
+            navManager.pushState(() => {
+                this._close(modal);
+            });
+        }
 
         try {
             // 1. Auto-clear disabled. User must manually clear or it stays.
@@ -421,12 +423,7 @@ export class NotificationUI {
 
         // Register Navigation Logic
         modal._navActive = true;
-        navManager.pushState(() => {
-            if (modal.parentElement) {
-                modal._navActive = false;
-                this._close(modal);
-            }
-        });
+        // Navigation push handled by showModal to avoid double-pushing on creation.
 
         return modal;
     }
@@ -1515,20 +1512,6 @@ export class NotificationUI {
         container.appendChild(bell);
         document.body.appendChild(container);
 
-        // 3. Fetch and Inline SVG to allow Color Styling
-        try {
-            const response = await fetch('notification_icon.svg');
-            if (response.ok) {
-                let svgContent = await response.text();
-                svgContent = svgContent.replace(/width=".*?"/g, '').replace(/height=".*?"/g, '');
-
-                const wrapper = bell.querySelector('.bell-icon-wrapper');
-                if (wrapper) wrapper.innerHTML = svgContent;
-            }
-        } catch (e) {
-            console.error('Failed to load Notification SVG', e);
-        }
-
         // State tracking for long-press
         let pressTimer;
         let isLongPress = false;
@@ -1537,12 +1520,12 @@ export class NotificationUI {
         const btn = bell; // Alias for cleaner event binding code below
 
         const startPress = () => {
+            if (pressTimer) clearTimeout(pressTimer); // BUGFIX: Clear any existing timers to prevent "two-click" bug
             isLongPress = false;
             pressTimer = setTimeout(() => {
                 isLongPress = true;
 
                 // REDESIGNED BEHAVIOR: Direct Dismiss (Hide App Badge)
-                // "if you long hold it it just dismisses it"
                 console.log('[NotificationUI] Long Press -> Dismissing Floating Bell.');
 
                 // 1. Hide Immediately (Visual Feedback)
@@ -1551,42 +1534,7 @@ export class NotificationUI {
 
                 // 2. Persist State (Sync with "Show Badges" setting)
                 if (AppState.preferences) {
-                    // Update Local State
                     AppState.preferences.showBadges = false;
-
-                    // Persist to Cloud/Local Storage
-                    // We need to access AppController or AppService. 
-                    // Since specific service access isn't injected, we'll dispatch an event or use global AppState save if available?
-                    // AppController listens for 'save-scanner-settings' but maybe not general prefs?
-                    // We can use a custom event or check if we can import AppService. 
-                    // Let's use the robust `AppController` instance if accessible or dispatch an update.
-
-                    // Best way: Dispatch a preference update request or save directly if possible.
-                    // Actually, AppController is not globally available as a variable.
-                    // But NotificationUI uses AppState.
-
-                    // Let's trigger a manual save via Event if possible, or just accept that the UI hides until next reload if we don't persist?
-                    // "make sure it coordinates with the icon in the notifications modell and the notification settings pill"
-                    // This implies we MUST persist it so the toggle in settings reflects "Off".
-
-                    // Dispatch Custom Event handled by AppController?
-                    // Or invoke `saveUserPreferences` if we can get an instance.
-                    // Let's try dispatching `EVENTS.SAVE_SCANNER_SETTINGS`? No, that's specific.
-
-                    // Better: AppController listens to `EVENTS.SECURITY_PREFS_CHANGED`? No.
-                    // Let's add a `EVENTS.UPDATE_USER_PREFS` or similar if needed, OR just use localStorage for now and assume sync picks it up?
-                    // Wait! AppState has `saveUserPreferences`? No, AppService does.
-
-                    // Let's instantiate AppService temporarily or use a global reference?
-                    // Actually, let's verify if `AppController` attaches itself to window or AppState?
-                    // AppController constructor: `AppState.securityController = this.securityController;`
-
-                    // Let's look for a "Requests Save" event.
-                    // Found `EVENTS.SAVE_SCANNER_SETTINGS`. Let's see if there is a generic one.
-
-                    // Fallback: Dispatch a new event `request-update-preferences` and add listener in AppController?
-                    // Or simpler: Directly update `AppState.preferences` and call `AppService`? 
-                    // Code below assumes `new AppService().saveUserPreferences(...)`.
 
                     import('../data/AppService.js').then(({ AppService }) => {
                         const service = new AppService();
@@ -1625,6 +1573,20 @@ export class NotificationUI {
                 detail: { source: 'custom' }
             }));
         });
+
+        // 3. Fetch and Inline SVG to allow Color Styling
+        try {
+            const response = await fetch('notification_icon.svg');
+            if (response.ok) {
+                let svgContent = await response.text();
+                svgContent = svgContent.replace(/width=".*?"/g, '').replace(/height=".*?"/g, '');
+
+                const wrapper = bell.querySelector('.bell-icon-wrapper');
+                if (wrapper) wrapper.innerHTML = svgContent;
+            }
+        } catch (e) {
+            console.error('Failed to load Notification SVG', e);
+        }
 
         // Initialize Badge
         // Handled by AppController via event

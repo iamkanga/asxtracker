@@ -187,13 +187,7 @@ export class AppController {
             // Ensure sidebar/header reflects this (handled by state change)
         });
 
-        document.addEventListener(EVENTS.OPEN_NOTIFICATIONS, (e) => {
-            // Notification Center Open Request
-            // Supports Deep Linking: detail.section (e.g., 'gainers', 'hilo-high')
-            const { tab, source, section } = e.detail || {};
-            // Default to 'custom' tab, 'total' source if not specified.
-            NotificationUI.showModal(tab || 'custom', source || 'total', section);
-        });
+        // OPEN_NOTIFICATIONS listener removed (Handled by NotificationUI.js with debounce)
 
         document.addEventListener('open-market-pulse', () => {
             // Open Snapshot / Market Pulse UI
