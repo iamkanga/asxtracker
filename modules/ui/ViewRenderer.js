@@ -549,15 +549,34 @@ export class ViewRenderer {
         const greenGradient = 'linear-gradient(90deg, rgba(0, 180, 0, var(--gradient-strength, 0.6)) 0%, rgba(20, 20, 20, 1) 50%, rgba(0, 180, 0, var(--gradient-strength, 0.6)) 100%)';
         const redGradient = 'linear-gradient(90deg, rgba(180, 0, 0, var(--gradient-strength, 0.6)) 0%, rgba(20, 20, 20, 1) 50%, rgba(180, 0, 0, var(--gradient-strength, 0.6)) 100%)';
 
-        // Day Change Mixed Gradient Logic (Proportional Scenario)
+        // Day Change Mixed Gradient Logic (Proportional & Dominant Side)
         const totalMovement = dayGain + dayLoss;
-        const gainRatio = totalMovement > 0 ? (dayGain / totalMovement) : 0.5;
-        const midpoint = Math.min(Math.max(Math.round(gainRatio * 100), 10), 90); // Constrain for aesthetics
 
-        const dayChangeGradient = `linear-gradient(135deg, 
-            rgba(20, 160, 20, var(--gradient-strength, 0.6)) 0%, 
-            rgba(20, 20, 20, 1) ${midpoint}%, 
-            rgba(180, 20, 20, var(--gradient-strength, 0.6)) 100%)`;
+        let splitPercent = 50;
+        let startColor = `rgba(0, 180, 0, var(--gradient-strength, 0.6))`; // Green Default
+        let endColor = `rgba(180, 0, 0, var(--gradient-strength, 0.6))`;   // Red Default
+
+        if (totalMovement > 0) {
+            if (dayGain >= dayLoss) {
+                // Gain Dominant (Green Left)
+                splitPercent = (dayGain / totalMovement) * 100;
+                startColor = `rgba(0, 180, 0, var(--gradient-strength, 0.6))`;
+                endColor = `rgba(180, 0, 0, var(--gradient-strength, 0.6))`;
+            } else {
+                // Loss Dominant (Red Left)
+                splitPercent = (dayLoss / totalMovement) * 100; // Use Loss Ratio
+                startColor = `rgba(180, 0, 0, var(--gradient-strength, 0.6))`;
+                endColor = `rgba(0, 180, 0, var(--gradient-strength, 0.6))`;
+            }
+        }
+
+        // Safety Clean
+        splitPercent = Math.min(Math.max(Math.round(splitPercent), 0), 100);
+
+        const dayChangeGradient = `linear-gradient(to right, 
+            ${startColor} 0%, 
+            rgba(20, 20, 20, 1) ${splitPercent}%, 
+            ${endColor} 100%)`;
 
         const capitalGainGradient = isTotalPos ? greenGradient : redGradient;
 
