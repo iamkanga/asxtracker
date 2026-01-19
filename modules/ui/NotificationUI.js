@@ -778,10 +778,10 @@ export class NotificationUI {
         // Structure Definitions - REORDERED & SPLIT
         const sections = [
             { id: 'custom', title: 'Custom', chipLabel: 'Custom', headerTitle: customTitleHeader, subtitle: '<span style="color: var(--color-accent);">Watchlist prices and Market filters</span>', items: sortedLocal, type: 'custom', color: 'neutral' },
-            { id: 'hilo-high', title: '52 Week High', chipLabel: '52w High', subtitle: hiloStrHigh, items: finalHiloHigh, type: 'hilo-up', color: 'green' },
-            { id: 'hilo-low', title: '52 Week Low', chipLabel: '52w Low', subtitle: hiloStrLow, items: finalHiloLow, type: 'hilo-down', color: 'red' },
-            { id: 'gainers', title: 'Market Gainers', chipLabel: 'Gainers', subtitle: upStr, items: finalMoversUp, type: 'gainers', color: 'green' },
-            { id: 'losers', title: 'Market Losers', chipLabel: 'Losers', subtitle: downStr, items: finalMoversDown, type: 'losers', color: 'red' }
+            { id: 'hilo-high', title: '52 Week <span style="color: var(--color-positive)">High</span>', chipLabel: '52w High', subtitle: hiloStrHigh, items: finalHiloHigh, type: 'hilo-up', color: 'green' },
+            { id: 'hilo-low', title: '52 Week <span style="color: var(--color-negative)">Low</span>', chipLabel: '52w Low', subtitle: hiloStrLow, items: finalHiloLow, type: 'hilo-down', color: 'red' },
+            { id: 'gainers', title: 'Market <span style="color: var(--color-positive)">Gainers</span>', chipLabel: 'Gainers', subtitle: upStr, items: finalMoversUp, type: 'gainers', color: 'green' },
+            { id: 'losers', title: 'Market <span style="color: var(--color-negative)">Losers</span>', chipLabel: 'Losers', subtitle: downStr, items: finalMoversDown, type: 'losers', color: 'red' }
         ];
 
         // --- DEBUG LOGGING: RENDER COUNT ---
