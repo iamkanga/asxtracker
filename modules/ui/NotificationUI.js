@@ -1110,7 +1110,7 @@ export class NotificationUI {
             const intent = alertItem.intent || '';
             const type = alertItem.type || '';
 
-            const isHiLo = intent === 'hilo' || intent.includes('hilo') || alertType.includes('hilo');
+            const isHiLo = intent === 'hilo' || intent.includes('hilo') || alertType.includes('hilo') || intent === '52w-high' || intent === '52w-low';
 
             // Fix: Explicitly define isGainers / isLosers derived from type/intent
             const isGainers = alertType === 'gainers' || intent === 'gainers';
@@ -1179,7 +1179,12 @@ export class NotificationUI {
                     text = `${dirArrow} 0%`; // Default if no rule set
                 }
 
-                return { text: text, range: null };
+                // ADDED: 52-Week Range
+                const low = (alertItem.low52 || alertItem.low || 0).toFixed(2);
+                const high = (alertItem.high52 || alertItem.high || 0).toFixed(2);
+                const rangeStr = (low > 0 && high > 0) ? `52w Range ${low}-${high}` : null;
+
+                return { text: text, range: rangeStr };
             }
 
             // 4. GENERIC / FALLBACK MOVERS
@@ -1202,7 +1207,12 @@ export class NotificationUI {
                     txt = `Price ${dirArrow} ${parts.join(' or ')}`;
                 }
 
-                return { text: txt, range: null };
+                // ADDED: 52-Week Range
+                const low = (alertItem.low52 || alertItem.low || 0).toFixed(2);
+                const high = (alertItem.high52 || alertItem.high || 0).toFixed(2);
+                const rangeStr = (low > 0 && high > 0) ? `52w Range ${low}-${high}` : null;
+
+                return { text: txt, range: rangeStr };
             }
 
             // 5. GENERIC FALLBACK (Raw Percentage)
@@ -1347,9 +1357,23 @@ export class NotificationUI {
         // --- EXPLAINER TEXT GENERATION (Moved after JIT) ---
         // Fix: Ensure we use the Enriched 'changePct' for the text, not the stale 'item.pct'.
         if ((explainerText === 'Alert Triggered' || (type === 'custom' && !explainerText)) && item.intent !== 'target' && item.intent !== 'target-hit') {
-            // Re-evaluate direction based on FINAL changePct
-            const ruleSet = changePct >= 0 ? (rules.up || {}) : (rules.down || {});
-            const arrow = changePct >= 0 ? '▲' : '▼';
+            // FIX: Prioritize the Alert's original intent/type for direction, rather than current price flux.
+            // This ensures we show the "Triggered Rule" (e.g. >5%) even if the stock has since retraced.
+            let direction = 'up'; // Default
+            const intentStr = (item.intent || '').toLowerCase();
+            const typeStr = (item.type || '').toLowerCase();
+
+            if (intentStr === 'up' || typeStr === 'up' || intentStr === 'gainers' || typeStr === 'gainers') {
+                direction = 'up';
+            } else if (intentStr === 'down' || typeStr === 'down' || intentStr === 'losers' || typeStr === 'losers') {
+                direction = 'down';
+            } else {
+                // Genuine Fallback if no intent exists
+                direction = changePct >= 0 ? 'up' : 'down';
+            }
+
+            const ruleSet = direction === 'up' ? (rules.up || {}) : (rules.down || {});
+            const arrow = direction === 'up' ? '▲' : '▼';
             const hasPct = ruleSet.percentThreshold && ruleSet.percentThreshold > 0;
             const hasDol = ruleSet.dollarThreshold && ruleSet.dollarThreshold > 0;
 

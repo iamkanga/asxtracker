@@ -632,6 +632,10 @@ export class NotificationStore {
                     // Re-calculate direction based on fresh data
                     hit.direction = hit.change > 0 ? 'up' : (hit.change < 0 ? 'down' : 'neutral');
                 }
+
+                // FIX: Enrich 52-Week Data if available (for UI range display)
+                if (fresh.high52 || fresh.high_52 || fresh.high) hit.high52 = Number(fresh.high52 || fresh.high_52 || fresh.high);
+                if (fresh.low52 || fresh.low_52 || fresh.low) hit.low52 = Number(fresh.low52 || fresh.low_52 || fresh.low);
             }
             return hit;
         });
@@ -798,11 +802,28 @@ export class NotificationStore {
             // FIX: Normalize intent to catch server-side 'MOVER' vs client 'mover'
             // ALSO: Catch items with NO intent (Implied Movers) to ensure they don't bypass thresholds.
             const intent = (hit.intent || '').toLowerCase();
-            if (intent === 'mover' || !intent) {
+            const type = (hit.type || '').toLowerCase();
+
+            // 0. 52-WEEK HIT RECOGNITION (Server-Side)
+            if (intent === '52w-high' || intent === '52w-low') {
+                // Determine if strict minPrice should apply (using hiloMinPrice logic form above)
+                if (rules.hiloEnabled === false) return false;
+                const price = Number(hit.live || hit.price || hit.last || 0);
+                if (rules.hiloMinPrice > 0 && price < rules.hiloMinPrice) return false;
+                return true; // Allow valid 52W hits
+            }
+
+            // 1. MOVER RECOGNITION (Expanded to catch 'gainers', 'losers', 'up', 'down')
+            const isMoverIntent = intent === 'mover' || intent === 'up' || intent === 'down' || intent === 'gainers' || intent === 'losers';
+            if (isMoverIntent || !intent) {
                 // 1. Global Feature Toggle: If Movers are disabled entirely, block EVERYTHING.
                 if (rules.moversEnabled === false) return false;
 
-                const isDown = (hit.direction || '').toLowerCase() === 'down' || (hit.pct || 0) < 0;
+                // FIX: Respect explicit intent for direction if available
+                let isDown = (hit.direction || '').toLowerCase() === 'down' || (hit.pct || 0) < 0;
+                if (intent === 'up' || intent === 'gainers') isDown = false;
+                if (intent === 'down' || intent === 'losers') isDown = true;
+
                 const activeRules = isDown ? (rules.down || {}) : (rules.up || {});
 
                 const thresholdPct = activeRules.percentThreshold || 0;
@@ -2103,6 +2124,10 @@ function normalizeHits(list, fallbackTime = null) {
                 // We map to 'pct' (primary) and 'dayChangePercent' (fallback for UI).
                 hit.pct = Number(live.changeInPercent || live.pct || live.pctChange || 0);
                 hit.dayChangePercent = hit.pct;
+
+                // FIX: Enrich 52-Week Data for UI Range Display (if available)
+                if (live.high52 || live.high_52 || live.high) hit.high52 = Number(live.high52 || live.high_52 || live.high);
+                if (live.low52 || live.low_52 || live.low) hit.low52 = Number(live.low52 || live.low_52 || live.low);
             }
         }
 
