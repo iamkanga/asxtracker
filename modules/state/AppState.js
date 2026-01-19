@@ -518,3 +518,8 @@ export const AppState = {
         this.isPortfolioVisible = false;
     }
 };
+
+// Expose AppState to window for inline script access (e.g., modal onclick handlers)
+if (typeof window !== 'undefined') {
+    window.AppState = AppState;
+}

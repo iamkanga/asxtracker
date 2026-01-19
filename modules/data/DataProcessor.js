@@ -372,16 +372,40 @@ export function calculatePortfolioTotals(processedShares) {
  * @returns {Object|null} Processed stock object or null if not found.
  */
 export function getSingleShareData(code, allShares, livePrices, userWatchlists = []) {
-    // 1. Find Primary Share (for base fields)
-    const primaryShare = allShares.find(s => s.shareName === code);
+    // Normalize code upfront for consistent matching
+    const normalizedCode = String(code || '').trim().toUpperCase();
+
+    // 1. Find Primary Share (for base fields) - CASE-INSENSITIVE
+    const primaryShare = allShares.find(s =>
+        String(s.shareName || '').trim().toUpperCase() === normalizedCode
+    );
     if (!primaryShare) return null;
+
+    // AUTOREPAIR: If ID is missing (Ghost), try to find it in the master list
+    if (!primaryShare.id) {
+        const masterRecord = allShares.find(s =>
+            String(s.shareName || '').trim().toUpperCase() === normalizedCode && s.id
+        );
+        if (masterRecord) {
+            primaryShare.id = masterRecord.id;
+        }
+    }
+
+    // OPTIMISTIC ID PROTECTION: Check guarded IDs registry
+    if (AppState.data.optimisticIds && AppState.data.optimisticIds.has(normalizedCode)) {
+        const guardedId = AppState.data.optimisticIds.get(normalizedCode);
+        if (!primaryShare.id || String(primaryShare.id).startsWith('temp_')) {
+            primaryShare.id = guardedId;
+        }
+    }
 
     // 2. Aggregate Memberships from ALL matching share documents
     const membershipSet = new Set();
-    const normalizedCode = String(code || '').toUpperCase();
 
-    // Find all records for this code
-    const matchingShares = allShares.filter(s => s.shareName === normalizedCode);
+    // Find all records for this code - CASE-INSENSITIVE
+    const matchingShares = allShares.filter(s =>
+        String(s.shareName || '').trim().toUpperCase() === normalizedCode
+    );
 
     matchingShares.forEach(s => {
         // Collect from watchlistIds (array) or watchlistId (singular)

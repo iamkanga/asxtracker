@@ -767,25 +767,31 @@ export class ViewRenderer {
                                                 ${sectorName ? `<span class="${CSS_CLASSES.TEXT_SM} ${CSS_CLASSES.TEXT_MUTED} ${CSS_CLASSES.GHOSTED} ${CSS_CLASSES.ITALIC} ${CSS_CLASSES.FONT_NORMAL} mt-1px">${sectorName}</span>` : ''}
                                             </div>
                                             <div class="${CSS_CLASSES.KANGAROO_WRAPPER} ${stock.muted ? CSS_CLASSES.IS_MUTED : ''}"
-                                                 title="${stock.id ? (stock.muted ? 'Unmute Share' : 'Mute Share') : 'Syncing...'}"
-                                                 style="${!stock.id ? 'opacity: 0.5; cursor: not-allowed;' : 'position: relative; z-index: 50;'}"
+                                                 data-code="${stock.code}"
+                                                 data-share-id="${stock.id || ''}"
+                                                 title="${stock.muted ? 'Unmute Share' : 'Mute Share'}"
+                                                 style="position: relative; z-index: 50; cursor: pointer;"
                                                  onclick="
                                                     event.stopPropagation(); 
                                                     event.preventDefault(); 
-                                                    const isGhost = !'${stock.id}' || '${stock.id}' === 'null' || '${stock.id}' === 'undefined';
+                                                    const code = this.dataset.code;
+                                                    let shareId = this.dataset.shareId;
                                                     const currentlyMuted = this.classList.contains('${CSS_CLASSES.IS_MUTED}');
                                                     
-                                                    if(isGhost) { 
-                                                        console.warn('Mute dispatching by code for ${stock.code}'); 
-                                                        document.dispatchEvent(new CustomEvent('${EVENTS.TOGGLE_SHARE_MUTE}', { 
-                                                            detail: { id: null, code: '${stock.code}', muted: currentlyMuted } 
-                                                        })); 
-                                                        return; 
-                                                    } 
+                                                    // Dynamic ID lookup from AppState if not baked in
+                                                    if (!shareId && window.AppState && window.AppState.data && window.AppState.data.shares) {
+                                                        const found = window.AppState.data.shares.find(s => 
+                                                            (s.shareName || '').toUpperCase() === code.toUpperCase() || 
+                                                            (s.code || '').toUpperCase() === code.toUpperCase()
+                                                        );
+                                                        if (found && found.id) shareId = found.id;
+                                                    }
                                                     
+                                                    // Toggle class immediately for responsive UI
                                                     this.classList.toggle('${CSS_CLASSES.IS_MUTED}'); 
+                                                    
                                                     document.dispatchEvent(new CustomEvent('${EVENTS.TOGGLE_SHARE_MUTE}', { 
-                                                        detail: { id: '${stock.id}', code: '${stock.code}', muted: currentlyMuted } 
+                                                        detail: { id: shareId || null, code: code, muted: currentlyMuted } 
                                                     }))">
                                                 <img src="${KANGAROO_ICON_SRC}" class="${CSS_CLASSES.KANGAROO_ICON_IMG}" />
                                             </div>

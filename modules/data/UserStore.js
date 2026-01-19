@@ -206,6 +206,7 @@ export class UserStore {
         try {
             const dataToSave = {
                 ...shareData,
+                muted: shareData.muted ?? false,  // Ensure muted state is explicitly set
                 createdAt: serverTimestamp()
             };
             // Ensure no undefined values
@@ -523,7 +524,8 @@ export class UserStore {
             watchlistIds: [watchlistId], // Initialize Array
             purchasePrice: price,
             purchaseDate: timestamp,
-            units: 0
+            units: 0,
+            muted: false  // Initialize mute state
         });
     }
 
