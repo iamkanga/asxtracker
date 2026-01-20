@@ -15,49 +15,39 @@
  */
 
 // ======================== CONFIGURATION ========================
-const PRICE_SHEET_NAME = 'Prices';
-const DASHBOARD_SHEET_NAME = 'Dashboard';
-const SUPPRESSION_LOG_SHEET_NAME = 'Suppression Log';
-// (Legacy constants removed)
+const GAS_CONFIG = {
+  VERSION: '2.5.2 (Constitutional Hardening)',
+  TIME_ZONE: 'Australia/Sydney',
+  FIREBASE: {
+    PROJECT_ID: 'asx-watchlist-app',
+    APP_ID: 'asx-watchlist-app',
+    BASE_URL: 'https://firestore.googleapis.com/v1'
+  },
+  SHEETS: {
+    PRICES: 'Prices',
+    DASHBOARD: 'Dashboard',
+    SUPPRESSION_LOG: 'Suppression Log'
+  },
+  HOLIDAYS: [
+    '2025-01-01', '2025-01-27', '2025-04-18', '2025-04-21',
+    '2025-04-25', '2025-06-09', '2025-12-25', '2025-12-26'
+  ],
+  EMAIL: {
+    SUBJECT_PREFIX: 'ASX Daily Briefing',
+    FOOTER_TEXT: 'This automated briefing is matched to your personal ASX Tracker thresholds. To change your notification settings, visit the app.'
+  }
+};
 
-const ASX_TIME_ZONE = 'Australia/Sydney';
+const PRICE_SHEET_NAME = GAS_CONFIG.SHEETS.PRICES;
+const DASHBOARD_SHEET_NAME = GAS_CONFIG.SHEETS.DASHBOARD;
+const SUPPRESSION_LOG_SHEET_NAME = GAS_CONFIG.SHEETS.SUPPRESSION_LOG;
 
-// Firestore / App identity (align APP_ID with frontend currentAppId / Firebase projectId)
-const FIREBASE_PROJECT_ID = 'asx-watchlist-app';
-const APP_ID = 'asx-watchlist-app';
+const ASX_TIME_ZONE = GAS_CONFIG.TIME_ZONE;
+const FIREBASE_PROJECT_ID = GAS_CONFIG.FIREBASE.PROJECT_ID;
+const APP_ID = GAS_CONFIG.FIREBASE.APP_ID;
+const FIRESTORE_BASE = GAS_CONFIG.FIREBASE.BASE_URL;
 
-// Base Firestore REST endpoint
-const FIRESTORE_BASE = 'https://firestore.googleapis.com/v1';
-
-// Central Firestore global settings document path segments
-// Full path: /artifacts/{APP_ID}/config/globalSettings
-const GLOBAL_SETTINGS_DOC_SEGMENTS = ['artifacts', APP_ID, 'config', 'globalSettings'];
-// Central Firestore GLOBAL_MOVERS document path
-const GLOBAL_MOVERS_DOC_SEGMENTS = ['artifacts', APP_ID, 'alerts', 'GLOBAL_MOVERS'];
-// Central Firestore daily 52-week hit history document
-// Full path: /artifacts/{APP_ID}/alerts/HI_LO_52W_HITS
-const DAILY_HILO_HITS_DOC_SEGMENTS = ['artifacts', APP_ID, 'alerts', 'HI_LO_52W_HITS'];
-// Central Firestore daily GLOBAL_MOVERS hit history document
-// Full path: /artifacts/{APP_ID}/alerts/GLOBAL_MOVERS_HITS
-const DAILY_MOVERS_HITS_DOC_SEGMENTS = ['artifacts', APP_ID, 'alerts', 'GLOBAL_MOVERS_HITS'];
-// Central Firestore daily CUSTOM TRIGGER hit history document
-// Full path: /artifacts/{APP_ID}/alerts/CUSTOM_TRIGGER_HITS
-const DAILY_CUSTOM_HITS_DOC_SEGMENTS = ['artifacts', APP_ID, 'alerts', 'CUSTOM_TRIGGER_HITS'];
-
-// ======================== TRADING CALENDAR ========================
-// Simple hardcoded holidays for ASX (User to update annually)
-// Format: 'YYYY-MM-DD'
-const ASX_HOLIDAYS_2025 = new Set([
-  '2025-01-01', // New Year's Day
-  '2025-01-27', // Australia Day (Observed)
-  '2025-04-18', // Good Friday
-  '2025-04-21', // Easter Monday
-  '2025-04-25', // Anzac Day
-  '2025-06-09', // King's Birthday
-  '2025-12-25', // Christmas Day
-  '2025-12-26'  // Boxing Day
-]);
-// Add 2026 if needed...
+const ASX_HOLIDAYS_2025 = new Set(GAS_CONFIG.HOLIDAYS);
 
 /** Check if today (Sydney time) is a trading day (Mon-Fri, non-holiday). */
 function isTradingDay_(dateObj) {
@@ -2274,13 +2264,13 @@ function sendCombinedDailyDigest_() {
 
       // Final Assembly
       const counts = `Movers: ${userUp.length+userDown.length} | 52-Week: ${userHighs.length+userLows.length} | Personal: ${userCustomHits.length}`;
-      const subject = `ASX Daily Briefing — ${sydneyDateStr} (${counts})`;
+      const subject = `${GAS_CONFIG.EMAIL.SUBJECT_PREFIX} — ${sydneyDateStr} (${counts})`;
       const htmlBody = (
         '<div style="font-family:Arial,Helvetica,sans-serif;color:#222;line-height:1.4;max-width:800px;margin:auto;">' +
-        `<h2 style="margin:0 0 12px 0;color:#1a73e8;">ASX Daily Briefing — ${esc(sydneyDateStr)}</h2>` +
+        `<h2 style="margin:0 0 12px 0;color:#1a73e8;">${GAS_CONFIG.EMAIL.SUBJECT_PREFIX} — ${esc(sydneyDateStr)}</h2>` +
         sections.join('<div style="height:20px;"></div>') +
         '<div style="margin-top:24px;color:#888;font-size:11px;border-top:1px solid #eee;padding-top:12px;">' +
-        'This automated briefing is matched to your personal ASX Tracker thresholds. To change your notification settings, visit the app.' +
+        GAS_CONFIG.EMAIL.FOOTER_TEXT +
         '</div></div>'
       );
 

@@ -1,4 +1,4 @@
-import { IDS, CSS_CLASSES, UI_ICONS } from '../utils/AppConstants.js';
+import { IDS, CSS_CLASSES, UI_ICONS, UI_LABELS } from '../utils/AppConstants.js';
 
 export class WatchlistPickerModal {
     getModalHTML() {
@@ -8,7 +8,7 @@ export class WatchlistPickerModal {
             <div class="${CSS_CLASSES.MODAL_CONTENT}">
                 <div class="${CSS_CLASSES.MODAL_HEADER}">
                     <h2 id="${IDS.WATCHLIST_MODAL_TITLE}" class="${CSS_CLASSES.MODAL_TITLE} ${CSS_CLASSES.CLICKABLE}">
-                        Select Watchlist 
+                        ${UI_LABELS.SELECT_WATCHLIST} 
                         <svg class="modal-title-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.3; margin-left: 8px; transition: transform 0.3s ease;">
                             <polyline points="6 9 12 15 18 9"></polyline>
                         </svg>
@@ -29,9 +29,9 @@ export class WatchlistPickerModal {
 
                 <!-- Selection Mode Headers (Hidden by default) -->
                 <div id="watchlistEditHeaders" class="watchlist-edit-headers ${CSS_CLASSES.HIDDEN}">
-                    <span class="col-hide">Hide</span>
-                    <span class="col-carousel">Carousel</span>
-                    <span class="col-reorder">Reorder</span>
+                    <span class="col-hide">${UI_LABELS.HIGH}</span>
+                    <span class="col-carousel">${UI_LABELS.CAROUSEL}</span>
+                    <span class="col-reorder">${UI_LABELS.REORDER}</span>
                 </div>
 
                 <div id="${IDS.WATCHLIST_PICKER_LIST}" class="${CSS_CLASSES.WATCHLIST_PICKER_LIST}">

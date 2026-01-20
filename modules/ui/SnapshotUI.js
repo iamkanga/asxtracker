@@ -5,7 +5,7 @@
  */
 
 import { AppState } from '../state/AppState.js';
-import { CSS_CLASSES, IDS, UI_ICONS, EVENTS } from '../utils/AppConstants.js';
+import { CSS_CLASSES, IDS, UI_ICONS, EVENTS, UI_LABELS } from '../utils/AppConstants.js';
 import { navManager } from '../utils/NavigationManager.js';
 import { formatCurrency, formatPercent } from '../utils/formatters.js';
 
@@ -63,11 +63,11 @@ export class SnapshotUI {
                     <div style="display: flex; flex-direction: column; justify-content: center;">
                         <h2 class="${CSS_CLASSES.MODAL_TITLE}" style="margin-bottom: 0;">
                             <i class="fas fa-heartbeat" style="color: var(--color-accent); margin-right: 8px;"></i>
-                            Market Pulse
+                            ${UI_LABELS.MARKET_PULSE_TITLE}
                         </h2>
-                        <span style="font-size: 0.8rem; color: var(--text-muted); margin-left: 0; font-weight: 400; margin-top: 2px;">All watchlist codes daily change</span>
+                        <span style="font-size: 0.8rem; color: var(--text-muted); margin-left: 0; font-weight: 400; margin-top: 2px;">${UI_LABELS.ALL_WATCHLIST_CHANGE}</span>
                     </div>
-                    <button class="${CSS_CLASSES.MODAL_CLOSE_BTN}" title="Close">
+                    <button class="${CSS_CLASSES.MODAL_CLOSE_BTN}" title="${UI_LABELS.CLOSE}">
                         <i class="fas ${UI_ICONS.CLOSE}"></i>
                     </button>
                 </div>
@@ -95,7 +95,7 @@ export class SnapshotUI {
                         <button type="button" class="${CSS_CLASSES.SEGMENTED_BUTTON} w-full" id="${IDS.SNAPSHOT_TOGGLE_BTN}">
                             <div class="${CSS_CLASSES.W_FULL} ${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.ALIGN_CENTER}" style="justify-content: center;">
                                 <i class="fas fa-sort" id="${IDS.SNAPSHOT_TOGGLE_ICON}" style="margin-right: 15px;"></i>
-                                <span class="${CSS_CLASSES.FONT_BOLD}" id="${IDS.SNAPSHOT_TOGGLE_TEXT}">High to Low</span>
+                                <span class="${CSS_CLASSES.FONT_BOLD}" id="${IDS.SNAPSHOT_TOGGLE_TEXT}">${UI_LABELS.HIGH_TO_LOW}</span>
                                 <i class="fas fa-sort" id="${IDS.SNAPSHOT_TOGGLE_ICON_2}" style="margin-left: 15px;"></i>
                             </div>
                         </button>
@@ -107,7 +107,7 @@ export class SnapshotUI {
                 </div>
                 
                 <div class="${CSS_CLASSES.MODAL_FOOTER}" style="text-align: center; color: var(--text-muted); font-size: 0.7rem; padding: 10px;">
-                    Tap card to view details
+                    ${UI_LABELS.TAP_CARD_DETAILS}
                 </div>
             </div>
         `;
@@ -138,7 +138,7 @@ export class SnapshotUI {
             const icon = modal.querySelectorAll('.fas.fa-sort, .fas.fa-caret-up, .fas.fa-caret-down');
             const text = modal.querySelector(`#${IDS.SNAPSHOT_TOGGLE_TEXT}`);
 
-            const label = isDesc ? 'Low to High' : 'High to Low';
+            const label = isDesc ? UI_LABELS.LOW_TO_HIGH : UI_LABELS.HIGH_TO_LOW;
             const iconClass = isDesc ? 'fa-caret-down' : 'fa-caret-up';
             const color = isDesc ? 'var(--color-negative)' : 'var(--color-positive)';
 

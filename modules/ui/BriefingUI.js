@@ -6,7 +6,7 @@
 
 import { notificationStore } from '../state/NotificationStore.js';
 import { AppState } from '../state/AppState.js';
-import { CSS_CLASSES, IDS, UI_ICONS, EVENTS } from '../utils/AppConstants.js';
+import { CSS_CLASSES, IDS, UI_ICONS, EVENTS, UI_LABELS } from '../utils/AppConstants.js';
 import { navManager } from '../utils/NavigationManager.js';
 import { formatCurrency, formatPercent } from '../utils/formatters.js';
 import { SnapshotUI } from './SnapshotUI.js';
@@ -56,9 +56,9 @@ export class BriefingUI {
                 <div class="${CSS_CLASSES.BRIEFING_HEADER}">
                     <!-- Title Row: Greeting + Close Button (Perfectly Aligned) -->
                     <div class="${CSS_CLASSES.BRIEFING_TITLE_ROW}">
-                        <h1>Good Morning</h1>
+                        <h1>${UI_LABELS.GOOD_MORNING}</h1>
                         <div style="display: flex; gap: 10px; align-items: center;">
-                            <button class="${CSS_CLASSES.MODAL_CLOSE_BTN} briefing-close-btn" title="Close">
+                            <button class="${CSS_CLASSES.MODAL_CLOSE_BTN} briefing-close-btn" title="${UI_LABELS.CLOSE}">
                                 <i class="fas ${UI_ICONS.CLOSE}"></i>
                             </button>
                         </div>
@@ -74,14 +74,14 @@ export class BriefingUI {
                     <!-- Market Pulse -->
                     <div id="${IDS.BRIEFING_PULSE_SHORTCUT}" style="cursor: pointer; display: flex; align-items: center; gap: 6px; transition: opacity 0.2s;">
                         <span style="font-size: 0.8rem; color: var(--color-accent); letter-spacing: 0.5px; font-weight: 500; display: flex; align-items: center; gap: 6px;">
-                             <i class="fas fa-heartbeat"></i> Market Pulse
+                             <i class="fas fa-heartbeat"></i> ${UI_LABELS.MARKET_PULSE_TITLE}
                         </span>
                     </div>
 
                     <!-- Roast Portfolio -->
                     <div id="btn-roast-portfolio" style="margin-left: auto; margin-right: 24px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: opacity 0.2s;">
                          <span style="font-size: 0.8rem; color: var(--color-negative); letter-spacing: 0.5px; font-weight: 500; display: flex; align-items: center; gap: 6px;">
-                             <i class="fas fa-fire"></i> Roast Portfolio
+                             <i class="fas fa-fire"></i> ${UI_LABELS.ROAST_PORTFOLIO}
                          </span>
                     </div>
 
@@ -91,9 +91,9 @@ export class BriefingUI {
                     
                     <!-- Feature 4: Ask the Market -->
                     <div style="margin: 0 0 16px 0; padding: 12px 16px; background: rgba(255,255,255,0.02); border-bottom: 1px solid rgba(255,255,255,0.05);">
-                       <div style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 8px;">Ask the Market</div>
+                       <div style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 8px;">${UI_LABELS.ASK_THE_MARKET}</div>
                        <div style="position:relative;">
-                          <input type="text" id="gemini-chat-input" placeholder="e.g. 'How are banks performing?'" style="width:100%; padding: 10px 40px 10px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.3); color: #eee; font-family: inherit; font-size: 0.9em;">
+                          <input type="text" id="gemini-chat-input" placeholder="${UI_LABELS.GEMINI_PLACEHOLDER}" style="width:100%; padding: 10px 40px 10px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.3); color: #eee; font-family: inherit; font-size: 0.9em;">
                           <button id="btn-gemini-ask" style="position:absolute; right:2px; top:2px; bottom:2px; padding:0 12px; background: transparent; border:none; color:var(--color-accent); cursor:pointer;">
                              <i class="fas fa-paper-plane"></i>
                           </button>
@@ -106,8 +106,8 @@ export class BriefingUI {
                             
                             <!-- Portfolio Hero -->
                             <div class="${CSS_CLASSES.BRIEFING_HERO_CARD}" id="${IDS.BRIEFING_PORTFOLIO_HERO}" style="flex: 2; min-width: 250px;">
-                                <div class="${CSS_CLASSES.HERO_LABEL}">My Portfolio</div>
-                                <div class="${CSS_CLASSES.HERO_MAIN_STAT} skeleton-text">Computing...</div>
+                                <div class="${CSS_CLASSES.HERO_LABEL}">${UI_LABELS.MY_PORTFOLIO}</div>
+                                <div class="${CSS_CLASSES.HERO_MAIN_STAT} skeleton-text">${UI_LABELS.COMPUTING}</div>
                                 <div class="${CSS_CLASSES.HERO_SUB_STAT} skeleton-text">...</div>
                             </div>
 
@@ -116,7 +116,7 @@ export class BriefingUI {
 
                     <!-- NEW: Portfolio Highlights -->
                     <div class="${CSS_CLASSES.BRIEFING_SECTION}">
-                        <div class="${CSS_CLASSES.BRIEFING_SECTION_TITLE}">Portfolio Highlights</div>
+                        <div class="${CSS_CLASSES.BRIEFING_SECTION_TITLE}">${UI_LABELS.PORTFOLIO_HIGHLIGHTS}</div>
                         <div class="${CSS_CLASSES.BRIEFING_WATCHLIST_GRID}" id="${IDS.BRIEFING_PORTFOLIO_GRID}">
                            <!-- Dynamic -->
                         </div>
@@ -124,7 +124,7 @@ export class BriefingUI {
 
                     <!-- 3. Watchlist Highlights -->
                     <div class="${CSS_CLASSES.BRIEFING_SECTION}">
-                        <div class="${CSS_CLASSES.BRIEFING_SECTION_TITLE}">Watchlist Highlights</div>
+                        <div class="${CSS_CLASSES.BRIEFING_SECTION_TITLE}">${UI_LABELS.WATCHLIST_HIGHLIGHTS}</div>
                         <div class="${CSS_CLASSES.BRIEFING_WATCHLIST_GRID}" id="${IDS.BRIEFING_WATCHLIST_GRID}">
                            <!-- Dynamic -->
                         </div>
@@ -132,7 +132,7 @@ export class BriefingUI {
                     
                     <!-- 4. Top Market Movers (Global) -->
                     <div class="${CSS_CLASSES.BRIEFING_SECTION}">
-                         <div class="${CSS_CLASSES.BRIEFING_SECTION_TITLE}" id="${IDS.MARKET_PULSE_HEADER}">Market</div>
+                         <div class="${CSS_CLASSES.BRIEFING_SECTION_TITLE}" id="${IDS.MARKET_PULSE_HEADER}">${UI_LABELS.MARKET}</div>
                          <div class="${CSS_CLASSES.BRIEFING_WATCHLIST_GRID}" id="${IDS.BRIEFING_MARKET_GRID}"></div>
                     </div>
 
@@ -197,7 +197,7 @@ export class BriefingUI {
                 </div>
                 
                 <div id="briefing-ai-summary" style="font-size: 0.95em; line-height: 1.5; color: var(--text-normal); margin: 12px 0 16px 0; min-height: 40px; font-weight: 400;">
-                    <span style="opacity: 0.7; font-size: 0.9em;"><i class="fas fa-circle-notch fa-spin"></i> Analyzing your portfolio...</span>
+                    <span style="opacity: 0.7; font-size: 0.9em;"><i class="fas fa-circle-notch fa-spin"></i> ${UI_LABELS.ANALYZING_PORTFOLIO}</span>
                 </div>
 
                 <div class="${CSS_CLASSES.HERO_MAIN_STAT} ${colorClass}">
@@ -212,7 +212,7 @@ export class BriefingUI {
                     <span class="${CSS_CLASSES.HERO_TOTAL_VALUE}">${formatCurrency(portfolio.totalValue)}</span>
                 </div>
                 
-                <div class="${CSS_CLASSES.HERO_CLICK_HINT}">Tap to view full portfolio <i class="fas fa-chevron-right"></i></div>
+                <div class="${CSS_CLASSES.HERO_CLICK_HINT}">${UI_LABELS.TAP_TO_VIEW_PORTFOLIO} <i class="fas fa-chevron-right"></i></div>
             `;
 
             // TRIGGER AI GENERATION (Async)
@@ -324,7 +324,7 @@ export class BriefingUI {
             footer.innerHTML = `
                 <div style="text-align: center;">
                     <div style="font-size: 0.95rem; font-weight: 800; color: ${sentimentColor}; margin-bottom: 0px; letter-spacing: -0.3px; line-height: 1.2;">
-                        ${iconHtml} Market is ${marketSentiment.sentiment}
+                        ${iconHtml} ${UI_LABELS.MARKET_IS} ${marketSentiment.sentiment}
                     </div>
                     <div class="${CSS_CLASSES.PULSE_MINIMAL_ROW}" style="justify-content: center; opacity: 0.9; font-size: 0.8rem; flex-wrap: wrap; gap: 2px;">
                          <span class="${CSS_CLASSES.PULSE_STAT}" style="font-weight: 600; color: var(--color-accent);">${pulse.custom} Custom</span>

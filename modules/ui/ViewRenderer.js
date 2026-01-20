@@ -771,21 +771,12 @@ export class ViewRenderer {
                                                  data-share-id="${stock.id || ''}"
                                                  title="${stock.muted ? 'Unmute Share' : 'Mute Share'}"
                                                  style="position: relative; z-index: 50; cursor: pointer;"
-                                                 onclick="
+                                                  onclick="
                                                     event.stopPropagation(); 
                                                     event.preventDefault(); 
                                                     const code = this.dataset.code;
-                                                    let shareId = this.dataset.shareId;
+                                                    const shareId = this.dataset.shareId;
                                                     const currentlyMuted = this.classList.contains('${CSS_CLASSES.IS_MUTED}');
-                                                    
-                                                    // Dynamic ID lookup from AppState if not baked in
-                                                    if (!shareId && window.AppState && window.AppState.data && window.AppState.data.shares) {
-                                                        const found = window.AppState.data.shares.find(s => 
-                                                            (s.shareName || '').toUpperCase() === code.toUpperCase() || 
-                                                            (s.code || '').toUpperCase() === code.toUpperCase()
-                                                        );
-                                                        if (found && found.id) shareId = found.id;
-                                                    }
                                                     
                                                     // Toggle class immediately for responsive UI
                                                     this.classList.toggle('${CSS_CLASSES.IS_MUTED}'); 

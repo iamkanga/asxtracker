@@ -3,7 +3,7 @@
  * Handles the Watchlist Dropdown, Title updating, and Watchlist management UI interactions.
  */
 import { AppState } from '../state/AppState.js';
-import { IDS, CSS_CLASSES, EVENTS, WATCHLIST_ICON_POOL, ALL_SHARES_ID, CASH_WATCHLIST_ID, DASHBOARD_WATCHLIST_ID, PORTFOLIO_ID, UI_ICONS, USER_MESSAGES, STORAGE_KEYS, WATCHLIST_MODES, SORT_OPTIONS, WATCHLIST_NAMES } from '../utils/AppConstants.js';
+import { IDS, CSS_CLASSES, EVENTS, WATCHLIST_ICON_POOL, ALL_SHARES_ID, CASH_WATCHLIST_ID, DASHBOARD_WATCHLIST_ID, PORTFOLIO_ID, UI_ICONS, USER_MESSAGES, STORAGE_KEYS, WATCHLIST_MODES, SORT_OPTIONS, WATCHLIST_NAMES, UI_LABELS } from '../utils/AppConstants.js';
 import { WatchlistPickerModal } from './WatchlistPickerModal.js';
 import { ToastManager } from './ToastManager.js';
 import { SnapshotUI } from './SnapshotUI.js';
@@ -55,10 +55,10 @@ export class WatchlistUI {
 
                         // Update Title Text & Style
                         if (this.isEditMode) {
-                            title.firstChild.textContent = 'Hide / Carousel / Reorder ';
+                            title.firstChild.textContent = UI_LABELS.EDIT_MODES_TITLE;
                             title.classList.add(CSS_CLASSES.TEXT_COFFEE);
                         } else {
-                            title.firstChild.textContent = 'Select Watchlist ';
+                            title.firstChild.textContent = UI_LABELS.SELECT_WATCHLIST;
                             title.classList.remove(CSS_CLASSES.TEXT_COFFEE);
                         }
 
@@ -104,7 +104,7 @@ export class WatchlistUI {
 
         const titleEl = document.getElementById(IDS.WATCHLIST_MODAL_TITLE);
         if (titleEl) {
-            titleEl.firstChild.textContent = 'Select Watchlist ';
+            titleEl.firstChild.textContent = UI_LABELS.SELECT_WATCHLIST;
             titleEl.classList.remove(CSS_CLASSES.ACTIVE);
             titleEl.classList.remove(CSS_CLASSES.TEXT_COFFEE);
         }
@@ -125,7 +125,7 @@ export class WatchlistUI {
         if (!toggleBtn) return;
 
         const isDesc = AppState.preferences.watchlistSort === 'desc';
-        const text = isDesc ? 'Z to A' : 'A to Z';
+        const text = isDesc ? UI_LABELS.Z_TO_A : UI_LABELS.A_TO_Z;
         const iconClass = isDesc ? 'fa-chevron-down' : 'fa-chevron-up';
         const colorClass = isDesc ? CSS_CLASSES.TEXT_NEGATIVE : CSS_CLASSES.TEXT_POSITIVE;
 
@@ -161,7 +161,7 @@ export class WatchlistUI {
                 this.isEditMode = false; // Always start in default mode
                 const title = document.getElementById(IDS.WATCHLIST_MODAL_TITLE);
                 if (title) {
-                    title.firstChild.textContent = 'Select Watchlist ';
+                    title.firstChild.textContent = UI_LABELS.SELECT_WATCHLIST;
                     title.classList.remove(CSS_CLASSES.TEXT_COFFEE);
                 }
                 this.renderWatchlistDropdown();
@@ -225,10 +225,10 @@ export class WatchlistUI {
                     oldName = WATCHLIST_NAMES.DASHBOARD;
                 } else {
                     const currentList = (AppState.data.watchlists || []).find(w => w.id === currentWatchlistId);
-                    oldName = currentList ? currentList.name : 'Watchlist';
+                    oldName = currentList ? currentList.name : UI_LABELS.WATCHLIST_LABEL;
                 }
 
-                const newName = prompt('Enter new name:', oldName);
+                const newName = prompt(UI_LABELS.RENAME_WATCHLIST_PROMPT, oldName);
                 if (newName && newName !== oldName) {
                     if (this.onRenameWatchlist) {
                         try {
@@ -249,7 +249,7 @@ export class WatchlistUI {
         const titleSpan = document.getElementById(IDS.CURRENT_WATCHLIST_NAME);
         if (!titleSpan) return;
 
-        let baseTitle = 'Watchlist';
+        let baseTitle = UI_LABELS.WATCHLIST_LABEL;
         const currentId = AppState.watchlist.id || PORTFOLIO_ID;
         const customNames = AppState.preferences.customWatchlistNames || {};
 
@@ -267,7 +267,7 @@ export class WatchlistUI {
                     baseTitle = WATCHLIST_NAMES.PORTFOLIO;
                 } else {
                     const list = (AppState.data.watchlists || []).find(w => w.id === AppState.watchlist.id);
-                    baseTitle = list ? list.name : 'Watchlist';
+                    baseTitle = list ? list.name : UI_LABELS.WATCHLIST_LABEL;
                 }
             }
         }

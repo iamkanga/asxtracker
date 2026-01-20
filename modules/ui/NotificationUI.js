@@ -6,7 +6,7 @@
 
 import { notificationStore } from '../state/NotificationStore.js';
 import { AppState } from '../state/AppState.js';
-import { CSS_CLASSES, IDS, UI_ICONS, EVENTS, SECTOR_INDUSTRY_MAP, DASHBOARD_SYMBOLS } from '../utils/AppConstants.js';
+import { CSS_CLASSES, IDS, UI_ICONS, EVENTS, SECTOR_INDUSTRY_MAP, DASHBOARD_SYMBOLS, UI_LABELS } from '../utils/AppConstants.js';
 import { navManager } from '../utils/NavigationManager.js';
 import { formatCurrency, formatPercent } from '../utils/formatters.js';
 import { BriefingUI } from './BriefingUI.js?v=327';
@@ -341,7 +341,7 @@ export class NotificationUI {
             <div class="${CSS_CLASSES.MODAL_CONTENT} ${CSS_CLASSES.MODAL_CONTENT_MEDIUM}" style="height: 50vh; display:flex; align-items:center; justify-content:center;">
                 <div style="text-align:center; color:var(--text-muted);">
                     <i class="fas fa-spinner fa-spin" style="font-size:2rem; margin-bottom:10px;"></i>
-                    <div>Loading notifications...</div>
+                    <div>${UI_LABELS.LOADING_NOTIFICATIONS}</div>
                 </div>
             </div>
         `;
@@ -376,21 +376,21 @@ export class NotificationUI {
             <div class="${CSS_CLASSES.MODAL_CONTENT} ${CSS_CLASSES.MODAL_CONTENT_MEDIUM}" style="height: 85vh; display: flex; flex-direction: column; overflow: hidden !important;">
                 
                 <div class="${CSS_CLASSES.MODAL_HEADER}">
-                    <h2 class="${CSS_CLASSES.MODAL_TITLE}">Notifications</h2>
+                    <h2 class="${CSS_CLASSES.MODAL_TITLE}">${UI_LABELS.NOTIFICATIONS_TITLE}</h2>
                     <div style="margin-left: auto; display: flex; gap: 15px; align-items: center;">
-                        <button id="${IDS.BTN_DAILY_BRIEFING}" title="Daily Brief" style="background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem;">
+                        <button id="${IDS.BTN_DAILY_BRIEFING}" title="${UI_LABELS.DAILY_BRIEFING_TITLE}" style="background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem;">
                             <i class="fas fa-coffee"></i>
                         </button>
-                        <button id="${IDS.BTN_MARKET_PULSE}" title="Market Pulse" style="background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem;">
+                        <button id="${IDS.BTN_MARKET_PULSE}" title="${UI_LABELS.MARKET_PULSE_TITLE}" style="background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem;">
                             <i class="fas fa-heartbeat"></i>
                         </button>
-                        <button id="${IDS.NOTIF_SETTINGS_BTN}" title="Notification Settings" style="background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem;">
+                        <button id="${IDS.NOTIF_SETTINGS_BTN}" title="${UI_LABELS.NOTIFICATION_SETTINGS}" style="background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem;">
                             <i class="fas ${UI_ICONS.PEN}"></i>
                         </button>
-                        <button id="${IDS.NOTIF_MARK_READ_BTN}" title="Dismiss Badge" style="background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem;">
+                        <button id="${IDS.NOTIF_MARK_READ_BTN}" title="${UI_LABELS.DISMISS_BADGE}" style="background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem;">
                              <div class="${CSS_CLASSES.DISMISS_ICON_WRAPPER}" style="width: 32px; height: 32px; display: inline-block;"></div>
                         </button>
-                        <button class="${CSS_CLASSES.MODAL_CLOSE_BTN}" title="Close">
+                        <button class="${CSS_CLASSES.MODAL_CLOSE_BTN}" title="${UI_LABELS.CLOSE}">
                             <i class="fas ${UI_ICONS.CLOSE}"></i>
                         </button>
                     </div>
@@ -566,16 +566,16 @@ export class NotificationUI {
                     const change = smartBtn.dataset.change;
                     const sector = smartBtn.dataset.sector;
 
-                    ToastManager.show(`Asking Gemini about ${symbol}...`, 'info');
+                    ToastManager.show(`${UI_LABELS.ASKING_GEMINI} ${symbol}...`, 'info');
 
                     import('../data/DataService.js').then(({ DataService }) => {
                         const ds = new DataService();
                         // console.log('Asking Gemini explain:', symbol);
                         ds.askGemini('explain', '', { symbol, change, sector }).then(res => {
                             if (res.ok) {
-                                alert(`🤖 AI Insight for ${symbol}:\n\n${res.text}`);
+                                alert(`${UI_LABELS.AI_INSIGHT_FOR} ${symbol}:\n\n${res.text}`);
                             } else {
-                                ToastManager.show('Analysis failed: ' + (res.error || 'Unknown error'), 'error');
+                                ToastManager.show(`${UI_LABELS.ANALYSIS_FAILED} ` + (res.error || 'Unknown error'), 'error');
                             }
                         });
                     });
@@ -625,8 +625,8 @@ export class NotificationUI {
 
         // Update Time
         const timeArea = modal.querySelector(`#${IDS.NOTIF_TIMESTAMP}`);
-        const lastUpd = notificationStore.lastUpdated ? new Date(notificationStore.lastUpdated).toLocaleTimeString() : 'Never';
-        if (timeArea) timeArea.textContent = `Last synced: ${lastUpd}`;
+        const lastUpd = notificationStore.lastUpdated ? new Date(notificationStore.lastUpdated).toLocaleTimeString() : UI_LABELS.NOT_SET;
+        if (timeArea) timeArea.textContent = `${UI_LABELS.LAST_SYNCED} ${lastUpd}`;
 
         // 0. Update Dismiss Button State (Live)
         if (notificationStore) {
@@ -673,7 +673,7 @@ export class NotificationUI {
             const hasPct = r.percentThreshold && r.percentThreshold > 0;
             const hasDol = r.dollarThreshold && r.dollarThreshold > 0;
 
-            if (!hasPct && !hasDol) return 'Not set';
+            if (!hasPct && !hasDol) return UI_LABELS.NOT_SET;
 
             const parts = [];
             if (hasPct) parts.push(`${icon}${r.percentThreshold}%`);
@@ -691,19 +691,19 @@ export class NotificationUI {
 
         // Gainers
         const upRuleStr = fmtRules(rules.up || {}, 0, 'up');
-        const upStr = (upRuleStr === 'Not set' && !thresholdStr)
-            ? 'Not set'
+        const upStr = (upRuleStr === UI_LABELS.NOT_SET && !thresholdStr)
+            ? UI_LABELS.NOT_SET
             : (upRuleStr === 'Not set' ? thresholdStrColored : `${upRuleStr}${thresholdStr ? ` • ${thresholdStrColored}` : ''}`);
 
         // Losers
         const downRuleStr = fmtRules(rules.down || {}, 0, 'down');
-        const downStr = (downRuleStr === 'Not set' && !thresholdStr)
-            ? 'Not set'
-            : (downRuleStr === 'Not set' ? thresholdStrColored : `${downRuleStr}${thresholdStr ? ` • ${thresholdStrColored}` : ''}`);
+        const downStr = (downRuleStr === UI_LABELS.NOT_SET && !thresholdStr)
+            ? UI_LABELS.NOT_SET
+            : (downRuleStr === UI_LABELS.NOT_SET ? thresholdStrColored : `${downRuleStr}${thresholdStr ? ` • ${thresholdStrColored}` : ''}`);
 
         // 52 Week Highs/Lows
         const hiloPriceVal = rules.hiloMinPrice ?? 0;
-        const hiloStrBase = (hiloPriceVal > 0) ? `<span style="color: var(--color-accent);">Min Price $${hiloPriceVal}</span>` : 'Not set';
+        const hiloStrBase = (hiloPriceVal > 0) ? `<span style="color: var(--color-accent);">${UI_LABELS.MIN_PRICE_LABEL}${hiloPriceVal}</span>` : UI_LABELS.NOT_SET;
 
         const hiloStrHigh = hiloStrBase;
         const hiloStrLow = hiloStrBase;
@@ -715,8 +715,8 @@ export class NotificationUI {
 
 
 
-        const customTitleChip = 'Custom Movers';
-        const customTitleHeader = `Custom Movers`;
+        const customTitleChip = UI_LABELS.CUSTOM_MOVERS;
+        const customTitleHeader = UI_LABELS.CUSTOM_MOVERS;
 
         // SURFACING: Reorder Custom Section per USER Request
         // Order: 1. Targets, 2. 52w Highs, 3. 52w Lows, 4. Gainers, 5. Losers
@@ -774,11 +774,11 @@ export class NotificationUI {
 
         // Structure Definitions - REORDERED & SPLIT
         const sections = [
-            { id: 'custom', title: 'Custom', chipLabel: 'Custom', headerTitle: customTitleHeader, subtitle: '<span style="color: var(--color-accent);">Watchlist prices and Market filters</span>', items: sortedLocal, type: 'custom', color: 'neutral' },
-            { id: 'hilo-high', title: '52 Week <span style="color: var(--color-positive)">High</span>', chipLabel: '52w High', subtitle: hiloStrHigh, items: finalHiloHigh, type: 'hilo-up', color: 'green' },
-            { id: 'hilo-low', title: '52 Week <span style="color: var(--color-negative)">Low</span>', chipLabel: '52w Low', subtitle: hiloStrLow, items: finalHiloLow, type: 'hilo-down', color: 'red' },
-            { id: 'gainers', title: 'Market <span style="color: var(--color-positive)">Gainers</span>', chipLabel: 'Gainers', subtitle: upStr, items: finalMoversUp, type: 'gainers', color: 'green' },
-            { id: 'losers', title: 'Market <span style="color: var(--color-negative)">Losers</span>', chipLabel: 'Losers', subtitle: downStr, items: finalMoversDown, type: 'losers', color: 'red' }
+            { id: 'custom', title: 'Custom', chipLabel: 'Custom', headerTitle: customTitleHeader, subtitle: `<span style="color: var(--color-accent);">${UI_LABELS.WATCHLIST_FILTER_SUBTITLE}</span>`, items: sortedLocal, type: 'custom', color: 'neutral' },
+            { id: 'hilo-high', title: `${UI_LABELS.FIFTY_TWO_WEEK} <span style="color: var(--color-positive)">${UI_LABELS.HIGH}</span>`, chipLabel: `${UI_LABELS.FIFTY_TWO_WEEK} ${UI_LABELS.HIGH}`, subtitle: hiloStrHigh, items: finalHiloHigh, type: 'hilo-up', color: 'green' },
+            { id: 'hilo-low', title: `${UI_LABELS.FIFTY_TWO_WEEK} <span style="color: var(--color-negative)">${UI_LABELS.LOW}</span>`, chipLabel: `${UI_LABELS.FIFTY_TWO_WEEK} ${UI_LABELS.LOW}`, subtitle: hiloStrLow, items: finalHiloLow, type: 'hilo-down', color: 'red' },
+            { id: 'gainers', title: `${UI_LABELS.MARKET} <span style="color: var(--color-positive)">${UI_LABELS.GAINERS}</span>`, chipLabel: UI_LABELS.GAINERS, subtitle: upStr, items: finalMoversUp, type: 'gainers', color: 'green' },
+            { id: 'losers', title: `${UI_LABELS.MARKET} <span style="color: var(--color-negative)">${UI_LABELS.LOSERS}</span>`, chipLabel: UI_LABELS.LOSERS, subtitle: downStr, items: finalMoversDown, type: 'losers', color: 'red' }
         ];
 
         // --- DEBUG LOGGING: RENDER COUNT ---
@@ -793,7 +793,7 @@ export class NotificationUI {
         openAllChip.dataset.target = 'open-all';
         openAllChip.innerHTML = `
             <span class="${CSS_CLASSES.CHIP_BADGE}">${totalRendered}</span>
-            <span class="${CSS_CLASSES.CHIP_LABEL}">Dashboard Open</span>
+            <span class="${CSS_CLASSES.CHIP_LABEL}">${UI_LABELS.DASHBOARD_OPEN}</span>
         `;
         chips.appendChild(openAllChip);
 

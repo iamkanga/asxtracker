@@ -519,7 +519,4 @@ export const AppState = {
     }
 };
 
-// Expose AppState to window for inline script access (e.g., modal onclick handlers)
-if (typeof window !== 'undefined') {
-    window.AppState = AppState;
-}
+// Removed: window.AppState = AppState; (Constitutional Compliance - No Global Pollution)
