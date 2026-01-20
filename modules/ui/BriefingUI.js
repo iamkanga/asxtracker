@@ -10,6 +10,7 @@ import { CSS_CLASSES, IDS, UI_ICONS, EVENTS, UI_LABELS } from '../utils/AppConst
 import { navManager } from '../utils/NavigationManager.js';
 import { formatCurrency, formatPercent } from '../utils/formatters.js';
 import { SnapshotUI } from './SnapshotUI.js';
+import { NotificationUI } from './NotificationUI.js';
 
 
 export class BriefingUI {

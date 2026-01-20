@@ -84,6 +84,11 @@
 
     /* Gradient Strength Presets (0=none, 1=max) */
     --gradient-strength: 0.6;
+    /* Notification Banner */
+    --banner-bg-error: rgba(255, 49, 49, 0.1);
+    /* Low opacity negative */
+    --banner-text-error: var(--color-negative);
+    --banner-border-error: var(--color-negative);
 }
 
 /* -------------------------------------------------------------------------- */
@@ -364,13 +369,7 @@ body.dark-theme .sidebar-title-svg {
     padding-bottom: 4px !important;
 }
 
-:root {
-    /* Notification Banner */
-    --banner-bg-error: rgba(255, 49, 49, 0.1);
-    /* Low opacity negative */
-    --banner-text-error: var(--color-negative);
-    --banner-border-error: var(--color-negative);
-}
+
 
 .notification-banner {
     padding: 12px 16px;
@@ -8998,6 +8997,10 @@ body.dark-theme .calc-result-card {
     align-items: center;
     height: 100%;
 }
+
+/* -------------------------------------------------------------------------- */
+/*                          10. UTILITIES & OVERRIDES                         */
+/* -------------------------------------------------------------------------- */
 
 .reorder-handle:active {
     cursor: grabbing;

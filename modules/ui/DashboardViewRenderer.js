@@ -207,7 +207,7 @@ export class DashboardViewRenderer {
 
         // DEBUG: Trace positioning values (remove after fix)
         if (index < 5 || code.includes('IXIC') || code.includes('NASDAQ')) {
-            console.log(`[SPARK 1080 DEBUG] ${code}: pct=${markerPct.toFixed(1)}%, left=${markerPct.toFixed(1)}%`);
+
         }
 
         // Sentiment class for border color (3-way: positive/negative/neutral)

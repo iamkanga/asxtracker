@@ -593,8 +593,8 @@ export class HeaderLayout {
 
             // AUTO-COLLAPSE: Close all accordions when sidebar closes (USER REQUEST)
             this.sidebar.querySelectorAll('.sidebar-accordion-content').forEach(container => {
-                container.classList.add('collapsed');
-                container.classList.remove('expanded');
+                container.classList.add(CSS_CLASSES.COLLAPSED);
+                container.classList.remove(CSS_CLASSES.EXPANDED);
             });
             this.sidebar.querySelectorAll('.sidebar-accordion-btn').forEach(btn => {
                 btn.setAttribute('aria-expanded', 'false');
@@ -748,10 +748,10 @@ export class HeaderLayout {
         const dot = document.getElementById('connection-dot');
         if (dot) {
             if (isConnected) {
-                dot.classList.add('connected');
+                dot.classList.add(CSS_CLASSES.CONNECTED);
                 dot.title = 'Connected to Live Updates';
             } else {
-                dot.classList.remove('connected');
+                dot.classList.remove(CSS_CLASSES.CONNECTED);
                 dot.title = 'Disconnected - Click to Reconnect';
             }
         }
@@ -760,10 +760,10 @@ export class HeaderLayout {
         const oldEl = document.getElementById('connection-status');
         if (oldEl) {
             if (isConnected) {
-                oldEl.classList.remove('visible');
+                oldEl.classList.remove(CSS_CLASSES.VISIBLE);
                 oldEl.classList.remove(CSS_CLASSES.STATUS_DISCONNECTED);
             } else {
-                oldEl.classList.add('visible');
+                oldEl.classList.add(CSS_CLASSES.VISIBLE);
                 oldEl.classList.add(CSS_CLASSES.STATUS_DISCONNECTED);
                 if (!oldEl._hasBind) {
                     oldEl._hasBind = true;
@@ -804,7 +804,7 @@ export class HeaderLayout {
             toggleBtn.addEventListener('click', (e) => {
                 e.preventDefault();
                 e.stopPropagation(); // Prevent Sidebar Close
-                const isExpanded = container.classList.toggle('expanded');
+                const isExpanded = container.classList.toggle(CSS_CLASSES.EXPANDED);
                 toggleBtn.setAttribute('aria-expanded', isExpanded);
             });
         }
@@ -914,7 +914,7 @@ export class HeaderLayout {
             toggleBtn.addEventListener('click', (e) => {
                 e.preventDefault();
                 e.stopPropagation(); // Prevent Sidebar Close
-                const isExpanded = container.classList.toggle('expanded');
+                const isExpanded = container.classList.toggle(CSS_CLASSES.EXPANDED);
                 toggleBtn.setAttribute('aria-expanded', isExpanded);
             });
         }

@@ -127,8 +127,9 @@ export class NotificationUI {
             return; // Stop processing
         }
 
-        // REDESIGNED ICON DISMISSAL: If showBadges is false, hide the entire kangaroo.
-        if (!showBadges) {
+        // REDESIGNED ICON DISMISSAL: If showBadges is false OR count is 0, hide the entire kangaroo.
+        // "Right when the user has no notifications the kangaroo is still jumping out That shouldn't happen"
+        if (!showBadges || validCount === 0) {
             if (container) container.classList.add(CSS_CLASSES.HIDDEN);
             bell.classList.add(CSS_CLASSES.HIDDEN);
             return;

@@ -29,7 +29,7 @@ import { SecurityUI } from '../ui/SecurityUI.js';
 import { GeneralSettingsUI } from '../ui/GeneralSettingsUI.js';
 import CalculatorUI from '../ui/CalculatorUI.js';
 import { AnalogClock } from '../ui/AnalogClock.js';
-import { IDS, CSS_CLASSES, EVENTS, WATCHLIST_ICON_POOL, ALL_SHARES_ID, CASH_WATCHLIST_ID, DASHBOARD_WATCHLIST_ID, PORTFOLIO_ID, UI_ICONS, USER_MESSAGES, STORAGE_KEYS, WATCHLIST_MODES, SORT_OPTIONS, WATCHLIST_NAMES, DASHBOARD_SYMBOLS, DASHBOARD_LINKS, SUMMARY_TYPES } from '../utils/AppConstants.js?v=1029';
+import { IDS, CSS_CLASSES, EVENTS, WATCHLIST_ICON_POOL, ALL_SHARES_ID, CASH_WATCHLIST_ID, DASHBOARD_WATCHLIST_ID, PORTFOLIO_ID, UI_ICONS, USER_MESSAGES, STORAGE_KEYS, WATCHLIST_MODES, SORT_OPTIONS, WATCHLIST_NAMES, DASHBOARD_SYMBOLS, DASHBOARD_LINKS, SUMMARY_TYPES, BRIEFING_BLACKLIST } from '../utils/AppConstants.js?v=1029';
 import { ToastManager } from '../ui/ToastManager.js';
 import { navManager } from '../utils/NavigationManager.js';
 // renderSortSelect removed
@@ -90,13 +90,12 @@ export class AppController {
     async init() {
         if (this._initialized) return;
         this._initialized = true;
-        console.log('%c [APP] CONTROLLER INIT v1040 - CACHE BUSTED ', 'background: #00bcd4; color: #000; font-size: 1.2em; padding: 4px;');
+
 
         // CRITICAL DEPLOYMENT FIX: Force Unregister Service Worker to fix stale cache issues (User reported stuck on old version)
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.getRegistrations().then(function (registrations) {
                 for (let registration of registrations) {
-                    console.log('[AppController] Force Unregistering Service Worker:', registration);
                     registration.unregister();
                 }
             });
@@ -211,15 +210,12 @@ export class AppController {
             if ((!id || isTempId) && code) {
                 // GUARD: Prevent double-tap resurrection
                 if (this._resurrectionGuard && this._resurrectionGuard.has(code)) {
-                    console.warn(`AppController: Resurrection already in progress for ${code}. Ignoring.`);
                     return;
                 }
 
                 // Init Guard
                 if (!this._resurrectionGuard) this._resurrectionGuard = new Set();
                 this._resurrectionGuard.add(code);
-
-                console.warn(`AppController: Toggle Mute - ID missing or temp for ${code}. Attempting sync/resurrection...`);
 
                 try {
                     // LAST-SECOND CHECK: Maybe the ID just arrived in a snapshot or update?
@@ -231,7 +227,6 @@ export class AppController {
 
                     if (existingReal || guardedId) {
                         id = existingReal ? existingReal.id : guardedId;
-                        console.log(`AppController: ID for ${code} found in ${existingReal ? 'snapshot' : 'Optimistic Guard'}: ${id}`);
                     } else {
                         // 1. Resolve Best Local Reference
                         const candidates = AppState.data.shares.filter(s => (s.shareName || s.code || '').toUpperCase() === codeUpper);
@@ -247,11 +242,11 @@ export class AppController {
                             candidates.forEach(s => { if (!s.id) s.id = id; });
 
                             // POPULATE GUARD: Ensure this ID survives snapshot refreshes
+                            // POPULATE GUARD: Ensure this ID survives snapshot refreshes
                             if (AppState.data.optimisticIds) {
                                 AppState.data.optimisticIds.set(codeUpper, id);
                             }
 
-                            console.log(`AppController: Resurrection success. New ID: ${id}`);
                             this.updateDataAndRender(false);
                         }
                     }
@@ -315,7 +310,6 @@ export class AppController {
         // If UserStore detects a write failure (permission-denied), it fires this event.
         // We prompt the user to "One-Tap Reconnect" using the Smart Login hint.
         document.addEventListener('auth-reconnect-needed', () => {
-            console.log('[AppController] preventing data loss: Triggering Reconnect Prompt.');
 
             // Only show if not already showing
             if (document.getElementById('reconnect-toast')) return;
@@ -437,7 +431,6 @@ export class AppController {
         }
 
         if (!AppState.user) {
-            console.warn('AppController: Blocked sync - User not logged in.');
             return;
         }
 
@@ -516,7 +509,6 @@ export class AppController {
             return false;
         }
 
-        console.log('[AppController] New User Detected - Triggering Onboarding defaults...');
         this._onboardingTriggered = true;
 
         try {
@@ -560,11 +552,9 @@ export class AppController {
 
         if (codesToFetch.length === 0) return;
 
-        console.log(`[DEBUG] Global Price Seed: STARTING fetch for ${codesToFetch.length} codes...`);
         AppState._isFetching = true;
 
         try {
-            console.log('[DEBUG] AppController calling fetchLivePrices...');
             const result = await this.dataService.fetchLivePrices(codesToFetch);
             const freshPrices = result?.prices;
             const freshDashboard = result?.dashboard;
@@ -573,7 +563,6 @@ export class AppController {
                 const prevSize = AppState.livePrices.size;
                 AppState.livePrices = new Map([...AppState.livePrices, ...freshPrices]);
                 AppState.lastGlobalFetch = Date.now();
-                console.log(`[DEBUG] Global Price Seed: COMPLETE. Merged ${freshPrices.size} prices. Cache size: ${prevSize} -> ${AppState.livePrices.size}`);
 
                 if (freshDashboard && Array.isArray(freshDashboard)) {
                     AppState.data.dashboard = freshDashboard;
@@ -723,7 +712,6 @@ export class AppController {
                         const PREFS_TIMEOUT = 2500;
                         this._prefsTimeoutId = setTimeout(() => {
                             if (!this._initialRenderComplete) {
-                                console.warn('Prefs timeout - rendering with defaults but BLOCKING outbound sync to prevent overwrite.');
                                 // this._cloudPrefsLoaded = true; // DISABLED: Do not unblock sync if we haven't confirmed cloud state
                                 this._initialRenderComplete = true; // Allow UI to show
                                 this.handleSecurityLock();
@@ -1006,7 +994,6 @@ export class AppController {
 
                         // Only update if different
                         if (JSON.stringify(mergedList) !== JSON.stringify(AppState.preferences.userCategories)) {
-                            console.log('[AppController] User Category Merge: Updating Local State with merged list.');
                             AppState.preferences.userCategories = mergedList;
                             localStorage.setItem(STORAGE_KEYS.USER_CATEGORIES, JSON.stringify(mergedList));
                             needsRender = true;
@@ -1037,7 +1024,6 @@ export class AppController {
 
                     // UNLOCK OUTBOUND SYNC: Cloud prefs have been applied, allow future syncs.
                     if (!this._cloudPrefsLoaded) {
-                        console.log('AppController: Cloud prefs loaded. Outbound sync now enabled.');
                         this._cloudPrefsLoaded = true;
                     }
                 });
@@ -1102,11 +1088,8 @@ export class AppController {
     _updateDebugStatus(msg, mode) {
         const colors = {
             'ok': 'color: #28a745;',
-            'warn': 'color: #ffc107;',
             'err': 'color: #dc3545;'
         };
-
-        console.log(`%c[AUTH-STATUS] ${msg.toUpperCase()}`, colors[mode] || '');
 
         // Optional: Update a hidden technical status field if needed for power-user support
         const debugNode = document.getElementById('debug-conn-status');
@@ -1478,7 +1461,6 @@ export class AppController {
         // Break any existing locks from previous cancelled/stale fetches.
         // This ensures the new view has authority to request data.
         if (AppState._isFetching) {
-            console.log(`AppController: Resetting concurrency lock for watchlist switch to ${watchlistId}.`);
             AppState._isFetching = false;
         }
 
@@ -1525,8 +1507,6 @@ export class AppController {
             if (isValid) {
                 AppState.sortConfig = { ...currentGlobal };
             } else {
-                console.log(`[AppController] Global Sort '${currentGlobal.field}' incompatible with ${viewType}. Apply Fallback.`);
-
                 // Fallback Logic
                 if (viewType === 'CASH') {
                     // Cash/Assets: Asset Name (A to Z) using the "Green Chevron" (High to Low / Ascending for text)
@@ -1646,8 +1626,8 @@ export class AppController {
      * Cycles through available watchlists in a sequence.
      * @param {number} direction - 1 for forward, -1 for backward
      */
+
     _handleCarousel(direction) {
-        console.log('[AppController] _handleCarousel direction:', direction);
         // 1. Build the full sequence of watchlists
         const systemWatchlists = [
             { id: ALL_SHARES_ID, name: 'All Shares' },
@@ -1702,8 +1682,6 @@ export class AppController {
         if (this._carouselGuard) return;
         this._carouselGuard = true;
 
-        console.log(`Carousel Navigation: ${currentId} -> ${nextWatchlist.id} (direction: ${direction})`);
-
         // 7. Trigger switch
         this.handleSwitchWatchlist(nextWatchlist.id);
 
@@ -1739,14 +1717,11 @@ export class AppController {
         const newDirection = currentSort.direction === 'asc' ? 'desc' : 'asc';
         const newSort = { ...currentSort, direction: newDirection };
 
-        console.log(`[AppController] Toggling Sort Direction: ${currentSort.direction} -> ${newDirection}`);
-
         // 1. Handle Global Sort Persistence
         const isGlobalActive = !!AppState.preferences.globalSort;
         if (isGlobalActive) {
             const currentGlobal = AppState.preferences.globalSort;
             if (currentGlobal.field === newSort.field) {
-                console.log('[AppController] Updating active Global Sort direction');
                 AppState.saveGlobalSort(newSort, true); // Persist updated direction
                 if (this.watchlistUI) this.watchlistUI.updateHeaderTitle();
             }
@@ -1786,7 +1761,6 @@ export class AppController {
             if (isGlobalActive) {
                 if (source === 'LIST') {
                     // TERMINATION RULE: Tapping any list item (even current one) Disable Global Sort
-                    console.log(`[AppController] Sort Source '${source}' -> Disabling Global Sort.`);
                     AppState.saveGlobalSort(null);
                     if (this.watchlistUI) this.watchlistUI.updateHeaderTitle();
                 } else if (source === 'TOGGLE') {
@@ -1794,13 +1768,9 @@ export class AppController {
                     // Validation: Ensure we are toggling the ACTIVE global sort field
                     const currentGlobal = AppState.preferences.globalSort;
                     if (currentGlobal.field === newSort.field) {
-                        console.log(`[AppController] Sort Source '${source}' -> Updating Active Global Sort Direction:`, newSort.direction);
-                        AppState.saveGlobalSort(newSort, true); // persist
-                        // Ensure Header Title Updates (Global: Label)
                         if (this.watchlistUI) this.watchlistUI.updateHeaderTitle();
                     } else {
                         // Edge case: Toggle on a field that isn't global? (Shouldn't happen in UI)
-                        console.warn('[AppController] Toggle on non-global field? Disabling Global.');
                         AppState.saveGlobalSort(null);
                         if (this.watchlistUI) this.watchlistUI.updateHeaderTitle();
                     }
@@ -1832,7 +1802,6 @@ export class AppController {
 
         const onGlobalCancel = () => {
             if (AppState.preferences.globalSort) {
-                console.log('[AppController] Global Cancel Triggered -> Disabling Global Sort');
                 AppState.saveGlobalSort(null);
                 if (this.watchlistUI) this.watchlistUI.updateHeaderTitle();
                 // We don't need to re-render data immediately, just the title bar.
@@ -1943,7 +1912,6 @@ export class AppController {
         // --- STYLING PERSISTENCE (USER REQUEST) ---
         // Listens for border or intensity changes to trigger immediate UI re-render
         document.addEventListener(EVENTS.REFRESH_WATCHLIST, () => {
-            console.log('[AppController] Refreshing UI for styling updates...');
             this.updateDataAndRender(false); // Render current state without fetching
         });
     }
@@ -1982,8 +1950,6 @@ export class AppController {
         const isHidden = AppState.hiddenWatchlists.has(currentId);
 
         if (isHidden) {
-            console.log(`Sanitization: Current watchlist '${currentId}' is HIDDEN. Finding replacement...`);
-
             // Priority Order: Dashboard -> All Shares -> Portfolio (if visible) -> First Custom
             let targetId = DASHBOARD_WATCHLIST_ID;
 
@@ -2000,7 +1966,6 @@ export class AppController {
                 }
             }
 
-            console.log(`Sanitization: Switching to '${targetId}'`);
             this.handleSwitchWatchlist(targetId, true); // Pass true for isBoot
             this._initialRenderComplete = true; // Ensure splash hides
         }
@@ -2020,8 +1985,6 @@ export class AppController {
 
         const sortKey = `${currentSort.field}-${currentSort.direction}`;
         if (hiddenSet.has(sortKey)) {
-            console.log(`[AppController] Sanitizing Sort: ${sortKey} is hidden for ${type}.`);
-
             // Fallback Defaults
             let fallback = { field: 'code', direction: 'asc' };
             if (type === 'CASH') fallback = { field: 'category', direction: 'asc' };
@@ -2061,16 +2024,13 @@ export class AppController {
         document.body.addEventListener('click', (e) => {
             const addBtn = e.target.closest(`#${IDS.SIDEBAR_ADD_BTN}`) || e.target.closest(`#${IDS.HEADER_ADD_BTN}`);
             if (addBtn) {
-                console.log('[AppController] Add Button Clicked. Current Watchlist ID:', AppState.watchlist.id);
                 if (this.headerLayout) this.headerLayout.closeSidebar();
 
                 // Standard 150ms delay for history stabilization
                 setTimeout(() => {
                     if (AppState.watchlist.id === CASH_WATCHLIST_ID) {
-                        console.log('[AppController] Opening Cash Modal (Add mode)');
                         this.modalController.handleOpenCashModal(null);
                     } else {
-                        console.log('[AppController] Opening Add Share Modal');
                         this.modalController.openAddShareModal(null);
                     }
                 }, 150);
@@ -2080,7 +2040,6 @@ export class AppController {
         // Cash Asset Selection Delegation
         document.body.addEventListener(EVENTS.CASH_ASSET_SELECTED, (e) => {
             const assetId = e.detail.assetId || (e.detail.asset ? e.detail.asset.id : null);
-            console.log('[AppController] Cash Asset Selected Event Received. Asset ID:', assetId);
             if (assetId) {
                 this.modalController.handleOpenCashModal(assetId);
             }
@@ -2110,18 +2069,15 @@ export class AppController {
 
                     // User Feedback
                     ToastManager.show('Cleaning caches and updating...', 'info');
-                    console.log('[AppController] Starting Clean Reload sequence...');
 
                     try {
                         // 1. Clear Session Storage (Temporary Tab Data)
                         sessionStorage.clear();
-                        console.log('[AppController] sessionStorage cleared.');
 
                         // 2. Clear Cache Storage API (The heavy lifter for PWA assets)
                         if ('caches' in window) {
                             const cacheKeys = await caches.keys();
                             await Promise.all(cacheKeys.map(key => {
-                                console.log(`[AppController] Deleting cache: ${key}`);
                                 return caches.delete(key);
                             }));
                         }
@@ -2130,7 +2086,6 @@ export class AppController {
                         if ('serviceWorker' in navigator) {
                             const registrations = await navigator.serviceWorker.getRegistrations();
                             await Promise.all(registrations.map(registration => {
-                                console.log('[AppController] Unregistering Service Worker:', registration);
                                 return registration.unregister();
                             }));
                         }
@@ -2139,7 +2094,6 @@ export class AppController {
                         console.warn('[AppController] Issue during cache cleanup (continuing to reload):', err);
                     } finally {
                         // 4. Force Reload from Server
-                        console.log('[AppController] Triggering location.reload(true)');
                         window.location.reload(true);
                     }
                 }
@@ -2172,7 +2126,6 @@ export class AppController {
                 e.stopPropagation();
                 const id = deepLink.dataset.id;
                 const section = deepLink.dataset.section;
-                console.log(`[AppController] Deep Link Clicked: ID=${id}, Section=${section}`);
                 if (id && section) {
                     this.modalController.openAddShareModal(id, section);
                 }
@@ -2191,7 +2144,6 @@ export class AppController {
                         document.getElementById(IDS.ASX_DROPDOWN_MENU)?.classList.remove(CSS_CLASSES.SHOW);
                     } else {
                         // Fallback: Open Discovery Modal
-                        console.log(`[AppController] Stock not in watchlist. Opening Discovery for: ${code}`);
                         document.dispatchEvent(new CustomEvent(EVENTS.OPEN_RESEARCH_MODAL, { detail: { query: code } }));
                         document.getElementById(IDS.ASX_DROPDOWN_MENU)?.classList.remove(CSS_CLASSES.SHOW);
                     }
@@ -2204,7 +2156,6 @@ export class AppController {
             const btn = e.target.closest(`#${IDS.LIVE_REFRESH_BTN}`);
             if (btn) {
                 e.preventDefault(); // Good practice for buttons
-                console.log("Live Refresh Clicked");
                 ToastManager.show('Refreshing Live Prices...', 'refresh');
                 this.updateDataAndRender(true);
             }
@@ -2255,20 +2206,15 @@ export class AppController {
         // Edit Share Request Listener (Custom Event)
         // Triggered by ViewRenderer dispatching EVENTS.REQUEST_EDIT_SHARE
         document.addEventListener(EVENTS.REQUEST_EDIT_SHARE, (e) => {
-            console.log('AppController received REQUEST_EDIT_SHARE:', e.detail);
-
             let targetId = e.detail?.id || e.detail?.shareId;
             const targetCode = e.detail?.code;
 
             // RECOVERY MECHANISM: If ID is missing but Code exists, look it up.
             if (!targetId && targetCode) {
-                console.warn('[AppController] Edit Request missing ID. Attempting lookup for:', targetCode);
                 const found = AppState.data.shares.find(s => (s.shareName || '').toUpperCase() === targetCode.toUpperCase());
                 if (found && found.id) {
                     targetId = found.id;
-                    console.log('[AppController] Recovered ID:', targetId);
                 } else {
-                    console.warn('[AppController] Recovery failed. Item will be treated as NEW SHARE (Pre-fill).');
                     // Fallback: Open as new share pre-filled
                     this.modalController.openAddShareModal({ shareName: targetCode });
                     return;
@@ -2280,7 +2226,6 @@ export class AppController {
                 // Safety delay for transition from detail to edit
                 setTimeout(() => {
                     // DEEP LINK: Pass specific section if requested (e.g. 'notes', 'target')
-                    console.log('AppController opening modal for section:', e.detail.section);
                     this.modalController.openAddShareModal(targetId, e.detail.section);
                 }, delay);
             } else {
@@ -2325,11 +2270,9 @@ export class AppController {
                 if (existingShare) {
                     // Check if it's a Ghost Share (missing ID)
                     if (existingShare.id) {
-                        console.log('[AppController] REQUEST_ADD_SHARE_PREFILL: Duplicate found, redirecting to EDIT mode.', existingShare.id);
                         this.modalController.openAddShareModal(existingShare.id);
                     } else {
                         // GHOST SHARE RECOVERY
-                        console.warn('[AppController] REQUEST_ADD_SHARE_PREFILL: Ghost Share found (No ID). Opening in Recovery Mode.');
                         // Pass the shareName to trigger Pre-fill/Recovery path in ModalController
                         this.modalController.openAddShareModal({
                             shareName: existingShare.shareName,
@@ -2348,11 +2291,9 @@ export class AppController {
         // Visibility Toggle (Eye Icon)
         document.addEventListener(EVENTS.SHARE_TOGGLE_VISIBILITY, (e) => {
             const { id } = e.detail || {};
-            console.log(`Visibility Toggle Event: Received ID = ${id}`);
             if (id) {
                 AppState.toggleHiddenAsset(id);
                 const isHidden = AppState.hiddenAssets.has(id);
-                console.log(`Hidden Assets now:`, [...AppState.hiddenAssets]);
 
                 // Fetch Name
                 const share = (AppState.data.shares || []).find(s => s.id === id);
@@ -2376,17 +2317,14 @@ export class AppController {
         document.addEventListener(EVENTS.REQUEST_NEW_WATCHLIST, async (e) => {
             const { name } = e.detail || {};
             if (!name || !AppState.user) {
-                console.warn('CREATE: Missing name or user not logged in');
                 return;
             }
 
 
 
             try {
-                console.log('AppController: Creating watchlist:', name);
                 const newId = await this.appService.addWatchlist(name);
                 if (newId) {
-                    console.log('Watchlist created:', newId);
                     // Switch to new watchlist - User initiated
                     this.handleSwitchWatchlist(newId, false);
                     ToastManager.success(`Watchlist "${name}" created.`);
@@ -2401,7 +2339,6 @@ export class AppController {
         document.addEventListener(EVENTS.REQUEST_UPDATE_WATCHLIST, async (e) => {
             const { id, newName } = e.detail || {};
             if (!id || !newName || !AppState.user) {
-                console.warn('UPDATE: Missing id, newName, or user not logged in');
                 return;
             }
 
@@ -2410,7 +2347,6 @@ export class AppController {
             const isSystem = systemIds.includes(id);
 
             try {
-                console.log('AppController: Renaming watchlist:', id, 'to', newName);
                 if (isSystem) {
                     AppState.saveCustomWatchlistName(id, newName);
                 } else {
@@ -2528,7 +2464,6 @@ export class AppController {
             try {
                 // 3. Delete Orphans (Permanent Delete)
                 if (orphans.length > 0) {
-                    console.log(`Deleting ${orphans.length} orphan shares...`);
                     for (const share of orphans) {
                         await this.appService.deleteShareRecord(id, share.id);
                     }
@@ -2536,7 +2471,6 @@ export class AppController {
 
                 // 4. Unlink Safe Shares (Remove ID from Array)
                 if (safeShares.length > 0) {
-                    console.log(`Unlinking ${safeShares.length} shared shares from this watchlist...`);
                     for (const share of safeShares) {
                         // Use new "Unlink" method
                         await this.appService.removeShareFromWatchlist(id, share.id);
@@ -2562,10 +2496,8 @@ export class AppController {
         // DELETE SHARE HANDLER (Bulletproof Fix + Ghost Support)
         document.addEventListener(EVENTS.REQUEST_DELETE_SHARE, async (e) => {
             const { shareId, shareCode, watchlistId } = e.detail;
-            console.log(`[AppController] REQUEST_DELETE_SHARE received for ID: ${shareId}, Code: ${shareCode}, Watchlist: ${watchlistId}`);
 
             if (!shareId && !shareCode) {
-                console.warn('[AppController] Delete requested but NO ID or Code provided.');
                 return;
             }
 
@@ -2580,7 +2512,6 @@ export class AppController {
             });
 
             const deletedCount = initialCount - AppState.data.shares.length;
-            console.log(`[AppController] Optimistically deleted ${deletedCount} instance(s) from memory.`);
 
             // Force Re-render immediately
             this.updateDataAndRender(false);
@@ -2599,7 +2530,6 @@ export class AppController {
                 } else if (!shareId && shareCode && watchlistId) {
                     // GHOST DELETE: We have no ID, so we can't delete a document.
                     // But we MUST scrub the reference from the watchlist to stop "Zombie Resurrection".
-                    console.log(`[AppController] Scrubbing Ghost Reference ${shareCode} from ${watchlistId}`);
                     await this.appService.removeStock(shareCode, watchlistId);
                 }
 
@@ -2615,7 +2545,6 @@ export class AppController {
         // DELETE CASH ASSET HANDLER (Directive 020)
         // -------------------------------------------------------------------------
         document.addEventListener(EVENTS.REQUEST_DELETE_CASH_ASSET, async (e) => {
-            console.log('AppController: REQUEST_DELETE_CASH_ASSET Received:', e.detail);
             const { id } = e.detail;
             if (!id) return;
 
@@ -2666,7 +2595,6 @@ export class AppController {
                         document.getElementById(IDS.ASX_DROPDOWN_MENU)?.classList.remove(CSS_CLASSES.SHOW);
                     } else {
                         // Fallback: Open Discovery Modal
-                        console.log(`[AppController] ASX Code Click: Data not found for ${code}. Opening Discovery.`);
                         document.dispatchEvent(new CustomEvent(EVENTS.OPEN_RESEARCH_MODAL, { detail: { query: code } }));
                     }
                 }, 150);
@@ -2718,7 +2646,6 @@ export class AppController {
 
         // 3. Discovery Internal Search
         document.addEventListener(EVENTS.REQUEST_DISCOVERY_SEARCH, (e) => {
-            console.log('[AppController] Event Received: REQUEST_DISCOVERY_SEARCH', e.detail); // TRACE
             const { query } = e.detail;
 
             // Retrieve Global Scanner Filters
@@ -2816,7 +2743,6 @@ export class AppController {
                     trendClass = totalCapGain >= 0 ? CSS_CLASSES.TREND_UP_BG : CSS_CLASSES.TREND_DOWN_BG;
                     break;
                 default:
-                    console.warn('Unknown summary type:', type);
                     return;
             }
             // Delay opening modal to allow any preceding history moves to settle
@@ -2941,7 +2867,6 @@ export class AppController {
                 });
             }
         } else {
-            console.error('Download Modal not found:', modalId);
         }
     }
 
@@ -3000,7 +2925,13 @@ export class AppController {
         // 1. Portfolio Calculation
         const portfolioItems = shares.filter(s => {
             const units = parseFloat(s.portfolioShares) || parseFloat(s.units) || 0;
-            return units > 0;
+            if (units <= 0) return false;
+
+            // AI Blacklist Filter
+            const code = (s.code || s.shareName || '').trim().toUpperCase();
+            if (BRIEFING_BLACKLIST.includes(code)) return false;
+
+            return true;
         });
 
         let totalDayChangeVal = 0;
@@ -3041,6 +2972,9 @@ export class AppController {
             const cleanCode = (s.code || s.shareName || '').replace(/\.AX$/i, '').trim().toUpperCase();
             const data = livePrices.get(cleanCode);
             if (!data) return null;
+            const code = cleanCode;
+            if (BRIEFING_BLACKLIST.includes(code)) return null;
+
             return {
                 code: cleanCode,
                 live: data.live || 0,
@@ -3227,7 +3161,6 @@ export class AppController {
                         const unsub = AuthService.observeState(async (u) => {
                             if (!u) {
                                 unsub();
-                                console.log("[AppController] Auth settled as NULL. Reloading now.");
                                 // Small delay for storage persistence
                                 setTimeout(() => window.location.reload(), 500);
                                 resolve();

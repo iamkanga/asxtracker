@@ -18,6 +18,7 @@ export class WatchlistUI {
         this.onWatchlistChange = callbacks.onWatchlistChange;
         this.onRenameWatchlist = callbacks.onRenameWatchlist;
         this.isEditMode = false; // Unified Edit Mode
+        this._isShimActive = false; // Local Shim State (No Global Pollution)
     }
 
     injectModalHTML() {
@@ -437,8 +438,8 @@ export class WatchlistUI {
         // We attach to the DOCUMENT to bypass any and all local event blocking.
         // This is the "Nuclear Option" for event handling.
 
-        // 1. Ensure we don't duplicate the global listener
-        if (!window._watchlistShimActive) {
+        // 1. Ensure we don't duplicate the listener
+        if (!this._isShimActive) {
             let globalStartY = 0;
             let globalStartTop = 0;
             let activeList = null;
@@ -478,7 +479,7 @@ export class WatchlistUI {
                 }
             }, { passive: false }); // Must be passive: false to preventDefault
 
-            window._watchlistShimActive = true;
+            this._isShimActive = true;
         }
 
         listContainer._hasTouchShim = true; // Mark local as handled

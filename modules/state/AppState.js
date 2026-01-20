@@ -142,7 +142,6 @@ export const AppState = {
             const stored = localStorage.getItem(STORAGE_KEYS.SORT);
             return stored ? JSON.parse(stored) : {};
         } catch (e) {
-            console.warn('Corrupted sort config, using defaults');
             return {};
         }
     })(),
@@ -156,7 +155,6 @@ export const AppState = {
             const stored = localStorage.getItem(STORAGE_KEYS.HIDDEN_ASSETS);
             return stored ? new Set(JSON.parse(stored).map(String)) : new Set();
         } catch (e) {
-            console.warn('Corrupted hidden assets, using empty set');
             return new Set();
         }
     })(),
@@ -180,7 +178,6 @@ export const AppState = {
             // Default selections for new or uninitialized users
             return new Set([ALL_SHARES_ID, PORTFOLIO_ID, CASH_WATCHLIST_ID]);
         } catch (e) {
-            console.warn('Corrupted carousel selections, using default set');
             return new Set([ALL_SHARES_ID, PORTFOLIO_ID, CASH_WATCHLIST_ID]);
         }
     })(),
@@ -274,10 +271,8 @@ export const AppState = {
                 badgeScope: this.preferences.badgeScope || 'all',
                 showBadges: this.preferences.showBadges !== false
             };
-            // console.log('[AppState] Triggering Sync with payload:', payload);
             this.onPersistenceUpdate(payload);
         } else {
-            console.warn('[AppState] _triggerSync called but no onPersistenceUpdate handler connected.');
         }
     },
 
@@ -340,17 +335,14 @@ export const AppState = {
         // Enforce array of strings for storage
         const currentList = [...this.hiddenAssets].map(String);
         localStorage.setItem(STORAGE_KEYS.HIDDEN_ASSETS, JSON.stringify(currentList));
-        console.log('AppState: Persisting hidden assets:', currentList);
         this._triggerSync();
     },
 
     toggleHiddenAsset(assetId) {
         const id = String(assetId);
         if (this.hiddenAssets.has(id)) {
-            console.log(`AppState: Removing from hiddenAssets: ${id}`);
             this.hiddenAssets.delete(id);
         } else {
-            console.log(`AppState: Adding to hiddenAssets: ${id}`);
             this.hiddenAssets.add(id);
         }
         this.saveHiddenAssets();
@@ -382,7 +374,6 @@ export const AppState = {
     saveCarouselSelections() {
         const currentList = [...this.carouselSelections];
         localStorage.setItem(STORAGE_KEYS.CAROUSEL_SELECTIONS, JSON.stringify(currentList));
-        console.log('AppState: Persisting carousel selections:', currentList);
         this._triggerSync();
     },
 
@@ -429,10 +420,8 @@ export const AppState = {
 
         if (index !== -1) {
             cats[index] = { ...categoryObj };
-            console.log(`[AppState] Updated existing category: ${categoryObj.id}, Color: ${categoryObj.color}`);
         } else {
             cats.push(categoryObj);
-            console.log(`[AppState] Added new category: ${categoryObj.id}, Color: ${categoryObj.color}`);
         }
 
         this.preferences.userCategories = cats;
@@ -491,7 +480,6 @@ export const AppState = {
      * Used during sign-out to prevent data leaks.
      */
     resetAll() {
-        console.log('AppState: Performing full state reset...');
         this.user = null;
         this.data = {
             shares: [],

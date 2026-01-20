@@ -81,13 +81,11 @@ export class NotificationStore {
 
         // LOGIC HARDENING: Null guard for userStore
         if (!userStore) {
-            console.warn('[NotificationStore] userStore is unavailable â€“ skipping preferences subscription.');
             return;
         }
 
         try {
             this.unsubscribePrefs = userStore.subscribeToPreferences(userId, (prefs, metadata) => {
-                console.log(`[NotificationStore] PREFS SNAPSHOT: hasPendingWrites=${metadata?.hasPendingWrites}, fromCache=${metadata?.fromCache}`);
                 if (prefs) {
                     // Update Local Rules
                     const data = prefs.scannerRules || {};
@@ -504,7 +502,7 @@ export class NotificationStore {
         const prefRef = doc(db, `artifacts/${APP_ID}/users/${userId}/preferences/config`);
         this.unsubscribePinned = onSnapshot(prefRef, (snap) => {
             const metadata = snap.metadata;
-            console.log(`[NotificationStore] PINNED SNAPSHOT: hasPendingWrites=${metadata.hasPendingWrites}, fromCache=${metadata.fromCache}`);
+
 
             if (snap.exists()) {
                 const data = snap.data();
@@ -762,7 +760,6 @@ export class NotificationStore {
                 if (Math.abs(reportedPct) > 0.05 && Math.abs(verifiedPct) > 0.05) {
                     const sameDirection = (reportedPct > 0 && verifiedPct > 0) || (reportedPct < 0 && verifiedPct < 0);
                     if (!sameDirection) {
-                        console.warn(`[NotificationStore] Blocked Dual Direction: ${hit.code} (Reported ${reportedPct}% vs Live ${verifiedPct}%)`);
                         return false;
                     }
                 }
@@ -770,7 +767,6 @@ export class NotificationStore {
                 // 2. PHANTOM DATA CHECK: If reporting a massive move but live data shows no move, block it.
                 const isPhantom = Math.abs(reportedPct) > 1.0 && Math.abs(verifiedPct) < 0.1;
                 if (isPhantom) {
-                    console.warn(`[NotificationStore] Blocked Phantom Data: ${hit.code} (Reported ${reportedPct}% vs Live ${verifiedPct}%)`);
                     hit._isPhantom = true; // Mark for UI health check
                     return false;
                 }
@@ -1702,7 +1698,7 @@ export class NotificationStore {
 
         this._notificationDebounceTimer = setTimeout(() => {
             const counts = this.getBadgeCounts();
-            console.log(`[NotificationStore] Dispatching NOTIFICATION_UPDATE: total=${counts.total}, custom=${counts.custom}`);
+
 
             document.dispatchEvent(new CustomEvent(EVENTS.NOTIFICATION_UPDATE, {
                 detail: {

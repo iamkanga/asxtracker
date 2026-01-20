@@ -15,6 +15,11 @@ export const DASHBOARD_SYMBOLS = [
     'GLD', 'SLV', 'OIL', 'BTC', 'ETH', 'LTC', 'NICKEL',
     'TIO=F', 'YAP=F'
 ];
+
+/* Pennystock Blacklist for AI Briefing (Excluded from AI calculations to prevent skewing) */
+export const BRIEFING_BLACKLIST = [
+    'FBR'
+];
 export const DASHBOARD_LINKS = {
     'NICKEL': 'https://au.finance.yahoo.com/quote/NICKEL=F',
     'TIO=F': 'https://www.marketindex.com.au/commodities',
@@ -612,6 +617,8 @@ export const CSS_CLASSES = {
 
     // Dropdowns & Interaction
     ACTIVE: 'active',
+    CONNECTED: 'connected',
+    VISIBLE: 'visible',
     SELECTED: 'selected',
     WATCHLIST_ITEM: 'watchlist-item',
     PICKER_ITEM_CONTENT: 'picker-item-content',
@@ -1492,6 +1499,18 @@ export const IDS = {
     MODAL_FAVORITE_LINKS: 'modal-favorite-links',
     FAVORITE_LINKS_LIST: 'favorite-links-list',
     ADD_FAVORITE_BTN: 'add-favorite-btn',
+
+    // General Settings IDs
+    GENERAL_SETTINGS_MODAL: 'general-settings-modal',
+    GEN_BIO_TOGGLE: 'gen-bio-toggle',
+    GEN_PIN_TOGGLE: 'gen-pin-toggle',
+    GEN_PIN_SETUP_AREA: 'gen-pin-setup-area',
+    GEN_CHANGE_PIN_BTN: 'gen-change-pin-btn',
+    GEN_DATA_MGMT_ROW: 'gen-data-mgmt-row',
+    GEN_DELETE_ROW: 'gen-delete-row',
+    BORDER_SELECTOR_MODAL: 'border-selector-modal',
+    BORDER_BOX_WIDGET: 'border-box-widget',
+    SAVE_BORDERS_BTN: 'save-borders-btn',
     FAVORITE_LINKS_TITLE: 'favorite-links-title',
     FAVORITE_MODE_CONTAINER: 'favorite-mode-container',
     FAV_MODE_EDIT: 'fav-mode-edit',

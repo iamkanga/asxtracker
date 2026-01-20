@@ -30,7 +30,7 @@ export class ShareFormUI {
         let currentMemberships = [];
         if (Array.isArray(activeWatchlistIds) && activeWatchlistIds.length > 0) {
             currentMemberships = activeWatchlistIds;
-            console.log('[ShareFormUI] Using Explicit Watchlist IDs:', currentMemberships);
+
         } else if (activeWatchlistId) {
             currentMemberships = [activeWatchlistId];
         } else if (isAddMode) {
@@ -644,16 +644,16 @@ export class ShareFormUI {
                                     <div class="${CSS_CLASSES.TOGGLE_GROUP}">
                                         <span class="toggle-label">Strategy</span>
                                         <div class="${CSS_CLASSES.SEGMENTED_TOGGLE}" id="${IDS.BUY_SELL_CONTROL}">
-                                            <div class="${CSS_CLASSES.TOGGLE_OPTION} ${(!shareData?.buySell || shareData.buySell === 'buy') ? 'active' : ''}" data-value="buy">Buy</div>
-                                            <div class="${CSS_CLASSES.TOGGLE_OPTION} ${(shareData?.buySell === 'sell') ? 'active' : ''}" data-value="sell">Sell</div>
+                                            <div class="${CSS_CLASSES.TOGGLE_OPTION} ${(!shareData?.buySell || shareData.buySell === 'buy') ? CSS_CLASSES.ACTIVE : ''}" data-value="buy">Buy</div>
+                                            <div class="${CSS_CLASSES.TOGGLE_OPTION} ${(shareData?.buySell === 'sell') ? CSS_CLASSES.ACTIVE : ''}" data-value="sell">Sell</div>
                                         </div>
                                         <input type="hidden" id="${IDS.BUY_SELL_INPUT}" value="${shareData?.buySell || 'buy'}">
                                     </div>
                                     <div class="${CSS_CLASSES.TOGGLE_GROUP}">
                                         <span class="toggle-label">Direction</span>
                                         <div class="${CSS_CLASSES.SEGMENTED_TOGGLE}" id="${IDS.TARGET_DIRECTION_CONTROL}">
-                                            <div class="${CSS_CLASSES.TOGGLE_OPTION} ${(shareData?.targetDirection === 'above') ? 'active' : ''}" data-value="above">Above</div>
-                                            <div class="${CSS_CLASSES.TOGGLE_OPTION} ${(!shareData?.targetDirection || shareData.targetDirection === 'below') ? 'active' : ''}" data-value="below">Below</div>
+                                            <div class="${CSS_CLASSES.TOGGLE_OPTION} ${(shareData?.targetDirection === 'above') ? CSS_CLASSES.ACTIVE : ''}" data-value="above">Above</div>
+                                            <div class="${CSS_CLASSES.TOGGLE_OPTION} ${(!shareData?.targetDirection || shareData.targetDirection === 'below') ? CSS_CLASSES.ACTIVE : ''}" data-value="below">Below</div>
                                         </div>
                                         <input type="hidden" id="${IDS.TARGET_DIRECTION_INPUT}" value="${shareData?.targetDirection || 'below'}">
                                     </div>

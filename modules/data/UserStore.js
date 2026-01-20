@@ -42,10 +42,8 @@ export class UserStore {
      */
     _handleWriteError(error, context) {
         if (error.code === 'permission-denied') {
-            console.warn(`[UserStore] Write denied in ${context}. Triggering Re-Auth.`);
             document.dispatchEvent(new CustomEvent('auth-reconnect-needed'));
         } else {
-            console.error(`[UserStore] Error in ${context}:`, error);
         }
     }
 
@@ -57,7 +55,6 @@ export class UserStore {
      */
     subscribe(userId, onDataChange) {
         if (!userId || !db) {
-            console.error("UserStore: Missing userId or DB instance.");
             return () => { };
         }
 
@@ -83,7 +80,6 @@ export class UserStore {
             notify();
         }, (error) => {
             if (error.code === 'permission-denied') return;
-            console.error("UserStore: Error listening to shares:", error);
         });
 
         // Subscribe to Cash Categories
@@ -92,7 +88,6 @@ export class UserStore {
             snapshot.forEach((doc) => {
                 const d = doc.data();
                 if (d.category === 'other') {
-                    console.log(`[UserStore INBOUND] Cash Asset: ${d.name}, Color Field: ${d.color}`);
                 }
                 cash.push({ id: doc.id, ...d });
             });
@@ -100,7 +95,6 @@ export class UserStore {
             notify();
         }, (error) => {
             if (error.code === 'permission-denied') return;
-            console.error("UserStore: Error listening to cash categories:", error);
         });
 
         // Subscribe to Watchlists
@@ -116,7 +110,6 @@ export class UserStore {
             notify();
         }, (error) => {
             if (error.code === 'permission-denied') return;
-            console.error("UserStore: Error listening to watchlists:", error);
         });
 
 
@@ -129,7 +122,6 @@ export class UserStore {
             // Do NOT aggressively clear AppState.data on unsubscribe.
             // This causes the "Flash of Death" if a re-subscription happens immediately (e.g. auth refresh).
             // Data will be overwritten by the next snapshot anyway.
-            console.log("UserStore: Unsubscribed from all listeners. (Cache preserved)");
         };
     }
 
@@ -151,7 +143,6 @@ export class UserStore {
                 onDataChange(null);
             }
         }, (err) => {
-            console.error("UserStore: Error subscribing to preferences:", err);
         });
     }
 
@@ -169,10 +160,8 @@ export class UserStore {
                 name: name,
                 createdAt: serverTimestamp()
             });
-            console.log(`UserStore: Added watchlist '${name}' (ID: ${docRef.id})`);
             return docRef.id;
         } catch (e) {
-            console.error("UserStore: Error adding watchlist:", e);
             return null;
         }
     }
@@ -195,11 +184,9 @@ export class UserStore {
                 const snap = await getDocs(q);
                 if (!snap.empty) {
                     const existingDoc = snap.docs[0];
-                    console.warn(`[UserStore] DB-level Deduplication caught ${symbol}: Returning existing ID ${existingDoc.id}`);
                     return existingDoc.id;
                 }
             } catch (err) {
-                console.warn(`[UserStore] Deduplication check failed for ${symbol}:`, err.message);
             }
         }
 
@@ -237,7 +224,6 @@ export class UserStore {
             });
         } catch (e) {
             if (e.code === 'not-found' || e.message.includes('No document to update')) {
-                console.warn(`[UserStore] Share ${shareId} not found (Ghost). Resurrecting...`);
                 // Resurrect: Use setDoc to recreate with same ID (preserve references)
                 try {
                     await setDoc(shareRef, {
@@ -245,7 +231,6 @@ export class UserStore {
                         createdAt: serverTimestamp(),
                         updatedAt: serverTimestamp()
                     });
-                    console.log(`[UserStore] Share ${shareId} resurrected.`);
                 } catch (resurrectError) {
                     this._handleWriteError(resurrectError, 'updateShare-Resurrect');
                     throw resurrectError;
@@ -309,7 +294,6 @@ export class UserStore {
         try {
             await deleteDoc(shareRef);
         } catch (e) {
-            console.error("UserStore: Error deleting share:", e);
         }
     }
 
@@ -348,7 +332,6 @@ export class UserStore {
                 updatedAt: serverTimestamp()
             });
         } catch (e) {
-            console.error("UserStore: Error updating watchlist:", e);
         }
     }
 
@@ -372,7 +355,6 @@ export class UserStore {
         try {
             const snap = await getDoc(userRef); // Requires getDoc import if not present
             if (!snap.exists()) {
-                console.log(`[UserStore] Provisioning new user: ${userId}`);
                 await setDoc(userRef, {
                     createdAt: serverTimestamp(),
                     lastLogin: serverTimestamp()
@@ -382,11 +364,9 @@ export class UserStore {
                 try {
                     await updateDoc(userRef, { lastLogin: serverTimestamp() });
                 } catch (err) {
-                    console.log('[UserStore] Provision update skipped (possibly conflict or offline):', err.message);
                 }
             }
         } catch (e) {
-            console.error("UserStore: Provisioning failed", e);
         }
     }
 
@@ -473,7 +453,6 @@ export class UserStore {
         let existing = null;
 
         if (existingId) {
-            console.log(`[UserStore] Using explicit ID for linking: ${existingId}`);
             // Verify it exists in memory for legacy check (optional but good for consistency)
             existing = shares.find(s => s.id === existingId);
         } else {
@@ -485,13 +464,11 @@ export class UserStore {
             );
 
             if (existing) {
-                console.log(`[UserStore] Found existing share for ${symbol}: ${existing.id || 'Ghost'}`);
                 existingId = existing.id;
             }
         }
 
         if (existingId) {
-            console.log(`[UserStore] Linking existing share ${symbol} (${existingId}) to ${watchlistId}`);
             const ref = doc(db, `artifacts/${APP_ID}/users/${userId}/shares`, existingId);
 
             // Migration: Ensure the legacy singular 'watchlistId' is included in the new array
@@ -507,10 +484,8 @@ export class UserStore {
             } catch (e) {
                 // FIX: Handle Ghost Share (Exists in AppState but not in DB)
                 if (e.code === 'not-found' || e.message.includes('No document to update')) {
-                    console.warn(`[UserStore] Share ${symbol} (${existing.id}) is a Ghost. Recreating...`);
                     // Fallback to Create New Logic (below)
                 } else {
-                    console.error("UserStore: Error linking stock:", e);
                     return null;
                 }
             }
@@ -578,7 +553,6 @@ export class UserStore {
             const docRef = await addDoc(ref, dataToSave);
             return docRef.id;
         } catch (e) {
-            console.error(`UserStore: Error adding document to ${collectionName}:`, e);
             return null;
         }
     }
@@ -594,14 +568,12 @@ export class UserStore {
         } catch (e) {
             // FIX: Handle Ghost Document Resurrect
             if (e.code === 'not-found' || e.message.includes('No document to update')) {
-                console.warn(`[UserStore] Document ${docId} in ${collectionName} not found. Resurrecting...`);
                 await setDoc(ref, {
                     ...data,
                     createdAt: serverTimestamp(),
                     updatedAt: serverTimestamp()
                 });
             } else {
-                console.error(`UserStore: Error updating document in ${collectionName}:`, e);
                 throw e;
             }
         }
@@ -627,16 +599,11 @@ export class UserStore {
             // DEEP EQUALITY CHECK: Skip update if data hasn't changed
             const currentJson = JSON.stringify(data);
             if (this._lastPrefsJson === currentJson) {
-                // console.log('UserStore: Preferences unchanged - skipping save.');
                 return;
             }
 
-            console.log('UserStore: Saving preferences to Firestore...', data);
-
             // Debug check for the specific failure point
             if (data.userCategories) {
-                console.log(`[UserStore DEBUG] Categories being saved: ${data.userCategories.length}. Colors:`,
-                    data.userCategories.map(c => `${c.label}: ${c.color}`).join(', '));
             }
 
             await setDoc(docRef, {
@@ -645,7 +612,6 @@ export class UserStore {
             }, { merge: true });
 
             this._lastPrefsJson = currentJson; // Update cache
-            console.log('UserStore: Preferences saved successfully.');
 
         } catch (e) {
             this._handleWriteError(e, 'savePreferences');
@@ -659,22 +625,18 @@ export class UserStore {
      */
     async wipeAllData(userId) {
         if (!userId) return;
-        console.log(`[UserStore] !!! STARTING ROBUST WIPE FOR USER: ${userId} !!!`);
 
         const subCollections = ['shares', 'cashCategories', 'watchlists', 'preferences'];
         const results = [];
 
         for (const colName of subCollections) {
-            console.log(`[UserStore] Wiping sub-collection: ${colName}`);
             const docs = await this.getAllDocuments(userId, colName);
-            console.log(`[UserStore] Found ${docs.length} documents in ${colName}`);
 
             const deletePromises = docs.map(async (d) => {
                 try {
                     await this.deleteDocument(userId, colName, d.id);
                     return { id: d.id, collection: colName, status: 'deleted' };
                 } catch (err) {
-                    console.error(`[UserStore] FAILED to delete ${d.id} from ${colName}:`, err);
                     return { id: d.id, collection: colName, status: 'failed', error: err.message };
                 }
             });
@@ -683,7 +645,6 @@ export class UserStore {
             results.push(...collectionResults);
         }
 
-        console.log('[UserStore] Wipe Completed. Results:', results);
         return results;
     }
 }

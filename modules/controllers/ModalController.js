@@ -79,18 +79,18 @@ export class ModalController {
         if (input && (typeof input === 'string' || typeof input === 'number')) {
             // EDIT MODE (shareId)
             const inputId = String(input);
-            console.log('[ModalController] Opening in Edit Mode. ID:', inputId);
+
 
             // Loose lookup to handle String/Number mismatch in data
             const targetShare = AppState.data.shares.find(s => String(s.id) === inputId);
 
             if (!targetShare) {
                 console.error('[ModalController] Share NOT found for ID:', inputId);
-                console.log('[ModalController] Available IDs:', AppState.data.shares.slice(0, 5).map(s => s.id));
+
                 ToastManager.error(USER_MESSAGES.SHARE_NOT_FOUND);
                 return;
             }
-            console.log('[ModalController] Found Share Data:', targetShare);
+
             stockCode = targetShare.shareName;
             initialData = {
                 ...targetShare,
@@ -133,7 +133,7 @@ export class ModalController {
 
                 // 1. Find explicit share documents (Legacy & Mixed Schema)
                 const matchingShares = AppState.data.shares.filter(s => (s.shareName || '').toUpperCase() === stockCode.toUpperCase());
-                console.log('[ModalController] Scan: Matching Shares Found:', matchingShares.length);
+
 
                 matchingShares.forEach(s => {
                     const wId = s.watchlistId || 'portfolio';
@@ -154,7 +154,7 @@ export class ModalController {
                         }
                     }
                 });
-                console.log('[ModalController] Scan Complete. Active Watchlists:', Array.from(existingMemberships.keys()));
+
             } else {
                 console.warn('[ModalController] Pre-fill Scan Skipped: No Stock Code');
             }
@@ -236,12 +236,12 @@ export class ModalController {
                         if (targetDocId && targetDocId !== 'OPTIMISTIC_LOCK' && !targetDocId.startsWith('temp_')) {
                             // PATH A: LINK EXISTING
                             try {
-                                console.log(`[ModalController] Linking Existing Share ${targetDocId} to ${wid}`);
+
                                 const resultId = await appService.addStock(lookupKey, persistenceId, null, null, targetDocId);
 
                                 // Ghost Recovery check (if UserStore created a new ID)
                                 if (resultId && resultId !== targetDocId) {
-                                    console.warn(`[ModalController] Ghost ID ${targetDocId} replaced by ${resultId}`);
+
                                     targetDocId = resultId; // Update local var for next iteration
 
                                     // Update AppState
@@ -256,7 +256,7 @@ export class ModalController {
                         } else {
                             // PATH B: CREATE NEW (Master Record)
                             try {
-                                console.log(`[ModalController] Creating New Share ${lookupKey} for ${wid}`);
+
                                 const priceData = AppState.livePrices?.get(lookupKey);
                                 const entryPrice = priceData ? (parseFloat(priceData.live) || 0) : 0;
                                 const purchaseDate = new Date().toISOString();
@@ -275,7 +275,7 @@ export class ModalController {
 
                                 // STRICT OPTIMISM: Inject into State with temp ID IMMEDIATELY
                                 const tempId = `temp_${Date.now()}`;
-                                console.log(`[ModalController] Optimistic Injection: ${lookupKey} with ${tempId}`);
+
                                 AppState.data.shares.push({
                                     ...dataToAdd,
                                     id: tempId
@@ -283,7 +283,7 @@ export class ModalController {
                                 if (this.updateCallback) await this.updateCallback(); // Force immediate render
 
                                 const newId = await appService.addBaseShareRecord(dataToAdd);
-                                console.log(`[ModalController] Success! New ID from DB: ${newId} for ${lookupKey}`);
+
 
                                 if (!newId) {
                                     throw new Error(`Failed to create share record for ${wid} (ID was null)`);
@@ -304,7 +304,7 @@ export class ModalController {
                                     if (AppState.data.optimisticIds) {
                                         AppState.data.optimisticIds.set(lookupKey, newId);
                                     }
-                                    console.log(`[ModalController] Swapped Temp/Ghost for Real ID ${newId}`);
+
                                     if (this.updateCallback) await this.updateCallback(); // RE-RENDER: Important to update DOM with real ID
                                 }
                             } catch (err) {
@@ -361,7 +361,7 @@ export class ModalController {
                                     if (!shareNowInState.id) shareNowInState.id = newId;
                                     shareExists = true;
                                 } else {
-                                    console.log(`[ModalController] Injecting Resurrected Share: ID=${newId}`);
+
                                     // Truly missing, safe to inject
                                     AppState.data.shares.push({
                                         shareName: lookupKey,
@@ -404,7 +404,7 @@ export class ModalController {
                             // CASE A: Removing a LINK (Array Entry)
                             // The share is just an item in the 'stocks' array of this watchlist.
                             try {
-                                console.log(`[ModalController] Removing Link ${code} from Watchlist ${wid}`);
+
                                 await appService.removeStock(code, wid);
                             } catch (err) {
                                 console.error(`Failed to remove link from ${wid}:`, err);
@@ -422,7 +422,7 @@ export class ModalController {
                                 const newPersistenceId = (newMasterWl === PORTFOLIO_ID || newMasterWl === 'main') ? PORTFOLIO_ID : newMasterWl;
 
                                 try {
-                                    console.log(`[ModalController] MIGRATING Share ${docId} from ${wid} to ${newMasterWl}`);
+
                                     // FIX: Update watchlistIds array during migration too
                                     await appService.updateShareRecord(docId, { watchlistId: newPersistenceId, watchlistIds: newWatchlists });
                                     // Note: We don't need to "add" it to newMasterWl because the 'toAdd' loop 
@@ -436,7 +436,7 @@ export class ModalController {
                                 // DELETION: The user removed it from ALL watchlists.
                                 // Now it is safe to delete the document.
                                 try {
-                                    console.log(`[ModalController] Deleting Share ${docId} (Removed from all lists)`);
+
                                     await appService.deleteShareRecord(null, docId);
                                 } catch (err) {
                                     console.error(`Failed to delete share ${docId}:`, err);

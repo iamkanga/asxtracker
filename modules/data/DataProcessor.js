@@ -107,7 +107,7 @@ export function processShares(allShares, watchlistId, livePrices, sortConfig, hi
             if (getRank(existing) >= getRank(share)) {
                 return;
             }
-            console.log(`[DataProcessor] Upgrading ${lookupKey}: ${getRank(existing)} -> ${getRank(share)}`);
+
         }
 
         let priceData = livePrices.get(lookupKey);
@@ -182,7 +182,7 @@ export function processShares(allShares, watchlistId, livePrices, sortConfig, hi
 
     // DEBUG: Log match rate
     const liveCount = mergedData.filter(m => m.currentPrice > 0).length;
-    console.log(`[DEBUG] DataProcessor.processShares: Matched ${liveCount}/${mergedData.length} items with live prices.`);
+
 
     // 3. Calculate Totals (ONLY for Portfolio view, usually skip hidden)
     // We pass mergedData but we want the summary to exclude hidden shares.

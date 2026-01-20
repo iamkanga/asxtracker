@@ -955,34 +955,34 @@ export class SettingsUI {
 
         // Toggles UI Updates
         modal.querySelectorAll('.pill-segment-movers').forEach(pill => {
-            pill.classList.toggle('active', pill.dataset.value === String(moversEnabled));
+            pill.classList.toggle(CSS_CLASSES.ACTIVE, pill.dataset.value === String(moversEnabled));
         });
 
         const hiloContainer = modal.querySelector('.hilo-pill-selector');
         if (hiloContainer) {
             hiloContainer.querySelectorAll('.pill-segment-hilo').forEach(pill => {
-                pill.classList.toggle('active', pill.dataset.value === String(hiloEnabled));
+                pill.classList.toggle(CSS_CLASSES.ACTIVE, pill.dataset.value === String(hiloEnabled));
             });
         }
 
         modal.querySelectorAll('.pill-segment-badge').forEach(pill => {
-            pill.classList.toggle('active', pill.dataset.value === String(showBadges));
+            pill.classList.toggle(CSS_CLASSES.ACTIVE, pill.dataset.value === String(showBadges));
         });
 
         modal.querySelectorAll('.pill-segment-email').forEach(pill => {
-            pill.classList.toggle('active', pill.dataset.value === String(dailyEmail));
+            pill.classList.toggle(CSS_CLASSES.ACTIVE, pill.dataset.value === String(dailyEmail));
         });
 
         modal.querySelectorAll('.pill-segment-override').forEach(pill => {
-            pill.classList.toggle('active', pill.dataset.value === String(isExclude));
+            pill.classList.toggle(CSS_CLASSES.ACTIVE, pill.dataset.value === String(isExclude));
         });
 
         modal.querySelectorAll('.pill-segment-personal').forEach(pill => {
-            pill.classList.toggle('active', pill.dataset.value === String(personalEnabled));
+            pill.classList.toggle(CSS_CLASSES.ACTIVE, pill.dataset.value === String(personalEnabled));
         });
 
         modal.querySelectorAll('.pill-segment-badge-scope').forEach(pill => {
-            pill.classList.toggle('active', pill.dataset.value === prefs.badgeScope);
+            pill.classList.toggle(CSS_CLASSES.ACTIVE, pill.dataset.value === prefs.badgeScope);
         });
 
         const totalIndustries = Object.values(SECTOR_INDUSTRY_MAP).flat().length;
@@ -991,7 +991,7 @@ export class SettingsUI {
             const isAllPill = prefs.scanner?.activeFilters === null || activeFilters.length === totalIndustries;
             const isNonePill = Array.isArray(prefs.scanner?.activeFilters) && activeFilters.length === 0;
             const isMatch = (action === 'all' && isAllPill) || (action === 'none' && isNonePill);
-            seg.classList.toggle('active', isMatch);
+            seg.classList.toggle(CSS_CLASSES.ACTIVE, isMatch);
         });
 
         // Efficient Sector Update: Only re-render if filters changed OR if accordion is currently empty (initial load fix)
@@ -1129,8 +1129,8 @@ export class SettingsUI {
                     <div style="display: flex; align-items: center; gap: 14px; justify-content: flex-end;">
                         <!-- Sector Pill Selector (Flush - Upsized) -->
                         <div class="pill-container upsized sector-pill-selector pill-segment-accordion" style="width: 104px;">
-                            <span class="bulk-btn ${isAllSelected ? 'active' : ''}" data-action="all" title="Select All" style="font-size: 0.65rem;">All</span>
-                            <span class="bulk-btn ${activeCount === 0 ? 'active' : ''}" data-action="none" title="Deselect All" style="font-size: 0.65rem;">None</span>
+                            <span class="bulk-btn ${isAllSelected ? CSS_CLASSES.ACTIVE : ''}" data-action="all" title="Select All" style="font-size: 0.65rem;">All</span>
+                            <span class="bulk-btn ${activeCount === 0 ? CSS_CLASSES.ACTIVE : ''}" data-action="none" title="Deselect All" style="font-size: 0.65rem;">None</span>
                         </div>
                         
                         <div style="width: 16px; display: flex; justify-content: center;">
@@ -1403,7 +1403,7 @@ export class SettingsUI {
                             hiddenInput.value = String(val);
                         }
                         // Update UI Active State (IMMEDIATE FEEDBACK)
-                        Array.from(container.children).forEach(p => p.classList.toggle('active', p === pill));
+                        Array.from(container.children).forEach(p => p.classList.toggle(CSS_CLASSES.ACTIVE, p === pill));
 
                         // SYNC FIX: If scope changed via pill, update badge instantly
                         if (targetId === IDS.PREF_BADGE_SCOPE && notificationStore) {
@@ -1434,7 +1434,7 @@ export class SettingsUI {
                 });
 
                 // Update Master Pill UI State (Immediate Feedback)
-                masterSeg.parentElement.querySelectorAll('.master-pill-segment').forEach(s => s.classList.toggle('active', s.dataset.action === action));
+                masterSeg.parentElement.querySelectorAll('.master-pill-segment').forEach(s => s.classList.toggle(CSS_CLASSES.ACTIVE, s.dataset.action === action));
 
                 // Sync UI Components
                 this._updateSummaryBoard(modal);
@@ -1556,8 +1556,8 @@ export class SettingsUI {
 
                     if (sectorSpan) sectorSpan.style.color = hasActive ? 'var(--color-accent)' : 'white';
                     if (header) header.style.borderLeftColor = hasActive ? 'var(--color-accent)' : 'transparent';
-                    if (pillAll) pillAll.classList.toggle('active', isAll);
-                    if (pillNone) pillNone.classList.toggle('active', checkedCount === 0);
+                    if (pillAll) pillAll.classList.toggle(CSS_CLASSES.ACTIVE, isAll);
+                    if (pillNone) pillNone.classList.toggle(CSS_CLASSES.ACTIVE, checkedCount === 0);
                 }
 
                 // SECTOR UPDATE: Trigger Immediate Save

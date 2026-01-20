@@ -35,7 +35,7 @@ export class FavoriteLinksUI {
         // Subscribe to Live Updates (Sync)
         if (!this._liveUpdateListener) {
             this._liveUpdateListener = () => {
-                console.log('[FavoriteLinksUI] Received Live Update Event. Re-rendering.');
+
                 this._renderContent(modal);
             };
             window.addEventListener(EVENTS.FAVORITE_LINKS_UPDATED, this._liveUpdateListener);
