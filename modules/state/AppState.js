@@ -101,9 +101,9 @@ export const AppState = {
         userCategories: (() => {
             try {
                 const stored = localStorage.getItem(STORAGE_KEYS.USER_CATEGORIES);
-                return stored ? JSON.parse(stored) : [];
+                return stored ? JSON.parse(stored) : null;
             } catch (e) {
-                return [];
+                return null;
             }
         })(),
         snapshotSort: localStorage.getItem(STORAGE_KEYS.SNAPSHOT_SORT) || 'desc',
@@ -111,9 +111,9 @@ export const AppState = {
         favoriteLinks: (() => {
             try {
                 const stored = localStorage.getItem(STORAGE_KEYS.FAVORITE_LINKS);
-                return stored ? JSON.parse(stored) : [];
+                return stored ? JSON.parse(stored) : null;
             } catch (e) {
-                return [];
+                return null;
             }
         })(),
         colorSeed: (() => {

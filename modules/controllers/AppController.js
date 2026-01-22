@@ -882,29 +882,11 @@ export class AppController {
 
                     // 5.1 Sync Favorite Links
                     if (prefs.favoriteLinks && Array.isArray(prefs.favoriteLinks)) {
-                        // MERGE STRATEGY (Startup Race Condition Fix):
-                        // If user has added links locally before Cloud Sync arrives, we must not overwrite them with empty/stale cloud data.
-                        // We perform a Union based on URL.
-                        const currentLinks = AppState.preferences.favoriteLinks || [];
                         const cloudLinks = prefs.favoriteLinks || [];
 
-                        // 1. Create Map of Cloud Links (Source of Truth)
-                        const linkMap = new Map();
-                        cloudLinks.forEach(l => linkMap.set(l.url, l));
-
-                        // 2. Merge Local Links (Preserve additions)
-                        currentLinks.forEach(l => {
-                            if (!linkMap.has(l.url)) {
-                                linkMap.set(l.url, l);
-                            }
-                        });
-
-                        // 3. Convert back to array
-                        const mergedLinks = Array.from(linkMap.values());
-
-                        // 4. Update State
-                        AppState.preferences.favoriteLinks = mergedLinks;
-                        localStorage.setItem(STORAGE_KEYS.FAVORITE_LINKS, JSON.stringify(mergedLinks));
+                        // Overwrite strategy: Trust the Cloud
+                        AppState.preferences.favoriteLinks = cloudLinks;
+                        localStorage.setItem(STORAGE_KEYS.FAVORITE_LINKS, JSON.stringify(cloudLinks));
 
                         // LIVE UPDATE: If modal is open, refresh it
                         if (!document.getElementById(IDS.MODAL_FAVORITE_LINKS).classList.contains(CSS_CLASSES.HIDDEN)) {
@@ -980,35 +962,15 @@ export class AppController {
                         }
                     }
 
-                    // 9. Sync User Categories (Merge Strategy)
+                    // 9. Sync User Categories (Trust Cloud)
                     if (prefs.userCategories && Array.isArray(prefs.userCategories)) {
-                        const localCats = AppState.preferences.userCategories || [];
                         const remoteCats = prefs.userCategories;
 
-                        // Union of Local and Remote (Remote wins conflicts, but Local new items are kept)
-                        const mergedMap = new Map();
-                        remoteCats.forEach(c => mergedMap.set(c.id, c));
-                        localCats.forEach(c => mergedMap.set(c.id, c));
-
-                        const mergedList = Array.from(mergedMap.values());
-
-                        // Only update if different
-                        if (JSON.stringify(mergedList) !== JSON.stringify(AppState.preferences.userCategories)) {
-                            AppState.preferences.userCategories = mergedList;
-                            localStorage.setItem(STORAGE_KEYS.USER_CATEGORIES, JSON.stringify(mergedList));
+                        // Overwrite strategy: Trust the Cloud
+                        if (JSON.stringify(remoteCats) !== JSON.stringify(AppState.preferences.userCategories)) {
+                            AppState.preferences.userCategories = remoteCats;
+                            localStorage.setItem(STORAGE_KEYS.USER_CATEGORIES, JSON.stringify(remoteCats));
                             needsRender = true;
-                        }
-
-                        // WRITE-BACK: If merged list differs from what Cloud sent, push back to Cloud immediately.
-                        // Logic: Only trigger if the length or IDs differ to avoid loops on minor field updates.
-                        const remoteIds = remoteCats.map(c => c.id).sort().join(',');
-                        const mergedIds = mergedList.map(c => c.id).sort().join(',');
-
-                        if (remoteIds !== mergedIds) {
-                            this._syncPreferencesWithDebounce({
-                                ...prefs,
-                                userCategories: mergedList
-                            });
                         }
                     }
 

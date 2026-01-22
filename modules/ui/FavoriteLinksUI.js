@@ -155,8 +155,8 @@ export class FavoriteLinksUI {
     }
 
     static _getEffectiveLinks() {
-        const links = AppState.preferences.favoriteLinks || [];
-        if (links.length === 0) {
+        const links = AppState.preferences.favoriteLinks;
+        if (links === null || links === undefined) {
             // Return a deep copy of defaults to ensure we don't mutate the constant
             return JSON.parse(JSON.stringify(this.DEFAULTS));
         }
