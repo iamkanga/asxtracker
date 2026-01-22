@@ -47,6 +47,11 @@ const FIREBASE_PROJECT_ID = GAS_CONFIG.FIREBASE.PROJECT_ID;
 const APP_ID = GAS_CONFIG.FIREBASE.APP_ID;
 const FIRESTORE_BASE = GAS_CONFIG.FIREBASE.BASE_URL;
 
+const GLOBAL_SETTINGS_DOC_SEGMENTS = ['artifacts', APP_ID, 'config', 'globalSettings'];
+const DAILY_HILO_HITS_DOC_SEGMENTS = ['artifacts', APP_ID, 'alerts', 'DAILY_HILO_HITS'];
+const DAILY_MOVERS_HITS_DOC_SEGMENTS = ['artifacts', APP_ID, 'alerts', 'DAILY_MOVERS_HITS'];
+const DAILY_CUSTOM_HITS_DOC_SEGMENTS = ['artifacts', APP_ID, 'alerts', 'DAILY_CUSTOM_TRIGGER_HITS'];
+
 const ASX_HOLIDAYS_2025 = new Set(GAS_CONFIG.HOLIDAYS);
 
 /** Check if today (Sydney time) is a trading day (Mon-Fri, non-holiday). */
