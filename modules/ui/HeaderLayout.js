@@ -867,6 +867,7 @@ export class HeaderLayout {
                 listContainer.querySelectorAll('.sidebar-list-item').forEach(p => p.classList.toggle('active', p === item));
 
                 ToastManager.success(`Style: ${preset.charAt(0).toUpperCase() + preset.slice(1)} applied.`);
+                this._updateSidebarSettingsUI(); // Immediate UI Sync (Label & Ticks)
             });
         });
     }
@@ -945,7 +946,7 @@ export class HeaderLayout {
     }
 
     _updateSidebarSettingsUI() {
-        const val = AppState.preferences.gradientStrength || 0.25;
+        const val = typeof AppState.preferences.gradientStrength === 'number' ? AppState.preferences.gradientStrength : 0.25;
         const borders = AppState.preferences.containerBorders || { sides: [0, 0, 0, 0], thickness: 1 };
 
         // FIXED SELECTOR: Limit to #sidebar-coloring-container

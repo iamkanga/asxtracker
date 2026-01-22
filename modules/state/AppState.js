@@ -122,7 +122,10 @@ export const AppState = {
         })(),
         dailyEmail: localStorage.getItem(STORAGE_KEYS.DAILY_EMAIL) === 'true',
         alertEmailRecipients: localStorage.getItem(STORAGE_KEYS.EMAIL_RECIPIENTS) || '',
-        gradientStrength: parseFloat(localStorage.getItem(STORAGE_KEYS.GRADIENT_STRENGTH)) || 0.25,
+        gradientStrength: (() => {
+            const stored = localStorage.getItem(STORAGE_KEYS.GRADIENT_STRENGTH);
+            return stored !== null ? parseFloat(stored) : 0.25;
+        })(),
         containerBorders: (() => {
             try {
                 const stored = localStorage.getItem(STORAGE_KEYS.BORDER_PREFS);
@@ -265,7 +268,7 @@ export const AppState = {
                 colorSeed: this.preferences.colorSeed || 0,
                 dailyEmail: this.preferences.dailyEmail || false,
                 alertEmailRecipients: this.preferences.alertEmailRecipients || '',
-                gradientStrength: this.preferences.gradientStrength ?? 0.6,
+                gradientStrength: this.preferences.gradientStrength ?? 0.25,
                 customWatchlistNames: this.preferences.customWatchlistNames || {},
                 containerBorders: this.preferences.containerBorders || { sides: [0, 0, 0, 1], thickness: 3 },
                 badgeScope: this.preferences.badgeScope || 'all',
