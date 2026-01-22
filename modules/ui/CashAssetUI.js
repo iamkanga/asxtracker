@@ -148,7 +148,7 @@ export class CashAssetUI {
 
         modal.innerHTML = `
             <div class="${CSS_CLASSES.MODAL_OVERLAY}"></div>
-            <div class="${CSS_CLASSES.MODAL_CONTENT}">
+            <div class="${CSS_CLASSES.MODAL_CONTENT}" style="height: 85vh; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden !important;">
                 <div class="${CSS_CLASSES.MODAL_HEADER}">
                     <div class="${CSS_CLASSES.MODAL_HEADER_LEFT}">
                         <h2 class="${CSS_CLASSES.MODAL_TITLE}">${title}</h2>
@@ -159,7 +159,7 @@ export class CashAssetUI {
                         <button class="${CSS_CLASSES.MODAL_CLOSE_BTN} ${CSS_CLASSES.MODAL_ACTION_BTN}" title="Close"><i class="fas ${UI_ICONS.CLOSE}"></i></button>
                     </div>
                 </div>
-                <div class="${CSS_CLASSES.MODAL_BODY}">
+                <div class="${CSS_CLASSES.MODAL_BODY}" style="flex: 1; overflow-y: auto; padding: 20px;">
                     <div class="${CSS_CLASSES.FORM_CONTAINER}">
                         <div class="${CSS_CLASSES.FORM_GROUP} stacked">
                             <label class="${CSS_CLASSES.INPUT_LABEL}">Category</label>

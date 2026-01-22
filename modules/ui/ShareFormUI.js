@@ -531,7 +531,7 @@ export class ShareFormUI {
 
         modal.innerHTML = `
             <div class="${CSS_CLASSES.MODAL_OVERLAY}"></div>
-            <div class="${CSS_CLASSES.MODAL_CONTENT} modal-content-medium scrollable-modal" style="height: 85vh; max-height: 85vh; display: flex; flex-direction: column;">
+            <div class="${CSS_CLASSES.MODAL_CONTENT} modal-content-medium" style="height: 85vh; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden !important;">
                 <input type="hidden" id="shareId" value="${shareData?.id || ''}">
                 <input type="hidden" id="originalShareName" value="${shareData?.shareName || ''}">
                 
@@ -556,7 +556,7 @@ export class ShareFormUI {
                 
                 <div id="modalLiveStats" class="${CSS_CLASSES.MODAL_STATS_HEADER} ${CSS_CLASSES.HIDDEN}"></div>
 
-                <div class="${CSS_CLASSES.MODAL_BODY}">
+                <div class="${CSS_CLASSES.MODAL_BODY}" style="flex: 1; overflow-y: auto; padding: 20px;">
                     <div class="${CSS_CLASSES.ACCORDION}">
                         
                         <div class="${CSS_CLASSES.ACCORDION_ITEM} ${CSS_CLASSES.ACTIVE}" data-section="core">
