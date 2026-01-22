@@ -2027,9 +2027,11 @@ function captureDailyClosePrice() {
   const newPrevCloses = values.slice(1).map(row => {
     const live = row[livePriceColIndex];
     const currentPrev = row[prevCloseColIndex];
-    // Rule: if live price is valid, use it. Else keep existing.
-    if (live !== null && live !== '') {
-      return [live];
+    // Rule: if live price is valid (a positive number), use it. Else keep existing.
+    // PROTECTION: Prevent #N/A or error strings from poisoning the PrevDayClose.
+    const liveNum = Number(live);
+    if (live !== null && live !== '' && !isNaN(liveNum) && liveNum > 0) {
+      return [liveNum];
     } else {
       return [currentPrev];
     }
@@ -2714,24 +2716,25 @@ function repairSheet_(sheetName) {
     // For Prices, we only check for broken/missing values.
     const priceVal = (priceIdx !== -1) ? data[i][priceIdx] : null;
 
-    // PROTECTION: Check if target cell has a formula
-    let hasFormula = false;
-    if (priceIdx !== -1 && formulas[i] && formulas[i][priceIdx] && formulas[i][priceIdx].toString().startsWith('=')) {
-      hasFormula = true;
+    // PROTECTION: Check if target cell has a formula (to avoid overwriting user formulas)
+    let targetHasFormula = false;
+    if (targetPrice !== -1 && formulas[i] && formulas[i][targetPrice] && formulas[i][targetPrice].toString().startsWith('=')) {
+      targetHasFormula = true;
     }
     
     // Definition of 'Needs Update':
     // Dashboard: Always update UNLESS it has a formula.
-    // Prices: Only if broken (0, blank, error).
+    // Prices: Only if broken (0, blank, error) and NO formula in the TARGET column.
     let needsUpdate = false;
     
     if (policy === 'DIRECT_OVERWRITE') {
-       needsUpdate = !hasFormula; // Always fetch fresh for dashboard, respecting formulas
+       needsUpdate = !targetHasFormula; // Always fetch fresh for dashboard
     } else {
-       // Safe Mode: Check if primary is broken
+       // Safe Mode: Check if primary is broken. 
+       // We allow updating the API_* column even if the primary has a formula.
        const isExplicitError = (typeof priceVal === 'string' && (priceVal.includes('INVALID') || priceVal.includes('DELISTED') || priceVal.includes('ERROR')));
        const isPriceBroken = !isExplicitError && (priceVal === 0 || priceVal === '' || isNaN(priceVal) || (typeof priceVal === 'string')); 
-       needsUpdate = isPriceBroken && !hasFormula;
+       needsUpdate = isPriceBroken && !targetHasFormula;
     }
     
     if (codeRaw && needsUpdate) {
