@@ -278,7 +278,11 @@ export class DataService {
                 // If whitelist is [], match will always be false (None selected)
                 const match = industryFilters.some(f => f.toUpperCase() === itemIndustry);
 
-                if (!match) {
+                // RESILIENCE: If it's an exact ticker match, bypass sector filter (User intent override)
+                // This prevents "Black Hole" searches when metadata is incomplete or filters are restrictive.
+                const isExactTicker = upperCode === q;
+
+                if (!match && !isExactTicker) {
                     continue;
                 }
             }
@@ -422,7 +426,8 @@ export class DataService {
                 // NEW METADATA (Enriched)
                 sector: item.Sector || item.sector || '',
                 industry: item.Industry || item.industry || '',
-                type: item.Type || item.type || 'Share'
+                type: item.Type || item.type || 'Share',
+                lastUpdate: Date.now()
             });
         });
 

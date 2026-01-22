@@ -273,13 +273,11 @@ function runGlobal52WeekScan() {
     // [FIRESTORE READ OPTIMIZATION] 
     // The duplication logic below is extremely expensive (listing all user shares).
     // The frontend NotificationStore already handles this intersection client-side.
-    /*
     try {
       duplicateHiLoHitsIntoCustom_(filteredHighs, filteredLows);
     } catch (dupErr) {
       Logger.log('[HiLo][Dup->Custom] Error: %s', dupErr && dupErr.message || dupErr);
     }
-    */
 
     // Backfill duplicates for users who added shares after earlier hits today (idempotent)
     /*
@@ -768,13 +766,11 @@ function runGlobalMoversScan() {
     }
 
     // NEW: duplicate portfolio-relevant movers into CUSTOM_TRIGGER_HITS
-    /*
     try {
       duplicateMoversIntoCustom_(upMovers, downMovers);
     } catch (dupErr) {
       Logger.log('[Movers][Dup->Custom] Error: %s', dupErr && dupErr.message || dupErr);
     }
-    */
 
     // Backfill duplicates for users who added shares after earlier hits today (idempotent)
     /*
@@ -1122,7 +1118,8 @@ function duplicateHiLoHitsIntoCustom_(highsArr, lowsArr) {
             // include whether it was high or low via intent hint (favor highsArr check)
             const wasHigh = (Array.isArray(highsArr)?highsArr:[]).some(e=> (e&&String(e.code).toUpperCase())===code);
             const intent = wasHigh ? '52w-high' : '52w-low';
-            pending.push({ code, name: meta.name || f.companyName || null, live: meta.live || null, intent, userId: uid, shareId, t: nowIso });
+            const direction = wasHigh ? 'high' : 'low';
+            pending.push({ code, name: meta.name || f.companyName || null, live: meta.live || null, intent, direction, userId: uid, shareId, t: nowIso });
           } catch(_){}
         });
       } catch(_){}
@@ -1260,11 +1257,11 @@ function reconcileCustomDuplicatesFromDailyHits_() {
             // 52W high/low intents
             if (hiSet.has(code)) {
               const meta = info[code] || {};
-              pending.push({ code, name: meta.name || f.companyName || null, live: meta.live || null, intent: '52w-high', userId: uid, shareId, t: nowIso });
+              pending.push({ code, name: meta.name || f.companyName || null, live: meta.live || null, intent: '52w-high', direction: 'high', userId: uid, shareId, t: nowIso });
             }
             if (loSet.has(code)) {
               const meta = info[code] || {};
-              pending.push({ code, name: meta.name || f.companyName || null, live: meta.live || null, intent: '52w-low', userId: uid, shareId, t: nowIso });
+              pending.push({ code, name: meta.name || f.companyName || null, live: meta.live || null, intent: '52w-low', direction: 'low', userId: uid, shareId, t: nowIso });
             }
 
             // Movers intent with direction
@@ -2110,6 +2107,8 @@ function sendCombinedDailyDigest_() {
 
   // [FIRESTORE READ OPTIMIZATION] Run custom trigger scan ONCE before generating email to capture any hits
   try { runCustomTriggersScan(); } catch(e){ Logger.log('[DailyDigest] CustomScan error: %s', e); }
+  // Reconcile portfolio-matched hits (Movers/52W) into custom hits for the email digest
+  try { reconcileCustomDuplicatesFromDailyHits_(); } catch(e){ Logger.log('[DailyDigest] Recon error: %s', e); }
 
   // 2) Master Toggle Check (Central Settings)
   const masterSettingsRes = fetchGlobalSettingsFromFirestore({ noCache: true });
@@ -2299,9 +2298,8 @@ function sendCombinedDailyDigest() {
 
 // Public wrapper for trigger: reconcile daily duplicates periodically
 function reconcileCustomDuplicatesFromDailyHits() {
-  // Disabled: Extremely expensive (listing all shares) for frequent runs.
-  // try { reconcileCustomDuplicatesFromDailyHits_(); }
-  // catch (e) { console.error('reconcileCustomDuplicatesFromDailyHits wrapper failed:', e); }
+  try { reconcileCustomDuplicatesFromDailyHits_(); }
+  catch (e) { console.error('reconcileCustomDuplicatesFromDailyHits wrapper failed:', e); }
 }
 
 // (Legacy alert helpers removed: fetchAllPriceData, fetchAlertRules, getSuppressionLog, processAlerts, sendAlertEmail)

@@ -141,11 +141,16 @@ export class SearchDiscoveryUI {
 
                 if (exactMatch) {
                     console.log(`[SearchDiscoveryUI] Auto-selecting exact match: ${exactMatch.code}`);
+                    modal.dataset.viewingCode = exactMatch.code;
+
                     this._renderDetail(detail, exactMatch, modal);
                     list.classList.add(CSS_CLASSES.HIDDEN);
                     empty.classList.add(CSS_CLASSES.HIDDEN);
                     detail.classList.remove(CSS_CLASSES.HIDDEN);
                     autoSelected = true;
+
+                    // Trigger Live Sync
+                    document.dispatchEvent(new CustomEvent(EVENTS.REQUEST_LIVE_PRICE, { detail: { code: exactMatch.code } }));
                 }
                 modal.dataset.autoSelect = 'false'; // Consume flag
             }
@@ -153,10 +158,16 @@ export class SearchDiscoveryUI {
             // Normal Render if not auto-selected
             if (!autoSelected) {
                 this._renderResults(list, results, (selectedStock) => {
+                    // Update dataset for Preview sync
+                    modal.dataset.viewingCode = selectedStock.code;
+
                     this._renderDetail(detail, selectedStock, modal);
                     list.classList.add(CSS_CLASSES.HIDDEN); // Hide list after selection
                     empty.classList.add(CSS_CLASSES.HIDDEN);
                     detail.classList.remove(CSS_CLASSES.HIDDEN);
+
+                    // Hook up live lookup (consistent with Add Share UI)
+                    document.dispatchEvent(new CustomEvent(EVENTS.REQUEST_LIVE_PRICE, { detail: { code: selectedStock.code } }));
                 });
 
                 if (results.length > 0) {
@@ -172,7 +183,21 @@ export class SearchDiscoveryUI {
             }
         };
 
+        const previewHandler = (e) => {
+            if (!document.contains(modal)) {
+                document.removeEventListener(EVENTS.UPDATE_MODAL_PREVIEW, previewHandler);
+                return;
+            }
+
+            const { data } = e.detail;
+            if (data && data.code === modal.dataset.viewingCode) {
+                // Update detail with fresh values
+                this._renderDetail(detail, data, modal);
+            }
+        };
+
         document.addEventListener(EVENTS.UPDATE_DISCOVERY_RESULTS, resultsHandler);
+        document.addEventListener(EVENTS.UPDATE_MODAL_PREVIEW, previewHandler);
     }
 
     static _renderResults(listContainer, results, onSelect) {

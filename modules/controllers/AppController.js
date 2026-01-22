@@ -2577,12 +2577,15 @@ export class AppController {
             const { code } = e.detail;
             if (!code) return;
 
-            // Check cache first
-            if (AppState.livePrices.has(code)) {
-                // Return simplified structure for Preview
-                const data = AppState.livePrices.get(code);
+            // Check cache first - but enforce freshness (60s)
+            const cached = AppState.livePrices.get(code);
+            const now = Date.now();
+            const freshnessThreshold = 60 * 1000; // 1 minute
+
+            if (cached && cached.lastUpdate && (now - cached.lastUpdate < freshnessThreshold)) {
+                // Return cached data if fresh enough
                 document.dispatchEvent(new CustomEvent(EVENTS.UPDATE_MODAL_PREVIEW, {
-                    detail: { data }
+                    detail: { data: cached }
                 }));
                 return;
             }
