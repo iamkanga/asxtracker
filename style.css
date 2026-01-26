@@ -2997,6 +2997,15 @@ h1.modal-title,
 
 .modal-body {
     padding: 20px;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    /* iOS/Android momentum scrolling */
+}
+
+/* Ensure accordion items align below fixed header when scrolled */
+.accordion-item {
+    scroll-margin-top: 0;
+    /* Align to top of scrollable area */
 }
 
 /* Modal Footer */

@@ -3,6 +3,7 @@ import { formatCurrency, formatPercent } from '../utils/formatters.js';
 import { UI_ICONS, HTML_TEMPLATES, CSS_CLASSES, IDS, EVENTS, USER_MESSAGES } from '../utils/AppConstants.js';
 import { ToastManager } from './ToastManager.js';
 import { navManager } from '../utils/NavigationManager.js';
+import { KeyboardModalHandler } from '../utils/KeyboardModalHandler.js';
 
 /**
  * ShareFormUI.js
@@ -150,13 +151,21 @@ export class ShareFormUI {
             // DEEP LINK: Expand requested section
             if (initialSection) {
                 const sectionItem = modal.querySelector(`.${CSS_CLASSES.ACCORDION_ITEM}[data-section="${initialSection}"]`);
+                const modalBody = modal.querySelector(`.${CSS_CLASSES.MODAL_BODY}`);
                 if (sectionItem) {
                     // Close others
                     modal.querySelectorAll(`.${CSS_CLASSES.ACCORDION_ITEM}`).forEach(i => i.classList.remove(CSS_CLASSES.ACTIVE));
                     // Open target
                     sectionItem.classList.add(CSS_CLASSES.ACTIVE);
-                    // Scroll to it
-                    setTimeout(() => sectionItem.scrollIntoView({ behavior: 'smooth', block: 'center' }), 200);
+                    // Scroll to it using modal body for consistent behavior
+                    setTimeout(() => {
+                        if (modalBody) {
+                            modalBody.scrollTo({
+                                top: sectionItem.offsetTop,
+                                behavior: 'smooth'
+                            });
+                        }
+                    }, 200);
                 }
             }
         });
@@ -535,7 +544,7 @@ export class ShareFormUI {
                 <input type="hidden" id="shareId" value="${shareData?.id || ''}">
                 <input type="hidden" id="originalShareName" value="${shareData?.shareName || ''}">
                 
-                <!-- HEADER (FIXED) -->
+                <!-- HEADER (FIXED via flexbox) -->
                 <div class="${CSS_CLASSES.MODAL_HEADER}" style="flex-shrink: 0;">
                     <div style="width: 100%;">
                         <h2 class="${CSS_CLASSES.MODAL_TITLE}">${headerTitleText}</h2>
@@ -556,6 +565,7 @@ export class ShareFormUI {
                 
                 <div id="modalLiveStats" class="${CSS_CLASSES.MODAL_STATS_HEADER} ${CSS_CLASSES.HIDDEN}" style="flex-shrink: 0;"></div>
 
+                <!-- SCROLLABLE BODY -->
                 <div class="${CSS_CLASSES.MODAL_BODY}" style="flex: 1; overflow-y: auto; padding: 20px;">
                     <div class="${CSS_CLASSES.ACCORDION}">
                         
@@ -621,7 +631,7 @@ export class ShareFormUI {
 
                         <div class="${CSS_CLASSES.ACCORDION_ITEM}" data-section="target">
                             <div class="${CSS_CLASSES.ACCORDION_HEADER}">
-                                <span>Target & Rating</span>
+                                <span>Target &amp; Rating</span>
                                 <i class="fas ${UI_ICONS.CHEVRON_DOWN}"></i>
                             </div>
                             <div class="${CSS_CLASSES.ACCORDION_CONTENT}">
@@ -703,6 +713,9 @@ export class ShareFormUI {
         const overlay = modal.querySelector(`.${CSS_CLASSES.MODAL_OVERLAY}`);
 
         const close = () => {
+            // Detach keyboard handler before closing
+            KeyboardModalHandler.detach();
+
             modal.classList.add(CSS_CLASSES.HIDDEN);
             setTimeout(() => modal.remove(), 300);
 
@@ -725,17 +738,41 @@ export class ShareFormUI {
         closeBtn?.addEventListener('click', close);
         overlay?.addEventListener('click', close);
 
+        // Attach keyboard handler for Android keyboard visibility
+        KeyboardModalHandler.attach(modal);
+
         return modal;
     }
 
     static _bindAccordion(modal) {
         const headers = modal.querySelectorAll(`.${CSS_CLASSES.ACCORDION_HEADER}`);
+        const modalBody = modal.querySelector(`.${CSS_CLASSES.MODAL_BODY}`);
+
         headers.forEach(header => {
             header.addEventListener('click', () => {
                 const item = header.parentElement;
                 const wasOpen = item.classList.contains(CSS_CLASSES.ACTIVE);
+
+                // Close all sections first
                 modal.querySelectorAll(`.${CSS_CLASSES.ACCORDION_ITEM}`).forEach(i => i.classList.remove(CSS_CLASSES.ACTIVE));
-                if (!wasOpen) item.classList.add(CSS_CLASSES.ACTIVE);
+
+                // Open clicked section if it wasn't already open
+                if (!wasOpen) {
+                    item.classList.add(CSS_CLASSES.ACTIVE);
+
+                    // Auto-scroll to the opened accordion section (just below the fixed header)
+                    // Use a delay to ensure the accordion content is fully expanded
+                    setTimeout(() => {
+                        if (modalBody) {
+                            // Calculate scroll position: accordion item's offset within the modal body
+                            const itemTop = item.offsetTop;
+                            modalBody.scrollTo({
+                                top: itemTop,
+                                behavior: 'smooth'
+                            });
+                        }
+                    }, 50);
+                }
             });
         });
     }
@@ -884,7 +921,7 @@ export class ShareFormUI {
                         modal._lastToastCode = query;
 
                         // Inform user and dispatch edit request (Instant Re-Mount)
-                        ToastManager.info(`${query} already exists. Switching to edit mode...`);
+                        ToastManager.info(`${query} already exists.Switching to edit mode...`);
 
                         document.dispatchEvent(new CustomEvent(EVENTS.REQUEST_EDIT_SHARE, {
                             detail: { id: duplicateShare.id, code: query, instant: true }
@@ -969,7 +1006,7 @@ export class ShareFormUI {
 
                     if (duplicateShare) {
                         // Inform user and dispatch edit request (Instant Re-Mount)
-                        ToastManager.info(`${code} already exists. Switching to edit mode...`);
+                        ToastManager.info(`${code} already exists.Switching to edit mode...`);
 
                         document.dispatchEvent(new CustomEvent(EVENTS.REQUEST_EDIT_SHARE, {
                             detail: { id: duplicateShare.id, code: code, instant: true }
@@ -990,7 +1027,7 @@ export class ShareFormUI {
                             <div style="display: flex; justify-content: center; align-items: center; min-height: 80px; width: 100%;">
                                 <i class="fas ${UI_ICONS.SPINNER}" style="font-size: 1.5rem; color: var(--text-muted);"></i>
                             </div>
-                         `;
+                        `;
                     }
 
                     // Dispatch Price Request immediately on selection
@@ -1040,7 +1077,7 @@ export class ShareFormUI {
                         ${changeStr} (${pctStr})
                     </span>
                 </div>
-             `;
+            `;
 
             // Row 2: Stats (Real Data)
             // Use '-' if 0/null/undefined, otherwise format to 2 decimals or currency
@@ -1063,7 +1100,7 @@ export class ShareFormUI {
                         <span class="${CSS_CLASSES.STAT_VAL}">${pe}</span>
                     </div>
                 </div>
-             `;
+            `;
 
             panel.innerHTML = row1 + row2;
             panel.classList.remove(CSS_CLASSES.HIDDEN);
@@ -1116,7 +1153,7 @@ export class ShareFormUI {
         const rawId = getVal('shareId');
         const dataId = currentData?.id;
         const resolvedId = rawId || dataId || null;
-        console.log(`[ShareFormUI] Extracting Share Data. InputID="${rawId}", DataID="${dataId}" -> ResolvedID="${resolvedId}"`);
+        console.log(`[ShareFormUI] Extracting Share Data.InputID = "${rawId}", DataID = "${dataId}" -> ResolvedID="${resolvedId}"`);
 
         return {
             id: resolvedId, // CRITICAL: Preserve ID for Updates vs Creates

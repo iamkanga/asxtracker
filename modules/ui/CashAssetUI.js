@@ -7,6 +7,7 @@ import { CASH_CATEGORIES, CSS_CLASSES, IDS, UI_ICONS, ASSET_CUSTOM_COLORS } from
 import { AppState } from '../state/AppState.js';
 import { ToastManager } from './ToastManager.js';
 import { navManager } from '../utils/NavigationManager.js';
+import { KeyboardModalHandler } from '../utils/KeyboardModalHandler.js';
 
 export class CashAssetUI {
     constructor() {
@@ -348,6 +349,9 @@ export class CashAssetUI {
         modal.querySelector(`#${IDS.BTN_ADD_COMMENT}`).addEventListener('click', () => addComment());
 
         const close = () => {
+            // Detach keyboard handler before closing
+            KeyboardModalHandler.detach();
+
             modal.classList.add(CSS_CLASSES.HIDDEN);
             setTimeout(() => modal.remove(), 300);
             navManager.popStateSilently();
@@ -361,6 +365,10 @@ export class CashAssetUI {
         if (isEdit) modal.querySelector(`.${CSS_CLASSES.DELETE_BTN}`).addEventListener('click', () => { if (onDelete) { onDelete(); close(); } });
 
         navManager.pushState(() => { if (modal.parentElement) close(); });
+
+        // Attach keyboard handler for Android keyboard visibility
+        KeyboardModalHandler.attach(modal);
+
         requestAnimationFrame(() => modal.classList.remove(CSS_CLASSES.HIDDEN));
     }
 
