@@ -148,8 +148,8 @@ export class CashAssetUI {
 
         modal.innerHTML = `
             <div class="${CSS_CLASSES.MODAL_OVERLAY}"></div>
-            <div class="${CSS_CLASSES.MODAL_CONTENT}" style="height: 85vh; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden !important;">
-                <div class="${CSS_CLASSES.MODAL_HEADER}">
+            <div class="${CSS_CLASSES.MODAL_CONTENT}" style="height: 85vh; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden !important; gap: 0 !important;">
+                <div class="${CSS_CLASSES.MODAL_HEADER}" style="flex-shrink: 0;">
                     <div class="${CSS_CLASSES.MODAL_HEADER_LEFT}">
                         <h2 class="${CSS_CLASSES.MODAL_TITLE}">${title}</h2>
                     </div>

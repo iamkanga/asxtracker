@@ -531,12 +531,12 @@ export class ShareFormUI {
 
         modal.innerHTML = `
             <div class="${CSS_CLASSES.MODAL_OVERLAY}"></div>
-            <div class="${CSS_CLASSES.MODAL_CONTENT} modal-content-medium" style="height: 85vh; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden !important;">
+            <div class="${CSS_CLASSES.MODAL_CONTENT} modal-content-medium" style="height: 85vh; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden !important; gap: 0 !important;">
                 <input type="hidden" id="shareId" value="${shareData?.id || ''}">
                 <input type="hidden" id="originalShareName" value="${shareData?.shareName || ''}">
                 
                 <!-- HEADER (FIXED) -->
-                <div class="${CSS_CLASSES.MODAL_HEADER}">
+                <div class="${CSS_CLASSES.MODAL_HEADER}" style="flex-shrink: 0;">
                     <div style="width: 100%;">
                         <h2 class="${CSS_CLASSES.MODAL_TITLE}">${headerTitleText}</h2>
                         <div id="${IDS.MODAL_SUBTITLE}" class="${CSS_CLASSES.MODAL_SUBTITLE}">${initialSubtitle}</div>
@@ -554,7 +554,7 @@ export class ShareFormUI {
                     </div>
                 </div>
                 
-                <div id="modalLiveStats" class="${CSS_CLASSES.MODAL_STATS_HEADER} ${CSS_CLASSES.HIDDEN}"></div>
+                <div id="modalLiveStats" class="${CSS_CLASSES.MODAL_STATS_HEADER} ${CSS_CLASSES.HIDDEN}" style="flex-shrink: 0;"></div>
 
                 <div class="${CSS_CLASSES.MODAL_BODY}" style="flex: 1; overflow-y: auto; padding: 20px;">
                     <div class="${CSS_CLASSES.ACCORDION}">
