@@ -1595,6 +1595,7 @@ export const UI_LABELS = {
     WATCHLIST_LABEL: 'Watchlist',
     Z_TO_A: 'Z to A',
     A_TO_Z: 'A to Z',
-    CAROUSEL: 'Carousel',
-    REORDER: 'Reorder'
+    CAROUSEL: 'CAROUSEL',
+    REORDER: 'REORDER',
+    HIDE: 'HIDE'
 };

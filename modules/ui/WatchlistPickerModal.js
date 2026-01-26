@@ -29,7 +29,7 @@ export class WatchlistPickerModal {
 
                 <!-- Selection Mode Headers (Hidden by default) -->
                 <div id="watchlistEditHeaders" class="watchlist-edit-headers ${CSS_CLASSES.HIDDEN}">
-                    <span class="col-hide">${UI_LABELS.HIGH}</span>
+                    <span class="col-hide">${UI_LABELS.HIDE}</span>
                     <span class="col-carousel">${UI_LABELS.CAROUSEL}</span>
                     <span class="col-reorder">${UI_LABELS.REORDER}</span>
                 </div>
