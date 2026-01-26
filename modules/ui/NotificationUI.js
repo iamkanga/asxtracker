@@ -127,10 +127,12 @@ export class NotificationUI {
             return; // Stop processing
         }
 
-        // REDESIGNED ICON DISMISSAL: If showBadges is false OR count is 0, hide the entire kangaroo.
+        // REDESIGNED ICON DISMISSAL: If showBadges is false OR count is 0, hide the bell button ONLY.
         // "Right when the user has no notifications the kangaroo is still jumping out That shouldn't happen"
+        // REINSTATEMENT FIX: Do NOT hide the container if showBadges is false. Keep it for long-press restoration.
         if (!showBadges || validCount === 0) {
-            if (container) container.classList.add(CSS_CLASSES.HIDDEN);
+            // Container remains visible (but transparent/pointer-events only) so user can restore it.
+            if (container) container.classList.remove(CSS_CLASSES.HIDDEN);
             bell.classList.add(CSS_CLASSES.HIDDEN);
             return;
         }
@@ -146,7 +148,11 @@ export class NotificationUI {
         }
 
         if (allDisabled) {
-            if (container) container.classList.add(CSS_CLASSES.HIDDEN);
+            // Same logic: Hide bell, keep container for potential future interactions (or if we want to allow re-enabling even if disabled)
+            // Actually, if ALL disabled in settings, maybe we should hide container too?
+            // "The kangaroo icon should dismiss itself".
+            // Let's allow reinstatement even here, just in case they want to access the settings menu via the modal.
+            if (container) container.classList.remove(CSS_CLASSES.HIDDEN);
             bell.classList.add(CSS_CLASSES.HIDDEN);
             return;
         }
@@ -1495,9 +1501,19 @@ export class NotificationUI {
         if (document.getElementById('floating-bell-container')) return;
 
         // 1. Create Wrapper for Formatting/Positioning (Fixed)
+        // 1. Create Wrapper for Formatting/Positioning (Fixed)
+        // REINSTATEMENT FEATURE: Container MUST remain visible and clickable even if bell is hidden
         const container = document.createElement('div');
         container.id = 'floating-bell-container';
-        container.className = `${CSS_CLASSES.FLOATING_BELL_CONTAINER} ${CSS_CLASSES.HIDDEN}`;
+        container.className = `${CSS_CLASSES.FLOATING_BELL_CONTAINER}`;
+        // Force dimensions to ensure hit-target exists when empty
+        container.style.width = '60px';
+        container.style.height = '60px';
+        container.style.pointerEvents = 'auto'; // Capture clicks even if children are hidden
+        container.style.zIndex = '9999'; // Ensure top layer
+
+        // Note: CSS class usually handles position (fixed bottom left). 
+        // We ensure it is NOT hidden by default logic here.
 
         // 2. Create the Button (The visual bell)
         const bell = document.createElement('button');
@@ -1528,21 +1544,39 @@ export class NotificationUI {
             pressTimer = setTimeout(() => {
                 isLongPress = true;
 
-                // REDESIGNED BEHAVIOR: Direct Dismiss (Hide App Badge)
-                console.log('[NotificationUI] Long Press -> Dismissing Floating Bell.');
+                // TOGGLE LOGIC: Check current preference state
+                const currentPref = AppState.preferences.showBadges !== false;
+                const newPref = !currentPref;
 
-                // 1. Hide Immediately (Visual Feedback)
-                if (container) container.classList.add(CSS_CLASSES.HIDDEN);
-                bell.classList.add(CSS_CLASSES.HIDDEN);
+                console.log(`[NotificationUI] Long Press -> Toggling Badges: ${currentPref} -> ${newPref}`);
 
-                // 2. Persist State (Sync with "Show Badges" setting)
+                // 1. Update State First
                 if (AppState.preferences) {
-                    AppState.preferences.showBadges = false;
+                    AppState.preferences.showBadges = newPref;
 
                     import('../data/AppService.js').then(({ AppService }) => {
                         const service = new AppService();
-                        service.saveUserPreferences({ showBadges: false });
+                        service.saveUserPreferences({ showBadges: newPref });
                     });
+                }
+
+                // 2. Visual Feedback
+                if (newPref === false) {
+                    // DISMISSING: Hide Bell Button ONLY (Keep Container for Reinstatement)
+                    bell.classList.add(CSS_CLASSES.HIDDEN);
+                    // Do NOT hide container: if (container) container.classList.add(CSS_CLASSES.HIDDEN);
+                    ToastManager.show("Notifications Dismissed. Long press valid area to restore.", 'info');
+                } else {
+                    // RESTORING: Show Bell Button
+                    bell.classList.remove(CSS_CLASSES.HIDDEN);
+                    bell.style.animation = 'popIn 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55)'; // Fun bounce
+
+                    // Trigger update to render badge count
+                    if (notificationStore) {
+                        const counts = notificationStore.getBadgeCounts();
+                        this.updateBadgeCount(counts.total);
+                    }
+                    ToastManager.show("Welcome Back! Notifications Restored.", 'success');
                 }
 
                 if (navigator.vibrate) navigator.vibrate(50); // Feedback
@@ -1550,11 +1584,23 @@ export class NotificationUI {
         };
         const cancelPress = () => clearTimeout(pressTimer);
 
-        btn.addEventListener('mousedown', startPress);
-        btn.addEventListener('touchstart', startPress, { passive: true });
-        btn.addEventListener('mouseup', cancelPress);
-        btn.addEventListener('mouseleave', cancelPress);
-        btn.addEventListener('touchend', cancelPress);
+        // Bind events to CONTAINER to capture even when bell is hidden
+        container.addEventListener('mousedown', startPress);
+        container.addEventListener('touchstart', startPress, { passive: true });
+        container.addEventListener('mouseup', cancelPress);
+        container.addEventListener('mouseleave', cancelPress);
+        container.addEventListener('touchend', cancelPress);
+
+        // Keep Button Specifics (Click vs Press)
+        // We bind click specific logic to the button, as clicking empty space shouldn't open modal
+        btn.addEventListener('click', (e) => {
+            if (isLongPress) {
+                isLongPress = false;
+                e.stopPropagation(); // Stop container click from propagating
+                return;
+            }
+            // ... normal click logic below ...
+        });
 
         // Click Logic (Open/Toggle Modal if not dismissing)
         btn.addEventListener('click', (e) => {

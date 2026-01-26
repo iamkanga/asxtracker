@@ -45,6 +45,14 @@ export const AppState = {
             }
         })(),
         badgeScope: localStorage.getItem(STORAGE_KEYS.BADGE_SCOPE) || 'all',
+        quickNav: (() => {
+            try {
+                const stored = localStorage.getItem(STORAGE_KEYS.QUICK_NAV);
+                return stored ? JSON.parse(stored) : null;
+            } catch (e) {
+                return null;
+            }
+        })(),
         scanner: {  // NEW: Global Scanner Settings
             activeFilters: null // null means No Filter (Show All). [] means Filter to None.
         },
@@ -272,7 +280,8 @@ export const AppState = {
                 customWatchlistNames: this.preferences.customWatchlistNames || {},
                 containerBorders: this.preferences.containerBorders || { sides: [0, 0, 0, 1], thickness: 3 },
                 badgeScope: this.preferences.badgeScope || 'all',
-                showBadges: this.preferences.showBadges !== false
+                showBadges: this.preferences.showBadges !== false,
+                quickNav: this.preferences.quickNav || null
             };
             this.onPersistenceUpdate(payload);
         } else {
@@ -475,6 +484,16 @@ export const AppState = {
     saveFavoriteLinks(links) {
         this.preferences.favoriteLinks = links;
         localStorage.setItem(STORAGE_KEYS.FAVORITE_LINKS, JSON.stringify(links));
+        this._triggerSync();
+    },
+
+    saveQuickNav(config) {
+        this.preferences.quickNav = config;
+        if (config) {
+            localStorage.setItem(STORAGE_KEYS.QUICK_NAV, JSON.stringify(config));
+        } else {
+            localStorage.removeItem(STORAGE_KEYS.QUICK_NAV);
+        }
         this._triggerSync();
     },
 

@@ -294,25 +294,68 @@ export class HeaderLayout {
      * Publisher Logic: Header simply announces "Toggle List Requested"
      */
     _bindWatchlistTitle() {
-        // Use ID constant for robustness
         const titleEl = document.getElementById(IDS.DYNAMIC_WATCHLIST_TITLE);
-
-        if (titleEl) {
-            // Remove old listeners (clone node trick optional, but standard addEventListener checks dupes)
-            // We use a named handler to "prevent" dupes if init called twice, but here anon is fine if single init.
-
-            titleEl.addEventListener('click', (e) => {
-                // STOP bubbling to prevent document.body from closing it instantly if it thinks it's an outside click
-                e.stopPropagation();
-                e.preventDefault();
-
-                // console.log('[HeaderLayout] Watchlist Title Clicked -> Dispatching TOGGLE_WATCHLIST_MODAL');
-                document.dispatchEvent(new CustomEvent(EVENTS.TOGGLE_WATCHLIST_MODAL));
-            });
-            // console.log('[HeaderLayout] Watchlist Title Publisher Bound.');
-        } else {
+        if (!titleEl) {
             console.error('[HeaderLayout] Critical: Watchlist Title Element Not Found!');
+            return;
         }
+
+        let pressTimer = null;
+        let isLongPress = false;
+        const LONG_PRESS_DURATION = 600;
+
+        // Start Press
+        const startPress = (e) => {
+            // Only left click or single touch
+            if (e.type === 'mousedown' && e.button !== 0) return;
+
+            isLongPress = false;
+            pressTimer = setTimeout(() => {
+                isLongPress = true;
+                // Visual feedback (optional) or haptic
+                try {
+                    if (navigator.vibrate) navigator.vibrate(50);
+                } catch (err) { }
+
+                document.dispatchEvent(new CustomEvent(EVENTS.REQUEST_QUICK_NAV));
+            }, LONG_PRESS_DURATION);
+        };
+
+        // Cancel Press (Move/End)
+        const cancelPress = () => {
+            if (pressTimer) {
+                clearTimeout(pressTimer);
+                pressTimer = null;
+            }
+        };
+
+        // Click Handler (Gated)
+        const handleClick = (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+
+            if (isLongPress) {
+                // If it was a long press, we ignore the click (it's essentially consumed)
+                isLongPress = false;
+                return;
+            }
+
+            // Normal Click -> Open Selector
+            document.dispatchEvent(new CustomEvent(EVENTS.TOGGLE_WATCHLIST_MODAL));
+        };
+
+        // Mouse Events
+        titleEl.addEventListener('mousedown', startPress);
+        titleEl.addEventListener('mouseup', cancelPress);
+        titleEl.addEventListener('mouseleave', cancelPress);
+
+        // Touch Events (Passive false for preventDefault if needed, though we rely on click mostly)
+        titleEl.addEventListener('touchstart', startPress, { passive: true });
+        titleEl.addEventListener('touchend', cancelPress);
+        titleEl.addEventListener('touchmove', cancelPress);
+
+        // Main Action
+        titleEl.addEventListener('click', handleClick);
     }
 
     /**
@@ -706,6 +749,7 @@ export class HeaderLayout {
             });
         }
 
+        // Sidebar Favorite Links Entry
         // Sidebar Favorite Links Entry
         this.btnFavoriteLinks = document.getElementById(IDS.BTN_FAVORITE_LINKS);
         if (this.btnFavoriteLinks) {

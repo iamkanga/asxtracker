@@ -20,6 +20,7 @@ import { BriefingUI } from '../ui/BriefingUI.js?v=1040';
 import { SnapshotUI } from '../ui/SnapshotUI.js'; // Added
 import { SettingsUI } from '../ui/SettingsUI.js?v=55';
 import { FavoriteLinksUI } from '../ui/FavoriteLinksUI.js';
+import { QuickNavUI } from '../ui/QuickNavUI.js'; // Added
 import { notificationStore } from '../state/NotificationStore.js';
 import { DashboardViewRenderer } from '../ui/DashboardViewRenderer.js?v=1075';
 import { ModalController } from './ModalController.js?v=1040';
@@ -67,6 +68,7 @@ export class AppController {
         // UI Managers
         this.headerLayout = null;
         this.watchlistUI = null;
+        this.quickNavUI = new QuickNavUI(); // Initialize QuickNavUI
 
         // Carousel Stability
         this._carouselGuard = false;
@@ -144,6 +146,11 @@ export class AppController {
         });
 
 
+
+        // Quick Nav Listener
+        document.addEventListener(EVENTS.REQUEST_QUICK_NAV, (e) => {
+            this._handleQuickNav(e.detail);
+        });
 
         // 3. LIVE READ-ONLY CHECK (On Resume/Re-Focus)
         // If we have data but no user, remind them they are in Read-Only mode
@@ -375,6 +382,9 @@ export class AppController {
         // 3b. Initialize Calculator UI
         this.calculatorUI = new CalculatorUI();
 
+        // 3c. Initialize QuickNav UI
+        this.quickNavUI.init();
+
         // Make headerLayout available to other parts if needed via singleton pattern or internal referencing
         // Logic in main.js used 'headerLayout.closeSidebar' in callbacks. 
         // We can expose a method on AppController for this.
@@ -481,6 +491,42 @@ export class AppController {
                 }, 1000);
             }
         }, 250); // 250ms debounce
+    }
+
+    _handleQuickNav(detail) {
+        // detail might indicate if it was a forced open (e.g. from settings, though unlikely)
+        const config = AppState.preferences.quickNav;
+
+        if (!config) {
+            // No config set? Open modal to create one
+            this.quickNavUI.show();
+            return;
+        }
+
+        const { watchlistId, sortField, sortDirection } = config;
+        const currentWatchlistId = AppState.watchlist.id || 'portfolio';
+
+        // Are we already there?
+        const isSameWatchlist = (watchlistId === 'portfolio' && (currentWatchlistId === 'portfolio' || currentWatchlistId === null)) ||
+            (watchlistId === currentWatchlistId);
+
+        // Check sort match
+        const currentSort = AppState.sortConfig;
+        const isSameSort = currentSort.field === sortField && currentSort.direction === sortDirection;
+
+        if (isSameWatchlist && isSameSort) {
+            // Already there -> Open Modal to Edit/Clear
+            this.quickNavUI.show();
+        } else {
+            // Execute Navigation
+            this.handleSwitchWatchlist(watchlistId);
+
+            // Execute Sort
+            this._applySort({ field: sortField, direction: sortDirection });
+
+            // Optional: Toast feedback? 
+            // ToastManager.show(`Quick Nav: ${watchlistId}`, 'success');
+        }
     }
 
 
@@ -791,6 +837,11 @@ export class AppController {
                     if (prefs.showBadges !== undefined) {
                         AppState.preferences.showBadges = prefs.showBadges !== false;
                         needsRender = true;
+                    }
+                    if (prefs.quickNav !== undefined) {
+                        AppState.preferences.quickNav = prefs.quickNav;
+                        localStorage.setItem(STORAGE_KEYS.QUICK_NAV, JSON.stringify(prefs.quickNav));
+                        // No render needed, it's Just-In-Time
                     }
                     if (prefs.badgeScope !== undefined) {
                         AppState.preferences.badgeScope = prefs.badgeScope || 'all';
@@ -1739,22 +1790,8 @@ export class AppController {
                 }
             }
 
-            // Update AppState.sortConfig (unified for both stock and cash)
-            AppState.sortConfig = newSort;
-
-            // Persist sort config for this watchlist (Last Used Local)
-            AppState.saveSortConfigForWatchlist(AppState.watchlist.id);
-
-            if (wType === 'cash') {
-                // Cash specific: refresh using CashController
-                this.cashController.refreshView();
-            } else {
-                // Stock: standard update
-                this.updateDataAndRender(false);
-            }
-
             // Update UI to reflect new sort
-            this.viewRenderer.updateSortButtonUI(contextId, newSort);
+            this._applySort(newSort);
         };
 
         const onHide = () => {
@@ -1964,6 +2001,36 @@ export class AppController {
             AppState.sortConfig = fallback;
             // Persist the correction for this specific watchlist
             AppState.saveSortConfigForWatchlist(AppState.watchlist.id);
+        }
+    }
+
+    /**
+     * PROGRAMMATIC SORT APPLICATION
+     * Applies a sort configuration directly without opening the UI picker.
+     * @param {Object} sortConfig { field, direction }
+     */
+    _applySort(sortConfig) {
+        if (!sortConfig || !sortConfig.field) return;
+
+        const wType = AppState.watchlist.type;
+        const contextId = wType === 'cash' ? 'CASH' : AppState.watchlist.id;
+
+        // Update AppState
+        AppState.sortConfig = sortConfig;
+
+        // Persist
+        AppState.saveSortConfigForWatchlist(AppState.watchlist.id);
+
+        // Render
+        if (wType === 'cash') {
+            this.cashController.refreshView();
+        } else {
+            this.updateDataAndRender(false);
+        }
+
+        // Update Button UI
+        if (this.viewRenderer) {
+            this.viewRenderer.updateSortButtonUI(contextId, sortConfig);
         }
     }
 

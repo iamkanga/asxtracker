@@ -80,7 +80,8 @@ export const STORAGE_KEYS = {
     EMAIL_RECIPIENTS: 'ASX_NEXT_emailRecipients',
     BADGE_SCOPE: 'ASX_NEXT_badgeScope',
     GRADIENT_STRENGTH: 'ASX_NEXT_gradientStrength',
-    BORDER_PREFS: 'ASX_NEXT_borderPrefs'
+    BORDER_PREFS: 'ASX_NEXT_borderPrefs',
+    QUICK_NAV: 'ASX_NEXT_quickNav'
 };
 
 export const EVENTS = {
@@ -91,6 +92,7 @@ export const EVENTS = {
     REQUEST_NEW_WATCHLIST: 'request-new-watchlist',
     REQUEST_UPDATE_WATCHLIST: 'request-update-watchlist',
     REQUEST_DELETE_WATCHLIST: 'request-delete-watchlist',
+    REQUEST_QUICK_NAV: 'request-quick-nav',
 
     // Share/Asset Events
     REQUEST_EDIT_SHARE: 'request-edit-share',

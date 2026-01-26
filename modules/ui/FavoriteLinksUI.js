@@ -156,7 +156,9 @@ export class FavoriteLinksUI {
 
     static _getEffectiveLinks() {
         const links = AppState.preferences.favoriteLinks;
-        if (links === null || links === undefined) {
+        // FAILSAFE: If null, undefined, OR EMPTY ARRAY (User reported "nothing in there"), load defaults.
+        // This assumes user wants defaults rather than an empty list if they deleted everything.
+        if (!links || links.length === 0) {
             // Return a deep copy of defaults to ensure we don't mutate the constant
             return JSON.parse(JSON.stringify(this.DEFAULTS));
         }
