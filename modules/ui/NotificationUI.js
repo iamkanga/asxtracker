@@ -6,7 +6,7 @@
 
 import { notificationStore } from '../state/NotificationStore.js';
 import { AppState } from '../state/AppState.js';
-import { CSS_CLASSES, IDS, UI_ICONS, EVENTS, SECTOR_INDUSTRY_MAP, DASHBOARD_SYMBOLS, UI_LABELS } from '../utils/AppConstants.js';
+import { CSS_CLASSES, IDS, UI_ICONS, EVENTS, SECTOR_INDUSTRY_MAP, DASHBOARD_SYMBOLS, UI_LABELS, KANGAROO_ICON_SVG } from '../utils/AppConstants.js';
 import { navManager } from '../utils/NavigationManager.js';
 import { formatCurrency, formatPercent } from '../utils/formatters.js';
 import { BriefingUI } from './BriefingUI.js?v=327';
@@ -1506,7 +1506,9 @@ export class NotificationUI {
 
         // Initial InnerHTML with Badge (to ensure it exists for updateBadgeCount immediately)
         bell.innerHTML = `
-            <div class="bell-icon-wrapper"><i class="fas ${UI_ICONS.ALERTS}" style="font-size: 2.5rem;"></i></div>
+            <div class="bell-icon-wrapper">
+                <span class="kangaroo-icon-inline" style="font-size: 2.5rem; color: var(--color-accent);">${KANGAROO_ICON_SVG}</span>
+            </div>
             <span class="notification-badge ${CSS_CLASSES.HIDDEN}">0</span>
         `;
 

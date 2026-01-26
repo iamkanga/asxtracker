@@ -175,6 +175,35 @@
     transition: filter 0.3s ease;
 }
 
+/* Global Kangaroo Icon Styles */
+.kangaroo-icon-inline {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1em;
+    height: 1em;
+    vertical-align: -0.125em;
+}
+
+.kangaroo-icon-inline svg {
+    width: 100%;
+    height: 100%;
+}
+
+.sidebar-kangaroo-wrapper {
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary-color);
+}
+
+.sidebar-kangaroo-wrapper svg {
+    width: 100%;
+    height: auto;
+}
+
 /* Invert for Dark Theme because SVGs are Black by default */
 body.dark-theme .nav-icon-svg,
 body.dark-theme .sidebar-title-svg {

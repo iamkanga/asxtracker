@@ -7,7 +7,7 @@
 
 import { formatCurrency, formatPercent, formatFriendlyDate } from '../utils/formatters.js';
 import { AppState } from '../state/AppState.js';
-import { SORT_OPTIONS, UI_ICONS, USER_MESSAGES, RESEARCH_LINKS_TEMPLATE, CSS_CLASSES, IDS, EVENTS, SUMMARY_TYPES, STORAGE_KEYS, PORTFOLIO_ID, KANGAROO_ICON_SRC, VIEW_MODES, FALLBACK_SECTOR_MAP } from '../utils/AppConstants.js?v=1029';
+import { SORT_OPTIONS, UI_ICONS, USER_MESSAGES, RESEARCH_LINKS_TEMPLATE, CSS_CLASSES, IDS, EVENTS, SUMMARY_TYPES, STORAGE_KEYS, PORTFOLIO_ID, KANGAROO_ICON_SRC, KANGAROO_ICON_SVG, VIEW_MODES, FALLBACK_SECTOR_MAP } from '../utils/AppConstants.js?v=1029';
 import { SnapshotUI } from './SnapshotUI.js';
 import { LinkHelper } from '../utils/LinkHelper.js';
 
@@ -921,9 +921,9 @@ export class ViewRenderer {
                             <!-- Card 4: Alerts (Dynamic Target Price) -->
                             ${stock.targetPrice > 0 ? `
                             <div class="${CSS_CLASSES.DETAIL_CARD} ${CSS_CLASSES.CURSOR_POINTER} ${trendBgClass}" data-action="deep-link" data-id="${stock.id}" data-section="target">
-                                <div class="${CSS_CLASSES.DETAIL_CARD_HEADER}">
-                                    <h3 class="${CSS_CLASSES.DETAIL_LABEL}">
-                                        <i class="fas ${UI_ICONS.ALERTS}"></i> Alerts
+                                <div class="${CSS_CLASSES.DETAIL_CARD_HEADER}" style="display: flex; align-items: center; gap: 8px;">
+                                    <h3 class="${CSS_CLASSES.DETAIL_LABEL}" style="display: flex; align-items: center; gap: 8px;">
+                                        <span class="kangaroo-icon-inline" style="width: 1.1em; height: 1.1em;">${KANGAROO_ICON_SVG}</span> Alerts
                                     </h3>
                                 </div>
                                 <div class="${CSS_CLASSES.DETAIL_ROW}">

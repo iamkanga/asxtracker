@@ -4,7 +4,7 @@
  * Handles Firestore Sync logic via UserStore.
  */
 
-import { CSS_CLASSES, IDS, UI_ICONS, EVENTS, SECTORS_LIST, SECTOR_INDUSTRY_MAP, STORAGE_KEYS } from '../utils/AppConstants.js';
+import { CSS_CLASSES, IDS, UI_ICONS, EVENTS, SECTORS_LIST, SECTOR_INDUSTRY_MAP, STORAGE_KEYS, KANGAROO_ICON_SVG } from '../utils/AppConstants.js';
 import { navManager } from '../utils/NavigationManager.js';
 import { userStore } from '../data/DataService.js';
 import { AppState } from '../state/AppState.js';
@@ -403,8 +403,8 @@ export class SettingsUI {
         // Border removed for floating effect via style.css
         notifCard.innerHTML = `
             <div class="${CSS_CLASSES.DETAIL_CARD_HEADER}" style="border-bottom: none;">
-                <h3 class="${CSS_CLASSES.DETAIL_LABEL}" style="text-decoration: none; border-bottom: none; color: white; font-size: 1.1rem;">
-                    <i id="btn-open-notifications-icon" class="fas ${UI_ICONS.ALERTS}" style="color: var(--color-accent); cursor: pointer;"></i> Alerts
+                <h3 class="${CSS_CLASSES.DETAIL_LABEL}" style="text-decoration: none; border-bottom: none; color: white; font-size: 1.1rem; display: flex; align-items: center; gap: 8px;">
+                    <span id="btn-open-notifications-icon" class="kangaroo-icon-inline" style="color: var(--color-accent); cursor: pointer; width: 22px; height: 22px;">${KANGAROO_ICON_SVG}</span> Alerts
                 </h3>
             </div>
 
