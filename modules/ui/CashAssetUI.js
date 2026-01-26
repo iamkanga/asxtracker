@@ -337,10 +337,12 @@ export class CashAssetUI {
         const commentsContainer = modal.querySelector(`#${IDS.COMMENTS_LIST_CONTAINER}`);
         const addComment = (text = '') => {
             const div = document.createElement('div');
-            div.className = 'flex gap-2 items-start mb-2';
+            div.className = 'relative w-full mb-2';
             div.innerHTML = `
-                <textarea class="${CSS_CLASSES.STANDARD_TEXTAREA} flex-grow" rows="1" placeholder="Note...">${text}</textarea>
-                <button type="button" class="text-red-500 p-1 delete-comment"><i class="fas fa-times"></i></button>
+                <textarea class="${CSS_CLASSES.STANDARD_TEXTAREA} w-full" rows="1" placeholder="Note..." style="padding-right: 30px;">${text}</textarea>
+                <button type="button" class="delete-comment text-coffee" style="position: absolute; top: 8px; right: 8px; background: none; border: none; padding: 0; cursor: pointer; opacity: 0.8;">
+                    <i class="fas ${UI_ICONS.CLOSE}"></i>
+                </button>
             `;
             div.querySelector('.delete-comment').addEventListener('click', () => div.remove());
             commentsContainer.appendChild(div);
