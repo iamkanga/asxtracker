@@ -1254,10 +1254,19 @@ export const CSS_CLASSES = {
     // Theme & Utility (Constitution Compliance)
     TINT_GREEN: 'tint-green',
     TINT_RED: 'tint-red',
-    COLOR_POSITIVE: 'color-positive',
-    COLOR_NEGATIVE: 'color-negative',
+    FOOTER_BG_NEUTRAL: 'footer-bg-neutral',
     KANGAROO_WRAPPER: 'kangaroo-wrapper',
-    KANGAROO_ICON_IMG: 'kangaroo-icon-img'
+    KANGAROO_ICON_IMG: 'kangaroo-icon-img',
+
+    // Chart Modal (Constitution Compliance)
+    CHART_MODAL: 'chart-modal',
+    CHART_MODAL_CONTENT: 'chart-modal-content',
+    CHART_WRAPPER: 'chart-wrapper',
+    CHART_CANVAS_CONTAINER: 'chart-canvas-container',
+    CHART_CONTROLS: 'chart-controls',
+    CHART_BTN: 'chart-btn',
+    CHART_SELECT: 'chart-select',
+    CHART_OVERLAY_LOADER: 'chart-overlay-loader'
 };
 
 export const ANIMATIONS = {
@@ -1278,6 +1287,11 @@ export const IDS = {
     NOTIFICATION_MODAL: 'notification-modal',
     DAILY_BRIEFING_MODAL: 'daily-briefing-modal',
     SETTINGS_MODAL: 'settings-modal',
+    CHART_MODAL: 'chart-modal',
+    CHART_ROTATOR: 'chartRotator',
+    CHART_MODAL_CLOSE: 'chartModalClose',
+    MODAL_CHART_BODY: 'modalChartBody',
+    CHART_STYLE_SELECT: 'chartStyleSelect',
     NOTIFICATION_BADGE: 'notification-badge',
     BTN_NOTIFICATIONS: 'btn-notifications',
     BTN_SIDEBAR_NOTIFICATIONS: 'sidebar-notifications-btn',

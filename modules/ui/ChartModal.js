@@ -27,7 +27,7 @@ export class ChartComponent {
             const style = document.createElement('style');
             style.id = 'chart-component-styles';
             style.textContent = `
-                .chart-wrapper {
+                .${CSS_CLASSES.CHART_WRAPPER} {
                     display: flex;
                     flex-direction: column;
                     width: 100%;
@@ -35,14 +35,14 @@ export class ChartComponent {
                     background: var(--card-bg);
                     position: relative;
                 }
-                .chart-canvas-container {
+                .${CSS_CLASSES.CHART_CANVAS_CONTAINER} {
                     flex: 1;
                     width: 100%;
                     min-height: 250px; /* Ensure visibility inline */
                     position: relative;
                     background: #111;
                 }
-                .chart-controls {
+                .${CSS_CLASSES.CHART_CONTROLS} {
                     display: flex;
                     flex-wrap: wrap; 
                     gap: 6px;
@@ -52,7 +52,7 @@ export class ChartComponent {
                     justify-content: center;
                     align-items: center;
                 }
-                .chart-btn {
+                .${CSS_CLASSES.CHART_BTN} {
                     background: transparent;
                     border: none;
                     color: #ffffff;
@@ -63,16 +63,16 @@ export class ChartComponent {
                     cursor: pointer;
                     transition: all 0.2s;
                 }
-                .chart-btn:hover {
+                .${CSS_CLASSES.CHART_BTN}:hover {
                     color: var(--text-color);
                 }
-                .chart-btn.active {
+                .${CSS_CLASSES.CHART_BTN}.active {
                     background: transparent;
                     color: var(--color-accent);
                     font-weight: 800;
                 }
                 /* Style Dropdown */
-                .chart-select {
+                .${CSS_CLASSES.CHART_SELECT} {
                     background: transparent;
                     border: none;
                     color: var(--text-muted);
@@ -83,11 +83,11 @@ export class ChartComponent {
                     outline: none;
                     text-align: center;
                 }
-                .chart-select:hover, .chart-select:focus {
+                .${CSS_CLASSES.CHART_SELECT}:hover, .${CSS_CLASSES.CHART_SELECT}:focus {
                     color: var(--color-accent);
                 }
 
-                .chart-overlay-loader {
+                .${CSS_CLASSES.CHART_OVERLAY_LOADER} {
                     position: absolute;
                     top: 0; left: 0;
                     width: 100%; height: 100%;
@@ -99,22 +99,24 @@ export class ChartComponent {
                     color: white;
                     display: none;
                 }
-                /* Rotated Landscape Mode */
-                .force-landscape {
+                /* Fullscreen Zoom Mode - uses inset anchoring, no viewport units */
+                .chart-fullscreen {
                     position: fixed !important;
-                    top: 0 !important;
-                    left: 0 !important;
-                    width: 100vh !important;
-                    height: 100vw !important;
-                    transform: rotate(90deg) !important;
-                    transform-origin: bottom left !important;
-                    top: -100vw !important; 
-                    left: 0 !important;
+                    inset: 0 !important;
+                    width: 100% !important;
+                    height: 100% !important;
                     z-index: 9999 !important;
                     background: var(--card-bg) !important;
                     border-radius: 0 !important;
                     margin: 0 !important;
+                    max-width: none !important;
+                    max-height: none !important;
                     overflow: hidden !important;
+                }
+                /* Parent modal adjustments when content is fullscreen */
+                .chart-modal-fullscreen {
+                    align-items: stretch !important;
+                    justify-content: stretch !important;
                 }
             `;
             document.head.appendChild(style);
@@ -122,16 +124,16 @@ export class ChartComponent {
 
         // 2. Build DOM
         this.container.innerHTML = `
-            <div class="chart-wrapper">
-                <div class="chart-canvas-container" id="chartCanvas_${this.code}">
-                    <div class="chart-overlay-loader">
+            <div class="${CSS_CLASSES.CHART_WRAPPER}">
+                <div class="${CSS_CLASSES.CHART_CANVAS_CONTAINER}" id="chartCanvas_${this.code}">
+                    <div class="${CSS_CLASSES.CHART_OVERLAY_LOADER}">
                         <i class="fas fa-spinner fa-spin fa-2x"></i>
                     </div>
                 </div>
-                <div class="chart-controls">
+                <div class="${CSS_CLASSES.CHART_CONTROLS}">
                     ${this._renderRangeButtons()}
                     <span style="font-size:0.8rem; color:var(--border-color); margin:0 6px;">|</span>
-                    <select class="chart-select" id="chartStyleSelect" title="Chart Style">
+                    <select class="${CSS_CLASSES.CHART_SELECT}" id="${IDS.CHART_STYLE_SELECT}" title="Chart Style">
                         <option value="candle">🕯️ Candles</option>
                         <option value="bar">📊 Bars</option>
                         <option value="line">📈 Line</option>
@@ -151,7 +153,7 @@ export class ChartComponent {
         });
 
         // Style Selector
-        const select = this.container.querySelector('#chartStyleSelect');
+        const select = this.container.querySelector(`#${IDS.CHART_STYLE_SELECT}`);
         select.value = this.currentStyle; // Set initial value
         select.addEventListener('change', (e) => this.setStyle(e.target.value));
 
@@ -163,12 +165,12 @@ export class ChartComponent {
         // Updated Ranges: 1D, 5D, 1M, ..., Max
         const ranges = ['1d', '5d', '1m', '3m', '6m', '1y', '5y', 'max'];
         return ranges.map(r =>
-            `<button class="chart-btn ${this.currentRange === r ? 'active' : ''}" data-range="${r}">${r.toUpperCase()}</button>`
+            `<button class="${CSS_CLASSES.CHART_BTN} ${this.currentRange === r ? 'active' : ''}" data-range="${r}">${r.toUpperCase()}</button>`
         ).join('');
     }
 
     initChart() {
-        const div = this.container.querySelector('.chart-canvas-container');
+        const div = this.container.querySelector(`.${CSS_CLASSES.CHART_CANVAS_CONTAINER}`);
         if (typeof LightweightCharts === 'undefined') {
             div.innerHTML = '<div style="color:red; padding:20px;">Chart library not loaded</div>';
             return;
@@ -323,7 +325,7 @@ export class ChartComponent {
         this.currentRange = range;
         this._updateButtons();
 
-        const loader = this.container.querySelector('.chart-overlay-loader');
+        const loader = this.container.querySelector(`.${CSS_CLASSES.CHART_OVERLAY_LOADER}`);
         if (loader) loader.style.display = 'flex';
 
         try {
@@ -364,8 +366,8 @@ export class ChartComponent {
 
     _updateButtons() {
         this.container.querySelectorAll('[data-range]').forEach(btn => {
-            if (btn.dataset.range === this.currentRange) btn.classList.add('active');
-            else btn.classList.remove('active');
+            if (btn.dataset.range === this.currentRange) btn.classList.add(CSS_CLASSES.ACTIVE);
+            else btn.classList.remove(CSS_CLASSES.ACTIVE);
         });
     }
 
@@ -385,24 +387,24 @@ export class ChartComponent {
 export class ChartModal {
     static async show(code, name) {
         // Remove existing
-        const existing = document.getElementById('chartModal');
+        const existing = document.getElementById(IDS.CHART_MODAL);
         if (existing) existing.remove();
 
-        // 1. Create Modal Container
+        // 1. Create Modal Container - using unique chart-modal class to avoid global modal CSS conflicts
         const modal = document.createElement('div');
-        modal.id = 'chartModal';
-        modal.className = 'modal show'; // Using app standard modal class
+        modal.id = IDS.CHART_MODAL;
+        modal.className = CSS_CLASSES.CHART_MODAL; // NOT using 'modal' class to avoid global CSS !important rules
 
         // App-specific overrides to make it feel like "App Store" fullscreen
         modal.style.cssText = `
-            position: fixed; top: 0; left: 0; width: 100%; height: 100vh;
-            background: rgba(0,0,0,0.85); z-index: 2000;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); z-index: 20001;
             display: flex; align-items: center; justify-content: center;
             backdrop-filter: blur(5px);
         `;
 
         modal.innerHTML = `
-            <div class="modal-content" style="width: 95%; height: 85vh; max-width: 900px; display:flex; flex-direction:column; background:var(--card-bg); border-radius:12px; overflow:hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
+            <div class="${CSS_CLASSES.CHART_MODAL_CONTENT}" style="width: 95%; height: 85%; max-width: 900px; display:flex; flex-direction:column; background:var(--card-bg); border-radius:12px; overflow:hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
                 <!-- Header -->
                 <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; border-bottom:1px solid var(--border-color);">
                     <div>
@@ -410,33 +412,123 @@ export class ChartModal {
                         <span style="font-size:0.85rem; color:var(--text-muted);">${name || ''}</span>
                     </div>
                     <div style="display:flex; gap:12px;">
-                        <button id="chartRotator" class="chart-btn" title="Landscape"><i class="fas fa-expand"></i></button>
-                        <button id="chartModalClose" class="chart-btn" style="border:none; font-size:1.2rem;"><i class="fas fa-times"></i></button>
+                        <button id="${IDS.CHART_ROTATOR}" class="${CSS_CLASSES.CHART_BTN}" title="Landscape"><i class="fas fa-expand"></i></button>
+                        <button id="${IDS.CHART_MODAL_CLOSE}" class="${CSS_CLASSES.CHART_BTN}" style="border:none; font-size:1.2rem;"><i class="fas fa-times"></i></button>
                     </div>
                 </div>
                 <!-- Chart Component Host -->
-                <div id="modalChartBody" style="flex:1; position:relative;"></div>
+                <div id="${IDS.MODAL_CHART_BODY}" style="flex:1; position:relative;"></div>
             </div>
         `;
 
         document.body.appendChild(modal);
 
         // 2. Instantiate Chart
-        const body = modal.querySelector('#modalChartBody');
+        const body = modal.querySelector(`#${IDS.MODAL_CHART_BODY}`);
         const chartComp = new ChartComponent(body, code, name);
 
         // 3. Event Handling
+        let orientationHandler = null;
+
         const close = () => {
+            // Clean up orientation listener
+            if (orientationHandler) {
+                window.removeEventListener('resize', orientationHandler);
+                window.removeEventListener('orientationchange', orientationHandler);
+                if (window.visualViewport) {
+                    window.visualViewport.removeEventListener('resize', orientationHandler);
+                }
+            }
             chartComp.destroy();
             modal.remove();
         };
-        modal.querySelector('#chartModalClose').addEventListener('click', close);
+        modal.querySelector(`#${IDS.CHART_MODAL_CLOSE}`).addEventListener('click', close);
 
-        // Rotation / Force Landscape
-        const rotator = modal.querySelector('#chartRotator');
-        rotator.addEventListener('click', () => {
-            const content = modal.querySelector('.modal-content');
-            content.classList.toggle('force-landscape');
+        // Fullscreen - apply immediately when modal opens
+        const rotator = modal.querySelector(`#${IDS.CHART_ROTATOR}`);
+        const content = modal.querySelector(`.${CSS_CLASSES.CHART_MODAL_CONTENT}`);
+
+        // Helper to resize chart - uses viewport dimensions for fullscreen
+        const resizeChart = () => {
+            if (chartComp.chart) {
+                const div = chartComp.container.querySelector(`.${CSS_CLASSES.CHART_CANVAS_CONTAINER}`);
+                const header = content.querySelector('div'); // First div is header
+                const controls = chartComp.container.querySelector(`.${CSS_CLASSES.CHART_CONTROLS}`);
+                if (div) {
+                    void div.offsetHeight; // Force layout
+
+                    // Use visualViewport if available (more reliable on mobile)
+                    const viewportWidth = window.visualViewport ? window.visualViewport.width : window.innerWidth;
+                    const viewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+                    const headerHeight = header ? header.offsetHeight : 50;
+                    const controlsHeight = controls ? controls.offsetHeight : 45;
+                    const width = viewportWidth;
+                    const height = viewportHeight - headerHeight - controlsHeight;
+
+                    chartComp.chart.applyOptions({ width, height });
+                    chartComp.chart.timeScale().fitContent();
+                }
+            }
+        };
+
+        // Apply fullscreen styles
+        const applyFullscreen = () => {
+            // Fullscreen the modal backdrop using inset: 0
+            modal.style.cssText = `
+                position: fixed;
+                inset: 0;
+                background: var(--card-bg);
+                z-index: 99999;
+                display: flex;
+                flex-direction: column;
+                margin: 0;
+                padding: 0;
+                overflow: hidden;
+            `;
+
+            // Fullscreen the content using inset: 0
+            content.style.cssText = `
+                position: absolute;
+                inset: 0;
+                max-width: none;
+                max-height: none;
+                display: flex;
+                flex-direction: column;
+                background: var(--card-bg);
+                border-radius: 0;
+                margin: 0;
+                overflow: hidden;
+            `;
+        };
+
+        // Apply fullscreen immediately when modal opens
+        applyFullscreen();
+
+        // Resize chart with multiple delays to wait for layout to settle
+        requestAnimationFrame(() => {
+            resizeChart();
+            setTimeout(resizeChart, 50);
+            setTimeout(resizeChart, 150);
+            setTimeout(resizeChart, 300);
+            setTimeout(resizeChart, 500);
         });
+
+        // Orientation change handler - always resize on any event
+        orientationHandler = () => {
+            applyFullscreen();
+            resizeChart();
+            setTimeout(() => { applyFullscreen(); resizeChart(); }, 100);
+            setTimeout(() => { applyFullscreen(); resizeChart(); }, 300);
+            setTimeout(() => { applyFullscreen(); resizeChart(); }, 500);
+        };
+
+        window.addEventListener('resize', orientationHandler);
+        window.addEventListener('orientationchange', orientationHandler);
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', orientationHandler);
+        }
+
+        // Zoom button now just closes the modal
+        rotator.addEventListener('click', close);
     }
 }
