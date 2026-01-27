@@ -1569,7 +1569,7 @@ export class NotificationUI {
                 } else {
                     // RESTORING: Show Bell Button
                     bell.classList.remove(CSS_CLASSES.HIDDEN);
-                    bell.style.animation = 'popIn 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55)'; // Fun bounce
+                    // bell.style.animation = 'popIn...'; REMOVED to allow CSS 'hopIn' to play instead
 
                     // Trigger update to render badge count
                     if (notificationStore) {

@@ -34,3 +34,23 @@
     /* Subtle background tint */
     border-left-color: var(--color-accent);
 }
+
+/* -------------------------------------------------------------------------- */
+/*                                LOGOUT BUTTON STYLE                         */
+/* -------------------------------------------------------------------------- */
+
+#logout-btn {
+    color: #ff3b3b !important;
+    /* Bright Red */
+}
+
+#logout-btn i {
+    color: #ff3b3b !important;
+    /* Icon Bright Red */
+}
+
+#logout-btn:hover {
+    background-color: rgba(255, 59, 59, 0.1) !important;
+    /* Red tint on hover */
+    color: #ff5252 !important;
+}
