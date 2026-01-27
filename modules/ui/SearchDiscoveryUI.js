@@ -1,6 +1,7 @@
 import { UI_ICONS, CSS_CLASSES, RESEARCH_LINKS_TEMPLATE, IDS, EVENTS } from '../utils/AppConstants.js';
 import { formatCurrency, formatPercent } from '../utils/formatters.js';
 import { navManager } from '../utils/NavigationManager.js';
+import { ChartModal, ChartComponent } from './ChartModal.js';
 
 /**
  * SearchDiscoveryUI.js
@@ -264,9 +265,12 @@ export class SearchDiscoveryUI {
                         ${renderBadges(stock)}
                     </div>
                     <div style="text-align: right;">
-                        <div style="font-size: 1.6rem; font-weight: 800; line-height: 1; color: var(--text-color);">${formatCurrency(stock.live)}</div>
-                        <div class="${stock.change >= 0 ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}" style="font-size: 0.9rem; font-weight: 600; margin-top: 8px;">
-                            ${formatCurrency(stock.change)} (${formatPercent(stock.pctChange)})
+                        <div style="display: flex; flex-direction: column; align-items: flex-end;">
+                             <button id="detailExpandChart" class="${CSS_CLASSES.ICON_BTN_GHOST}" title="Expand Chart" style="margin-bottom: 10px; padding: 6px; font-size: 1rem;"><i class="fas fa-expand"></i></button>
+                             <div style="font-size: 1.6rem; font-weight: 800; line-height: 1; color: var(--text-color);">${formatCurrency(stock.live)}</div>
+                             <div class="${stock.change >= 0 ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}" style="font-size: 0.9rem; font-weight: 600; margin-top: 8px;">
+                                ${formatCurrency(stock.change)} (${formatPercent(stock.pctChange)})
+                             </div>
                         </div>
                     </div>
                 </div>
@@ -286,16 +290,19 @@ export class SearchDiscoveryUI {
                         <span class="${CSS_CLASSES.STAT_VALUE}" style="font-size: 0.9rem; font-weight: 700;">${safeVal(stock.pe, (v) => v.toFixed(2))}</span>
                     </div>
                 </div>
+
+                <!-- INLINE CHART -->
+                <div id="inlineChartContainer" style="height:320px; width:100%; border-radius:8px; overflow:hidden; margin-top:1.5rem; border:1px solid var(--border-color);"></div>
             </div>
 
-            <!-- ACTION BUTTON -->
-            <div style="display: flex; justify-content: center; margin: 1.5rem 0;">
+            <!-- ACTION BUTTONS -->
+            <div style="display: flex; justify-content: center; gap: 12px; margin: 1.5rem 0;">
                 <button id="discoveryAddBtn" class="${CSS_CLASSES.ICON_BTN_GHOST}" style="display: flex; align-items: center; padding: 10px 24px; font-size: 0.95rem; font-weight: 700; gap: 10px; border: 1px solid var(--color-accent); border-radius: 30px; transition: all 0.3s ease; color: var(--color-accent);">
-                    <span>Add to Share Tracker</span>
+                    <span>Add to Watchlist</span>
                     <i class="fas ${UI_ICONS.ADD}" style="font-size: 1.1rem; color: var(--color-accent);"></i>
                 </button>
             </div>
-
+            
             <div style="margin-top: 2rem;">
                 <h4 class="${CSS_CLASSES.SECTION_TITLE}" style="font-weight: 700; color: var(--color-accent); border-bottom: none; display: inline-block; padding-bottom: 4px; margin-bottom: 1.5rem;">Research Tools</h4>
                 <div class="${CSS_CLASSES.RESEARCH_LINKS_GRID}">
@@ -304,16 +311,38 @@ export class SearchDiscoveryUI {
             </div>
         `;
 
+        // Instantiate Chart
+        try {
+            const chartArea = container.querySelector('#inlineChartContainer');
+            if (chartArea) {
+                new ChartComponent(chartArea, stock.code, stock.name);
+            }
+        } catch (e) { console.error('Inline chart error', e); }
+
+        // Bind Expand Button
+        const expandBtn = container.querySelector('#detailExpandChart');
+        if (expandBtn) {
+            expandBtn.addEventListener('click', () => {
+                ChartModal.show(stock.code, stock.name);
+            });
+        }
+
         // Bind Add Button
         const addBtn = container.querySelector('#discoveryAddBtn');
         if (addBtn) {
             addBtn.addEventListener('click', () => {
-                // REMOVED close() to allow stacking (Discovery -> Add Share)
-
                 // Delay opening ShareForm to ensure history settles (lock safety)
                 setTimeout(() => {
                     document.dispatchEvent(new CustomEvent(EVENTS.REQUEST_ADD_SHARE_PREFILL, { detail: { stock } }));
                 }, 150);
+            });
+        }
+
+        // Bind Chart Button
+        const chartBtn = container.querySelector('#discoveryChartBtn');
+        if (chartBtn) {
+            chartBtn.addEventListener('click', () => {
+                ChartModal.show(stock.code, stock.name);
             });
         }
     }

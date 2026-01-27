@@ -498,8 +498,12 @@ function fetchAllAsxData_(spreadsheet) {
 
   const apiPrevKey = findKey(/api.*prev/i) || findKey(/prev.*api/i) || findKey(/pi.*prev/i) || ['API_PrevClose','APIPrevClose','ApiPrevClose','APIPREVCLOSE','PIPREVCLOSE'].find(k=> map[k]!=null);
   
-  // Robust search for API_Price (Fuzzy regex: handles "API Price", "API_Price", "Price (API)", etc.)
+  // Robust search for API_Price
   const apiPriceIdx = findIdx(/api.*price/i) || findIdx(/price.*api/i) || findIdx(/pi.*price/i);
+
+  // Robust case-insensitive lookup for Sector/Industry
+  const sectorKey = ['Sector','Category'].find(k => findKey(new RegExp('^' + k + '$', 'i')));
+  const industryKey = ['Industry'].find(k => findKey(new RegExp('^' + k + '$', 'i')));
 
   // Expand live price detection to handle alternative column headers used in some sheets
   const liveKey = (function(){
@@ -569,7 +573,9 @@ function fetchAllAsxData_(spreadsheet) {
       high52: high52,
       low52: low52,
       marketCap: mcapIdx !== -1 ? cleanFloat(r[mcapIdx]) : cleanFloat(r[map['MarketCap']]),
-      prevClose: prev
+      prevClose: prev,
+      sector: sectorKey ? String(r[map[sectorKey]]).trim() : null,
+      industry: industryKey ? String(r[map[industryKey]]).trim() : null
     };
   });
 }
@@ -588,7 +594,9 @@ function writeGlobalHiLoDoc_(highsArr, lowsArr, filtersMeta) {
       high52: (e.high52!=null && !isNaN(e.high52)) ? Number(e.high52) : (e.High52!=null && !isNaN(e.High52)? Number(e.High52): null),
       low52: (e.low52!=null && !isNaN(e.low52)) ? Number(e.low52) : (e.Low52!=null && !isNaN(e.Low52)? Number(e.Low52): null),
       marketCap: (e.marketCap!=null && !isNaN(e.marketCap)) ? Number(e.marketCap) : null,
-      prevClose: (e.prevClose!=null && !isNaN(e.prevClose)) ? Number(e.prevClose) : null
+      prevClose: (e.prevClose!=null && !isNaN(e.prevClose)) ? Number(e.prevClose) : null,
+      sector: e.sector && String(e.sector).trim() ? String(e.sector).trim() : (e.Sector && String(e.Sector).trim() ? String(e.Sector).trim() : null),
+      industry: e.industry && String(e.industry).trim() ? String(e.industry).trim() : (e.Industry && String(e.Industry).trim() ? String(e.Industry).trim() : null)
     };
   }
   const highsObjs = (Array.isArray(highsArr)? highsArr : []).map(normalizeEntry).filter(Boolean);
@@ -669,6 +677,8 @@ function appendDailyHiLoHits_(highsArr, lowsArr) {
       live: (e.live!=null && !isNaN(e.live)) ? Number(e.live) : (e.livePrice!=null && !isNaN(e.livePrice)? Number(e.livePrice): null),
       high52: (e.high52!=null && !isNaN(e.high52)) ? Number(e.high52) : (e.High52!=null && !isNaN(e.High52)? Number(e.High52): null),
       low52: (e.low52!=null && !isNaN(e.low52)) ? Number(e.low52) : (e.Low52!=null && !isNaN(e.Low52)? Number(e.Low52): null),
+      sector: e.sector && String(e.sector).trim() ? String(e.sector).trim() : (e.Sector && String(e.Sector).trim() ? String(e.Sector).trim() : null),
+      industry: e.industry && String(e.industry).trim() ? String(e.industry).trim() : (e.Industry && String(e.Industry).trim() ? String(e.Industry).trim() : null),
       t: nowIso
     };
   }
@@ -788,6 +798,91 @@ function runGlobalMoversScan() {
   }
 }
 
+// ===============================================================
+// ================== HISTORY SERVICE (YAHOO) ====================
+// ===============================================================
+
+/**
+ * Fetches historical price data from Yahoo Finance.
+ * @param {string} code - The ASX code (e.g., 'BHP').
+ * @param {string} range - '1y', '5y', '10y', 'max'.
+ * @returns {Object} { ok: boolean, data: Array<{time, open, high, low, close}>, error?: string }
+ */
+function fetchHistory(code, range = '1y') {
+  try {
+    if (!code) return { ok: false, error: 'No code provided' };
+    
+    // Normalize code: Yahoo uses .AX sufix for ASX
+    const symbol = code.toUpperCase().trim() + (code.toUpperCase().endsWith('.AX') ? '' : '.AX');
+    
+    // Map Frontend Ranges to Yahoo API params
+    // Ranges: 1d, 5d, 1m, 3m, 6m, 1y, 5y, max
+    let yRange = '1y';
+    let yInterval = '1d';
+
+    switch (range.toLowerCase()) {
+      case '1d': yRange = '1d'; yInterval = '5m'; break;
+      case '5d': yRange = '5d'; yInterval = '15m'; break;
+      case '1m': yRange = '1mo'; yInterval = '1d'; break;
+      case '3m': yRange = '3mo'; yInterval = '1d'; break;
+      case '6m': yRange = '6mo'; yInterval = '1d'; break;
+      case '1y': yRange = '1y'; yInterval = '1d'; break;
+      case '5y': yRange = '5y'; yInterval = '1d'; break; // Could use 1wk for speed if needed
+      case 'max': yRange = 'max'; yInterval = '1mo'; break; // Max is huge, use monthly
+      default: yRange = '1y'; yInterval = '1d';
+    }
+
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?range=${yRange}&interval=${yInterval}`;
+    
+    const resp = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+    const codeResp = resp.getResponseCode();
+    
+    if (codeResp !== 200) {
+      return { ok: false, error: `Yahoo API Error: ${codeResp} ${resp.getContentText()}` };
+    }
+    
+    const json = JSON.parse(resp.getContentText());
+    if (!json.chart || !json.chart.result || !json.chart.result[0]) {
+      return { ok: false, error: 'No chart data in response' };
+    }
+    
+    const result = json.chart.result[0];
+    const timestamps = result.timestamp;
+    const quotes = result.indicators.quote[0];
+    
+    if (!timestamps || !quotes) {
+       return { ok: false, error: 'Empty dataset' };
+    }
+    
+    const candles = [];
+    
+    for (let i = 0; i < timestamps.length; i++) {
+      // Filter out nulls
+      if (quotes.open[i] == null || quotes.close[i] == null) continue;
+      
+      const ts = timestamps[i];
+      // Lightweight charts handles Unix Timestamp (seconds) for intraday if we pass 'time' as number
+      // For Daily, we typically pass string 'YYYY-MM-DD'.
+      // To keep it simple and unified, we can pass Unix Timestamp (seconds) for EVERYTHING.
+      // Lightweight Charts detects: if string -> date only. If number -> timestamp.
+      
+      candles.push({
+        time: ts, // Pass raw unix timestamp (seconds)
+        open: Number(quotes.open[i].toFixed(3)),
+        high: Number(quotes.high[i].toFixed(3)),
+        low: Number(quotes.low[i].toFixed(3)),
+        close: Number(quotes.close[i].toFixed(3)),
+      });
+    }
+    
+    return { ok: true, data: candles, symbol: result.meta.symbol };
+    
+  } catch (e) {
+    Logger.log('[fetchHistory] Error: ' + e);
+    return { ok: false, error: String(e) };
+  }
+}
+
 function normalizeDirectionalThresholds_(settings) {
   function numOrNull(v) { if (v === '' || v == null) return null; const n = Number(v); return (!isFinite(n) || n <= 0) ? null : n; }
   const upPercent = numOrNull(settings.globalPercentIncrease);
@@ -806,25 +901,31 @@ function fetchPriceRowsForMovers_(spreadsheet) {
   if (values.length < 2) return [];
   const headers = values.shift();
   const map = {}; headers.forEach((h,i)=> map[h]=i);
+  // Helper for case-insensitive lookup
+  function getCol(candidates) {
+    for (let c of candidates) {
+      if (map[c] != null) return map[c];
+      // Try uppercase match
+      const upper = c.toUpperCase();
+      const key = Object.keys(map).find(k => k.toUpperCase() === upper);
+      if (key != null) return map[key];
+    }
+    return null;
+  }
+
   // Resolve code column (tolerate slight header variants)
-  const codeIdx = (function(){
-    const candidates = ['ASX Code','ASXCode','Code'];
-    for (let k of candidates) { if (map[k] != null) return map[k]; }
-    return map['ASX Code'];
-  })();
+  const codeIdx = getCol(['ASX Code','ASXCode','Code']);
+  
   // Resolve live price column (support alternative headings)
-  const liveIdx = (function(){
-    const candidates = ['LivePrice','Last','LastPrice','Last Trade','LastTrade','Last trade','Price','Current'];
-    for (let k of candidates) { if (map[k] != null) return map[k]; }
-    return map['LivePrice'];
-  })();
+  const liveIdx = getCol(['LivePrice','Last','LastPrice','Last Trade','LastTrade','Last trade','Price','Current']);
+  
   // Resolve previous close column (support multiple spellings)
-  const prevIdx = (function(){
-    const candidates = ['PrevDayClose','PrevClose','Previous Close','PreviousClose','Prev'];
-    for (let k of candidates) { if (map[k] != null) return map[k]; }
-    return map['PrevDayClose'] != null ? map['PrevDayClose'] : map['PrevClose'];
-  })();
-  const nameIdx = (map['Company Name']!=null) ? map['Company Name'] : (map['CompanyName']!=null ? map['CompanyName'] : (map['Name']!=null ? map['Name'] : null));
+  const prevIdx = getCol(['PrevDayClose','PrevClose','Previous Close','PreviousClose','Prev']);
+  
+  const nameIdx = getCol(['Company Name','CompanyName','Name']);
+  const sectorIdx = getCol(['Sector','Category']);
+  const industryIdx = getCol(['Industry']);
+
   if (codeIdx == null || liveIdx == null || prevIdx == null) return [];
   const rows = [];
   values.forEach(r => {
@@ -833,7 +934,14 @@ function fetchPriceRowsForMovers_(spreadsheet) {
     if (live == null || prev == null || live === '' || prev === '' || prev === 0) return;
     const liveNum = Number(live); const prevNum = Number(prev);
     if (!isFinite(liveNum) || !isFinite(prevNum) || prevNum === 0) return;
-    rows.push({ code: String(codeRaw).trim().toUpperCase(), live: liveNum, prev: prevNum, name: (nameIdx!=null? r[nameIdx] : null) });
+    rows.push({
+      code: String(codeRaw).trim().toUpperCase(),
+      live: liveNum,
+      prev: prevNum,
+      name: (nameIdx!=null? r[nameIdx] : null),
+      sector: (sectorIdx!=null && r[sectorIdx]) ? String(r[sectorIdx]).trim() : null,
+      industry: (industryIdx!=null && r[industryIdx]) ? String(r[industryIdx]).trim() : null
+    });
   });
   return rows;
 }
@@ -854,6 +962,8 @@ function evaluateMovers_(rows, thresholds) {
       const obj = {
         code,
         name: row.name || null,
+        sector: row.sector || null,
+        industry: row.industry || null,
         live,
         prevClose: prev,
         change,
@@ -880,6 +990,8 @@ function writeGlobalMoversDoc_(upMovers, downMovers, thresholds, meta) {
     return {
       code,
       name: o.name || null,
+      sector: o.sector || null,
+      industry: o.industry || null,
       live: (o.live!=null && !isNaN(o.live)) ? Number(o.live) : null,
       prevClose: (o.prevClose!=null && !isNaN(o.prevClose)) ? Number(o.prevClose) : (o.prev!=null && !isNaN(o.prev)? Number(o.prev): null),
       change: (o.change!=null && !isNaN(o.change)) ? Number(o.change) : (o.live!=null && o.prevClose!=null ? Number(o.live - o.prevClose) : null),
@@ -1764,6 +1876,8 @@ function doPost(e) {
       result = handlePortfolioRoast_(payload);
     } else if (payload.action === 'geminiQuery') {
       result = handleGeminiQuery_(payload);
+    } else if (payload.action === 'fetchHistory') {
+      result = fetchHistory(payload.code, payload.range);
     } else {
       // Default: sync user settings
       result = handleSyncUserSettings_(payload);
@@ -2200,8 +2314,21 @@ function sendCombinedDailyDigest_() {
         hiloPrice: num(rules.hiloMinPrice)
       };
 
+      // Sector Filter: If activeFilters (prefs.scanner.activeFilters) is present, it's an allowlist.
+      // If null/undefined, ALL sectors are allowed.
+      const activeFilters = (prefs.scanner && Array.isArray(prefs.scanner.activeFilters)) 
+        ? new Set(prefs.scanner.activeFilters.map(s => String(s).toUpperCase().trim())) 
+        : null;
+
+      const checkSector = (o) => {
+        if (!activeFilters) return true; // Null means All
+        if (!o || !o.sector) return true; // Allow items with unknown sector (Safety)
+        return activeFilters.has(String(o.sector).toUpperCase().trim());
+      };
+
       // Helper: Does mover qualify for this specific user?
       const qualifies = (o) => {
+        if (!checkSector(o)) return false;
         const live = num(o.live);
         if (t.minPrice && live < t.minPrice) return false;
         const pct = Math.abs(num(o.pct)||0);
@@ -2218,8 +2345,8 @@ function sendCombinedDailyDigest_() {
       const userUp = allUp.filter(qualifies).sort((a,b)=> (num(b.pct)||0) - (num(a.pct)||0));
       
       // Filter 52-Week Hits
-      const userLows = allLows.filter(o => !t.hiloPrice || num(o.live) >= t.hiloPrice).sort((a,b)=> (num(b.live)||0) - (num(a.live)||0));
-      const userHighs = allHighs.filter(o => !t.hiloPrice || num(o.live) >= t.hiloPrice).sort((a,b)=> (num(b.live)||0) - (num(a.live)||0));
+      const userLows = allLows.filter(o => (!t.hiloPrice || num(o.live) >= t.hiloPrice) && checkSector(o)).sort((a,b)=> (num(b.live)||0) - (num(a.live)||0));
+      const userHighs = allHighs.filter(o => (!t.hiloPrice || num(o.live) >= t.hiloPrice) && checkSector(o)).sort((a,b)=> (num(b.live)||0) - (num(a.live)||0));
 
       // Build Mover Map for Personal Alerts Validation
       const moverMap = new Map();

@@ -318,6 +318,46 @@ export class DataService {
         ].slice(0, 50);
     }
 
+    /**
+     * Fetches historical price data.
+     * @param {string} code 
+     * @param {string} range '1y', '5y', 'max'
+     */
+    async fetchHistory(code, range) {
+        try {
+            const user = AuthService.getCurrentUser();
+            const userId = user ? user.uid : null;
+
+            if (!userId) {
+                console.warn('DataService: fetchHistory called without logged-in user.');
+                return { ok: false, error: 'User not logged in' };
+            }
+
+            const payload = {
+                action: 'fetchHistory',
+                userId: userId,
+                code: code,
+                range: range
+            };
+
+            const response = await fetch(this.API_ENDPOINT, {
+                method: 'POST',
+                mode: 'cors',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                return { ok: false, error: `HTTP ${response.status}` };
+            }
+
+            return await response.json();
+        } catch (err) {
+            console.error('DataService: History Fetch Exception:', err);
+            return { ok: false, error: err.message };
+        }
+    }
+
     _normalizePriceData(apiResponse) {
         const normalizedPrices = new Map();
         let dashboardData = [];
