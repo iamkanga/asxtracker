@@ -12,6 +12,7 @@ import { SnapshotUI } from './SnapshotUI.js';
 import { LinkHelper } from '../utils/LinkHelper.js';
 
 import { navManager } from '../utils/NavigationManager.js';
+import { MiniChartPreview, ChartModal } from './ChartModal.js';
 
 export class ViewRenderer {
     constructor() {
@@ -923,7 +924,7 @@ export class ViewRenderer {
                             <div class="${CSS_CLASSES.DETAIL_CARD} ${CSS_CLASSES.CURSOR_POINTER} ${trendBgClass}" data-action="deep-link" data-id="${stock.id}" data-section="target">
                                 <div class="${CSS_CLASSES.DETAIL_CARD_HEADER}" style="display: flex; align-items: center; gap: 8px;">
                                     <h3 class="${CSS_CLASSES.DETAIL_LABEL}" style="display: flex; align-items: center; gap: 8px;">
-                                        <span class="kangaroo-icon-inline" style="width: 1.1em; height: 1.1em;">${KANGAROO_ICON_SVG}</span> Alerts
+                                        <i class="fas fa-crosshairs"></i> Alerts
                                     </h3>
                                 </div>
                                 <div class="${CSS_CLASSES.DETAIL_ROW}">
@@ -955,6 +956,16 @@ export class ViewRenderer {
                                     </div>
                                 </div>
                                 ` : ''}
+
+                            <!-- Card: 52W Chart Preview -->
+                            <div class="${CSS_CLASSES.DETAIL_CARD} ${trendBgClass} ${CSS_CLASSES.CURSOR_POINTER}" id="miniChartCard_${stock.code}">
+                                <div class="${CSS_CLASSES.DETAIL_CARD_HEADER}">
+                                    <h3 class="${CSS_CLASSES.DETAIL_LABEL}">
+                                        <i class="fas ${UI_ICONS.CHART}"></i> 52W Chart Preview
+                                    </h3>
+                                </div>
+                                <div id="miniChartHost_${stock.code}" style="margin-top: 8px;"></div>
+                            </div>
 
                             <!-- Card 5: Entry Details (Decoupled & Decentered) -->
                             <div class="${CSS_CLASSES.DETAIL_CARD} ${trendBgClass} ${CSS_CLASSES.CURSOR_POINTER}" data-action="deep-link" data-id="${stock.id}" data-section="holdings">
@@ -1070,6 +1081,23 @@ export class ViewRenderer {
                     document.dispatchEvent(event);
                 }, 150);
             });
+        }
+
+        // Mini Chart Preview - instantiate and wire click to expand
+        const miniChartHost = modal.querySelector(`#miniChartHost_${stock.code}`);
+        let miniChartInstance = null;
+
+        if (miniChartHost) {
+            // Use day change to determine line color (green if up, red if down)
+            const dayChange = stock.change || stock.dayChangeValue || 0;
+            // Pass callback to open fullscreen chart
+            miniChartInstance = new MiniChartPreview(
+                miniChartHost,
+                stock.code,
+                stock.name,
+                dayChange,
+                () => ChartModal.show(stock.code, stock.name)
+            );
         }
 
         requestAnimationFrame(() => {

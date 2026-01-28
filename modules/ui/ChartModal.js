@@ -657,3 +657,214 @@ export class ChartModal {
         rotator.addEventListener('click', close);
     }
 }
+
+/**
+ * Mini Chart Preview Component
+ * Simplified, non-interactive 52-week line chart for the viewing modal.
+ * Uses day sentiment colors (green/red) and opens full ChartModal on click.
+ */
+export class MiniChartPreview {
+    constructor(container, code, name, dayChange = 0, onExpand = null) {
+        this.container = container;
+        this.code = code;
+        this.name = name;
+        this.dayChange = dayChange; // Used to determine line color
+        this.onExpand = onExpand; // Callback when chart is clicked
+        this.chart = null;
+        this.series = null;
+        this.resizeObserver = null;
+
+        this.init();
+    }
+
+    init() {
+        // Inject mini chart specific styles if not present
+        if (!document.getElementById('mini-chart-preview-styles')) {
+            const style = document.createElement('style');
+            style.id = 'mini-chart-preview-styles';
+            style.textContent = `
+                .mini-chart-container {
+                    width: 100%;
+                    height: 120px;
+                    position: relative;
+                    background: transparent;
+                    border: 1px solid var(--color-accent);
+                    border-radius: 0;
+                    overflow: hidden;
+                    cursor: pointer;
+                    transition: opacity 0.2s;
+                }
+                .mini-chart-container:hover {
+                    opacity: 0.85;
+                }
+                .mini-chart-container:active {
+                    opacity: 0.75;
+                }
+                .mini-chart-stats {
+                    position: absolute;
+                    top: 6px;
+                    left: 8px;
+                    font-size: 0.7rem;
+                    background: transparent;
+                    padding: 0;
+                    z-index: 5;
+                    pointer-events: none;
+                    display: flex;
+                    gap: 10px;
+                }
+                .mini-chart-container canvas,
+                .mini-chart-container table {
+                    pointer-events: none !important;
+                }
+                .mini-chart-loader {
+                    position: absolute;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    color: var(--text-muted);
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        // Build DOM
+        this.container.innerHTML = `
+            <div class="mini-chart-container" title="Tap to expand chart">
+                <div class="mini-chart-stats">
+                    <span class="mini-chart-high" style="color:#06FF4F;">H: --</span>
+                    <span class="mini-chart-low" style="color:#FF3131;">L: --</span>
+                </div>
+                <div class="mini-chart-loader"><i class="fas fa-spinner fa-spin"></i></div>
+            </div>
+        `;
+
+        // Initialize chart
+        this.initChart();
+
+        // Bind click handler to container
+        const chartContainer = this.container.querySelector('.mini-chart-container');
+        if (chartContainer && this.onExpand) {
+            chartContainer.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.onExpand();
+            });
+        }
+
+        // Load 1-year data
+        this.load();
+    }
+
+    initChart() {
+        const div = this.container.querySelector('.mini-chart-container');
+        if (typeof LightweightCharts === 'undefined') {
+            div.innerHTML = '<div style="color:var(--text-muted); padding:20px; text-align:center; font-size:0.8rem;">Chart unavailable</div>';
+            return;
+        }
+
+        this.chart = LightweightCharts.createChart(div, {
+            layout: {
+                background: { type: 'solid', color: 'transparent' },
+                textColor: '#AAA',
+            },
+            grid: {
+                vertLines: { visible: false },
+                horzLines: { visible: false },
+            },
+            width: div.clientWidth,
+            height: div.clientHeight,
+            timeScale: {
+                visible: false, // Hide time axis for clean look
+                borderVisible: false,
+            },
+            rightPriceScale: {
+                visible: true,
+                borderVisible: false,
+                scaleMargins: { top: 0.15, bottom: 0.15 },
+            },
+            crosshair: {
+                mode: 0, // Disable crosshair (non-interactive)
+            },
+            handleScroll: false,
+            handleScale: false,
+        });
+
+        // Create line series with sentiment color
+        const lineColor = this.dayChange >= 0 ? '#06FF4F' : '#FF3131';
+        this.series = this.chart.addLineSeries({
+            color: lineColor,
+            lineWidth: 2,
+            lastValueVisible: false,
+            priceLineVisible: false,
+            crosshairMarkerVisible: false,
+        });
+
+        // Resize Observer
+        this.resizeObserver = new ResizeObserver(entries => {
+            if (!entries[0] || !entries[0].contentRect) return;
+            const { width, height } = entries[0].contentRect;
+            if (this.chart) this.chart.applyOptions({ width, height });
+        });
+        this.resizeObserver.observe(div);
+    }
+
+    async load() {
+        const loader = this.container.querySelector('.mini-chart-loader');
+
+        try {
+            const api = AppState.controller.dataService;
+            if (!api) throw new Error('DataService not ready');
+
+            const res = await api.fetchHistory(this.code, '1y');
+            if (res && res.ok && res.data && this.series) {
+                // Convert to line data format
+                const lineData = res.data.map(d => ({
+                    time: d.time,
+                    value: d.close
+                }));
+
+                this.series.setData(lineData);
+                this._updateStats(res.data);
+                this.chart.timeScale().fitContent();
+            }
+        } catch (e) {
+            console.warn('[MiniChartPreview] Load error:', e);
+        } finally {
+            if (loader) loader.style.display = 'none';
+        }
+    }
+
+    _updateStats(data) {
+        const highEl = this.container.querySelector('.mini-chart-high');
+        const lowEl = this.container.querySelector('.mini-chart-low');
+
+        if (!data || data.length === 0) return;
+
+        let periodHigh = -Infinity;
+        let periodLow = Infinity;
+
+        for (const candle of data) {
+            const h = candle.high !== undefined ? candle.high : candle.close;
+            const l = candle.low !== undefined ? candle.low : candle.close;
+            if (h > periodHigh) periodHigh = h;
+            if (l < periodLow) periodLow = l;
+        }
+
+        const formatPrice = (val) => {
+            if (val >= 10) return '$' + val.toFixed(2);
+            if (val >= 1) return '$' + val.toFixed(3);
+            return '$' + val.toFixed(4);
+        };
+
+        if (highEl) highEl.textContent = 'H: ' + formatPrice(periodHigh);
+        if (lowEl) lowEl.textContent = 'L: ' + formatPrice(periodLow);
+    }
+
+    destroy() {
+        if (this.resizeObserver) this.resizeObserver.disconnect();
+        if (this.chart) {
+            this.chart.remove();
+            this.chart = null;
+        }
+        this.container.innerHTML = '';
+    }
+}
