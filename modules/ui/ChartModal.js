@@ -50,8 +50,8 @@ export class ChartComponent {
                 .${CSS_CLASSES.CHART_CONTROLS} {
                     display: flex;
                     flex-wrap: wrap;
-                    gap: 6px;
-                    padding: 8px;
+                    gap: 4px;
+                    padding: 6px 8px;
                     background: var(--card-bg);
                     border-top: 1px solid var(--border-color);
                     justify-content: center;
@@ -60,7 +60,7 @@ export class ChartComponent {
                 /* Timeframe row - always centered */
                 .chart-timeframe-row {
                     display: flex;
-                    gap: 6px;
+                    gap: 2px;
                     justify-content: center;
                     align-items: center;
                     flex-wrap: wrap;
@@ -90,7 +90,7 @@ export class ChartComponent {
                     }
                     .chart-style-row {
                         width: 100% !important;
-                        margin-top: 4px;
+                        margin-top: 2px;
                     }
                     .chart-controls-separator-landscape {
                         display: none !important;
@@ -100,9 +100,9 @@ export class ChartComponent {
                     background: transparent;
                     border: none;
                     color: #ffffff;
-                    padding: 4px 8px;
+                    padding: 4px 6px;
                     border-radius: 4px;
-                    font-size: 0.85rem;
+                    font-size: 0.8rem;
                     font-weight: 600;
                     cursor: pointer;
                     transition: all 0.2s;
@@ -121,7 +121,7 @@ export class ChartComponent {
                     border: none;
                     color: var(--color-accent);
                     padding: 4px 2px; 
-                    font-size: 0.85rem;
+                    font-size: 0.8rem;
                     font-weight: 600;
                     cursor: pointer;
                     outline: none;
@@ -182,6 +182,12 @@ export class ChartComponent {
                 .chart-modal-fullscreen {
                     align-items: stretch !important;
                     justify-content: stretch !important;
+                }
+                /* Orientation specific header adjustments */
+                @media (orientation: landscape) {
+                    .chart-modal-header {
+                        padding: 4px 16px !important;
+                    }
                 }
             `;
             document.head.appendChild(style);
@@ -531,10 +537,9 @@ export class ChartModal {
         modal.innerHTML = `
             <div class="${CSS_CLASSES.CHART_MODAL_CONTENT}" style="width: 95%; height: 85%; max-width: 900px; display:flex; flex-direction:column; background:var(--card-bg); border-radius:12px; overflow:hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
                 <!-- Header -->
-                <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; border-bottom:1px solid var(--border-color);">
+                <div class="chart-modal-header" style="display:flex; justify-content:space-between; align-items:center; padding:8px 16px; border-bottom:1px solid var(--border-color);">
                     <div>
                         <h3 style="margin:0; font-size:1.2rem; font-weight:700;">${code}</h3>
-                        <span style="font-size:0.85rem; color:var(--text-muted);">${name || ''}</span>
                     </div>
                     <div style="display:flex; gap:12px;">
                         <button id="${IDS.CHART_MODAL_CLOSE}" class="${CSS_CLASSES.CHART_BTN}" style="border:none; font-size:1.2rem;"><i class="fas fa-times"></i></button>
