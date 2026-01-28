@@ -2355,8 +2355,8 @@ function sendCombinedDailyDigest_() {
       const userUp = allUp.filter(o => qualifies(o, false)).sort((a,b)=> (num(b.pct)||0) - (num(a.pct)||0));
       
       // Filter 52-Week Hits (Global - Strict)
-      const userLows = allLows.filter(o => (!t.hiloPrice || num(o.live) >= t.hiloPrice) && checkSector(o)).sort((a,b)=> (num(b.live)||0) - (num(a.live)||0));
-      const userHighs = allHighs.filter(o => (!t.hiloPrice || num(o.live) >= t.hiloPrice) && checkSector(o)).sort((a,b)=> (num(b.live)||0) - (num(a.live)||0));
+      const userLows = allLows.filter(o => (!t.hiloPrice || num(o.live) >= t.hiloPrice) && _isSectorAllowed_(o, prefs)).sort((a,b)=> (num(b.live)||0) - (num(a.live)||0));
+      const userHighs = allHighs.filter(o => (!t.hiloPrice || num(o.live) >= t.hiloPrice) && _isSectorAllowed_(o, prefs)).sort((a,b)=> (num(b.live)||0) - (num(a.live)||0));
 
       // Build Mover Map for Personal Alerts Validation
       const moverMap = new Map();
