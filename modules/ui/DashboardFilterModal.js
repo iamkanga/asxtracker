@@ -283,6 +283,12 @@ export class DashboardFilterModal {
             modal.classList.add(CSS_CLASSES.HIDDEN);
             setTimeout(() => { if (modal.parentElement) modal.remove(); }, 300);
             window.dispatchEvent(new Event('dashboard-prefs-changed'));
+
+            // Navigation Cleanup
+            if (modal._navActive) {
+                modal._navActive = false;
+                navManager.popStateSilently();
+            }
         };
 
         modal.querySelector(`.${CSS_CLASSES.MODAL_CLOSE_BTN}`).onclick = closeModal;

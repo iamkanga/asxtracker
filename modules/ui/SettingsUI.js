@@ -28,6 +28,16 @@ export class SettingsUI {
         // Bind Events (Save, Close)
         this._bindEvents(modal, userId, unsubscribe);
 
+        // Register with NavigationManager
+        modal._navActive = true;
+        navManager.pushState(() => {
+            if (document.contains(modal)) {
+                modal._navActive = false;
+                // Trigger dismissal via the close button to ensure all cleanup (unsubscribes, etc) runs.
+                modal.querySelector(`.${CSS_CLASSES.MODAL_CLOSE_BTN}`)?.click();
+            }
+        });
+
         // Show
         requestAnimationFrame(() => modal.classList.remove(CSS_CLASSES.HIDDEN));
     }

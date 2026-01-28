@@ -6,6 +6,7 @@ import { AppState } from '../state/AppState.js';
 import { CSS_CLASSES, UI_ICONS, EVENTS, WATCHLIST_NAMES, SORT_OPTIONS, WATCHLIST_ICON_POOL } from '../utils/AppConstants.js';
 import { AppController } from '../controllers/AppController.js';
 import { ToastManager } from './ToastManager.js';
+import { navManager } from '../utils/NavigationManager.js';
 
 export class QuickNavUI {
     constructor() {
@@ -232,6 +233,15 @@ export class QuickNavUI {
         this.modal.classList.add(CSS_CLASSES.SHOW);
         this.isVisible = true;
 
+        // Register with NavigationManager
+        this._navActive = true;
+        navManager.pushState(() => {
+            if (this.isVisible) {
+                this._navActive = false;
+                this.hide();
+            }
+        });
+
         // Animate Buttons
         this.saveBtn.style.transform = 'scale(0.8)';
         setTimeout(() => this.saveBtn.style.transform = 'scale(1)', 150);
@@ -241,6 +251,12 @@ export class QuickNavUI {
         this.modal.classList.remove(CSS_CLASSES.SHOW);
         this.modal.classList.add(CSS_CLASSES.HIDDEN);
         this.isVisible = false;
+
+        // Navigation Cleanup: If closed manually, sync history stack
+        if (this._navActive) {
+            this._navActive = false;
+            navManager.popStateSilently();
+        }
 
         // Hide dropdowns
         this.watchlistOptionsContainer.classList.add(CSS_CLASSES.HIDDEN);

@@ -1,6 +1,7 @@
 import { formatCurrency } from '../utils/formatters.js';
 import { UI_ICONS, CSS_CLASSES, IDS } from '../utils/AppConstants.js';
 import { AppState } from '../state/AppState.js';
+import { navManager } from '../utils/NavigationManager.js';
 
 /**
  * Reusable Chart Component
@@ -564,6 +565,12 @@ export class ChartModal {
             }
             chartComp.destroy();
             modal.remove();
+
+            // Navigation Cleanup: If closed manually, sync history stack
+            if (modal._navActive) {
+                modal._navActive = false;
+                navManager.popStateSilently();
+            }
         };
         modal.querySelector(`#${IDS.CHART_MODAL_CLOSE}`).addEventListener('click', close);
 
@@ -660,6 +667,16 @@ export class ChartModal {
 
         // Zoom button closes the modal
         rotator.addEventListener('click', close);
+
+        // --- Navigation Support ---
+        // Register state so back button dismisses the chart
+        modal._navActive = true;
+        navManager.pushState(() => {
+            if (document.contains(modal)) {
+                modal._navActive = false;
+                close();
+            }
+        });
     }
 }
 

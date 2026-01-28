@@ -335,7 +335,12 @@ export const SecurityUI = {
 
         const closeModal = () => {
             modal.remove();
-            navManager.popStateSilently();
+
+            // Navigation Cleanup
+            if (modal._navActive) {
+                modal._navActive = false;
+                navManager.popStateSilently();
+            }
             if (onCancel) onCancel();
         };
 
@@ -359,8 +364,7 @@ export const SecurityUI = {
                 if (val === 'Del') {
                     currentInput = currentInput.slice(0, -1);
                 } else if (val === 'C') {
-                    modal.remove();
-                    if (onCancel) onCancel();
+                    closeModal(); // Use standardized close
                     return;
                 } else if (currentInput.length < 4) {
                     currentInput += val;
@@ -389,6 +393,12 @@ export const SecurityUI = {
                     } else {
                         if (currentInput === firstPin) {
                             controller.setPin(currentInput);
+
+                            // Navigation Cleanup before removal
+                            if (modal._navActive) {
+                                modal._navActive = false;
+                                navManager.popStateSilently();
+                            }
                             modal.remove();
                             if (onSuccess) onSuccess();
                         } else {
