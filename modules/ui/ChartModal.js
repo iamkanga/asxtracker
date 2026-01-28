@@ -736,8 +736,8 @@ export class MiniChartPreview {
         this.container.innerHTML = `
             <div class="mini-chart-container" title="Tap to expand chart">
                 <div class="mini-chart-stats">
-                    <span class="mini-chart-high" style="color:#06FF4F;">H: --</span>
                     <span class="mini-chart-low" style="color:#FF3131;">L: --</span>
+                    <span class="mini-chart-high" style="color:#06FF4F;">H: --</span>
                 </div>
                 <div class="mini-chart-loader"><i class="fas ${UI_ICONS.SPINNER} fa-spin"></i></div>
             </div>
@@ -793,8 +793,8 @@ export class MiniChartPreview {
             handleScale: false,
         });
 
-        // Create line series with sentiment color or custom color
-        const lineColor = this.customColor || (this.dayChange >= 0 ? '#06FF4F' : '#FF3131');
+        // Create line series with standard Coffee color (overridable via customColor)
+        const lineColor = this.customColor || '#a49393';
         this.series = this.chart.addLineSeries({
             color: lineColor,
             lineWidth: 2,
@@ -812,15 +812,20 @@ export class MiniChartPreview {
         this.resizeObserver.observe(div);
     }
 
-    async load() {
+    async load(retries = 3) {
         const loader = this.container.querySelector('.mini-chart-loader');
+
+        // Jitter: Add random delay (0-500ms) to scatter simultaneous requests (e.g. initial scroll)
+        await new Promise(resolve => setTimeout(resolve, Math.random() * 500));
 
         try {
             const api = AppState.controller.dataService;
             if (!api) throw new Error('DataService not ready');
 
             const res = await api.fetchHistory(this.code, '1y');
-            if (res && res.ok && res.data && this.series) {
+
+            // Check specifically for valid data array
+            if (res && res.ok && Array.isArray(res.data) && res.data.length > 0 && this.series) {
                 // Convert to line data format
                 const lineData = res.data.map(d => ({
                     time: d.time,
@@ -830,13 +835,27 @@ export class MiniChartPreview {
                 this.series.setData(lineData);
                 this._updateStats(res.data);
                 this.chart.timeScale().fitContent();
+
+                // Hide loader only on success
+                if (loader) loader.style.display = 'none';
+            } else {
+                console.warn('[MiniChartPreview] Invalid response debug:', { code: this.code, res });
+                throw new Error('Invalid data response');
             }
         } catch (e) {
-            console.warn('[MiniChartPreview] Load error:', e);
-        } finally {
-            if (loader) loader.style.display = 'none';
+            console.warn(`[MiniChartPreview] Load error (${retries} retries left):`, e);
+            if (retries > 0) {
+                // Backoff retry: 1.5s, 3s, 4.5s
+                const delay = (4 - retries) * 1500;
+                setTimeout(() => this.load(retries - 1), delay);
+            } else {
+                // Final failure: Hide loader to keep UI clean
+                if (loader) loader.style.display = 'none';
+            }
         }
     }
+
+    // ... (rest of file)
 
     _updateStats(data) {
         const highEl = this.container.querySelector('.mini-chart-high');

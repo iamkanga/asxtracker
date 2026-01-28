@@ -324,6 +324,25 @@ export class DataService {
      * @param {string} range '1y', '5y', 'max'
      */
     async fetchHistory(code, range) {
+        // CACHE IMPLEMENTATION: Check localStorage first to save API quota
+        // Key format: asx_history_{code}_{range}
+        // Expiry: 24 hours
+        const cacheKey = `asx_history_${code}_${range}`;
+        const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
+
+        try {
+            const cached = localStorage.getItem(cacheKey);
+            if (cached) {
+                const { timestamp, data } = JSON.parse(cached);
+                if (Date.now() - timestamp < CACHE_DURATION) {
+                    // console.log(`[DataService] Serving cached history for ${code}`);
+                    return data; // Return valid cached data
+                }
+            }
+        } catch (e) {
+            console.warn('[DataService] Cache read error:', e);
+        }
+
         try {
             const user = AuthService.getCurrentUser();
             const userId = user ? user.uid : null;
@@ -351,7 +370,22 @@ export class DataService {
                 return { ok: false, error: `HTTP ${response.status}` };
             }
 
-            return await response.json();
+            const json = await response.json();
+
+            // Cache successful valid responses only
+            if (json && json.ok && Array.isArray(json.data) && json.data.length > 0) {
+                try {
+                    localStorage.setItem(cacheKey, JSON.stringify({
+                        timestamp: Date.now(),
+                        data: json
+                    }));
+                } catch (e) {
+                    // Quota exceeded or storage full
+                    console.warn('[DataService] Cache write error:', e);
+                }
+            }
+
+            return json;
         } catch (err) {
             console.error('DataService: History Fetch Exception:', err);
             return { ok: false, error: err.message };

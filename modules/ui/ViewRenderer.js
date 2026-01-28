@@ -2404,24 +2404,53 @@ export class ViewRenderer {
     _initPortfolioCharts(data) {
         if (!data || data.length === 0) return;
 
-        // Debounce / Stagger execution to avoid UI freeze if list is large
-        // We just do a simple loop here but in real world maybe IntersectionObserver
-        data.forEach(item => {
-            const container = document.getElementById(`bg-chart-${item.id}`);
-            if (container && this.container.contains(container)) {
-                // Ensure no existing chart content
-                if (container.querySelector('div')) return;
+        // Disconnect existing observer to prevent leaks or zombie callbacks
+        if (this.portfolioChartObserver) {
+            this.portfolioChartObserver.disconnect();
+            this.portfolioChartObserver = null;
+        }
 
-                const dayChange = Number(item.dayChangeValue) || 0;
+        // Create IntersectionObserver for lazy loading
+        this.portfolioChartObserver = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const container = entry.target;
 
-                // Initialize MiniChartPreview
-                // Note: This triggers a data fetch (fetchHistory) for each item.
-                // We trust the browser queue to handle 20-30 requests.
-                new MiniChartPreview(container, item.code, item.name, dayChange, () => {
-                    // Tap to expand
-                    ChartModal.show(item.code, item.name);
-                }, false, '#a49393'); // Hide price scale, use Coffee color
-            }
+                    // Stop observing immediately
+                    observer.unobserve(container);
+
+                    // Get metadata
+                    const code = container.dataset.code;
+                    const change = Number(container.dataset.change) || 0;
+
+                    // Lookup item for name (safer than dataset encoding)
+                    const item = data.find(d => d.code === code);
+                    const name = item ? item.name : code;
+
+                    // Ensure no existing chart
+                    if (container.querySelector('div')) return;
+
+                    // Hydrate chart
+                    new MiniChartPreview(container, code, name, change, () => {
+                        ChartModal.show(code, name);
+                    }, false, '#a49393');
+                }
+            });
+        }, {
+            root: null, // viewport
+            rootMargin: '100px', // Load shortly before appearing
+            threshold: 0.01
+        });
+
+        // Observe elements
+        // We use requestAnimationFrame to ensure DOM is ready
+        requestAnimationFrame(() => {
+            data.forEach(item => {
+                const container = document.getElementById(`bg-chart-${item.id}`);
+                if (container) {
+                    this.portfolioChartObserver.observe(container);
+                }
+            });
         });
     }
 }
