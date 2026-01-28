@@ -506,7 +506,7 @@ export class ViewRenderer {
                     </div>
                     <div class="${CSS_CLASSES.SNAPSHOT_FOOTER}">
                         <span class="${CSS_CLASSES.CHANGE_VALUE} ${CSS_CLASSES.TEXT_SM}">${formatCurrency(changeValue)}</span>
-                        <span class="${CSS_CLASSES.CHANGE_VALUE} ${CSS_CLASSES.TEXT_SM}">${formatPercent(changePercent)}</span>
+                        <span class="${CSS_CLASSES.CHANGE_PERCENT} ${CSS_CLASSES.TEXT_SM}">${formatPercent(changePercent)}</span>
                     </div>
                 </div>
             `;
@@ -519,7 +519,7 @@ export class ViewRenderer {
                     </div>
                     <div class="${CSS_CLASSES.SNAPSHOT_FOOTER}">
                         <span class="${CSS_CLASSES.CHANGE_VALUE} ${CSS_CLASSES.TEXT_SM}">${formatCurrency(changeValue)}</span>
-                        <span class="${CSS_CLASSES.CHANGE_VALUE} ${CSS_CLASSES.TEXT_SM}">${formatPercent(changePercent)}</span>
+                        <span class="${CSS_CLASSES.CHANGE_PERCENT} ${CSS_CLASSES.TEXT_SM}">${formatPercent(changePercent)}</span>
                     </div>
                 </div>
             `;

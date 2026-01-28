@@ -6603,12 +6603,14 @@ tr.trend-neutral,
 
 /* Internal Trend Text Coloring */
 .trend-up .change-value,
+.trend-up .change-percent,
 .trend-up .chevron-icon,
 .trend-up .fa-caret-up {
     color: var(--positive);
 }
 
 .trend-down .change-value,
+.trend-down .change-percent,
 .trend-down .chevron-icon,
 .trend-down .fa-caret-down {
     color: var(--negative);
@@ -6616,7 +6618,8 @@ tr.trend-neutral,
 
 .trend-neutral .chevron-icon,
 .trend-neutral .fa-minus,
-.trend-neutral .change-value {
+.trend-neutral .change-value,
+.trend-neutral .change-percent {
     color: var(--primary-color) !important;
 }
 
@@ -8209,11 +8212,11 @@ body.dark-theme .calc-result-card {
     }
 
     .change-value {
-        font-size: 1.0rem !important;
+        font-size: 0.85rem;
     }
 
     .change-percent {
-        font-size: 0.75rem !important;
+        font-size: 0.85rem;
     }
 
     /* Overflow Protection: Ensure flex items can shrink in narrow cards */
