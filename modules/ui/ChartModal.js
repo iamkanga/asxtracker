@@ -194,8 +194,8 @@ export class ChartComponent {
                         <i class="fas fa-spinner fa-spin fa-2x"></i>
                     </div>
                     <div class="chart-period-overlay" id="chartPeriodStats_${this.code}">
-                        <span class="chart-period-high" style="color:#06FF4F;">H: --</span>
-                        <span class="chart-period-low" style="color:#FF3131; margin-left:8px;">L: --</span>
+                        <span class="chart-period-low" style="color:#FF3131;">L: --</span>
+                        <span class="chart-period-high" style="color:#06FF4F; margin-left:8px;">H: --</span>
                     </div>
                 </div>
                 <div class="${CSS_CLASSES.CHART_CONTROLS}">
@@ -235,8 +235,8 @@ export class ChartComponent {
     }
 
     _renderRangeButtons() {
-        // Updated Ranges: 1D, 5D, 1M, ..., Max
-        const ranges = ['1d', '5d', '1m', '3m', '6m', '1y', '5y', 'max'];
+        // Updated Ranges: 1D, 5D, 1M, ..., 10Y, Max
+        const ranges = ['1d', '5d', '1m', '3m', '6m', '1y', '5y', '10y', 'max'];
         return ranges.map(r =>
             `<button class="${CSS_CLASSES.CHART_BTN} ${this.currentRange === r ? 'active' : ''}" data-range="${r}">${r.toUpperCase()}</button>`
         ).join('');
@@ -417,7 +417,8 @@ export class ChartComponent {
                 this.cachedData = res.data; // Store for style switching
 
                 // Set data based on current style
-                if (this.series) {
+                // Set data based on current style
+                if (this.chart && this.series) {
                     let dataToSet = this.cachedData;
                     if (this.currentStyle === 'line' || this.currentStyle === 'area') {
                         dataToSet = this.cachedData.map(d => ({
@@ -425,10 +426,14 @@ export class ChartComponent {
                             value: d.close
                         }));
                     }
-                    this.series.setData(dataToSet);
-                    this._updateLastPriceLine(dataToSet);
-                    this._updatePeriodStats(this.cachedData);
-                    this.chart.timeScale().fitContent();
+                    try {
+                        this.series.setData(dataToSet);
+                        this._updateLastPriceLine(dataToSet);
+                        this._updatePeriodStats(this.cachedData);
+                        if (this.chart) this.chart.timeScale().fitContent();
+                    } catch (err) {
+                        console.warn('Error updating chart data:', err);
+                    }
                 }
             } else {
                 console.warn('Chart load failed:', res);
