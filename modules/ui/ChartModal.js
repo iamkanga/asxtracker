@@ -664,12 +664,14 @@ export class ChartModal {
  * Uses day sentiment colors (green/red) and opens full ChartModal on click.
  */
 export class MiniChartPreview {
-    constructor(container, code, name, dayChange = 0, onExpand = null) {
+    constructor(container, code, name, dayChange = 0, onExpand = null, showScale = true, customColor = null) {
         this.container = container;
         this.code = code;
         this.name = name;
         this.dayChange = dayChange; // Used to determine line color
         this.onExpand = onExpand; // Callback when chart is clicked
+        this.showScale = showScale; // Control price scale visibility
+        this.customColor = customColor; // Override sentiment color
         this.chart = null;
         this.series = null;
         this.resizeObserver = null;
@@ -677,7 +679,10 @@ export class MiniChartPreview {
         this.init();
     }
 
+    // ... (init method remains same)
+
     init() {
+        // ... (styles injection remains same)
         // Inject mini chart specific styles if not present
         if (!document.getElementById('mini-chart-preview-styles')) {
             const style = document.createElement('style');
@@ -734,7 +739,7 @@ export class MiniChartPreview {
                     <span class="mini-chart-high" style="color:#06FF4F;">H: --</span>
                     <span class="mini-chart-low" style="color:#FF3131;">L: --</span>
                 </div>
-                <div class="mini-chart-loader"><i class="fas fa-spinner fa-spin"></i></div>
+                <div class="mini-chart-loader"><i class="fas ${UI_ICONS.SPINNER} fa-spin"></i></div>
             </div>
         `;
 
@@ -777,7 +782,7 @@ export class MiniChartPreview {
                 borderVisible: false,
             },
             rightPriceScale: {
-                visible: true,
+                visible: this.showScale,
                 borderVisible: false,
                 scaleMargins: { top: 0.15, bottom: 0.15 },
             },
@@ -788,8 +793,8 @@ export class MiniChartPreview {
             handleScale: false,
         });
 
-        // Create line series with sentiment color
-        const lineColor = this.dayChange >= 0 ? '#06FF4F' : '#FF3131';
+        // Create line series with sentiment color or custom color
+        const lineColor = this.customColor || (this.dayChange >= 0 ? '#06FF4F' : '#FF3131');
         this.series = this.chart.addLineSeries({
             color: lineColor,
             lineWidth: 2,

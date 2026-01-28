@@ -152,6 +152,13 @@ export class ViewRenderer {
             const html = data.map(item => this.createCardHTML(item, 'portfolio')).join('');
             gridContainer.innerHTML = html;
             this.container.appendChild(gridContainer);
+
+            // Hydrate background charts (delayed significantly to prioritize UI paint)
+            setTimeout(() => {
+                requestAnimationFrame(() => {
+                    this._initPortfolioCharts(data);
+                });
+            }, 150);
         } else {
             // 2. Standard Table (Desktop View)
             const table = document.createElement('table');
@@ -377,9 +384,16 @@ export class ViewRenderer {
             // For the new Portfolio Card, always use TOTAL holding change
             const displayChangeValue = item.dayChangeValue || 0;
 
+            // Background Chart Container (Hydrated post-render)
+            // Using ID based on item ID to ensure uniqueness
+            const chartBgHtml = `
+                <div class="portfolio-card-chart-bg" id="bg-chart-${item.id}" data-code="${item.code}" data-change="${item.dayChangeValue || 0}"></div>
+            `;
+
             return `
                 <div class="${CSS_CLASSES.CARD} ${trendClass} ${gradeClass} ${ghostClass}" data-id="${item.id}" data-code="${item.code}" style="${borderStyle}">
-                    <div class="${CSS_CLASSES.CARD_HEADER_ROW} ${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.JUSTIFY_BETWEEN} ${CSS_CLASSES.ALIGN_START} ${CSS_CLASSES.W_FULL} ${CSS_CLASSES.MB_2PX} ${CSS_CLASSES.BORDER_NONE}">
+                    ${chartBgHtml}
+                    <div class="${CSS_CLASSES.CARD_HEADER_ROW} ${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.JUSTIFY_BETWEEN} ${CSS_CLASSES.ALIGN_START} ${CSS_CLASSES.W_FULL} ${CSS_CLASSES.MB_2PX} ${CSS_CLASSES.BORDER_NONE}" style="position:relative; z-index:1;">
                         <div class="${CSS_CLASSES.CARD_HEADER_LEFT} ${CSS_CLASSES.FLEX_COLUMN} ${CSS_CLASSES.ALIGN_START} ${CSS_CLASSES.GAP_SMALL}">
                             <span class="${CSS_CLASSES.CARD_CODE}" data-code="${item.code}">${item.code}</span>
                             <button class="${CSS_CLASSES.ICON_BTN_GHOST} ${CSS_CLASSES.VISIBILITY_TOGGLE_BTN} ${CSS_CLASSES.P_0} ${CSS_CLASSES.TEXT_SM} ${CSS_CLASSES.MT_NEG_2PX}" 
@@ -399,7 +413,7 @@ export class ViewRenderer {
                         </div>
                     </div>
 
-                    <div class="${CSS_CLASSES.CARD_BODY_SECTION} ${CSS_CLASSES.W_FULL} ${CSS_CLASSES.MT_TINY} ${CSS_CLASSES.PT_SMALL} ${CSS_CLASSES.BORDER_TOP_NONE}">
+                    <div class="${CSS_CLASSES.CARD_BODY_SECTION} ${CSS_CLASSES.W_FULL} ${CSS_CLASSES.MT_TINY} ${CSS_CLASSES.PT_SMALL} ${CSS_CLASSES.BORDER_TOP_NONE}" style="position:relative; z-index:1;">
                         <div class="${CSS_CLASSES.DETAIL_ROW} ${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.JUSTIFY_BETWEEN} ${CSS_CLASSES.PY_TINY}">
                             <span class="${CSS_CLASSES.DETAIL_LABEL}">Current Value</span>
                             <span class="${CSS_CLASSES.DETAIL_VALUE} ${CSS_CLASSES.FONT_BOLD}">${formatCurrency(value)}</span>
@@ -2375,5 +2389,39 @@ export class ViewRenderer {
         if (s[3]) shadows.push(`inset ${t} 0 0 0 ${color}`); // Left
 
         return shadows.length ? `box-shadow: ${shadows.join(', ')} !important; border-radius: 0 !important;` : '';
+    }
+
+    /**
+     * Calculates the percentage position for the 52-week range marker.
+     * @private
+     */
+
+
+    /**
+     * Initializes background charts for Portfolio cards using MiniChartPreview.
+     * @private
+     */
+    _initPortfolioCharts(data) {
+        if (!data || data.length === 0) return;
+
+        // Debounce / Stagger execution to avoid UI freeze if list is large
+        // We just do a simple loop here but in real world maybe IntersectionObserver
+        data.forEach(item => {
+            const container = document.getElementById(`bg-chart-${item.id}`);
+            if (container && this.container.contains(container)) {
+                // Ensure no existing chart content
+                if (container.querySelector('div')) return;
+
+                const dayChange = Number(item.dayChangeValue) || 0;
+
+                // Initialize MiniChartPreview
+                // Note: This triggers a data fetch (fetchHistory) for each item.
+                // We trust the browser queue to handle 20-30 requests.
+                new MiniChartPreview(container, item.code, item.name, dayChange, () => {
+                    // Tap to expand
+                    ChartModal.show(item.code, item.name);
+                }, false, '#a49393'); // Hide price scale, use Coffee color
+            }
+        });
     }
 }

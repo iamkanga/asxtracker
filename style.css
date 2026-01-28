@@ -9598,3 +9598,32 @@ body.dashboard-active .sidebar {
 .connection-dot:not(.connected) {
     animation: pulse-red 2s infinite;
 }
+
+/* -------------------------------------------------------------------------- */
+/*                       PORTFOLIO BACKGROUND CHART                           */
+/* -------------------------------------------------------------------------- */
+
+.portfolio-card-chart-bg {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    opacity: 0.25;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+/* Overrides for MiniChartPreview when used in background */
+.portfolio-card-chart-bg .mini-chart-container {
+    width: 100% !important;
+    height: 100% !important;
+    border: none !important;
+    background: transparent !important;
+    opacity: 1 !important;
+    /* Managed by parent */
+    border-radius: 0 !important;
+}
+
+.portfolio-card-chart-bg .mini-chart-stats,
+.portfolio-card-chart-bg .mini-chart-loader {
+    display: none !important;
+}

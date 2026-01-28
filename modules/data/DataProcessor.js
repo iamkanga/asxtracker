@@ -171,7 +171,9 @@ export function processShares(allShares, watchlistId, livePrices, sortConfig, hi
             comments: normalizeComments(share.comments),
             isHidden: hiddenAssets.has(String(share.id)),
             sector: priceData ? priceData.sector : (share.sector || ''),
-            industry: priceData ? priceData.industry : (share.industry || '')
+            industry: priceData ? priceData.industry : (share.industry || ''),
+            high52: priceData ? priceData.high : 0,
+            low52: priceData ? priceData.low : 0
         };
 
         processedMap.set(lookupKey, processedShare);
