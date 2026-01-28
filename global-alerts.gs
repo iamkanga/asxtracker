@@ -16,7 +16,7 @@
 
 // ======================== CONFIGURATION ========================
 const GAS_CONFIG = {
-  VERSION: '2.5.2 (Constitutional Hardening)',
+  VERSION: '2.6.0 (Refactored)',
   TIME_ZONE: 'Australia/Sydney',
   FIREBASE: {
     PROJECT_ID: 'asx-watchlist-app',
@@ -29,8 +29,8 @@ const GAS_CONFIG = {
     SUPPRESSION_LOG: 'Suppression Log'
   },
   HOLIDAYS: [
-    '2025-01-01', '2025-01-27', '2025-04-18', '2025-04-21',
-    '2025-04-25', '2025-06-09', '2025-12-25', '2025-12-26'
+    '2026-01-01', '2026-01-26', '2026-04-03', '2026-04-06',
+    '2026-04-25', '2026-06-08', '2026-12-25', '2026-12-28'
   ],
   EMAIL: {
     SUBJECT_PREFIX: 'ASX Daily Briefing',
@@ -52,7 +52,7 @@ const DAILY_HILO_HITS_DOC_SEGMENTS = ['artifacts', APP_ID, 'alerts', 'DAILY_HILO
 const DAILY_MOVERS_HITS_DOC_SEGMENTS = ['artifacts', APP_ID, 'alerts', 'DAILY_MOVERS_HITS'];
 const DAILY_CUSTOM_HITS_DOC_SEGMENTS = ['artifacts', APP_ID, 'alerts', 'DAILY_CUSTOM_TRIGGER_HITS'];
 
-const ASX_HOLIDAYS_2025 = new Set(GAS_CONFIG.HOLIDAYS);
+const ASX_HOLIDAYS_CURRENT = new Set(GAS_CONFIG.HOLIDAYS);
 
 /** Check if today (Sydney time) is a trading day (Mon-Fri, non-holiday). */
 function isTradingDay_(dateObj) {
@@ -67,7 +67,7 @@ function isTradingDay_(dateObj) {
   }
   
   // 2. Holiday Check
-  if (ASX_HOLIDAYS_2025.has(dayStr)) {
+  if (ASX_HOLIDAYS_CURRENT.has(dayStr)) {
     Logger.log('[isTradingDay] Skipping: Public Holiday (' + dayStr + ')');
     return false;
   }
@@ -109,6 +109,63 @@ function _collectFieldPaths_(prefix, obj, out) {
       out.push(path);
     }
   });
+}
+
+/** Unified utility to parse various price formats (text, $, c, commas). */
+function _parseNum_(v) {
+  if (v === null || v === undefined || v === '') return null;
+  if (typeof v === 'number') return isFinite(v) ? v : null;
+  let s = String(v).trim();
+  if (!s) return null;
+  
+  // Clean separators and currency symbols
+  s = s.replace(/[$, ]/g,'');
+  
+  // Handle 'c' or 'cents' for small cap stocks (e.g. 50c -> 0.5)
+  const centsMatch = /^([0-9.]+)(c|cents?)$/i.exec(s);
+  if (centsMatch) {
+    const val = parseFloat(centsMatch[1]);
+    return isFinite(val) ? (val / 100) : null;
+  }
+  
+  const n = parseFloat(s);
+  return (isNaN(n) || !isFinite(n)) ? null : n;
+}
+
+/** Robust column index finder using standard aliases. */
+function _getColIdx_(headers, patterns) {
+  const norm = (s) => String(s).replace(/[^A-Z0-9]/gi, '').toUpperCase();
+  const patternNorms = (Array.isArray(patterns) ? patterns : [patterns]).map(norm);
+  return headers.findIndex(h => {
+    const hn = norm(h);
+    return patternNorms.includes(hn);
+  });
+}
+
+/** Centralized Sector/Industry permission logic. */
+function _isSectorAllowed_(item, prefs, debug = false) {
+  const s = item.sector ? String(item.sector).toUpperCase().trim() : null;
+  const i = item.industry ? String(item.industry).toUpperCase().trim() : null;
+
+  // 1. Blocklist (Hidden Sectors)
+  if (Array.isArray(prefs.hiddenSectors)) {
+    const hidden = new Set(prefs.hiddenSectors.map(x => String(x).toUpperCase().trim()));
+    if (s && hidden.has(s)) return false;
+    if (i && hidden.has(i)) return false;
+  }
+
+  // 2. Allowlist (Active Filters)
+  const filters = (prefs.scanner && Array.isArray(prefs.scanner.activeFilters))
+    ? new Set(prefs.scanner.activeFilters.map(x => String(x).toUpperCase().trim()))
+    : null;
+    
+  if (!filters) return true; // Default allow all
+
+  // Check Industry first (granular), then Sector
+  if (i && filters.has(i)) return true;
+  if (s && filters.has(s)) return true;
+
+  return false;
 }
 
 /**
@@ -233,7 +290,9 @@ function runGlobal52WeekScan() {
           high52: isNaN(stock.high52)? null : stock.high52,
           low52: isNaN(stock.low52)? null : stock.low52,
           marketCap: (stock.marketCap!=null && !isNaN(stock.marketCap)) ? stock.marketCap : null,
-          prevClose: (stock.prevClose!=null && !isNaN(stock.prevClose)) ? stock.prevClose : null
+          prevClose: (stock.prevClose!=null && !isNaN(stock.prevClose)) ? stock.prevClose : null,
+          sector: stock.sector || null,
+          industry: stock.industry || null
         };
         if (reachedLow) lowObjs.push(o);
         if (reachedHigh) highObjs.push(o);
@@ -482,100 +541,50 @@ function discoverBestModel_(key) {
 function fetchAllAsxData_(spreadsheet) {
   const sheet = spreadsheet.getSheetByName(PRICE_SHEET_NAME);
   if (!sheet) return [];
-  const values = sheet.getDataRange().getValues();
-  if (!values.length) return [];
-  const headers = values.shift();
-  const map = headers.reduce((acc,h,i)=>{
-    const key = String(h).trim();
-    acc[key]=i;
-    return acc;
-  },{});
-  const nameKey = ['Company Name','CompanyName','Name'].find(k=> map[k]!=null);
-  const prevKey = map['PrevDayClose']!=null ? 'PrevDayClose' : (map['PrevClose']!=null ? 'PrevClose' : null);
-  // LOGIC HARDENING: Fuzzy match helper
-  const findKey = (pattern) => Object.keys(map).find(k => pattern.test(String(k)));
-  const findIdx = (pattern) => headers.findIndex(h => pattern.test(String(h)));
-
-  const apiPrevKey = findKey(/api.*prev/i) || findKey(/prev.*api/i) || findKey(/pi.*prev/i) || ['API_PrevClose','APIPrevClose','ApiPrevClose','APIPREVCLOSE','PIPREVCLOSE'].find(k=> map[k]!=null);
+  const data = sheet.getDataRange().getValues();
+  if (data.length < 2) return [];
+  const headers = data.shift();
   
-  // Robust search for API_Price
-  const apiPriceIdx = findIdx(/api.*price/i) || findIdx(/price.*api/i) || findIdx(/pi.*price/i);
-
-  // Robust case-insensitive lookup for Sector/Industry
-  const sectorKey = ['Sector','Category'].find(k => findKey(new RegExp('^' + k + '$', 'i')));
-  const industryKey = ['Industry'].find(k => findKey(new RegExp('^' + k + '$', 'i')));
-
-  // Expand live price detection to handle alternative column headers used in some sheets
-  const liveKey = (function(){
-    const candidates = ['LivePrice','Last','LastPrice','Last Trade','LastTrade','Last trade'];
-    for (let k of candidates) { if (map[k] != null) return k; }
-    return 'LivePrice';
-  })();
-
-  // Helper to parse currency strings (e.g. "$54.10", "1,200.50")
-  const cleanFloat = (v) => {
-    if (v == null) return NaN;
-    if (typeof v === 'number') return v;
-    const s = String(v).replace(/[$,]/g, '').trim();
-    return parseFloat(s);
+  // Column Mapping
+  const idx = {
+    code: _getColIdx_(headers, ['ASXCODE', 'CODE']),
+    name: _getColIdx_(headers, ['COMPANYNAME', 'NAME', 'COMPANY NAME']),
+    live: _getColIdx_(headers, ['LIVEPRICE', 'LAST', 'LASTPRICE', 'PRICE']),
+    prev: _getColIdx_(headers, ['PREVDAYCLOSE', 'PREVCLOSE', 'PREVIOUSCLOSE']),
+    high: _getColIdx_(headers, ['HIGH52', '52WEEKHIGH', 'HIGH52WEEK']),
+    low: _getColIdx_(headers, ['LOW52', '52WEEKLOW', 'LOW52WEEK']),
+    mcap: _getColIdx_(headers, ['MARKETCAP', 'MCAP', 'MARKET CAP']),
+    sector: _getColIdx_(headers, ['SECTOR', 'CATEGORY']),
+    industry: _getColIdx_(headers, ['INDUSTRY']),
+    apiPrice: _getColIdx_(headers, ['APIPRICE', 'PIPRICE']),
+    apiPrev: _getColIdx_(headers, ['APIPREVCLOSE', 'PIPREVCLOSE']),
+    apiHigh: _getColIdx_(headers, ['APIHIGH', 'API52WHIGH', 'APIHIGH52']),
+    apiLow: _getColIdx_(headers, ['APILOW', 'PI52WLOW', 'APILOW52'])
   };
 
-  return values.map(r => {
-    let live = (map[liveKey] != null) ? cleanFloat(r[map[liveKey]]) : cleanFloat(r[map['LivePrice']]);
-    
-    // Recovery Logic: If Google returns 0 or #N/A, check the API_Price column
-    if ((live == null || isNaN(live) || live === 0) && apiPriceIdx != null) {
-      const fallback = cleanFloat(r[apiPriceIdx]);
-      if (fallback != null && !isNaN(fallback) && fallback > 0) {
-        live = fallback;
-      }
-    }
+  return data.map(r => {
+    let live = _parseNum_(r[idx.live]);
+    if ((live === null || live === 0) && idx.apiPrice !== -1) live = _parseNum_(r[idx.apiPrice]);
 
-    // PrevClose Recovery
-    let prev = prevKey ? cleanFloat(r[map[prevKey]]) : null;
-    const apiPrevIdx = apiPrevKey ? map[apiPrevKey] : -1;
-    if ((prev == null || isNaN(prev) || prev === 0) && apiPrevIdx != -1) {
-        const val = cleanFloat(r[apiPrevIdx]);
-        if (val > 0) prev = val;
-    }
+    let prev = _parseNum_(r[idx.prev]);
+    if ((prev === null || prev === 0) && idx.apiPrev !== -1) prev = _parseNum_(r[idx.apiPrev]);
 
-    // Primary Column Robustness (Fuzzy regex)
-    const highIdx = findIdx(/high.*52|52.*high/i);
-    const lowIdx = findIdx(/low.*52|52.*low/i);
-    const mcapIdx = findIdx(/market.*cap|mcap/i);
+    let high = _parseNum_(r[idx.high]);
+    if ((high === null || high === 0) && idx.apiHigh !== -1) high = _parseNum_(r[idx.apiHigh]);
 
-    let high52 = highIdx !== -1 ? cleanFloat(r[highIdx]) : cleanFloat(r[map['High52']]);
-    let low52 = lowIdx !== -1 ? cleanFloat(r[lowIdx]) : cleanFloat(r[map['Low52']]);
-
-    // API Recovery for High/Low
-    // LOGIC HARDENING: Reuse fuzzy findKey from above
-    // Look for "API" and "High" (e.g. "API_High52", "API High", "APIHigh")
-    const apiHighKey = findKey(/api.*high/i) || findKey(/high.*api/i) || findKey(/api.*hi/i);
-    
-    // Look for "API" and "Low" (e.g. "API_Low52", "API Low", "APILow")
-    const apiLowKey = findKey(/api.*low/i) || findKey(/low.*api/i) || findKey(/api.*lo/i);
-
-    if ((isNaN(high52) || high52 === 0) && apiHighKey) {
-      const v = cleanFloat(r[map[apiHighKey]]);
-      if (v > 0) high52 = v;
-    }
-
-    if ((isNaN(low52) || low52 === 0) && apiLowKey) {
-      const v = cleanFloat(r[map[apiLowKey]]);
-      if (v > 0) low52 = v;
-    }
-
+    let low = _parseNum_(r[idx.low]);
+    if ((low === null || low === 0) && idx.apiLow !== -1) low = _parseNum_(r[idx.apiLow]);
 
     return {
-      code: r[map['ASX Code']],
-      name: nameKey ? r[map[nameKey]] : null,
+      code: r[idx.code],
+      name: r[idx.name] || null,
       livePrice: live,
-      high52: high52,
-      low52: low52,
-      marketCap: mcapIdx !== -1 ? cleanFloat(r[mcapIdx]) : cleanFloat(r[map['MarketCap']]),
+      high52: high,
+      low52: low,
+      marketCap: _parseNum_(r[idx.mcap]),
       prevClose: prev,
-      sector: sectorKey ? String(r[map[sectorKey]]).trim() : null,
-      industry: industryKey ? String(r[map[industryKey]]).trim() : null
+      sector: r[idx.sector] ? String(r[idx.sector]).trim() : null,
+      industry: r[idx.industry] ? String(r[idx.industry]).trim() : null
     };
   });
 }
@@ -703,27 +712,6 @@ function appendDailyHiLoHits_(highsArr, lowsArr) {
 
 // (Test harness removed for production)
 
-function sendHiLoEmailIfAny_(results, settings) {
-  // Disabled: email sending for hi/lo from frequent scan moved to daily digest only.
-  // Keep a lightweight log for diagnostics.
-  try {
-    const highsCount = (results && Array.isArray(results.highs)) ? results.highs.length : 0;
-    const lowsCount = (results && Array.isArray(results.lows)) ? results.lows.length : 0;
-    if (!highsCount && !lowsCount) return;
-    console.log('[sendHiLoEmailIfAny_] Disabled email send – hi/lo results:', { highs: highsCount, lows: lowsCount });
-  } catch (e) { console.log('[sendHiLoEmailIfAny_] Disabled function error:', e); }
-}
-
-function sendMoversEmailIfAny_(results, settings) {
-  // Disabled: email sending for movers from frequent scan moved to daily digest only.
-  // Keep a lightweight log for diagnostics.
-  try {
-    const upCount = (results && Array.isArray(results.up)) ? results.up.length : 0;
-    const downCount = (results && Array.isArray(results.down)) ? results.down.length : 0;
-    if (!upCount && !downCount) return;
-    console.log('[sendMoversEmailIfAny_] Disabled email send – movers results:', { up: upCount, down: downCount });
-  } catch (e) { console.log('[sendMoversEmailIfAny_] Disabled function error:', e); }
-}
 
 // ===============================================================
 // ================== GLOBAL MOVERS (CENTRAL) ====================
@@ -901,7 +889,8 @@ function fetchPriceRowsForMovers_(spreadsheet) {
   const values = sheet.getDataRange().getValues();
   if (values.length < 2) return [];
   const headers = values.shift();
-  const map = {}; headers.forEach((h,i)=> map[h]=i);
+  // Trim headers to avoid whitespace issues
+  const map = {}; headers.forEach((h,i)=> map[String(h).trim()]=i);
   // Helper for case-insensitive lookup
   function getCol(candidates) {
     for (let c of candidates) {
@@ -923,9 +912,11 @@ function fetchPriceRowsForMovers_(spreadsheet) {
   // Resolve previous close column (support multiple spellings)
   const prevIdx = getCol(['PrevDayClose','PrevClose','Previous Close','PreviousClose','Prev']);
   
-  const nameIdx = getCol(['Company Name','CompanyName','Name']);
-  const sectorIdx = getCol(['Sector','Category']);
-  const industryIdx = getCol(['Industry']);
+  // Robust header index finding (Direct Regex)
+  const nameIdx = headers.findIndex(h => /^(Company Name|CompanyName|Name)$/i.test(String(h).trim()));
+  // Capture Sector (which contains Industry data in this sheet) from 'Sector' or 'Category' column
+  const sectorIdx = headers.findIndex(h => /^(Sector|Category)$/i.test(String(h).trim()));
+  const industryIdx = headers.findIndex(h => /^(Industry)$/i.test(String(h).trim()));
 
   if (codeIdx == null || liveIdx == null || prevIdx == null) return [];
   const rows = [];
@@ -1107,7 +1098,18 @@ function appendDailyMoversHits_(upArr, downArr) {
     const change = (e.change!=null && !isNaN(e.change)) ? Number(e.change) : (live!=null && prev!=null ? Number(live - prev) : null);
     const pct = (e.pct!=null && !isNaN(e.pct)) ? Number(e.pct) : ((change!=null && prev) ? Number((change/prev)*100) : null);
     const direction = (e.direction || (change!=null ? (change>0?'up':'down') : null)) || null;
-    return { code, name: e.name || e.companyName || null, live: live, prevClose: prev, change: change, pct: pct, direction: direction, t: nowIso };
+    return { 
+      code, 
+      name: e.name || e.companyName || null, 
+      sector: e.sector || (e.Sector || null),
+      industry: e.industry || (e.Industry || null),
+      live: live, 
+      prevClose: prev, 
+      change: change, 
+      pct: pct, 
+      direction: direction, 
+      t: nowIso 
+    };
   }
 
   (Array.isArray(upArr) ? upArr : []).forEach(e => {
@@ -1141,7 +1143,7 @@ function duplicateMoversIntoCustom_(upArr, downArr) {
     function num(v){ const n=Number(v); return isFinite(n)? n : null; }
     (Array.isArray(upArr)?upArr:[]).concat(Array.isArray(downArr)?downArr:[]).forEach(e=>{
       if (!e || !e.code) return; const c = String(e.code).toUpperCase();
-      if (!infoMap[c]) infoMap[c] = { name: e.name || null, live: num(e.live) };
+      if (!infoMap[c]) infoMap[c] = { name: e.name || null, live: num(e.live), sector: e.sector||null, industry: e.industry||null };
     });
     // Iterate users and their shares
     const usersList = _listFirestoreCollection_(['artifacts', APP_ID, 'users']);
@@ -1180,7 +1182,7 @@ function duplicateMoversIntoCustom_(upArr, downArr) {
             const meta = infoMap[code] || {};
             const direction = (Array.isArray(upArr) && upArr.some(x=> (x.code||'').toString().toUpperCase()===code)) ? 'up' : ((Array.isArray(downArr) && downArr.some(x=> (x.code||'').toString().toUpperCase()===code)) ? 'down' : null);
             
-            pending.push({ code, name: meta.name || f.companyName || null, live: meta.live || null, intent: 'mover', direction: direction, userId: uid, shareId, t: nowIso });
+            pending.push({ code, name: meta.name || f.companyName || null, live: meta.live || null, sector: meta.sector || null, industry: meta.industry || null, intent: 'mover', direction: direction, userId: uid, shareId, t: nowIso });
           } catch(e){ Logger.log('[DupMovers] Error processing share for user %s: %s', uid, e); }
         });
         if (userMatchCount > 0) {
@@ -1209,7 +1211,7 @@ function duplicateHiLoHitsIntoCustom_(highsArr, lowsArr) {
     function num(v){ const n=Number(v); return isFinite(n)? n : null; }
     (Array.isArray(highsArr)?highsArr:[]).concat(Array.isArray(lowsArr)?lowsArr:[]).forEach(e=>{
       if (!e || !e.code) return; const c = String(e.code).toUpperCase();
-      if (!infoMap[c]) infoMap[c] = { name: e.name || null, live: num(e.live) };
+      if (!infoMap[c]) infoMap[c] = { name: e.name || null, live: num(e.live), sector: e.sector||null, industry: e.industry||null };
     });
     const usersList = _listFirestoreCollection_(['artifacts', APP_ID, 'users']);
     if (!usersList.ok) { Logger.log('[DupHiLo] users list failed: %s', usersList.error); return; }
@@ -1232,7 +1234,7 @@ function duplicateHiLoHitsIntoCustom_(highsArr, lowsArr) {
             const wasHigh = (Array.isArray(highsArr)?highsArr:[]).some(e=> (e&&String(e.code).toUpperCase())===code);
             const intent = wasHigh ? '52w-high' : '52w-low';
             const direction = wasHigh ? 'high' : 'low';
-            pending.push({ code, name: meta.name || f.companyName || null, live: meta.live || null, intent, direction, userId: uid, shareId, t: nowIso });
+            pending.push({ code, name: meta.name || f.companyName || null, live: meta.live || null, sector: meta.sector || null, industry: meta.industry || null, intent, direction, userId: uid, shareId, t: nowIso });
           } catch(_){}
         });
       } catch(_){}
@@ -1308,7 +1310,9 @@ function appendDailyCustomHits_(newHitsArr) {
       userId: uid || null,
       shareId: h.shareId || null,
       t: h.t || nowIso,
-      userIntent: h.userIntent || null
+      userIntent: h.userIntent || null,
+      sector: h.sector || null,
+      industry: h.industry || null
     };
     hits.push(item); seen.add(key);
   });
@@ -1478,7 +1482,11 @@ function runCustomTriggersScan() {
               name: p.name || fields.companyName || null,
               live,
               target: tgt,
+              live,
+              target: tgt,
               direction,
+              sector: p.sector || null,
+              industry: p.industry || null,
               // Classify this as a target-hit event; preserve user-configured intent separately
               intent: 'target-hit',
               userIntent: (function(){ const ui = (fields.intent==null? null : String(fields.intent)); return (ui && ui.trim()) ? ui : null; })(),
@@ -2066,9 +2074,6 @@ function handleSyncUserSettings_(payload) {
     return { ok: false, error: String(e) };
   }
 }
-// (Legacy syncUserSettingsFromFirestore removed)
-
-// (All temporary sync test harnesses & menu removed for production)
 
 
 // (Legacy checkMarketAlerts removed)
@@ -2321,17 +2326,21 @@ function sendCombinedDailyDigest_() {
         ? new Set(prefs.scanner.activeFilters.map(s => String(s).toUpperCase().trim())) 
         : null;
 
-      const checkSector = (o) => {
-        if (!activeFilters) return true; // Null means All
-        if (!o || !o.sector) return true; // Allow items with unknown sector (Safety)
-        return activeFilters.has(String(o.sector).toUpperCase().trim());
-      };
+      // Override Preference: "Watchlist - Override Filter" (excludePortfolio)
+      // Defaults to TRUE (enabled) if undefined, matching NotificationStore logic.
+      const overrideFilters = (prefs.excludePortfolio !== false);
 
-      // Helper: Does mover qualify for this specific user?
-      const qualifies = (o) => {
-        if (!checkSector(o)) return false;
-        const live = num(o.live);
-        if (t.minPrice && live < t.minPrice) return false;
+      // Hidden Sectors (Blocklist) - Priority over Allowlist
+      const hiddenSectors = (Array.isArray(prefs.hiddenSectors))
+        ? new Set(prefs.hiddenSectors.map(s => String(s).toUpperCase().trim()))
+        : null;
+
+      const qualifies = (o, bypassFilters = false) => {
+        if (!bypassFilters && !_isSectorAllowed_(o, prefs)) return false;
+        
+        const live = _parseNum_(o.live);
+        if (!bypassFilters && t.minPrice && live < t.minPrice) return false;
+
         const pct = Math.abs(num(o.pct)||0);
         const dol = Math.abs(num(o.change)||0);
         if (o.direction === 'up') {
@@ -2341,11 +2350,11 @@ function sendCombinedDailyDigest_() {
         }
       };
 
-      // Filter Movers
-      const userDown = allDown.filter(qualifies).sort((a,b)=> Math.abs(num(b.pct)||0) - Math.abs(num(a.pct)||0));
-      const userUp = allUp.filter(qualifies).sort((a,b)=> (num(b.pct)||0) - (num(a.pct)||0));
+      // Filter Movers (Global Sections - Strict, no bypass)
+      const userDown = allDown.filter(o => qualifies(o, false)).sort((a,b)=> Math.abs(num(b.pct)||0) - Math.abs(num(a.pct)||0));
+      const userUp = allUp.filter(o => qualifies(o, false)).sort((a,b)=> (num(b.pct)||0) - (num(a.pct)||0));
       
-      // Filter 52-Week Hits
+      // Filter 52-Week Hits (Global - Strict)
       const userLows = allLows.filter(o => (!t.hiloPrice || num(o.live) >= t.hiloPrice) && checkSector(o)).sort((a,b)=> (num(b.live)||0) - (num(a.live)||0));
       const userHighs = allHighs.filter(o => (!t.hiloPrice || num(o.live) >= t.hiloPrice) && checkSector(o)).sort((a,b)=> (num(b.live)||0) - (num(a.live)||0));
 
@@ -2361,13 +2370,14 @@ function sendCombinedDailyDigest_() {
           if (h.intent === 'target-hit') return true;
           
           // 2. For Movers: Must match User's Thresholds
+          // Respect Override setting for Personal Alerts
           if (h.intent === 'mover') {
             const rich = moverMap.get(h.code);
             // If we can't find the rich data, we default to filtering it OUT (safety) 
             // or we could check 'live' vs 'prev' if we had it, but 'qualifies' needs pct/change.
             // Since it came from duplicateMoversIntoCustom_, it SHOULD be in allUp/allDown.
             if (!rich) return false;
-            return qualifies(rich);
+            return qualifies(rich, overrideFilters);
           }
 
           // 3. For 52-Week: Must match Min Price rule
@@ -2860,8 +2870,24 @@ function repairSheet_(sheetName) {
     } else {
        // Safe Mode: Check if primary is broken. 
        // We allow updating the API_* column even if the primary has a formula.
+
+       // LOGIC FIX: Do not treat valid number-strings (e.g. "$5.50" or " 5.50 ") as broken.
+       // Convert to pure number first.
+       let cleanVal = priceVal;
+       if (typeof priceVal === 'string') {
+          // Remove currency symbols, commas, and whitespace
+          const s = priceVal.replace(/[$, ]/g, '').trim();
+          // Check if it parses
+          const n = Number(s);
+          if (isFinite(n) && n > 0) {
+             cleanVal = n; // It's a valid number disguised as text
+          }
+       }
+
        const isExplicitError = (typeof priceVal === 'string' && (priceVal.includes('INVALID') || priceVal.includes('DELISTED') || priceVal.includes('ERROR')));
-       const isPriceBroken = !isExplicitError && (priceVal === 0 || priceVal === '' || isNaN(priceVal) || (typeof priceVal === 'string')); 
+       // Now we check cleanVal instead of raw priceVal for the number check
+       const isPriceBroken = !isExplicitError && (cleanVal === 0 || cleanVal === '' || cleanVal === null || isNaN(cleanVal)); 
+       
        needsUpdate = isPriceBroken && !targetHasFormula;
     }
     
@@ -2950,7 +2976,7 @@ function repairSheet_(sheetName) {
  * Running this function puts you back on the Primary engine, saving Yahoo quota.
  */
 function restoreGoogleFinanceFormulas() {
-  const sheetsToFix = ['Prices', 'Dashboard'];
+  const sheetsToFix = ['Prices'];
   
   sheetsToFix.forEach(sheetName => {
     restoreFormulasForSheet_(sheetName);
@@ -2988,6 +3014,11 @@ function restoreFormulasForSheet_(sheetName) {
   };
 
   if (codeIdx === -1) { Logger.log(`❌ Error: ASX Code not found in "${sheetName}".`); return; }
+
+  if (colMap['price'] === -1) {
+    Logger.log(`❌ CRITICAL: Could not find 'LivePrice' column in ${sheetName}. Check headers.`);
+    return;
+  }
 
   // Prepare batch updates
   const batches = {};
@@ -3191,6 +3222,137 @@ function setupDashboardList() {
   
   // 5. Trigger Fetch immediately
   repairBrokenPrices();
+}
+
+// ===============================================================
+// ==================== DEBUG / REPAIR TOOLS =====================
+// ===============================================================
+
+/**
+ * UTILITY: Clears today's hit logs.
+ * Run this to purge "Corrupt/Missing Sector" data from the current day
+ * so that a fresh Scan can repopulate it correctly.
+ */
+function debug_ResetDailyHits() {
+  console.log('Resetting ALL Daily Hits Documents (Custom, Movers, HiLo)...');
+  
+  // 1. Clear Custom Hits
+  const res1 = commitCentralDoc_(DAILY_CUSTOM_HITS_DOC_SEGMENTS, { hits: [] });
+  console.log('Custom Hits Reset:', res1.ok);
+
+  // 2. Clear Global Movers Hits
+  const res2 = commitCentralDoc_(DAILY_MOVERS_HITS_DOC_SEGMENTS, { dayKey: getSydneyDayKey_(), upHits: [], downHits: [] });
+  console.log('Global Movers Hits Reset:', res2.ok);
+
+  // 3. Clear Global HiLo Hits
+  const res3 = commitCentralDoc_(DAILY_HILO_HITS_DOC_SEGMENTS, { dayKey: getSydneyDayKey_(), highHits: [], lowHits: [] });
+  console.log('Global HiLo Hits Reset:', res3.ok);
+
+  console.log('Done. Please now run:');
+  console.log('1. runGlobalMoversScan');
+  console.log('2. runGlobal52WeekScan');
+  console.log('3. sendCombinedDailyDigest');
+}
+
+/**
+ * DIAGNOSTIC: Run this to see what the Spreadsheet actually looks like.
+ */
+function debug_DiagnoseSheet() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(PRICE_SHEET_NAME);
+  if (!sheet) { console.log('ERROR: Sheet not found: ' + PRICE_SHEET_NAME); return; }
+  
+  const values = sheet.getDataRange().getValues();
+  if (values.length < 1) { console.log('ERROR: Sheet is empty'); return; }
+  
+  const headers = values[0];
+  console.log('=== HEADERS ===');
+  headers.forEach((h, i) => console.log(`[${i}] "${h}"`));
+  console.log('================');
+  
+  console.log('=== FIRST 3 ROWS ===');
+  for (let i = 1; i < Math.min(4, values.length); i++) {
+    const r = values[i];
+    // Print Code (col 0 usually) and first few cols to identify mapping
+    console.log(`Row ${i}:`, r.slice(0, 10).map(c => String(c).substring(0, 20)));
+  }
+}
+
+/**
+ * DIAGNOSTIC: Test if the code can actually read sector data now.
+ * It fetches the spreadsheet data using the REPAIRED function and checks a specific stock.
+ */
+function debug_VerifyScanData() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet();
+  const data = fetchAllAsxData_(sheet);
+  
+  if (!data || !data.length) { console.log('FAIL: No data returned from fetchAllAsxData_'); }
+  
+  // Test Case: Leaking ETFs
+  const targets = ['GDX', 'ZYUS', 'NUGG', 'LHGG', 'CGUN'];
+
+  // Test Readers
+  console.log('--- 1. DATA EXTRACTION TEST ---');
+  let testMovers = fetchPriceRowsForMovers_(sheet);
+  let resolvedData = {};
+
+  targets.forEach(code => {
+    let t = data.find(d => d.code === code) || testMovers.find(d => d.code === code);
+    if (t && t.sector) {
+      console.log(`[${code}] FOUND. Sector: "${t.sector}" | Industry: "${t.industry}"`);
+      resolvedData[code] = t;
+    } else {
+      console.log(`[${code}] MISSING SECTOR in both readers. (Check sheet content?)`);
+    }
+  });
+
+  // Test User Filtering
+  console.log('--- 2. USER FILTER SIMULATION ---');
+  const usersList = _listFirestoreCollection_(['artifacts', APP_ID, 'users']);
+  if (!usersList.ok) { console.log('Error listing users.'); return; }
+
+  usersList.docs.forEach(u => {
+    const uid = (u.name||'').split('/').pop();
+    // Fetch user settings
+    const settingsDoc = _fetchFirestoreDocument_(['artifacts', APP_ID, 'users', uid, 'settings', 'default']);
+    if (!settingsDoc.ok) return;
+    const s = _fromFsFields_(settingsDoc.fields || {});
+    
+    // Build Filter Set
+    // Note: SettingsUI uses 'activeFilters'. GlobalAlerts maps this to a Set.
+    // If activeSectorFilters is undefined/empty, usually means "All Allowed" OR "None Set".
+    // Check SettingsUI logic: It saves to 'preferences.scanner.activeFilters'.
+    // Firestore path might be different? 
+    // Actually, 'applyUserFilters_' logic reads: userSettings.activeSectorFilters
+    // which comes from the object passed to generateBriefing or stored?
+    // Let's check 'scanner.activeFilters' in the settings doc we just fetched.
+    
+    const filters = (s.preferences && s.preferences.scanner && s.preferences.scanner.activeFilters);
+    const filterSet = (filters && filters.length) ? new Set(filters.map(x=>String(x).toUpperCase())) : null;
+    
+    console.log(`User [${uid.substring(0,5)}...] Filters: ${filters ? filters.length + ' active' : 'ALL ALLOWED (Null)'}`);
+    
+    targets.forEach(code => {
+      const item = resolvedData[code];
+      if (!item) return; // Can't test if data missing
+      
+      const sec = item.sector ? String(item.sector).toUpperCase().trim() : null;
+      const ind = item.industry ? String(item.industry).toUpperCase().trim() : null;
+      
+      // Simulate checkSector logic
+      let allowed = true;
+      let reason = 'Default Allow';
+      
+      if (!filterSet) {
+         allowed = true; reason = 'All Allowed';
+      } else {
+         if (ind && filterSet.has(ind)) { allowed = true; reason = 'Industry Match'; }
+         else if (sec && filterSet.has(sec)) { allowed = true; reason = 'Sector Match'; } // Fallback
+         else { allowed = false; reason = 'Not in Filter'; } // Blocked
+      }
+      
+      console.log(`   -> ${code} (${item.sector}): ${allowed ? 'ALLOWED' : 'BLOCKED'} [${reason}]`);
+    });
+  });
 }
 
 
