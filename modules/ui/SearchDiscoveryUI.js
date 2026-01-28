@@ -266,7 +266,6 @@ export class SearchDiscoveryUI {
                     </div>
                     <div style="text-align: right;">
                         <div style="display: flex; flex-direction: column; align-items: flex-end;">
-                             <button id="detailExpandChart" class="${CSS_CLASSES.ICON_BTN_GHOST}" title="Expand Chart" style="margin-bottom: 10px; padding: 6px; font-size: 1rem;"><i class="fas fa-expand"></i></button>
                              <div style="font-size: 1.6rem; font-weight: 800; line-height: 1; color: var(--text-color);">${formatCurrency(stock.live)}</div>
                              <div class="${stock.change >= 0 ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}" style="font-size: 0.9rem; font-weight: 600; margin-top: 8px;">
                                 ${formatCurrency(stock.change)} (${formatPercent(stock.pctChange)})
@@ -311,21 +310,20 @@ export class SearchDiscoveryUI {
             </div>
         `;
 
-        // Instantiate Chart
+        // Instantiate Chart and wire up zoom button
         try {
             const chartArea = container.querySelector('#inlineChartContainer');
             if (chartArea) {
-                new ChartComponent(chartArea, stock.code, stock.name);
+                const chartComp = new ChartComponent(chartArea, stock.code, stock.name);
+                // Wire up the inline chart's zoom button to open ChartModal
+                const zoomBtn = chartArea.querySelector(`#${IDS.CHART_ROTATOR}`);
+                if (zoomBtn) {
+                    zoomBtn.addEventListener('click', () => {
+                        ChartModal.show(stock.code, stock.name);
+                    });
+                }
             }
         } catch (e) { console.error('Inline chart error', e); }
-
-        // Bind Expand Button
-        const expandBtn = container.querySelector('#detailExpandChart');
-        if (expandBtn) {
-            expandBtn.addEventListener('click', () => {
-                ChartModal.show(stock.code, stock.name);
-            });
-        }
 
         // Bind Add Button
         const addBtn = container.querySelector('#discoveryAddBtn');

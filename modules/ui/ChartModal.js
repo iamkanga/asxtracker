@@ -41,16 +41,59 @@ export class ChartComponent {
                     min-height: 250px; /* Ensure visibility inline */
                     position: relative;
                     background: #111;
+                    box-sizing: border-box;
+                    margin: 0;
+                    padding: 0;
+                    overflow: hidden;
                 }
                 .${CSS_CLASSES.CHART_CONTROLS} {
                     display: flex;
-                    flex-wrap: wrap; 
+                    flex-wrap: wrap;
                     gap: 6px;
                     padding: 8px;
                     background: var(--card-bg);
                     border-top: 1px solid var(--border-color);
                     justify-content: center;
                     align-items: center;
+                }
+                /* Timeframe row - always centered */
+                .chart-timeframe-row {
+                    display: flex;
+                    gap: 6px;
+                    justify-content: center;
+                    align-items: center;
+                    flex-wrap: wrap;
+                }
+                /* Second row - style and zoom */
+                .chart-style-row {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    width: 100%;
+                }
+                /* Landscape: single line layout */
+                @media (orientation: landscape) {
+                    .chart-style-row {
+                        width: auto;
+                        justify-content: center;
+                        gap: 6px;
+                    }
+                    .chart-controls-separator-portrait {
+                        display: none;
+                    }
+                }
+                /* Portrait: two row layout */
+                @media (orientation: portrait) {
+                    .chart-timeframe-row {
+                        width: 100% !important;
+                    }
+                    .chart-style-row {
+                        width: 100% !important;
+                        margin-top: 4px;
+                    }
+                    .chart-controls-separator-landscape {
+                        display: none !important;
+                    }
                 }
                 .${CSS_CLASSES.CHART_BTN} {
                     background: transparent;
@@ -75,7 +118,7 @@ export class ChartComponent {
                 .${CSS_CLASSES.CHART_SELECT} {
                     background: transparent;
                     border: none;
-                    color: var(--text-muted);
+                    color: var(--color-accent);
                     padding: 4px 2px; 
                     font-size: 0.85rem;
                     font-weight: 600;
@@ -85,6 +128,27 @@ export class ChartComponent {
                 }
                 .${CSS_CLASSES.CHART_SELECT}:hover, .${CSS_CLASSES.CHART_SELECT}:focus {
                     color: var(--color-accent);
+                }
+                /* Period Stats (High/Low) */
+                .chart-period-stats {
+                    font-size: 0.75rem;
+                    color: var(--text-muted);
+                    margin-right: auto;
+                    white-space: nowrap;
+                    opacity: 0.9;
+                }
+                /* Period Stats Overlay (inside chart) */
+                .chart-period-overlay {
+                    position: absolute;
+                    top: 8px;
+                    left: 8px;
+                    font-size: 0.75rem;
+                    background: rgba(17, 17, 17, 0.75);
+                    padding: 4px 8px;
+                    border-radius: 4px;
+                    z-index: 5;
+                    pointer-events: none;
+                    white-space: nowrap;
                 }
 
                 .${CSS_CLASSES.CHART_OVERLAY_LOADER} {
@@ -129,16 +193,25 @@ export class ChartComponent {
                     <div class="${CSS_CLASSES.CHART_OVERLAY_LOADER}">
                         <i class="fas fa-spinner fa-spin fa-2x"></i>
                     </div>
+                    <div class="chart-period-overlay" id="chartPeriodStats_${this.code}">
+                        <span class="chart-period-high" style="color:#06FF4F;">H: --</span>
+                        <span class="chart-period-low" style="color:#FF3131; margin-left:8px;">L: --</span>
+                    </div>
                 </div>
                 <div class="${CSS_CLASSES.CHART_CONTROLS}">
-                    ${this._renderRangeButtons()}
-                    <span style="font-size:0.8rem; color:var(--border-color); margin:0 6px;">|</span>
-                    <select class="${CSS_CLASSES.CHART_SELECT}" id="${IDS.CHART_STYLE_SELECT}" title="Chart Style">
-                        <option value="candle">🕯️ Candles</option>
-                        <option value="bar">📊 Bars</option>
-                        <option value="line">📈 Line</option>
-                        <option value="area">🌊 Area</option>
-                    </select>
+                    <div class="chart-timeframe-row">
+                        ${this._renderRangeButtons()}
+                    </div>
+                    <span class="chart-controls-separator-landscape" style="font-size:0.8rem; color:var(--border-color); margin:0 6px;">|</span>
+                    <div class="chart-style-row">
+                        <select class="${CSS_CLASSES.CHART_SELECT}" id="${IDS.CHART_STYLE_SELECT}" title="Chart Style">
+                            <option value="candle">Candles</option>
+                            <option value="bar">Bars</option>
+                            <option value="line">Line</option>
+                            <option value="area">Area</option>
+                        </select>
+                        <button id="${IDS.CHART_ROTATOR}" class="${CSS_CLASSES.CHART_BTN}" title="Fullscreen"><i class="fas fa-expand"></i></button>
+                    </div>
                 </div>
             </div>
         `;
@@ -188,9 +261,16 @@ export class ChartComponent {
                 timeVisible: true,
                 secondsVisible: false,
                 borderColor: '#333',
+                rightOffset: 0,
+                fixLeftEdge: true,
+                fixRightEdge: true,
             },
             rightPriceScale: {
                 borderColor: '#333',
+                scaleMargins: {
+                    top: 0.1,
+                    bottom: 0.1,
+                },
             },
             crosshair: {
                 // "No background selection" - match chart bg or transparent
@@ -347,6 +427,7 @@ export class ChartComponent {
                     }
                     this.series.setData(dataToSet);
                     this._updateLastPriceLine(dataToSet);
+                    this._updatePeriodStats(this.cachedData);
                     this.chart.timeScale().fitContent();
                 }
             } else {
@@ -369,6 +450,44 @@ export class ChartComponent {
             if (btn.dataset.range === this.currentRange) btn.classList.add(CSS_CLASSES.ACTIVE);
             else btn.classList.remove(CSS_CLASSES.ACTIVE);
         });
+    }
+
+    /**
+     * Calculate and display the period high/low from loaded candle data.
+     * @param {Array} data - Array of candle objects with high/low values
+     */
+    _updatePeriodStats(data) {
+        const statsEl = this.container.querySelector(`#chartPeriodStats_${this.code}`);
+        if (!statsEl) return;
+
+        const highEl = statsEl.querySelector('.chart-period-high');
+        const lowEl = statsEl.querySelector('.chart-period-low');
+
+        if (!data || data.length === 0) {
+            if (highEl) highEl.textContent = 'H: --';
+            if (lowEl) lowEl.textContent = 'L: --';
+            return;
+        }
+
+        let periodHigh = -Infinity;
+        let periodLow = Infinity;
+
+        for (const candle of data) {
+            const h = candle.high !== undefined ? candle.high : candle.close;
+            const l = candle.low !== undefined ? candle.low : candle.close;
+            if (h > periodHigh) periodHigh = h;
+            if (l < periodLow) periodLow = l;
+        }
+
+        // Format with appropriate decimal places
+        const formatPrice = (val) => {
+            if (val >= 10) return '$' + val.toFixed(2);
+            if (val >= 1) return '$' + val.toFixed(3);
+            return '$' + val.toFixed(4);
+        };
+
+        if (highEl) highEl.textContent = 'H: ' + formatPrice(periodHigh);
+        if (lowEl) lowEl.textContent = 'L: ' + formatPrice(periodLow);
     }
 
     destroy() {
@@ -412,12 +531,11 @@ export class ChartModal {
                         <span style="font-size:0.85rem; color:var(--text-muted);">${name || ''}</span>
                     </div>
                     <div style="display:flex; gap:12px;">
-                        <button id="${IDS.CHART_ROTATOR}" class="${CSS_CLASSES.CHART_BTN}" title="Landscape"><i class="fas fa-expand"></i></button>
                         <button id="${IDS.CHART_MODAL_CLOSE}" class="${CSS_CLASSES.CHART_BTN}" style="border:none; font-size:1.2rem;"><i class="fas fa-times"></i></button>
                     </div>
                 </div>
                 <!-- Chart Component Host -->
-                <div id="${IDS.MODAL_CHART_BODY}" style="flex:1; position:relative;"></div>
+                <div id="${IDS.MODAL_CHART_BODY}" style="flex:1; position:relative; width:100%; overflow:hidden;"></div>
             </div>
         `;
 
@@ -445,8 +563,15 @@ export class ChartModal {
         modal.querySelector(`#${IDS.CHART_MODAL_CLOSE}`).addEventListener('click', close);
 
         // Fullscreen - apply immediately when modal opens
-        const rotator = modal.querySelector(`#${IDS.CHART_ROTATOR}`);
+        const rotator = chartComp.container.querySelector(`#${IDS.CHART_ROTATOR}`);
         const content = modal.querySelector(`.${CSS_CLASSES.CHART_MODAL_CONTENT}`);
+
+        // Update zoom button for modal context (compress = close fullscreen)
+        if (rotator) {
+            rotator.title = 'Close';
+            const icon = rotator.querySelector('i');
+            if (icon) icon.className = 'fas fa-compress';
+        }
 
         // Helper to resize chart - uses viewport dimensions for fullscreen
         const resizeChart = () => {
@@ -528,7 +653,7 @@ export class ChartModal {
             window.visualViewport.addEventListener('resize', orientationHandler);
         }
 
-        // Zoom button now just closes the modal
+        // Zoom button closes the modal
         rotator.addEventListener('click', close);
     }
 }
