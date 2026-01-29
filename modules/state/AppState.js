@@ -141,6 +141,14 @@ export const AppState = {
             } catch (e) {
                 return { sides: [0, 0, 0, 1], thickness: 3 };
             }
+        })(),
+        historicalData: (() => {
+            try {
+                const stored = localStorage.getItem('ASX_NEXT_historicalData');
+                return stored ? JSON.parse(stored) : {}; // Keyed by categoryId
+            } catch (e) {
+                return {};
+            }
         })()
     },
 
@@ -281,7 +289,8 @@ export const AppState = {
                 containerBorders: this.preferences.containerBorders || { sides: [0, 0, 0, 1], thickness: 3 },
                 badgeScope: this.preferences.badgeScope || 'all',
                 showBadges: this.preferences.showBadges !== false,
-                quickNav: this.preferences.quickNav || null
+                quickNav: this.preferences.quickNav || null,
+                historicalData: this.preferences.historicalData || {}
             };
             this.onPersistenceUpdate(payload);
         } else {
@@ -494,6 +503,13 @@ export const AppState = {
         } else {
             localStorage.removeItem(STORAGE_KEYS.QUICK_NAV);
         }
+        this._triggerSync();
+    },
+
+    saveHistoricalData(catId, points) {
+        if (!this.preferences.historicalData) this.preferences.historicalData = {};
+        this.preferences.historicalData[catId] = points;
+        localStorage.setItem('ASX_NEXT_historicalData', JSON.stringify(this.preferences.historicalData));
         this._triggerSync();
     },
 

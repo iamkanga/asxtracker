@@ -45,6 +45,22 @@ export class ModalController {
 
         ui.showAddEditModal(asset, async (formData) => {
             await appService.saveCashAsset(formData, assetId);
+
+            // Record historical anchor point for this category
+            if (formData.category) {
+                const now = Math.floor(Date.now() / 1000);
+                const points = AppState.preferences.historicalData?.[formData.category] || [];
+
+                // Add new point (assuming current balance is the new value)
+                // Filter out any points within the same minute to avoid spam
+                const cleanPoints = points.filter(p => Math.abs(p.time - now) > 60);
+                cleanPoints.push({ time: now, val: formData.balance });
+
+                // Keep only last 1000 points to avoid bloating localStorage
+                const cappedPoints = cleanPoints.sort((a, b) => a.time - b.time).slice(-1000);
+                AppState.saveHistoricalData(formData.category, cappedPoints);
+            }
+
             if (this.updateCallback) await this.updateCallback(false);
         }, async () => {
             if (assetId) {

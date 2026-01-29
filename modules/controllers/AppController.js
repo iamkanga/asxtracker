@@ -185,7 +185,7 @@ export class AppController {
 
         document.addEventListener(EVENTS.OPEN_PORTFOLIO_CHART, () => {
             // Lazy import to keep boot fast
-            import('../ui/PortfolioChartUI.js?v=1061').then(module => {
+            import('../ui/PortfolioChartUI.js?v=1114').then(module => {
                 module.PortfolioChartUI.show();
             });
         });
@@ -670,6 +670,19 @@ export class AppController {
             // Sanitize only if new session or necessary (idempotent usually, but cheap to skip if same)
             if (!isSameUser) {
                 await this.appService.sanitizeCorruptedShares(user.uid);
+            }
+
+            // --- HISTORICAL DATA SEEDING ---
+            // If super history is empty, seed it with the provided dataset
+            if (!AppState.preferences.historicalData?.super) {
+                try {
+                    const { HISTORICAL_SUPER_DATA } = await import('../data/HistoricalSuperData.js');
+                    if (HISTORICAL_SUPER_DATA && HISTORICAL_SUPER_DATA.length > 0) {
+                        AppState.saveHistoricalData('super', HISTORICAL_SUPER_DATA);
+                    }
+                } catch (e) {
+                    console.warn('[AppController] Failed to seed historical super data:', e);
+                }
             }
 
 

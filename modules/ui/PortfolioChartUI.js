@@ -28,26 +28,24 @@ export class PortfolioChartUI {
 
     constructor() {
         this.range = '1y';
-        this.filter = 'TOTAL';
+        this.filter = 'SHARES_ONLY';
         this.chart = null;
         this.dataService = new DataService();
         this.modal = null;
 
         // Series References
         this.series = {
-            value: null,
-            cost: null,
-            profit: null,
+            total: null,
             shares: null,
+            super: null,
             cash: null
         };
 
-        // Visibility State
+        // Visibility State (Sources instead of Metric Types)
         this.visibleLayers = {
-            value: true,
-            cost: true,
-            profit: false,
+            total: true,
             shares: false,
+            super: false,
             cash: false
         };
 
@@ -63,57 +61,59 @@ export class PortfolioChartUI {
         this.modal.id = 'portfolio-chart-modal';
         this.modal.className = `${CSS_CLASSES.MODAL} ${CSS_CLASSES.SHOW}`;
 
-        // Prepare Category Breakdown Buttons
+        // Prepare Category Breakdown Dropdown Items
         const cashByCat = this._getCashByCategory();
-        const catButtonsHtml = Object.keys(cashByCat).map((catId, idx) => {
-            const label = this._getCategoryLabel(catId);
-            const active = !!this.visibleLayers[`cat_${catId}`];
-            const palette = ['#4db8ff', '#ff4d4d', '#4dff88', '#ffcc4d', '#ff4db8', '#b84dff', '#4dffff', '#ff994d'];
-            const color = palette[idx % palette.length];
+        const catItemsHtml = Object.keys(cashByCat)
+            .filter(catId => catId !== 'super')
+            .map((catId, idx) => {
+                const label = this._getCategoryLabel(catId);
+                const active = !!this.visibleLayers[`cat_${catId}`];
+                const color = this._getCategoryColor(catId, idx);
 
-            return `
-                <button class="layer-toggle-btn cat-toggle ${active ? 'active' : ''}" data-layer="cat_${catId}" 
-                        style="background:transparent; border:none; outline:none; padding:4px 0; color:#fff; font-size:0.85rem; font-weight:800; cursor:pointer; display:flex; align-items:center; gap:8px; transition: color 0.15s ease;">
-                     <span style="width:8px; height:8px; border-radius:50%; background:${color}; opacity:${active ? 1 : 0.4};"></span>
-                     ${label}
-                </button>
+                return `
+                <div class="dropdown-item layer-toggle-btn" data-layer="cat_${catId}" data-color="${color}"
+                     style="padding: 8px 12px; display:flex; align-items:center; gap:10px; cursor:pointer; transition:background 0.1s;">
+                     <div class="checkbox-indicator" style="width:14px; height:14px; border:1px solid rgba(255,255,255,0.3); border-radius:2px; display:flex; align-items:center; justify-content:center; background:${active ? color : 'transparent'};">
+                        ${active ? '<i class="fas fa-check" style="font-size:0.6rem; color:#fff;"></i>' : ''}
+                     </div>
+                     <span style="font-size:0.85rem; color:${active ? '#fff' : 'rgba(255,255,255,0.6)'}; margin-top:1px;">${label}</span>
+                </div>
             `;
-        }).join('');
+            }).join('');
 
         this.modal.innerHTML = `
             <div class="${CSS_CLASSES.MODAL_OVERLAY}"></div>
             <div class="${CSS_CLASSES.MODAL_CONTENT} portfolio-chart-content" style="width: 100%; height: 100%; max-width: none; border-radius: 0; display:flex; flex-direction:column; background:var(--card-bg); overflow:hidden;">
-                <div class="${CSS_CLASSES.MODAL_HEADER}" style="border-bottom: 1px solid rgba(255,255,255,0.05); padding: 16px 24px; display:flex; justify-content:space-between; align-items:center;">
-                    <div style="display:flex; flex-direction:column; gap:8px;">
-                        <h2 class="${CSS_CLASSES.MODAL_TITLE}" style="font-size: 1.4rem;"><i class="fas fa-chart-line"></i> Portfolio History</h2>
-                        
-                        <!-- NEW: Source Filter Dropdown -->
-                        <div class="source-filter-container" style="display: items-center; gap: 8px;">
-                            <select id="portfolio-source-filter" style="background: #1e2026; border: none; color: #fff; padding: 6px 10px; border-radius: 4px; font-size: 0.9rem; cursor: pointer; outline: none; font-weight: 600; appearance: none; -webkit-appearance: none; background-image: url('data:image/svg+xml;utf8,<svg fill=\\'white\\' height=\\'24\\' viewBox=\\'0 0 24 24\\' width=\\'24\\' xmlns=\\'http://www.w3.org/2000/svg\\'><path d=\\'M7 10l5 5 5-5z\\'/></svg>'); background-repeat: no-repeat; background-position: right 8px center; padding-right: 32px;">
-                                <option value="TOTAL" style="background: #1e2026; color: #fff;">Total Portfolio</option>
-                                <option value="SHARES_ONLY" style="background: #1e2026; color: #fff;">Shares Only</option>
-                                <option value="SUPER" style="background: #1e2026; color: #fff;">Superannuation</option>
-                                <option value="CASH_ASSETS" style="background: #1e2026; color: #fff;">Cash & Assets</option>
-                            </select>
+                
+                <!-- HEADER: Stacked on Mobile, Row on Desktop -->
+                <div class="${CSS_CLASSES.MODAL_HEADER} chart-header-responsive" style="border-bottom: 1px solid rgba(255,255,255,0.05); padding: 16px 24px; display:flex; align-items:flex-start; justify-content:space-between;">
+                    <div class="header-content-wrapper" style="display:flex; flex-grow:1; flex-direction:row; align-items:center; justify-content:space-between; margin-right:16px;">
+                        <div style="display:flex; flex-direction:column; gap:4px;">
+                            <h2 class="${CSS_CLASSES.MODAL_TITLE}" style="font-size: 1.4rem; display:flex; align-items:center; gap:10px;">
+                                <i class="fas fa-chart-line" style="color:var(--color-accent);"></i> Portfolio History
+                            </h2>
                         </div>
+                        <div class="chart-stats-summary" style="text-align:right;"></div>
                     </div>
-                    <div style="text-align:right;">
-                        <div class="chart-stats-summary" style="margin-bottom:4px;"></div>
-                        <button class="${CSS_CLASSES.MODAL_CLOSE_BTN} ${CSS_CLASSES.MODAL_ACTION_BTN}" title="Close">
-                            <i class="fas ${UI_ICONS.CLOSE}"></i>
-                        </button>
-                    </div>
+
+                    <button class="${CSS_CLASSES.MODAL_CLOSE_BTN} ${CSS_CLASSES.MODAL_ACTION_BTN}" title="Close" style="flex-shrink:0;">
+                        <i class="fas ${UI_ICONS.CLOSE}"></i>
+                    </button>
                 </div>
                 
                 <div class="${CSS_CLASSES.MODAL_BODY}" style="flex:1; position:relative; padding:0; overflow:hidden; background:#111;">
                     <div id="portfolio-chart-container" style="width:100%; height:100%;"></div>
                     <div id="portfolio-chart-loading" style="position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center; flex-direction:column; z-index:10; backdrop-filter: blur(2px);">
                         <i class="fas ${UI_ICONS.SPINNER} fa-2x" style="color:var(--color-accent);"></i>
-                        <span style="margin-top:16px; font-weight:600; font-size: 0.9rem; color: #fff;">Simulating Growth...</span>
+                        <span style="margin-top:16px; font-weight:600; font-size: 0.9rem; color: #fff;">Calculating Performance...</span>
                     </div>
                 </div>
 
-                <div class="portfolio-chart-controls" style="padding:24px 16px; background:var(--card-bg); display:flex; flex-direction:column; gap:24px; border-top: 1px solid rgba(255,255,255,0.05); overflow-y:auto; max-height:40%;">
+                <div class="portfolio-chart-controls" style="padding:12px 16px; background:var(--card-bg); display:flex; flex-direction:column; gap:20px; border-top: 1px solid rgba(255,255,255,0.05); overflow:visible; z-index:20; position:relative; transition: max-height 0.3s ease-out, padding 0.3s ease-out;">
+                    <!-- Collapse Toggle Handle -->
+                    <div class="controls-collapse-toggle" style="height: 32px; width: 100%; display: flex; align-items: center; justify-content: center; cursor: pointer; margin-top: -8px;">
+                        <div style="width: 40px; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.2);"></div>
+                    </div>
                     
                     <!-- Timeframe Toggles -->
                     <div class="control-row timeframe-row" style="display:flex; gap:18px; justify-content:center; overflow-x:auto; padding-bottom:4px; -webkit-overflow-scrolling: touch; flex-shrink:0;">
@@ -125,39 +125,40 @@ export class PortfolioChartUI {
                         `).join('')}
                     </div>
 
-                    <!-- Main Layer Toggles -->
-                    <div class="control-row layer-row" style="display:flex; gap:28px; justify-content:center; flex-wrap:wrap;">
-                        <button class="layer-toggle-btn ${this.visibleLayers.value ? 'active' : ''}" data-layer="value" 
+                    <!-- Main Source Toggles & Other Assets Dropdown -->
+                    <div class="control-row layer-row" style="display:flex; gap:24px; justify-content:center; flex-wrap:wrap; align-items:center;">
+                        <button class="layer-toggle-btn ${this.visibleLayers.total ? 'active' : ''}" data-layer="total" 
                                 style="background:transparent; border:none; outline:none; padding:4px 0; color:#fff; font-size:0.85rem; font-weight:800; cursor:pointer; display:flex; align-items:center; gap:8px;">
-                             <span style="width:8px; height:8px; border-radius:50%; background:rgba(193, 154, 107, 1); opacity:${this.visibleLayers.value ? 1 : 0.4};"></span>
-                             Total Value
+                             <span style="width:10px; height:10px; border-radius:2px; background:#06FF4F; opacity:${this.visibleLayers.total ? 1 : 0.4};"></span>
+                             Total
                         </button>
-                        <button class="layer-toggle-btn ${this.visibleLayers.cost ? 'active' : ''}" data-layer="cost" 
+                        <button class="layer-toggle-btn ${this.visibleLayers.super ? 'active' : ''}" data-layer="super" 
                                 style="background:transparent; border:none; outline:none; padding:4px 0; color:#fff; font-size:0.85rem; font-weight:800; cursor:pointer; display:flex; align-items:center; gap:8px;">
-                             <span style="width:8px; height:8px; border-radius:50%; background:rgba(140, 140, 140, 0.6); opacity:${this.visibleLayers.cost ? 1 : 0.4};"></span>
-                             Cost Basis
+                             <span style="width:10px; height:10px; border-radius:2px; background:#9C27B0; opacity:${this.visibleLayers.super ? 1 : 0.4};"></span>
+                             Super
                         </button>
-                        <button class="layer-toggle-btn ${this.visibleLayers.profit ? 'active' : ''}" data-layer="profit" 
+                        <button class="layer-toggle-btn ${this.visibleLayers.shares ? 'active' : ''}" data-layer="shares" 
                                 style="background:transparent; border:none; outline:none; padding:4px 0; color:#fff; font-size:0.85rem; font-weight:800; cursor:pointer; display:flex; align-items:center; gap:8px;">
-                             <span style="width:8px; height:8px; border-radius:50%; background:rgba(0, 255, 0, 0.8); opacity:${this.visibleLayers.profit ? 1 : 0.4};"></span>
-                             Profit ($)
+                             <span style="width:10px; height:10px; border-radius:2px; background:#a49393; opacity:${this.visibleLayers.shares ? 1 : 0.4};"></span>
+                             Shares
                         </button>
-                    </div>
 
-                    <!-- Composition Breakdown Toggles -->
-                    ${catButtonsHtml || this.visibleLayers.shares ? `
-                    <div class="control-row breakdown-row" style="border-top:1px solid rgba(255,255,255,0.03); padding-top:16px;">
-                        <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:12px; text-align:center; font-weight:800;">Asset Breakdown</div>
-                        <div style="display:flex; gap:24px; justify-content:center; flex-wrap:wrap;">
-                            <button class="layer-toggle-btn ${this.visibleLayers.shares ? 'active' : ''}" data-layer="shares" 
-                                style="background:transparent; border:none; outline:none; padding:4px 0; color:#fff; font-size:0.85rem; font-weight:800; cursor:pointer; display:flex; align-items:center; gap:8px;">
-                                 <span style="width:8px; height:8px; border-radius:50%; background:rgba(107, 169, 193, 0.8); opacity:${this.visibleLayers.shares ? 1 : 0.4};"></span>
-                                 All Shares
+                        <!-- Divider -->
+                        <div style="width:1px; height:16px; background:rgba(255,255,255,0.1);"></div>
+
+                        <!-- Other Assets Dropdown -->
+                        <div class="custom-dropdown-container" style="position:relative;">
+                            <button id="other-assets-btn" 
+                                    style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:4px; padding:6px 12px; color:#fff; font-size:0.8rem; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:8px; transition:all 0.2s;">
+                                 Other Assets <i class="fas fa-chevron-down" style="font-size:0.7rem; opacity:0.7;"></i>
                             </button>
-                            ${catButtonsHtml}
+                            <!-- Dropdown Menu -->
+                            <div id="other-assets-menu" 
+                                 style="position:absolute; bottom:100%; right:50%; transform:translateX(50%); margin-bottom:8px; width:200px; background:#1e1e1e; border:1px solid rgba(255,255,255,0.1); border-radius:6px; box-shadow:0 4px 20px rgba(0,0,0,0.5); display:none; flex-direction:column; padding:4px 0; z-index:100;">
+                                ${catItemsHtml || '<div style="padding:12px; font-size:0.8rem; opacity:0.5; text-align:center;">No other assets</div>'}
+                            </div>
                         </div>
                     </div>
-                    ` : ''}
                 </div>
             </div>
 
@@ -167,6 +168,40 @@ export class PortfolioChartUI {
                 }
                 #portfolio-chart-modal .timeframe-row::-webkit-scrollbar { display: none; }
                 #portfolio-chart-modal .timeframe-row { -ms-overflow-style: none; scrollbar-width: none; }
+                
+                #portfolio-chart-modal .portfolio-chart-controls.collapsed {
+                    max-height: 40px !important;
+                    padding-bottom: 0 !important;
+                    padding-top: 8px !important;
+                    gap: 0 !important;
+                }
+                #portfolio-chart-modal .portfolio-chart-controls.collapsed .control-row {
+                    display: none !important;
+                }
+                /* Dropdown Item Hover */
+                #portfolio-chart-modal .dropdown-item:hover { background: rgba(255,255,255,0.05); }
+
+                /* Responsive Logic */
+                @media (max-width: 600px) and (orientation: portrait) {
+                    .chart-header-responsive .header-content-wrapper {
+                        flex-direction: column !important;
+                        align-items: flex-start !important;
+                        gap: 12px;
+                    }
+                    .chart-header-responsive .header-content-wrapper .chart-stats-summary {
+                        text-align: left !important;
+                        width: 100%;
+                    }
+                    /* Force left alignment for the flex column inside stats */
+                    .chart-stats-summary > div {
+                        align-items: flex-start !important;
+                    }
+                }
+                
+                /* Default Desktop/Landscape Alignment */
+                 .chart-stats-summary > div {
+                    align-items: flex-end; /* Default right align for desktop */
+                }
             </style>
         `;
 
@@ -189,16 +224,7 @@ export class PortfolioChartUI {
         this.modal.querySelector(`.${CSS_CLASSES.MODAL_CLOSE_BTN}`).addEventListener('click', close);
         this.modal.querySelector(`.${CSS_CLASSES.MODAL_OVERLAY}`).addEventListener('click', close);
 
-        // Bind Source Filter
-        const filterSelect = this.modal.querySelector('#portfolio-source-filter');
-        if (filterSelect) {
-            filterSelect.value = this.filter;
-            filterSelect.addEventListener('change', (e) => {
-                this.filter = e.target.value;
-                this.loadData();
-            });
-        }
-
+        // Bind Range Buttons
         this.modal.querySelectorAll('.range-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 this.range = btn.dataset.range;
@@ -208,18 +234,73 @@ export class PortfolioChartUI {
             });
         });
 
+        // Bind Main Layer Toggles & Dropdown Items
         this.modal.querySelectorAll('.layer-toggle-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
+            btn.addEventListener('click', (e) => {
+                // If inside dropdown, stop propagation to keep menu open
+                if (btn.closest('#other-assets-menu')) {
+                    e.stopPropagation();
+                }
+
                 const layer = btn.dataset.layer;
                 this.visibleLayers[layer] = !this.visibleLayers[layer];
-                btn.classList.toggle('active', this.visibleLayers[layer]);
+                const isActive = this.visibleLayers[layer];
 
-                const dot = btn.querySelector('span');
-                if (dot) dot.style.opacity = this.visibleLayers[layer] ? 1 : 0.4;
+                // Handle Dropdown Item Styling
+                if (btn.classList.contains('dropdown-item')) {
+                    const indicator = btn.querySelector('.checkbox-indicator');
+                    const text = btn.querySelector('span');
+                    const color = btn.dataset.color || '#fff';
+
+                    if (indicator) {
+                        indicator.style.background = isActive ? color : 'transparent';
+                        indicator.innerHTML = isActive ? '<i class="fas fa-check" style="font-size:0.6rem; color:#fff;"></i>' : '';
+                    }
+                    if (text) text.style.color = isActive ? '#fff' : 'rgba(255,255,255,0.6)';
+
+                } else {
+                    // Main Toggles
+                    btn.classList.toggle('active', isActive);
+                    const dot = btn.querySelector('span');
+                    if (dot) dot.style.opacity = isActive ? 1 : 0.4;
+                }
 
                 this._updateSeriesVisibility();
             });
         });
+
+        // Dropdown Open/Close Logic
+        const dropdownBtn = this.modal.querySelector('#other-assets-btn');
+        const dropdownMenu = this.modal.querySelector('#other-assets-menu');
+
+        if (dropdownBtn && dropdownMenu) {
+            dropdownBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const isHidden = dropdownMenu.style.display === 'none';
+                dropdownMenu.style.display = isHidden ? 'flex' : 'none';
+            });
+
+            // Close when clicking outside
+            const closeDropdown = (e) => {
+                if (!document.body.contains(this.modal)) {
+                    document.removeEventListener('click', closeDropdown);
+                    return;
+                }
+                if (dropdownMenu.style.display !== 'none' && !dropdownBtn.contains(e.target) && !dropdownMenu.contains(e.target)) {
+                    dropdownMenu.style.display = 'none';
+                }
+            };
+            document.addEventListener('click', closeDropdown);
+        }
+
+        // Bind Collapse Toggle
+        const collapseHandle = this.modal.querySelector('.controls-collapse-toggle');
+        const controls = this.modal.querySelector('.portfolio-chart-controls');
+        if (collapseHandle && controls) {
+            collapseHandle.addEventListener('click', () => {
+                controls.classList.toggle('collapsed');
+            });
+        }
     }
 
     initChart() {
@@ -232,8 +313,8 @@ export class PortfolioChartUI {
             rightPriceScale: { borderVisible: false, scaleMargins: { top: 0.1, bottom: 0.1 } },
             timeScale: { borderVisible: false, rightOffset: 5 },
             crosshair: {
-                vertLine: { color: 'rgba(193, 154, 107, 0.5)', labelBackgroundColor: '#111' },
-                horzLine: { color: 'rgba(193, 154, 107, 0.5)', labelBackgroundColor: '#111' }
+                vertLine: { color: 'rgba(164, 147, 147, 0.5)', labelBackgroundColor: '#111' },
+                horzLine: { color: 'rgba(164, 147, 147, 0.5)', labelBackgroundColor: '#111' }
             },
             localization: {
                 priceFormatter: (price) => {
@@ -247,13 +328,27 @@ export class PortfolioChartUI {
         // AUTO-RESIZE OBSERVER (Fixes Mobile Landscape / Orientation Issues)
         // This ensures the chart adapts to the container's new size immediately
         this.resizeObserver = new ResizeObserver(entries => {
-            if (!this.chart || !entries[0]) return;
-            const { width, height } = entries[0].contentRect;
-            this.chart.applyOptions({ width, height });
-            // Optional: Refit content if drastic change?
-            // this.chart.timeScale().fitContent(); 
+            if (!this.chart || !container) return;
+            // Use offsets for more accurate "real" dimensions during transitions
+            const width = container.offsetWidth;
+            const height = container.offsetHeight;
+            if (width > 0 && height > 0) {
+                this.chart.applyOptions({ width, height });
+                // Force a fitContent to ensure simulation isn't "half screen"
+                this.chart.timeScale().fitContent();
+            }
         });
         this.resizeObserver.observe(container);
+
+        // Explicit Orientation change listener as a fallback for some mobile browsers
+        window.addEventListener('orientationchange', () => {
+            setTimeout(() => {
+                if (this.chart && container) {
+                    this.chart.applyOptions({ width: container.offsetWidth, height: container.offsetHeight });
+                    this.chart.timeScale().fitContent();
+                }
+            }, 200);
+        });
 
         const accountingFormat = {
             type: 'price',
@@ -261,10 +356,31 @@ export class PortfolioChartUI {
             minMove: 1,
         };
 
-        this.series.value = this.chart.addAreaSeries({ lineColor: 'rgba(193, 154, 107, 1)', topColor: 'rgba(193, 154, 107, 0.4)', bottomColor: 'rgba(193, 154, 107, 0.05)', lineWidth: 3, title: 'Total Value', visible: this.visibleLayers.value, priceFormat: accountingFormat });
-        this.series.cost = this.chart.addLineSeries({ color: 'rgba(140, 140, 140, 0.6)', lineWidth: 2, lineStyle: 2, title: 'Cost Basis', visible: this.visibleLayers.cost, lastValueVisible: false, priceLineVisible: false, priceFormat: accountingFormat });
-        this.series.profit = this.chart.addLineSeries({ color: 'rgba(0, 255, 0, 0.8)', lineWidth: 2, title: 'Total Profit', visible: this.visibleLayers.profit, priceFormat: accountingFormat });
-        this.series.shares = this.chart.addLineSeries({ color: 'rgba(107, 169, 193, 0.8)', lineWidth: 2, title: 'All Shares', visible: this.visibleLayers.shares, priceFormat: accountingFormat });
+        // Total Portfolio Series (Value)
+        this.series.total = this.chart.addAreaSeries({
+            lineColor: '#06FF4F',
+            topColor: 'rgba(6, 255, 79, 0.4)',
+            bottomColor: 'rgba(6, 255, 79, 0.05)',
+            lineWidth: 3,
+            visible: this.visibleLayers.total,
+            priceFormat: accountingFormat
+        });
+
+        // Superannuation Series
+        this.series.super = this.chart.addLineSeries({
+            color: '#9C27B0',
+            lineWidth: 2,
+            visible: this.visibleLayers.super,
+            priceFormat: accountingFormat
+        });
+
+        // Shares Portfolio Series
+        this.series.shares = this.chart.addLineSeries({
+            color: '#a49393',
+            lineWidth: 2,
+            visible: this.visibleLayers.shares,
+            priceFormat: accountingFormat
+        });
 
         this.loadData();
     }
@@ -281,7 +397,7 @@ export class PortfolioChartUI {
     }
 
     async loadData() {
-        console.log(`[PortfolioChartUI] v1055 Loading... Range: ${this.range} Filter: ${this.filter}`);
+        console.log(`[PortfolioChartUI] v1106 Loading... Range: ${this.range}`);
         const loading = document.getElementById('portfolio-chart-loading');
         if (loading) loading.style.display = 'flex';
 
@@ -289,40 +405,39 @@ export class PortfolioChartUI {
             const rawShares = (AppState.data.shares || []).filter(s => s && s.shareName);
             const rawCash = AppState.data.cash || [];
 
-            // Apply Source Filtering
-            const { filteredShares, filteredCash } = this._applySourceFilter(rawShares, rawCash);
+            // 1. Calculate Timestep start for filtering the visible window
+            const startTs = this._getRangeStartTs();
 
-            // 1. Calculate Static Cash Components (Filtered)
-            let totalCashValue = 0;
+            // 2. Prepare Source Components
             const cashByCat = {};
-            filteredCash.forEach(item => {
+            rawCash.forEach(item => {
+                if (item.category === 'shares') return;
                 const bal = parseFloat(item.balance || 0);
-                totalCashValue += bal;
                 const catId = item.category || 'cash';
                 cashByCat[catId] = (cashByCat[catId] || 0) + bal;
             });
 
-            // 2. Fetch Shares History (Only for filtered shares)
-            const results = await Promise.all(filteredShares.map(s => this.dataService.fetchHistory(s.shareName, this.range)));
+            // 3. Fetch Shares History (For ALL shares in portfolio)
+            const results = await Promise.all(rawShares.map(s => this.dataService.fetchHistory(s.shareName, this.range)));
             const allTimestamps = new Set();
             const shareHistories = [];
 
             results.forEach((res, i) => {
-                const s = filteredShares[i];
-                // CRITICAL FIX: Even if a stock has NO history (illiquid in 5d), we MUST include it
-                // so it can be valued at its Live Price / Last Known Price.
-                // Otherwise, the chart total drops significantly.
-                // if (res && res.ok && Array.isArray(res.data) && res.data.length > 0) {
+                const s = rawShares[i];
                 const map = new Map();
                 if (res && res.ok && Array.isArray(res.data)) {
-                    res.data.forEach(d => { allTimestamps.add(d.time); map.set(d.time, d.close); });
+                    res.data.forEach(d => {
+                        if (d.time >= startTs) {
+                            allTimestamps.add(d.time);
+                            map.set(d.time, d.close);
+                        }
+                    });
                 }
 
-                // Purchase Date logic for Backfilling
+                // Purchase Date logic
                 let purchaseTs = 0;
                 if (s.purchaseDate || s.entryDate) {
                     const dateStr = s.purchaseDate || s.entryDate;
-                    // Support DD/MM/YYYY or YYYY-MM-DD
                     let d;
                     if (dateStr.includes('/')) {
                         const p = dateStr.split('/');
@@ -335,12 +450,20 @@ export class PortfolioChartUI {
 
                 shareHistories.push({
                     units: parseFloat(s.portfolioShares || 0),
-                    costBasis: parseFloat(s.portfolioShares || 0) * parseFloat(s.portfolioAvgPrice || 0),
                     purchaseTs: purchaseTs,
                     data: map,
                     code: s.shareName
                 });
-                // }
+            });
+
+            // 4. Inject Historical Data Timestamps (Cash/Super Anchors)
+            Object.keys(cashByCat).forEach(cid => {
+                const history = AppState.preferences.historicalData?.[cid];
+                if (history && Array.isArray(history)) {
+                    history.forEach(p => {
+                        if (p.time >= startTs) allTimestamps.add(p.time);
+                    });
+                }
             });
 
             // Fallback Timeline
@@ -350,143 +473,82 @@ export class PortfolioChartUI {
                 for (let i = 30; i >= 0; i--) sortedTimes.push(now - (i * 86400));
             }
 
-            const valueData = [], costData = [], profitData = [], sharesValueData = [];
-            const catBuffers = {};
-            Object.keys(cashByCat).forEach(cid => catBuffers[cid] = []);
-
-            // INJECT LIVE PRICE: Ensure the chart always ends at the current "Live" value from Sidebar
-            // This fixes the discrepancy where history might lag by 1 day or miss today's market moves
+            // Inject Live Price
             const nowTs = Math.floor(Date.now() / 1000);
             const liveMap = new Map();
             let hasLiveUpdates = false;
-
-            filteredShares.forEach(s => {
+            rawShares.forEach(s => {
                 const priceData = AppState.livePrices.get(s.shareName);
                 if (priceData && priceData.live > 0) {
                     liveMap.set(s.shareName, priceData.live);
                     hasLiveUpdates = true;
+                    // Also update the map for each history
+                    const sh = shareHistories.find(h => h.code === s.shareName);
+                    if (sh) sh.data.set(nowTs, priceData.live);
                 }
             });
 
-            // Initialize lastPrices with LIVE data if available. 
-            // This fills the gaps for illiquid stocks that have no history in this range.
+            if (nowTs >= startTs) {
+                const lastTs = sortedTimes[sortedTimes.length - 1] || 0;
+                if (nowTs - lastTs > 3600) sortedTimes.push(nowTs);
+            }
+
+            const totalData = [], superData = [], sharesData = [];
+            const catBuffers = {};
+            Object.keys(cashByCat).forEach(cid => catBuffers[cid] = []);
+
+            // Last known prices for interpolation
             const lastPrices = shareHistories.map(sh => liveMap.get(sh.code) || 0);
 
-            if (hasLiveUpdates) {
-                // If the last timestamp is significantly older (>12h), or we just want to force "Now"
-                const lastTs = sortedTimes.length > 0 ? sortedTimes[sortedTimes.length - 1] : 0;
-                if (nowTs - lastTs > 3600) { // If > 1 hour gap, append NOW
-                    sortedTimes.push(nowTs);
-                    // Append live price to each history's data map for this new timestamp
-                    shareHistories.forEach(sh => {
-                        if (liveMap.has(sh.code)) {
-                            sh.data.set(nowTs, liveMap.get(sh.code));
-                        }
-                    });
-                } else {
-                    // Just update the very last point to be the live price if it's "close enough" (e.g. today)
-                    // Actually, safer to always append "Now" for visual accuracy of "Current Value"
-                    // But duplicates might look weird. Let's stick to appending if gap exist, or updating if same day.
-                    // For safety: Always Append. Lightweight charts handles proximity fine.
-                    // Actually, let's just push nowTs and let the loop handle it
-                    if (nowTs !== lastTs) {
-                        sortedTimes.push(nowTs);
-                        shareHistories.forEach(sh => {
-                            if (liveMap.has(sh.code)) sh.data.set(nowTs, liveMap.get(sh.code));
-                        });
-                    }
-                }
-            }
-
+            // 5. Loop through timeline and calculate sources
             sortedTimes.forEach(time => {
                 let daySharesValue = 0;
-                let daySharesCost = 0;
+                let daySuperValue = 0;
+                let dayTotalCash = 0;
 
+                // A. Shares
                 shareHistories.forEach((sh, idx) => {
-                    // Backfilling Filter: If time is before purchase, asset didn't exist in portfolio
                     if (sh.purchaseTs > 0 && time < sh.purchaseTs) return;
+                    if (sh.data.has(time)) {
+                        lastPrices[idx] = sh.data.get(time);
+                    }
+                    const val = lastPrices[idx] * sh.units;
+                    daySharesValue += val;
 
-                    if (sh.data.has(time)) { lastPrices[idx] = sh.data.get(time); }
-                    daySharesValue += (lastPrices[idx] * sh.units);
-                    daySharesCost += sh.costBasis;
+                    // Super Check
+                    const watchlists = AppState.data.watchlists || [];
+                    const isSuper = watchlists.some(w =>
+                        w.name?.toLowerCase().includes('super') &&
+                        w.items?.some(i => i.code === sh.code)
+                    );
+                    if (isSuper) daySuperValue += val;
                 });
 
-                const dayTotalValue = daySharesValue + totalCashValue;
-                const dayTotalCost = daySharesCost + totalCashValue;
-
-                valueData.push({ time, value: dayTotalValue });
-                costData.push({ time, value: dayTotalCost });
-                profitData.push({ time, value: dayTotalValue - dayTotalCost });
-
-                sharesValueData.push({ time, value: daySharesValue });
-
+                // B. Cash
                 Object.keys(cashByCat).forEach(cid => {
-                    catBuffers[cid].push({ time, value: cashByCat[cid] });
+                    const histVal = this._getHistoricalValue(cid, time, cashByCat[cid]);
+                    if (cid === 'super') daySuperValue += histVal;
+                    dayTotalCash += histVal;
+                    if (catBuffers[cid]) catBuffers[cid].push({ time, value: histVal });
                 });
+
+                const dayTotalValue = daySharesValue + dayTotalCash;
+                totalData.push({ time, value: dayTotalValue });
+                superData.push({ time, value: daySuperValue });
+                sharesData.push({ time, value: daySharesValue });
             });
 
-            // 2. Diagnostic Log (Updated)
-            console.log(`[PortfolioChartUI] v1055 Diagnostic (${this.filter}): Total=${formatCurrency(valueData[valueData.length - 1].value)}, Shares=${formatCurrency(sharesValueData[sharesValueData.length - 1].value)}, Cash=${formatCurrency(totalCashValue)} (Cost=${formatCurrency(costData[costData.length - 1].value)})`);
+            // 6. Push to Series
+            if (this.series.total) this.series.total.setData(totalData);
+            if (this.series.super) this.series.super.setData(superData);
+            if (this.series.shares) this.series.shares.setData(sharesData);
 
-            // 3. Update Chart Series
-            this.series.value.setData(valueData);
-            this.series.cost.setData(costData);
-            this.series.profit.setData(profitData);
-            this.series.shares.setData(sharesValueData);
-
-            // MARKERS: "Live Price" & "Inception"
-            const markers = [];
-
-            // A. Live Price Marker (at the very end)
-            if (hasLiveUpdates && valueData.length > 0) {
-                const lastPoint = valueData[valueData.length - 1];
-                markers.push({
-                    time: lastPoint.time,
-                    position: 'aboveBar',
-                    color: '#e91e63', // Pink/Accent color
-                    shape: 'arrowDown',
-                    text: 'LIVE'
-                });
-            }
-
-            // B. Inception Marker (First non-zero value where cost basis starts)
-            // Find the first point where cost > 0 (or value > 0 if cost is missing)
-            // Actually, we use filteredShares to find the earliest purchaseTs
-            let earliestPurchaseTs = Infinity;
-            filteredShares.forEach(s => {
-                if (s.purchaseTs && s.purchaseTs > 0 && s.purchaseTs < earliestPurchaseTs) {
-                    earliestPurchaseTs = s.purchaseTs;
-                }
-            });
-
-            // If we found a valid earliest purchase time, add a marker
-            if (earliestPurchaseTs !== Infinity) {
-                // Find the closest data point in valueData
-                const inceptionPoint = valueData.find(d => d.time >= earliestPurchaseTs);
-                if (inceptionPoint) {
-                    markers.push({
-                        time: inceptionPoint.time,
-                        position: 'belowBar',
-                        color: '#2196f3', // Blue color
-                        shape: 'arrowUp',
-                        text: 'INCEPTION'
-                    });
-                }
-            }
-
-            this.series.value.setMarkers(markers);
-
-            // 4. Manage Breakdown Series Dynamically
+            // 7. Breakdown Series
             Object.keys(catBuffers).forEach((catId, idx) => {
                 if (!this.categorySeries[catId]) {
-                    const label = this._getCategoryLabel(catId);
-                    const palette = ['#4db8ff', '#ff4d4d', '#4dff88', '#ffcc4d', '#ff4db8', '#b84dff', '#4dffff', '#ff994d'];
-                    const color = palette[idx % palette.length];
-
                     this.categorySeries[catId] = this.chart.addLineSeries({
-                        color: color,
+                        color: this._getCategoryColor(catId, idx),
                         lineWidth: 2,
-                        title: label,
                         visible: !!this.visibleLayers[`cat_${catId}`],
                         priceFormat: { type: 'price', precision: 0, minMove: 1 }
                     });
@@ -494,74 +556,62 @@ export class PortfolioChartUI {
                 this.categorySeries[catId].setData(catBuffers[catId]);
             });
 
-            this.chart.timeScale().fitContent();
-            this._updateStats(valueData, costData[costData.length - 1].value);
+            // 8. Markers
+            if (hasLiveUpdates && totalData.length > 0 && this.series.total) {
+                this.series.total.setMarkers([{
+                    time: totalData[totalData.length - 1].time,
+                    position: 'aboveBar',
+                    color: '#e91e63',
+                    shape: 'arrowDown',
+                    text: 'LIVE'
+                }]);
+            }
+
+            if (this.chart) this.chart.timeScale().fitContent();
+            this._updateStats(totalData);
 
             if (loading) loading.style.display = 'none';
         } catch (e) {
             console.error('[PortfolioChartUI] Load Error:', e);
-            if (loading) {
-                loading.innerHTML = `<i class="fas fa-exclamation-triangle fa-2x" style="color:#ff6666;"></i>
-                                    <span style="color:#ff6666; margin-top:16px; text-align:center; padding:0 24px;">
-                                        Simulation Error<br><small>${e.message}</small>
-                                    </span>
-                                    <button style="margin-top:20px; background:transparent; border:1px solid #fff; color:#fff; padding:6px 16px; border-radius:4px; font-weight:700;" onclick="location.reload()">REFRESH</button>`;
-            }
+            if (loading) loading.style.display = 'none';
         }
     }
 
-    /**
-     * Filters shares and cash based on the selected Source Filter.
-     */
-    _applySourceFilter(shares, cash) {
-        let filteredShares = [];
-        let filteredCash = [];
-
-        const mode = this.filter; // TOTAL, SHARES_ONLY, SUPER, CASH_ASSETS
-
-        if (mode === 'TOTAL') {
-            filteredShares = [...shares];
-            // Exclude 'shares' category from cash to avoid double counting (standard logic)
-            filteredCash = cash.filter(c => c.category !== 'shares');
+    _getRangeStartTs() {
+        const now = Math.floor(Date.now() / 1000);
+        const day = 86400;
+        switch (this.range) {
+            case '1d': return now - day;
+            case '5d': return now - (5 * day);
+            case '1m': return now - (31 * day);
+            case '3m': return now - (92 * day);
+            case '6m': return now - (183 * day);
+            case '1y': return now - (365 * day);
+            case '5y': return now - (5 * 365 * day);
+            case '10y': return now - (10 * 365 * day);
+            case 'max': return 0;
+            default: return now - (365 * day);
         }
-        else if (mode === 'SHARES_ONLY') {
-            filteredShares = [...shares];
-            filteredCash = []; // No cash
-        }
-        else if (mode === 'SUPER') {
-            // Include Cash with category 'super'
-            filteredCash = cash.filter(c => c.category === 'super');
-
-            // Include Shares in 'Super' watchlist
-            // 1. Find the ID of any watchlist named 'Super' (case insensitive)
-            const watchlists = AppState.data.watchlists || [];
-            const superList = watchlists.find(w => w.name && w.name.toLowerCase().includes('super'));
-
-            if (superList && superList.items) {
-                const superCodes = new Set(superList.items.map(i => i.code));
-                filteredShares = shares.filter(s => superCodes.has(s.shareName));
-            } else {
-                filteredShares = [];
-            }
-        }
-        else if (mode === 'CASH_ASSETS') {
-            filteredShares = [];
-            // Exclude 'shares' category, exclude 'super' category (optional? No, usually Cash Assets implies liquid/personal)
-            // Let's include everything EXCEPT 'shares' for now, or maybe strictly non-super?
-            // The plan said: "All non-share assets".
-            filteredCash = cash.filter(c => c.category !== 'shares');
-        }
-
-        return { filteredShares, filteredCash };
     }
+
+    _getFilterColor(filter) {
+        const map = {
+            'total': { hex: '#06FF4F', rgb: '6, 255, 79' },
+            'super': { hex: '#9C27B0', rgb: '156, 39, 176' },
+            'shares': { hex: '#a49393', rgb: '164, 147, 147' }
+        };
+        const c = map[filter] || map['total'];
+        return { hex: c.hex, rgba: (opacity) => `rgba(${c.rgb}, ${opacity})` };
+    }
+
+    _updateFilterStyles() { }
+    _applySourceFilter() { }
 
     _getCashByCategory() {
         const cash = AppState.data.cash || [];
         const map = {};
         cash.forEach(item => {
-            // EXCLUDE 'shares' category from cash aggregation to prevent double-counting
             if (item.category === 'shares') return;
-
             const bal = parseFloat(item.balance || 0);
             if (bal === 0) return;
             const cid = item.category || 'cash';
@@ -579,23 +629,50 @@ export class PortfolioChartUI {
         return sys ? sys.label : 'Asset';
     }
 
-    _updateStats(data, currentCost) {
+    _getCategoryColor(catId, index) {
+        const userCat = AppState.preferences.userCategories?.find(c => c.id === catId);
+        if (userCat && userCat.color) return userCat.color;
+        const firstAssetInCat = (AppState.data.cash || []).find(a => a.category === catId && a.color);
+        if (firstAssetInCat && firstAssetInCat.color) return firstAssetInCat.color;
+        const palette = ['#4db8ff', '#ff4d4d', '#4dff88', '#ffcc4d', '#ff4db8', '#b84dff', '#4dffff', '#ff994d'];
+        return palette[index % palette.length];
+    }
+
+    _getHistoricalValue(catId, time, currentBalance) {
+        const history = AppState.preferences.historicalData?.[catId];
+        if (!history || history.length === 0) return currentBalance;
+        const points = [...history].sort((a, b) => a.time - b.time);
+        const lastPoint = points[points.length - 1];
+        if (time >= lastPoint.time) {
+            const now = Math.floor(Date.now() / 1000);
+            if (time >= now) return currentBalance;
+            if (now - lastPoint.time < 86400) return currentBalance;
+            const t = (time - lastPoint.time) / (now - lastPoint.time);
+            return lastPoint.val + t * (currentBalance - lastPoint.val);
+        }
+        if (time <= points[0].time) return points[0].val;
+        for (let i = 0; i < points.length - 1; i++) {
+            const p1 = points[i];
+            const p2 = points[i + 1];
+            if (time >= p1.time && time <= p2.time) {
+                const t = (time - p1.time) / (p2.time - p1.time);
+                return p1.val + t * (p2.val - p1.val);
+            }
+        }
+        return currentBalance;
+    }
+
+    _updateStats(data) {
         if (!data || data.length === 0) return;
         const last = data[data.length - 1].value;
-        const change = last - currentCost;
-        const pct = currentCost !== 0 ? (change / currentCost) * 100 : 0;
-
         const statsEl = this.modal.querySelector('.chart-stats-summary');
         if (statsEl) {
-            const colorClass = change >= 0 ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE;
             statsEl.innerHTML = `
-                <div style="display:flex; gap:16px; align-items:center;">
-                    <span class="${colorClass}" style="font-weight:800; font-size:1.1rem; letter-spacing:-0.2px;">
-                        ${change >= 0 ? '+' : ''}${Math.floor(change).toLocaleString('en-AU')} (${formatPercent(pct)})
-                    </span>
-                    <span style="opacity:0.6; font-weight:700; font-size:0.8rem;">Current Total: ${Math.floor(last).toLocaleString('en-AU')}</span>
-                </div>
-            `;
+                    <div style="display:flex; flex-direction:column; gap:2px;">
+                        <div style="font-size: 1.3rem; font-weight: 900; color: #fff; line-height: 1.1;">$${Math.floor(last).toLocaleString('en-AU')}</div>
+                        <div style="font-size: 0.7rem; opacity: 0.5; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase;">Current Value</div>
+                    </div>
+                `;
         }
     }
 }
