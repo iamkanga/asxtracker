@@ -75,6 +75,36 @@ function isTradingDay_(dateObj) {
   return true;
 }
 
+/** 
+ * Strict Guard: Checks if it's a trading day AND currently between 9:00 AM - 6:30 PM Sydney. 
+ * Prevents unnecessary script execution (quota drain) late at night or on weekends.
+ */
+function isMarketActive_(dateObj) {
+  const d = dateObj || new Date();
+  
+  // 1. Day Check (Weekend/Holiday)
+  if (!isTradingDay_(d)) return false;
+  
+  // 2. Hour Check (Sydney Time)
+  const hour = Number(Utilities.formatDate(d, ASX_TIME_ZONE, 'H')); // 0-23
+  const min = Number(Utilities.formatDate(d, ASX_TIME_ZONE, 'mm'));
+  
+  const currentTimeVal = hour * 100 + min; // e.g. 10:30 -> 1030
+  
+  // Market starts 10:00 (Pre-market 7am-10am). We start at 9:00 for data readiness.
+  // Market closes 4:30. We run until 6:30 for final reconciliation / Daily Digest prep.
+  const start = 900;
+  const end = 1830;
+  
+  const active = (currentTimeVal >= start && currentTimeVal <= end);
+  
+  if (!active) {
+    console.log('[MarketGuard] Inactive hour: ' + hour + ':' + min + '. No scan required.');
+  }
+  
+  return active;
+}
+
 // ===============================================================
 // ============= GENERIC FIRESTORE COMMIT UTILITIES ==============
 // ===============================================================
@@ -222,6 +252,8 @@ function commitCentralDoc_(docPathSegments, plainData, explicitMask) {
 
 function runGlobal52WeekScan() {
   try {
+    if (!isMarketActive_()) return;
+
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     // Guaranteed latest settings via multi-attempt loop
     const guaranteed = fetchGlobalSettingsGuaranteedLatest_(3, 200);
@@ -719,10 +751,9 @@ function appendDailyHiLoHits_(highsArr, lowsArr) {
 
 function runGlobalMoversScan() {
   try {
+    if (!isMarketActive_()) return;
+
     const now = new Date();
-    const hourSydney = Number(Utilities.formatDate(now, ASX_TIME_ZONE, 'HH'));
-    const inHours = (hourSydney >= 10 && hourSydney < 17);
-    if (!inHours) console.log('[MoversScan] Outside market hours (' + hourSydney + 'h) – still executing for freshness.');
 
     const guaranteed = fetchGlobalSettingsGuaranteedLatest_(3, 200);
     if (!guaranteed.ok || !guaranteed.data) { console.log('[MoversScan] FAILED settings fetch: ' + (guaranteed.error || 'unknown')); return; }
@@ -908,9 +939,11 @@ function fetchPriceRowsForMovers_(spreadsheet) {
   
   // Resolve live price column (support alternative headings)
   const liveIdx = getCol(['LivePrice','Last','LastPrice','Last Trade','LastTrade','Last trade','Price','Current']);
+  const apiPriceIdx = getCol(['API Price', 'APIPrice', 'PIPrice', 'PI Price', 'API_Price']);
   
   // Resolve previous close column (support multiple spellings)
   const prevIdx = getCol(['PrevDayClose','PrevClose','Previous Close','PreviousClose','Prev']);
+  const apiPrevIdx = getCol(['API Prev', 'APIPrev', 'PI Prev', 'PIPrev', 'API_Prev']);
   
   // Robust header index finding (Direct Regex)
   const nameIdx = headers.findIndex(h => /^(Company Name|CompanyName|Name)$/i.test(String(h).trim()));
@@ -922,10 +955,31 @@ function fetchPriceRowsForMovers_(spreadsheet) {
   const rows = [];
   values.forEach(r => {
     const codeRaw = r[codeIdx]; if (!codeRaw) return;
-    const live = r[liveIdx]; const prev = r[prevIdx];
-    if (live == null || prev == null || live === '' || prev === '' || prev === 0) return;
-    const liveNum = Number(live); const prevNum = Number(prev);
-    if (!isFinite(liveNum) || !isFinite(prevNum) || prevNum === 0) return;
+    
+    let liveVal = r[liveIdx];
+    let prevVal = r[prevIdx];
+    
+    // --- SMART FALLBACK: If Live Price is broken (#N/A, Error, 0, or Empty), try API Price ---
+    const isBroken = (v) => (v == null || v === '' || v === 0 || v === '#N/A' || String(v).includes('Error') || String(v).includes('Unknown'));
+    
+    if (isBroken(liveVal) && apiPriceIdx != null) {
+      const fallback = r[apiPriceIdx];
+      if (!isBroken(fallback)) liveVal = fallback; 
+    }
+    
+    // --- SMART FALLBACK: Prev Close ---
+    if (isBroken(prevVal) && apiPrevIdx != null) {
+       const fallback = r[apiPrevIdx];
+       if (!isBroken(fallback)) prevVal = fallback;
+    }
+
+    if (liveVal == null || prevVal == null) return;
+    
+    const liveNum = Number(liveVal); 
+    const prevNum = Number(prevVal);
+    
+    if (!isFinite(liveNum) || !isFinite(prevNum) || prevNum === 0 || liveNum === 0) return;
+    
     rows.push({
       code: String(codeRaw).trim().toUpperCase(),
       live: liveNum,
@@ -1407,6 +1461,7 @@ function reconcileCustomDuplicatesFromDailyHits_() {
  */
 function runCustomTriggersScan() {
   try {
+    if (!isMarketActive_()) return;
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const priceRows = fetchAllAsxData_(ss) || [];
     if (!priceRows.length) { console.log('[CustomScan] No price data; abort.'); return; }
@@ -2133,6 +2188,9 @@ function captureDailyClosePrice() {
   // Robust matching for essential columns
   const livePriceColIndex = headersMap['LIVEPRICE'] ?? headersMap['LAST'] ?? headersMap['PRICE'];
   const prevCloseColIndex = headersMap['PREVDAYCLOSE'] ?? headersMap['PREVCLOSE'] ?? headersMap['CLOSEYEST'];
+  
+  // Fallback API Column (for GSCF/broken stocks)
+  const apiPriceColIndex = headersMap['APIPRICE'] ?? headersMap['PIPRICE'] ?? headersMap['APILAST'] ?? headersMap['API PRICE'];
 
   if (livePriceColIndex === undefined || prevCloseColIndex === undefined) {
     console.error('Missing essential columns. Headers found: ' + JSON.stringify(headersMap));
@@ -2147,11 +2205,28 @@ function captureDailyClosePrice() {
   const newPrevCloses = values.slice(1).map(row => {
     const live = row[livePriceColIndex];
     const currentPrev = row[prevCloseColIndex];
-    // Rule: if live price is valid (a positive number), use it. Else keep existing.
+    
+    // --- SMART FALLBACK LOGIC ---
+    let candidate = live;
+    const isBroken = (v) => (v == null || v === '' || v === 0 || v === '#N/A' || String(v).includes('Error') || String(v).includes('Unknown'));
+    
+    // If Live Price is broken, try API Price
+    if (isBroken(candidate) && apiPriceColIndex !== undefined) {
+      const apiVal = row[apiPriceColIndex];
+      // Only use API val if it looks valid
+      if (!isBroken(apiVal)) candidate = apiVal;
+    }
+
+    // Rule: if candidate price is valid (a positive number), use it. Else keep existing.
     // PROTECTION: Prevent #N/A or error strings from poisoning the PrevDayClose.
-    const liveNum = Number(live);
-    if (live !== null && live !== '' && !isNaN(liveNum) && liveNum > 0) {
-      return [liveNum];
+    
+    // Clean string input (e.g. "$102.00")
+    if (typeof candidate === 'string') candidate = candidate.replace(/[^0-9.]/g, '');
+    
+    const valNum = Number(candidate);
+    
+    if (!isNaN(valNum) && valNum > 0) {
+      return [valNum];
     } else {
       return [currentPrev];
     }
@@ -2215,12 +2290,21 @@ function debugDailyHitsParity() {
 
 // ================== DAILY COMBINED EMAIL DIGEST ==================
 function sendCombinedDailyDigest_() {
-  // 1) Weekday Guard
+  console.log('[DailyDigest] Attempting to run daily digest flow...');
+  
+  // 0) FORCE REFRESH: Ensure API columns are fresh to avoid stale prices (e.g. XRO)
+  try {
+    console.log('[DailyDigest] Forcing repairBrokenPrices() to clear stale data...');
+    repairBrokenPrices();
+  } catch (e) {
+    console.error('[DailyDigest] Repair warning (proceeding): ' + e);
+  }
+
+  // 1) Trading Day Guard (Catch Weekends & Holidays)
   try {
     const now = new Date();
-    const isoDay = Number(Utilities.formatDate(now, ASX_TIME_ZONE, 'u'));
-    if (isoDay === 6 || isoDay === 7) { 
-      console.log('[DailyDigest] Today is weekend; skipping email send.');
+    if (!isTradingDay_(now)) {
+      console.log(`[DailyDigest] Non-trading day; skipping email send.`);
       return;
     }
   } catch (dayErr) {
@@ -2581,6 +2665,7 @@ function doGet(e) {
 
 function buildPriceFeedArray_(singleCode, options) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
+  
   const pricesOut = [];
   const dashboardOut = [];
 
@@ -2631,6 +2716,7 @@ function buildPriceFeedArray_(singleCode, options) {
       const rawCode = idxCode != null ? r[idxCode] : '';
       if (!rawCode) return;
       const code = String(rawCode).trim().toUpperCase();
+      
       if (!code) return;
       if (singleCode && code !== singleCode) return;
       function num(idx) {
@@ -2770,6 +2856,8 @@ function fetchBulkYahooPrices_(tickers) {
  * and attempts to "repair" them using Yahoo Finance data.
  */
 function repairBrokenPrices() {
+  if (!isMarketActive_()) return;
+  
   repairSheet_('Prices');
   Utilities.sleep(1000); // Pause between sheets
   repairSheet_('Dashboard');

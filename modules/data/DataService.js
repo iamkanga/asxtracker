@@ -62,11 +62,6 @@ export class DataService {
 
                 const json = await response.json();
 
-                // DIAGNOSTIC LOOP: Check Dashboard Items
-                if (json.dashboard) {
-                    // Diagnostic removed after verification
-                }
-
                 // Normalize and return both prices and dashboard data
                 return this._normalizePriceData(json);
 

@@ -1231,8 +1231,9 @@ export class NotificationUI {
                 changePct = livePct;
                 changeAmt = liveAmt;
 
-                // Fix Price if missing/zero
-                if (rawPrice === 0) {
+                // FIX: Always prefer currentPrice if it exists, ensuring the UI reflects live reality
+                // rather than the potentially stale snapshot price from the hit document.
+                if (currentPrice > 0) {
                     rawPrice = currentPrice;
                     price = formatCurrency(rawPrice);
                 }
