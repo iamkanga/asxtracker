@@ -202,8 +202,14 @@ export class DashboardViewRenderer {
 
         // CALCULATE RANGE PERCENTAGE (Consolidated for consistency)
         const markerPct = this._calculateRangePercent(live, low52, high52);
+
+        // Kangaroo Color Logic (User Request: < 50% Red, >= 50% Green)
+        const kangarooColor = markerPct >= 50 ? 'var(--color-positive)' : 'var(--color-negative)';
+
         // Robust positioning style - ensuring z-index and overflow are handled
-        const markerStyle = `left: ${markerPct}% !important; position: absolute !important; top: 50% !important; transform: translate(-50%, -50%) !important; z-index: 1000 !important; width: 28px !important; height: 28px !important; display: flex !important; justify-content: center !important; align-items: center !important; pointer-events: none;`;
+        // Size reduced to 21px (75% of 28px)
+        // Opacity 0.6 added to 'ghost' the marker
+        const markerStyle = `left: ${markerPct}% !important; position: absolute !important; top: 50% !important; transform: translate(-50%, -50%) !important; z-index: 1000 !important; width: 21px !important; height: 21px !important; display: flex !important; justify-content: center !important; align-items: center !important; pointer-events: none; color: ${kangarooColor} !important; opacity: 0.6 !important;`;
 
         // DEBUG: Trace positioning values (remove after fix)
         if (index < 5 || code.includes('IXIC') || code.includes('NASDAQ')) {

@@ -386,9 +386,10 @@ export class ViewRenderer {
 
             // Background Chart Container (Hydrated post-render)
             // Using ID based on item ID to ensure uniqueness
-            const chartBgHtml = `
+            const showCharts = !AppState.preferences.containerBorders || AppState.preferences.containerBorders.showCardCharts !== false;
+            const chartBgHtml = showCharts ? `
                 <div class="portfolio-card-chart-bg" id="bg-chart-${item.id}" data-code="${item.code}" data-change="${item.dayChangeValue || 0}"></div>
-            `;
+            ` : '';
 
             return `
                 <div class="${CSS_CLASSES.CARD} ${trendClass} ${gradeClass} ${ghostClass}" data-id="${item.id}" data-code="${item.code}" style="${borderStyle}">

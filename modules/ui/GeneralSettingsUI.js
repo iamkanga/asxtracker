@@ -210,11 +210,10 @@ export class GeneralSettingsUI {
 
         modal.innerHTML = `
             <div class="${CSS_CLASSES.MODAL_OVERLAY}"></div>
-            <div class="${CSS_CLASSES.MODAL_CONTENT} ${CSS_CLASSES.MODAL_CONTENT_MEDIUM}" style="max-width: 350px;">
+            <div class="${CSS_CLASSES.MODAL_CONTENT} ${CSS_CLASSES.MODAL_CONTENT_MEDIUM}" style="max-width: 450px;">
                 <div class="${CSS_CLASSES.MODAL_HEADER}">
-                    <h2 class="${CSS_CLASSES.MODAL_TITLE}">Border Selection</h2>
+                    <h2 class="${CSS_CLASSES.MODAL_TITLE}">Card Customization</h2>
                     <div class="${CSS_CLASSES.FLEX_ROW}" style="gap: 15px;">
-                        <button id="${IDS.SAVE_BORDERS_BTN}" class="${CSS_CLASSES.MODAL_CLOSE_BTN}" style="color: var(--color-accent) !important; font-size: 1.5rem;"><i class="fas ${UI_ICONS.CHECK}"></i></button>
                         <button class="${CSS_CLASSES.MODAL_CLOSE_BTN}" style="font-size: 1.5rem;"><i class="fas ${UI_ICONS.CLOSE}"></i></button>
                     </div>
                 </div>
@@ -252,6 +251,18 @@ export class GeneralSettingsUI {
                             <div class="thickness-option ${prefs.thickness === 6 ? CSS_CLASSES.ACTIVE : ''}" data-value="6">6px</div>
                         </div>
                     </div>
+
+                    <!-- PORTFOLIO BACKGROUND TOGGLE -->
+                    <div style="width: 100%; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 35px; margin-top: 10px; display: flex; align-items: center; justify-content: space-between;">
+                         <div>
+                            <div class="${CSS_CLASSES.DETAIL_LABEL}" style="font-size: 0.8rem; letter-spacing: 2px; color: var(--text-muted); font-weight: 800; margin-bottom: 6px;">PORTFOLIO BACKGROUND</div>
+                            <div style="font-size: 0.85rem; color: var(--text-muted); opacity: 0.8;">Show chart lines on portfolio cards</div>
+                        </div>
+                        <div id="chart-bg-toggle" class="square-radio-btn ${prefs.showCardCharts !== false ? 'selected' : ''}" style="cursor: pointer; width: 22px; height: 22px; border: 2px solid var(--text-muted); padding: 3px; display: flex; align-items: center; justify-content: center; transition: all 0.2s;">
+                            <div class="inner-square" style="width: 100%; height: 100%; background: var(--color-accent); opacity: ${prefs.showCardCharts !== false ? '1' : '0'}; transition: opacity 0.2s;"></div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
             <style>
@@ -286,6 +297,43 @@ export class GeneralSettingsUI {
         const widget = modal.querySelector(`#${IDS.BORDER_BOX_WIDGET}`);
         const edges = widget.querySelectorAll('.border-edge');
 
+        // Toggle Logic
+        const chartToggle = modal.querySelector('#chart-bg-toggle');
+        const innerSquare = chartToggle.querySelector('.inner-square');
+
+        // Initial Coloring State Check
+        if (prefs.showCardCharts !== false) {
+            chartToggle.classList.add('selected');
+            chartToggle.style.borderColor = 'var(--color-accent)';
+            innerSquare.style.opacity = '1';
+        } else {
+            chartToggle.classList.remove('selected');
+            chartToggle.style.borderColor = 'var(--text-muted)';
+            innerSquare.style.opacity = '0';
+        }
+
+        chartToggle.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const isCurrentlySelected = chartToggle.classList.contains('selected');
+            const newState = !isCurrentlySelected;
+
+            if (newState) {
+                chartToggle.classList.add('selected');
+                chartToggle.style.borderColor = 'var(--color-accent)';
+                innerSquare.style.opacity = '1';
+            } else {
+                chartToggle.classList.remove('selected');
+                chartToggle.style.borderColor = 'var(--text-muted)';
+                innerSquare.style.opacity = '0';
+            }
+
+            // Save
+            AppState.saveBorderPreferences({ sides: currentSides, thickness: currentThickness, showCardCharts: newState });
+            document.dispatchEvent(new CustomEvent(EVENTS.REFRESH_WATCHLIST));
+        });
+
         edges.forEach(edge => {
             edge.addEventListener('click', () => {
                 const sideIdx = parseInt(edge.dataset.side);
@@ -317,28 +365,14 @@ export class GeneralSettingsUI {
             });
         });
 
-        // Save/Done
-        modal.querySelector(`#${IDS.SAVE_BORDERS_BTN}`).addEventListener('click', () => {
-            // Already saved live on each click
-            ToastManager.success("Border settings applied.");
 
-            // Close both modals
-            const generalModal = document.getElementById(IDS.GENERAL_SETTINGS_MODAL);
-            if (generalModal) {
-                generalModal.remove();
-                navManager.popStateSilently(); // Pop state for general settings
-            }
-
-            modal.remove();
-            navManager.popStateSilently(); // Pop state for border selector
-        });
 
         // Close
         const close = () => {
             modal.remove();
             navManager.popStateSilently();
         };
-        modal.querySelector(`.${CSS_CLASSES.MODAL_CLOSE_BTN}:not(#${IDS.SAVE_BORDERS_BTN})`).addEventListener('click', close);
+        modal.querySelector(`.${CSS_CLASSES.MODAL_CLOSE_BTN}`).addEventListener('click', close);
         modal.querySelector(`.${CSS_CLASSES.MODAL_OVERLAY}`).addEventListener('click', close);
     }
 }

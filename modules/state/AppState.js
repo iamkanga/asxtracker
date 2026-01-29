@@ -137,9 +137,9 @@ export const AppState = {
         containerBorders: (() => {
             try {
                 const stored = localStorage.getItem(STORAGE_KEYS.BORDER_PREFS);
-                return stored ? JSON.parse(stored) : { sides: [0, 0, 0, 1], thickness: 3 };
+                return stored ? JSON.parse(stored) : { sides: [0, 0, 0, 1], thickness: 3, showCardCharts: true };
             } catch (e) {
-                return { sides: [0, 0, 0, 1], thickness: 3 };
+                return { sides: [0, 0, 0, 1], thickness: 3, showCardCharts: true };
             }
         })(),
         historicalData: (() => {
