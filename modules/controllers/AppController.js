@@ -475,7 +475,8 @@ export class AppController {
                     gradientStrength: AppState.preferences.gradientStrength, // Fresh Read (USER REQUEST)
                     containerBorders: AppState.preferences.containerBorders, // Fresh Read (USER REQUEST)
                     badgeScope: AppState.preferences.badgeScope, // Fresh Read
-                    showBadges: AppState.preferences.showBadges  // Fresh Read
+                    showBadges: AppState.preferences.showBadges,  // Fresh Read
+                    customWatchlistNames: AppState.preferences.customWatchlistNames || {} // Fresh Read
                 };
 
                 if (freshPrefs.userCategories) {
