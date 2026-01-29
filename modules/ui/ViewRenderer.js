@@ -975,7 +975,7 @@ export class ViewRenderer {
                             <div class="${CSS_CLASSES.DETAIL_CARD} ${trendBgClass} ${CSS_CLASSES.CURSOR_POINTER}" id="miniChartCard_${stock.code}">
                                 <div class="${CSS_CLASSES.DETAIL_CARD_HEADER}">
                                     <h3 class="${CSS_CLASSES.DETAIL_LABEL}">
-                                        <i class="fas ${UI_ICONS.CHART}"></i> 52W Chart Preview
+                                        <i class="fas fa-hourglass-half"></i> 52W Chart Preview
                                     </h3>
                                 </div>
                                 <div id="miniChartHost_${stock.code}" style="margin-top: 8px;"></div>
@@ -2282,6 +2282,9 @@ export class ViewRenderer {
                     <div class="${CSS_CLASSES.MODAL_HEADER}">
                         <h2 class="${CSS_CLASSES.MODAL_TITLE}">${title}</h2>
                         <div class="${CSS_CLASSES.MODAL_ACTIONS}">
+                            <button class="portfolio-history-modal-btn ${CSS_CLASSES.MODAL_ACTION_BTN}" title="View History">
+                                <i class="fas ${UI_ICONS.CHART}"></i>
+                            </button>
                             <button class="${CSS_CLASSES.MODAL_CLOSE_BTN} ${CSS_CLASSES.MODAL_ACTION_BTN}" title="Close">
                                 <i class="fas ${UI_ICONS.CLOSE}"></i>
                             </button>
@@ -2320,6 +2323,13 @@ export class ViewRenderer {
 
         modal.querySelector(`.${CSS_CLASSES.MODAL_CLOSE_BTN} `).addEventListener('click', close);
         modal.querySelector(`.${CSS_CLASSES.MODAL_OVERLAY} `).addEventListener('click', close);
+
+        const historyModalBtn = modal.querySelector('.portfolio-history-modal-btn');
+        if (historyModalBtn) {
+            historyModalBtn.addEventListener('click', () => {
+                document.dispatchEvent(new CustomEvent(EVENTS.OPEN_PORTFOLIO_CHART));
+            });
+        }
 
         // Click row to open stock details
         modal.querySelectorAll(`.${CSS_CLASSES.SUMMARY_DETAIL_ROW} `).forEach(row => {

@@ -646,37 +646,153 @@ export class NotificationUI {
         // Flatten Local: Pinned first, then Fresh
         let localAlerts = [...(localData.pinned || []), ...(localData.fresh || [])];
 
-        // --- SORT PRIORITY: TARGETS FIRST ---
-        // Requirement: "I want the user set targets that are entered into the AD share modal. To appear first."
-        localAlerts.sort((a, b) => {
-            const isTargetA = (a.intent === 'target' || a.intent === 'target-hit');
-            const isTargetB = (b.intent === 'target' || b.intent === 'target-hit');
-            if (isTargetA && !isTargetB) return -1;
-            if (!isTargetA && isTargetB) return 1;
-            return 0; // Keep existing order (time-based)
-        });
-
         // Global Scans: Returns { movers: {up, down}, hilo: {high, low} }
         // FIX: Use strict mode (false) so that if thresholds are "Not Set" (0), no shares are returned.
         const globalData = notificationStore.getGlobalAlerts(false) || { movers: { up: [], down: [] }, hilo: { high: [], low: [] } };
 
         const rules = notificationStore.getScannerRules() || { up: {}, down: {} };
 
+        // SORTING (Custom Section Only):
+        // Order: Targets -> 52W Lows -> 52W Highs -> Movers Losers -> Movers Gainers
+        // Sub-sort: Alphabetical
+        const indexSort = (a, b) => {
+            const codeA = String(a.code || a.shareName || '').toUpperCase();
+            const codeB = String(b.code || b.shareName || '').toUpperCase();
+            return codeA.localeCompare(codeB);
+        };
+
+        const sortedLocal = [...localAlerts].sort((a, b) => {
+            const getRank = (item) => {
+                const intent = (item.intent || '').toLowerCase();
+                const type = (item.type || '').toLowerCase();
+                // Check Down/Loser
+                const pct = Number(item.pct || item.changeInPercent || 0);
+                const isDown = (item.direction || '').toLowerCase() === 'down' || pct < 0;
+
+                // Rank 1: Targets ("Target Alerts remain in their current position" - Top)
+                if (intent === 'target' || intent === 'target-hit') return 1;
+
+                // Rank 2: 52W Low (User: "Losers first... then 52 highs")
+                // Logic: If it's a Hilo/52W alert AND it's Down (or explicitly 'low')
+                const isHilo = (intent.includes('hilo') || intent.includes('52') || type.includes('hilo'));
+                if (isHilo && isDown) return 2;
+                if (intent.includes('low') && isHilo) return 2; // Safety for explicit 'low' intent
+
+                // Rank 3: 52W High
+                // Logic: If it's a Hilo/52W alert AND it's Up (or explicitly 'high')
+                if (isHilo && !isDown) return 3;
+                if (intent.includes('high') && isHilo) return 3; // Safety
+
+                // Rank 4: Movers Losers
+                if (isDown) return 4;
+
+                // Rank 5: Movers Gainers
+                return 5;
+            };
+
+            const rankA = getRank(a);
+            const rankB = getRank(b);
+
+            if (rankA !== rankB) return rankA - rankB;
+
+            // Tie-breaker: Alphabetical
+            return indexSort(a, b);
+        });
+
+        // Global Scans Extraction
         const finalMoversUp = globalData.movers?.up || [];
         const finalMoversDown = globalData.movers?.down || [];
         const finalHiloHigh = globalData.hilo?.high || [];
         const finalHiloLow = globalData.hilo?.low || [];
 
-        // Wait, 'minPrice' above is LOCAL logic fallback? 
-        // No, I'll use proper Coalescing.
-        const ruleMin = rules.up?.minPrice ?? 0.05;
+        // SORTING HELPERS
 
-        // Format Helper
+        // Robust Parser: Handles "-$1.27", "4.06%", etc.
+        const parseVal = (v) => {
+            if (typeof v === 'number') return v;
+            if (!v) return 0;
+            const clean = String(v).replace(/[^0-9.-]+/g, '');
+            return parseFloat(clean) || 0;
+        };
+
+        // 1. Percentage Magnitude Sort (Desc Pct -> Tiebreak Dollar)
+        const pctSort = (a, b) => {
+            // Check ALL aliases: pct, changeInPercent, pctChange
+            const rawPctA = Math.abs(parseVal(a.pct || a.changeInPercent || a.pctChange));
+            const rawPctB = Math.abs(parseVal(b.pct || b.changeInPercent || b.pctChange));
+
+            const roundA = Number(rawPctA.toFixed(2));
+            const roundB = Number(rawPctB.toFixed(2));
+            if (roundA !== roundB) return roundB - roundA;
+
+            // Check aliases: change, valueChange
+            const dolA = Math.abs(parseVal(a.change || a.valueChange));
+            const dolB = Math.abs(parseVal(b.change || b.valueChange));
+            return dolB - dolA;
+        };
+
+        // 2. Dollar Magnitude Sort (Desc Dollar -> Tiebreak Pct)
+        const dolSort = (a, b) => {
+            const dolA = Math.abs(parseVal(a.change || a.valueChange));
+            const dolB = Math.abs(parseVal(b.change || b.valueChange));
+
+            if (Math.abs(dolA - dolB) > 0.001) return dolB - dolA;
+
+            const rawPctA = Math.abs(parseVal(a.pct || a.changeInPercent || a.pctChange));
+            const rawPctB = Math.abs(parseVal(b.pct || b.changeInPercent || b.pctChange));
+            return rawPctB - rawPctA;
+        };
+
+        // 3. Alphabetical Sort (Already defined as indexSort above, reused here if needed)
+
+        // SPLIT SORT LOGIC: Top Tier (>= Threshold) by Pct, Bottom Tier (< Threshold) by Dollar
+        const splitSort = (items, threshold) => {
+            if (!items || items.length === 0) return [];
+            const threshVal = parseVal(threshold);
+
+            const topTier = [];
+            const bottomTier = [];
+
+            items.forEach(item => {
+                const pct = Math.abs(parseVal(item.pct || item.changeInPercent || item.pctChange));
+                // Use a small epsilon for float comparison safety or standard rounding?
+                // Standard Number comparison is usually fine for thresholds like 4 vs 3.77
+                if (pct >= threshVal && threshVal > 0) {
+                    topTier.push(item);
+                } else {
+                    bottomTier.push(item);
+                }
+            });
+
+            topTier.sort(pctSort);
+            bottomTier.sort(dolSort);
+
+            return [...topTier, ...bottomTier];
+        };
+
+        // Apply Sorting Strategies
+
+        // 52 Week High/Low: "Should just be done alphabetically"
+        finalHiloHigh.sort(indexSort);
+        finalHiloLow.sort(indexSort);
+
+        // Market Movers: Split Sort based on Rules
+        // Gainers
+        const upThresh = rules.up?.percentThreshold || 0;
+        const sortedMoversUp = splitSort(finalMoversUp, upThresh);
+
+        // Losers
+        const downThresh = rules.down?.percentThreshold || 0;
+        const sortedMoversDown = splitSort(finalMoversDown, downThresh);
+
+        // (We need to re-assign or use these new variables in the sections array)
+        // I will re-assign to the final arrays to minimalize changes below
+        finalMoversUp.length = 0; finalMoversUp.push(...sortedMoversUp);
+        finalMoversDown.length = 0; finalMoversDown.push(...sortedMoversDown);
+
         // Format Helper: CLEANER TEXT for Null/Zero
         const fmtRules = (r, defaultMin, dir) => {
             const icon = dir === 'up' ? '<i class="fas fa-caret-up"></i> ' : '<i class="fas fa-caret-down"></i> ';
-
-            // Check if Effectively Empty (Null, undefined, or 0)
             const hasPct = r.percentThreshold && r.percentThreshold > 0;
             const hasDol = r.dollarThreshold && r.dollarThreshold > 0;
 
@@ -688,12 +804,8 @@ export class NotificationUI {
             return parts.join(' or ');
         };
 
-        const greenUp = '<i class="fas fa-caret-up"></i>';
-        const redDown = '<i class="fas fa-caret-down"></i>';
-
         const minPriceVal = rules.minPrice ?? 0;
         const thresholdStr = (minPriceVal > 0) ? `Min $${minPriceVal}` : null;
-        // User Request: Only the "Min $X" part should be coffee color.
         const thresholdStrColored = thresholdStr ? `<span style="color: var(--color-accent);">${thresholdStr}</span>` : '';
 
         // Gainers
@@ -708,78 +820,16 @@ export class NotificationUI {
             ? UI_LABELS.NOT_SET
             : (downRuleStr === UI_LABELS.NOT_SET ? thresholdStrColored : `${downRuleStr}${thresholdStr ? ` • ${thresholdStrColored}` : ''}`);
 
-        // 52 Week Highs/Lows
+        // 52 Week Highs/Lows Strings
         const hiloPriceVal = rules.hiloMinPrice ?? 0;
         const hiloStrBase = (hiloPriceVal > 0) ? `<span style="color: var(--color-accent);">${UI_LABELS.MIN_PRICE_LABEL}${hiloPriceVal}</span>` : UI_LABELS.NOT_SET;
-
         const hiloStrHigh = hiloStrBase;
         const hiloStrLow = hiloStrBase;
-
-        // --- OVERRIDE INDICATOR --- 
-        // User Request: "Next custom title in the notifications I would like to have some sort of display letting the user if the watch list override is on or off"
-        // REMOVED OVERRIDE LABEL (Moved to System Status Bar)
-        // const overrideLabel = ...
-
-
 
         const customTitleChip = UI_LABELS.CUSTOM_MOVERS;
         const customTitleHeader = UI_LABELS.CUSTOM_MOVERS;
 
-        // SURFACING: Reorder Custom Section per USER Request
-        // Order: 1. Targets, 2. 52w Highs, 3. 52w Lows, 4. Gainers, 5. Losers
-        const sortedLocal = [...localAlerts].sort((a, b) => {
-            const getRank = (item) => {
-                const intent = (item.intent || '').toLowerCase();
-                const pct = Number(item.pct || item.changeInPercent || 0);
-                const isDown = (item.direction || '').toLowerCase() === 'down' || pct < 0;
-
-                if (intent.includes('target')) return 1;
-                if (intent === 'high' || (intent === 'hilo' && !isDown)) return 2;
-                if (intent === 'low' || (intent === 'hilo' && isDown)) return 3;
-                if (!isDown) return 4; // Gainers
-                return 5; // Losers
-            };
-
-            const rankA = getRank(a);
-            const rankB = getRank(b);
-
-            if (rankA !== rankB) return rankA - rankB;
-
-            // Secondary Sort: Percentage Primary, Dollar Tiebreaker
-            const getValues = (item) => {
-                let p = Number(item.pct ?? 0);
-                let d = Number(item.change ?? 0);
-                // Fallback Calculation (matches _renderCard)
-                if (Math.abs(p) === 0 && Math.abs(d) > 0) {
-                    const price = Number(item.live || 0);
-                    const prev = price - d;
-                    if (prev > 0) p = (d / prev) * 100;
-                }
-                return { p, d };
-            };
-
-            const valA = getValues(a);
-            const valB = getValues(b);
-
-            // Determine if this rank should sort descending (up/gain) or ascending (down/loss)
-            const isDownRank = rankA === 3 || rankA === 5;
-
-            // Rounding for "tie" detection (to 2 decimal places in percent)
-            const pAR = Math.round(valA.p * 100);
-            const pBR = Math.round(valB.p * 100);
-
-            if (!isDownRank) {
-                // High/Gain Sort: Highest % first
-                if (pBR !== pAR) return pBR - pAR;
-                return Math.abs(valB.d) - Math.abs(valA.d); // Highest dollar magnitude tiebreaker
-            } else {
-                // Low/Loss Sort: Most negative % first (Ascending)
-                if (pAR !== pBR) return pAR - pBR;
-                return Math.abs(valB.d) - Math.abs(valA.d); // Still highest impact (magnitude) first
-            }
-        });
-
-        // Structure Definitions - REORDERED & SPLIT
+        // Structure Definitions
         const sections = [
             { id: 'custom', title: 'Custom', chipLabel: 'Custom', headerTitle: customTitleHeader, subtitle: `<span style="color: var(--color-accent);">${UI_LABELS.WATCHLIST_FILTER_SUBTITLE}</span>`, items: sortedLocal, type: 'custom', color: 'neutral' },
             { id: 'hilo-high', title: `${UI_LABELS.FIFTY_TWO_WEEK} <span style="color: var(--color-positive)">${UI_LABELS.HIGH}</span>`, chipLabel: `${UI_LABELS.FIFTY_TWO_WEEK} ${UI_LABELS.HIGH}`, subtitle: hiloStrHigh, items: finalHiloHigh, type: 'hilo-up', color: 'green' },
@@ -805,6 +855,7 @@ export class NotificationUI {
         chips.appendChild(openAllChip);
 
         // Define Specific Chip Order (Row 1 then Row 2)
+        // User Order: Targets -> 52W Lows -> 52W Highs -> Movers Losers -> Movers Gainers
         // Standard Notification Categories
         const chipOrder = ['hilo-high', 'gainers', 'custom', 'hilo-low', 'losers'];
 
@@ -1102,131 +1153,6 @@ export class NotificationUI {
     }
 
     static _renderCard(item, type, rules = {}) {
-        // ... (Skipping Top logic) ...
-        // (Assume _renderCard start is unchanged, targeting Explainer block below)
-
-        // ... (middle of _renderCard) ...
-
-        // --- UI CUSTOMIZATION: EXPLAINER TEXT ---
-        // Helper to Generate Text for a Single Logic Item
-        // RETURNS: { text: string, range: string | null }
-        const getExplainer = (alertItem, alertType, enrichedPct = null) => {
-            const intent = alertItem.intent || '';
-            const type = alertItem.type || '';
-
-            const isHiLo = intent === 'hilo' || intent.includes('hilo') || alertType.includes('hilo') || intent === '52w-high' || intent === '52w-low';
-
-            // Fix: Explicitly define isGainers / isLosers derived from type/intent
-            const isGainers = alertType === 'gainers' || intent === 'gainers';
-            const isLosers = alertType === 'losers' || intent === 'losers';
-
-            const isMover = intent === 'mover' || intent === 'up' || intent === 'down' ||
-                alertType === 'gainers' || alertType === 'losers' || alertType === 'up' || alertType === 'down' || alertType === 'movers';
-
-            // 1. PRICE TARGET (Priority 1: User set targets)
-            if (intent === 'target' || intent === 'target-hit') {
-                const tPrice = formatCurrency(alertItem.target || alertItem.targetPrice || 0);
-
-                // INTENT-BASED RENDERING (Constitutional Fix)
-                // Use explicit direction from DB if available, rather than inferring from transient price.
-                let dirArrow = '';
-                let contextInfo = ''; // Helper to explain WHY if price looks wrong
-
-                // Current Price & Target for Context Check
-                const p = Number(alertItem.price || 0);
-                const t = Number(alertItem.target || alertItem.targetPrice || 0);
-
-                if (alertItem.direction === 'above') {
-                    dirArrow = '▲';
-                } else if (alertItem.direction === 'below') {
-                    dirArrow = '▼';
-                } else {
-                    dirArrow = (p >= t) ? '▲' : '▼';
-                }
-
-                return { text: `Target Hit ${dirArrow} ${tPrice}`, range: null };
-            }
-
-            // 2. 52-WEEK HIGH / LOW (Priority 2: Historical Range)
-            if (isHiLo) {
-                // User Request: "It should just display Min price. And whatever that is. Or if there is a placeholder card there, it should just display None."
-                const limit = rules.hiloMinPrice || 0; // null/0 safely handled
-                const limitStr = (limit > 0) ? `Min Price $${limit}` : 'None';
-
-                const isHigh = type === 'high' || type === 'up' || intent === 'hilo-up' || alertType.includes('high') || alertType === 'hilo-up';
-                const low = (alertItem.low52 || alertItem.low || 0).toFixed(2);
-                const high = (alertItem.high52 || alertItem.high || 0).toFixed(2);
-
-                // SPLIT: Text on Left (Limit), Range on Right
-                return {
-                    text: limitStr,
-                    range: `52w Range ${low}-${high}`
-                };
-            }
-
-            // 3. GLOBAL GAINERS / LOSERS (Modified Logic)
-            if (isGainers || isLosers) {
-                const rule = isGainers ? (rules.up || {}) : (rules.down || {});
-                const dirArrow = isGainers ? '▲' : '▼';
-
-                const tPct = rule.percentThreshold || 0;
-                const tDol = rule.dollarThreshold || 0;
-
-                let parts = [];
-                if (tPct > 0) parts.push(`${tPct}%`);
-                if (tDol > 0) parts.push(`$${tDol}`);
-
-                let text = '';
-                if (parts.length > 0) {
-                    text = `${dirArrow} ${parts.join(' or ')}`;
-                } else {
-                    text = `${dirArrow} 0%`; // Default if no rule set
-                }
-
-                // ADDED: 52-Week Range
-                const low = (alertItem.low52 || alertItem.low || 0).toFixed(2);
-                const high = (alertItem.high52 || alertItem.high || 0).toFixed(2);
-                const rangeStr = (low > 0 && high > 0) ? `52w Range ${low}-${high}` : null;
-
-                return { text: text, range: rangeStr };
-            }
-
-            // 4. GENERIC / FALLBACK MOVERS
-            if (isMover) {
-                const isUp = type === 'up' || intent === 'up';
-                const rule = isUp ? (rules.up || {}) : (rules.down || {});
-                const dirArrow = isUp ? '▲' : '▼';
-
-                // Check for null/zero rules -> "None" or "All"
-                const hasPct = rule.percentThreshold && rule.percentThreshold > 0;
-                const hasDol = rule.dollarThreshold && rule.dollarThreshold > 0;
-
-                let txt = '';
-                if (!hasPct && !hasDol) {
-                    txt = `Price ${dirArrow}`; // Just direction if no rules
-                } else {
-                    const parts = [];
-                    if (hasPct) parts.push(`${rule.percentThreshold}%`);
-                    if (hasDol) parts.push(`$${rule.dollarThreshold}`);
-                    txt = `Price ${dirArrow} ${parts.join(' or ')}`;
-                }
-
-                // ADDED: 52-Week Range
-                const low = (alertItem.low52 || alertItem.low || 0).toFixed(2);
-                const high = (alertItem.high52 || alertItem.high || 0).toFixed(2);
-                const rangeStr = (low > 0 && high > 0) ? `52w Range ${low}-${high}` : null;
-
-                return { text: txt, range: rangeStr };
-            }
-
-            // 5. GENERIC FALLBACK (Raw Percentage)
-            const pct = Number(alertItem.pct || alertItem.changeInPercent || 0);
-            if (Math.abs(pct) < 0.01 && !intent) return { text: null, range: null }; // Silence 0% heartbeats
-
-            const dirArrow = pct >= 0 ? '▲' : '▼';
-            return { text: `Price ${dirArrow} ${Math.abs(pct).toFixed(2)}%`, range: null };
-        };
-
         // --- ROBUST KEY MAPPING & ENRICHMENT ---
         let code = String(item.code || item.shareName || item.symbol || item.s || item.shareCode || '???').toUpperCase();
         let name = item.name || '';
@@ -1313,168 +1239,226 @@ export class NotificationUI {
             }
         }
 
+        // --- HELPER: Icon & Text Generator ---
+        const getExplainer = (alertItem, alertType, enrichedPct = null) => {
+            const intent = alertItem.intent || '';
+            const type = alertItem.type || '';
+            let text = '';
+            let range = '';
+            let iconClass = '';
+            let colorVar = 'var(--color-accent)'; // Default to accent color
+
+            const isHiLo = intent === 'hilo' || intent.includes('hilo') || alertType.includes('hilo') || intent === '52w-high' || intent === '52w-low';
+            const isGainers = alertType === 'gainers' || intent === 'gainers';
+            const isLosers = alertType === 'losers' || intent === 'losers';
+            const isTarget = intent === 'target' || intent === 'target-hit';
+
+            // 1. PRICE TARGET
+            if (isTarget) {
+                iconClass = 'fa-crosshairs'; // Target Icon
+
+                // Direction Logic for Target
+                let shareConfig = alertItem;
+                if (!shareConfig.buySell) {
+                    const cleanC = (code || '').replace(/\.AX$/i, '').trim().toUpperCase();
+                    const foundShare = AppState.data.shares.find(s => {
+                        const sCode = String(s.code || s.shareName || '').toUpperCase();
+                        return sCode === cleanC;
+                    });
+                    if (foundShare) shareConfig = foundShare;
+                }
+
+                let tDirection = 'up';
+                let sbPrefix = '';
+
+                if (shareConfig.buySell === 'buy') {
+                    tDirection = 'down';
+                    sbPrefix = 'B';
+                } else if (shareConfig.buySell === 'sell') {
+                    tDirection = 'up';
+                    sbPrefix = 'S';
+                } else if (alertItem.direction === 'below' || alertItem.condition === 'below') {
+                    tDirection = 'down';
+                    sbPrefix = 'B'; // Infer Buy for 'below'
+                } else {
+                    sbPrefix = 'S'; // Default Sell
+                }
+
+                const targetCaret = tDirection === 'up'
+                    ? '<i class="fas fa-caret-up" style="margin-left: 2px;"></i>'
+                    : '<i class="fas fa-caret-down" style="margin-left: 2px;"></i>';
+
+                // Display: "S $Target ▲"
+                text = `<span style="font-weight: 700; margin-right: 2px;">${sbPrefix}</span>${formatCurrency(alertItem.target || alertItem.targetPrice || 0)} ${targetCaret}`;
+
+                // Keep Target coffee/netural as usually it's a specific trigger type,
+                // but user said "Chevron arrow use assist... should display first".
+                // We'll keep default accent color for Target unless specified otherwise.
+            }
+
+            // 2. 52-WEEK HIGH / LOW
+            else if (isHiLo) {
+                iconClass = 'fa-hourglass-half'; // Hourglass Icon
+                const limit = rules.hiloMinPrice || 0;
+                text = (limit > 0) ? `$${limit} min` : 'None';
+
+                const low = (alertItem.low52 || alertItem.low || 0).toFixed(2);
+                const high = (alertItem.high52 || alertItem.high || 0).toFixed(2);
+                range = `52w Range ${low}-${high}`;
+
+                // Color Logic
+                const intentLower = (alertItem.intent || '').toLowerCase();
+                const typeLower = (alertItem.type || '').toLowerCase();
+                if (intentLower.includes('high') || typeLower.includes('high')) {
+                    colorVar = 'var(--text-positive)';
+                } else if (intentLower.includes('low') || typeLower.includes('low')) {
+                    colorVar = 'var(--text-negative)';
+                }
+            }
+
+            // 3. MARKET MOVERS (Gainers/Losers/Generic)
+            else {
+                iconClass = 'fa-chart-line'; // Chart Icon
+                let direction = 'up';
+
+                // Determine direction
+                const intentStr = (item.intent || '').toLowerCase();
+                const typeStr = (item.type || '').toLowerCase();
+                if (intentStr === 'up' || typeStr === 'up' || intentStr === 'gainers' || typeStr === 'gainers') direction = 'up';
+                else if (intentStr === 'down' || typeStr === 'down' || intentStr === 'losers' || typeStr === 'losers') direction = 'down';
+                else direction = enrichedPct >= 0 ? 'up' : 'down';
+
+                // Color Logic
+                colorVar = direction === 'up' ? 'var(--text-positive)' : 'var(--text-negative)';
+
+                const ruleSet = direction === 'up' ? (rules.up || {}) : (rules.down || {});
+                const hasPct = ruleSet.percentThreshold && ruleSet.percentThreshold > 0;
+                const hasDol = ruleSet.dollarThreshold && ruleSet.dollarThreshold > 0;
+
+                const chevronIcon = direction === 'up'
+                    ? `<i class="fas fa-caret-up" style="margin-left: 2px; font-size: 0.8em; color: ${colorVar};"></i>`
+                    : `<i class="fas fa-caret-down" style="margin-left: 2px; font-size: 0.8em; color: ${colorVar};"></i>`;
+
+                if (hasPct || hasDol) {
+                    let textParts = [];
+                    if (hasPct) textParts.push(`${ruleSet.percentThreshold}% ${chevronIcon}`);
+                    if (hasDol) textParts.push(`$${ruleSet.dollarThreshold}`);
+                    text = `${textParts.join(' or ')} min`;
+                } else {
+                    text = `${Math.abs(enrichedPct).toFixed(2)}% ${chevronIcon}`;
+                }
+
+                const low = (alertItem.low52 || alertItem.low || 0).toFixed(2);
+                const high = (alertItem.high52 || alertItem.high || 0).toFixed(2);
+                if (low > 0 && high > 0) range = `52w Range ${low}-${high}`;
+            }
+
+            return { text, range, iconClass, colorVar };
+        };
         // RENDERING LOGIC: SINGLE VS STACKED
-        // For Stacked (Consolidated), we will just stack the text in the left cell.
-        // Range support for consolidated items is tricky, we'll assume primary single item logic for now.
-
         let explainerText = '';
-        let explainerRange = ''; // Only for primary single item if applicable
+        let explainerRange = '';
 
-        // Check for Consolidated Matches (Custom Type Only)
+        // Stacked (Custom Multiple)
         if (type === 'custom' && item.matches && item.matches.length > 1) {
-            // Sort: Hilo First, then Target/Mover
-            // 52W High/Low should be at top of stack.
+            // Sort Order: Target -> 52W -> Movers
             const sortedMatches = [...item.matches].sort((a, b) => {
-                const isHiloA = a.intent && a.intent.includes('hilo');
-                const isHiloB = b.intent && b.intent.includes('hilo');
-                if (isHiloA && !isHiloB) return -1;
-                if (!isHiloA && isHiloB) return 1;
-                return 0;
+                const getRank = (m) => {
+                    const i = (m.intent || '').toLowerCase();
+                    const t = (m.type || '').toLowerCase();
+                    if (i === 'target' || i === 'target-hit') return 1;
+                    if (i.includes('hilo') || i.includes('52') || t.includes('hilo')) return 2;
+                    return 3;
+                };
+                return getRank(a) - getRank(b);
             });
 
-            // EXTRACT RANGE: Find the first Hilo match and pull its range for the right side
+            // Extract Range from Hilo match if exists
             const hiloMatch = sortedMatches.find(m => m.intent && m.intent.includes('hilo'));
             if (hiloMatch) {
                 const obj = getExplainer(hiloMatch, type, changePct);
-                explainerRange = obj.range || ''; // Set the Right Aligned Range
+                explainerRange = obj.range || '';
             }
 
-            // Generate Lines (Text Only). Filter out null/empty results.
-            const labels = sortedMatches
-                .map(m => getExplainer(m, type, changePct).text)
-                .filter(txt => txt && txt.trim().length > 0) // Explicit filter for valid strings
-                .map(txt => `<div style="line-height: 1.2;">${txt}</div>`);
+            // Generate Lines with Icons
+            const lines = sortedMatches.map(m => {
+                const { text, iconClass, colorVar } = getExplainer(m, type, changePct);
+                if (!text || text === 'None') return null;
+                // Use Dynamic Color
+                return `<div style="line-height: 1.4; display: flex; align-items: center;">
+                            <i class="fas ${iconClass}" style="color: ${colorVar || 'var(--color-accent)'}; margin-right: 6px; width: 14px; text-align: center;"></i>
+                            <span style="color: ${colorVar || 'inherit'}">${text}</span>
+                        </div>`;
+            }).filter(Boolean);
 
-            explainerText = labels.join('');
+            explainerText = lines.join('');
 
         } else {
             // Single Item
             if (item.reason) {
                 explainerText = item.reason;
             } else {
-                const obj = getExplainer(item, type, changePct);
-                explainerText = obj.text;
-                explainerRange = obj.range || '';
-            }
-        }
-
-        // --- EXPLAINER TEXT GENERATION (Moved after JIT) ---
-        // Fix: Ensure we use the Enriched 'changePct' for the text, not the stale 'item.pct'.
-        if ((explainerText === 'Alert Triggered' || (type === 'custom' && !explainerText)) && item.intent !== 'target' && item.intent !== 'target-hit') {
-            // FIX: Prioritize the Alert's original intent/type for direction, rather than current price flux.
-            // This ensures we show the "Triggered Rule" (e.g. >5%) even if the stock has since retraced.
-            let direction = 'up'; // Default
-            const intentStr = (item.intent || '').toLowerCase();
-            const typeStr = (item.type || '').toLowerCase();
-
-            if (intentStr === 'up' || typeStr === 'up' || intentStr === 'gainers' || typeStr === 'gainers') {
-                direction = 'up';
-            } else if (intentStr === 'down' || typeStr === 'down' || intentStr === 'losers' || typeStr === 'losers') {
-                direction = 'down';
-            } else {
-                // Genuine Fallback if no intent exists
-                direction = changePct >= 0 ? 'up' : 'down';
-            }
-
-            const ruleSet = direction === 'up' ? (rules.up || {}) : (rules.down || {});
-            const arrow = direction === 'up' ? '▲' : '▼';
-            const hasPct = ruleSet.percentThreshold && ruleSet.percentThreshold > 0;
-            const hasDol = ruleSet.dollarThreshold && ruleSet.dollarThreshold > 0;
-
-            if (hasPct || hasDol) {
-                const parts = [];
-                if (hasPct) parts.push(`${ruleSet.percentThreshold}%`);
-                if (hasDol) parts.push(`$${ruleSet.dollarThreshold}`);
-                explainerText = `Price ${arrow} ${parts.join(' or ')}`;
-            } else {
-                // Fallback: Use the ACTUAL live percent
-                explainerText = `Price ${arrow} ${Math.abs(changePct).toFixed(2)}%`;
+                const { text, range, iconClass, colorVar } = getExplainer(item, type, changePct);
+                explainerText = `<div style="display: flex; align-items: center;">
+                                    <i class="fas ${iconClass}" style="color: ${colorVar || 'var(--color-accent)'}; margin-right: 6px; width: 14px; text-align: center;"></i>
+                                    <span style="color: ${colorVar || 'inherit'}">${text}</span>
+                                 </div>`;
+                explainerRange = range || '';
             }
         }
 
         // Force Direction based on Type (Override for Hi/Lo/Gainer/Loser)
-        if (type === 'hilo-up' || type === 'up' || type === 'gainers') changePct = Math.abs(changePct); // Force Positive
-        if (type === 'hilo-down' || type === 'down' || type === 'losers') changePct = -Math.abs(changePct); // Force Negative if not already
+        if (type === 'hilo-up' || type === 'up' || type === 'gainers') changePct = Math.abs(changePct);
+        if (type === 'hilo-down' || type === 'down' || type === 'losers') changePct = -Math.abs(changePct);
 
         let changeClass = changePct >= 0 ? CSS_CLASSES.POSITIVE : CSS_CLASSES.NEGATIVE;
-
-        // Arrows (Generic)
         let arrowIcon = changePct >= 0 ? '<i class="fas fa-caret-up"></i>' : '<i class="fas fa-caret-down"></i>';
-
         let changeFormatted = `${arrowIcon} ${formatCurrency(Math.abs(changeAmt))} (${Math.abs(changePct).toFixed(2)}%)`;
 
-        // Card Border Class Logic (Strict)
-        // 1. Custom/Target -> Coffee (Neutral) ALWAYS
-        // 2. Highs/Gainers -> Green (Up) ALWAYS
-        // 3. Lows/Losers -> Red (Down) ALWAYS
-
-        let cardClass = CSS_CLASSES.CARD_NEUTRAL; // Default to Coffee
-
+        // Card Border Class Logic
+        let cardClass = CSS_CLASSES.CARD_NEUTRAL;
         if (item.intent === 'target' || item.intent === 'target-hit') {
-            cardClass = CSS_CLASSES.CARD_TARGET; // Explicit Coffee for TARGETS only (New Class)
-        }
-        else if (type === 'custom') {
-            // If custom but NOT a target, use daily change color
-            if (changePct > 0) cardClass = CSS_CLASSES.CARD_UP;
-            else if (changePct < 0) cardClass = CSS_CLASSES.CARD_DOWN;
-            else cardClass = CSS_CLASSES.CARD_NEUTRAL;
-        }
-        else if (type === 'high' || type === 'up' || type === 'gainers' || type === 'hilo-up') {
+            cardClass = CSS_CLASSES.CARD_TARGET;
+        } else if (changePct > 0) {
             cardClass = CSS_CLASSES.CARD_UP;
-        }
-        else if (type === 'low' || type === 'down' || type === 'losers' || type === 'hilo-down') {
+        } else if (changePct < 0) {
             cardClass = CSS_CLASSES.CARD_DOWN;
         }
-        else {
-            // Fallback for generic movers if type isn't explicit (NotificationUI fallback)
-            if (changePct > 0) cardClass = CSS_CLASSES.CARD_UP;
-            else if (changePct < 0) cardClass = CSS_CLASSES.CARD_DOWN;
-        }
-
         if (item._isPinned) cardClass += ` ${CSS_CLASSES.CARD_PINNED}`;
 
         // --- SECTOR / INDUSTRY ENRICHMENT ---
-        // Priority: 
-        // 1. Explicit Item Sector/Industry (from backend)
-        let sector = item.Sector || item.Industry || item.industry || item.sector; // try all variants
-
-        if (!sector && liveShare) {
-            sector = liveShare.industry || liveShare.Industry || liveShare.Sector || liveShare.sector;
-        }
-
-        // Final fallback if we found it in shares but it wasn't the liveShare object
+        let sector = item.Sector || item.Industry || item.industry || item.sector;
+        if (!sector && liveShare) sector = liveShare.industry || liveShare.Industry || liveShare.Sector || liveShare.sector;
         if (!sector) {
             const fallbackShare = AppState.data.shares.find(s => {
                 const sCode = String(s.code || s.shareName || s.symbol || '').toUpperCase();
                 return sCode === cleanCode;
             });
-            if (fallbackShare) {
-                sector = fallbackShare.industry || fallbackShare.Sector || fallbackShare.sector;
-            }
+            if (fallbackShare) sector = fallbackShare.industry || fallbackShare.Sector || fallbackShare.sector;
         }
-
-        // --- VERIFICATION LOG REMOVED ---
 
         let sectorHtml = '';
         if (sector) {
-            // Apply truncation and ghosted styling as requested
-            // Grid Column 1 / -1 ensures it spans the full width (like a footer)
             sectorHtml = `
             <div class="${CSS_CLASSES.NOTIF_CELL_SECTOR} ${CSS_CLASSES.GHOSTED}" style="grid-column: 1 / -1; font-size: 0.85rem; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-muted);">
                 ${sector}
             </div>`;
         }
 
-
         // --- SMART ALERT BUTTON (AI Integration) ---
+        // Repositioned to bottom-right of container (Absolute)
+        // User requested image replacement
         let smartAlertBtn = '';
-        if (Math.abs(changePct) >= 2.0) {
-            smartAlertBtn = `<button class="btn-smart-alert" title="Ask AI Why" data-symbol="${code}" data-change="${changePct.toFixed(2)}" data-sector="${sector || ''}" style="border:none; background:none; cursor:pointer; font-size:0.85rem; color: #9c27b0; margin-left:8px;">✨ Why?</button>`;
+        // ALWAYS SHOW if we have a code (Relaxed threshold from 2.0%)
+        if (code) {
+            smartAlertBtn = `<button class="btn-smart-alert" title="Ask AI Why" data-symbol="${code}" data-change="${(changePct || 0).toFixed(2)}" data-sector="${sector || ''}" style="border:none; background:none; cursor:pointer; font-size:1.1rem; color: #9c27b0; position: absolute; bottom: 6px; right: 6px; z-index: 10;">
+                                <img src="gemini-icon.png" style="width: 20px; height: 20px; vertical-align: middle;">
+                             </button>`;
         }
 
         //GRID LAYOUT IMPLEMENTATION
         return `
-            <div class="${CSS_CLASSES.NOTIFICATION_CARD_GRID} ${cardClass}" data-code="${code}">
+            <div class="${CSS_CLASSES.NOTIFICATION_CARD_GRID} ${cardClass}" data-code="${code}" style="position: relative;">
                 <!-- R1: CODE | PRICE -->
                 <div class="${CSS_CLASSES.NOTIF_CELL_CODE}">${code}</div>
                 <div class="${CSS_CLASSES.NOTIF_CELL_PRICE}">${price}</div>
@@ -1486,16 +1470,17 @@ export class NotificationUI {
                 <!-- R3: EXPLAINER | RANGE (Optional) -->
                 <div class="${CSS_CLASSES.NOTIF_CELL_EXPLAINER}">
                     ${explainerText}
-                    ${smartAlertBtn}
                 </div>
                 <div class="${CSS_CLASSES.NOTIF_CELL_RANGE}">${explainerRange}</div>
                 
                 <!-- R4: SECTOR (Full Width) -->
                 ${sectorHtml}
+
+                <!-- AI Button (Floating Bottom Right) -->
+                ${smartAlertBtn}
             </div>
         `;
     }
-
 
     static async renderFloatingBell() {
         if (document.getElementById('floating-bell-container')) return;

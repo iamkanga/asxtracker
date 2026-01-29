@@ -148,7 +148,8 @@ export const EVENTS = {
     OPEN_FAVORITE_LINKS: 'open-favorite-links',
     FAVORITE_LINKS_UPDATED: 'favorite-links-updated',
     TOGGLE_SORT_DIRECTION: 'toggle-sort-direction',
-    SAVE_BORDER_PREFS: 'save-border-prefs'
+    SAVE_BORDER_PREFS: 'save-border-prefs',
+    OPEN_PORTFOLIO_CHART: 'open-portfolio-chart'
 };
 
 export const SORT_OPTIONS = {

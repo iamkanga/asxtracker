@@ -380,8 +380,17 @@ export class DataService {
                         data: json
                     }));
                 } catch (e) {
-                    // Quota exceeded or storage full
-                    console.warn('[DataService] Cache write error:', e);
+                    if (e.name === 'QuotaExceededError') {
+                        console.warn('[DataService] Cache full. Purging history keys...');
+                        // Strategy: Clear all history keys to make room
+                        Object.keys(localStorage).forEach(key => {
+                            if (key.startsWith('asx_history_')) localStorage.removeItem(key);
+                        });
+                        // Retry once
+                        try { localStorage.setItem(cacheKey, JSON.stringify({ timestamp: Date.now(), data: json })); } catch (e2) { }
+                    } else {
+                        console.warn('[DataService] Cache write error:', e);
+                    }
                 }
             }
 

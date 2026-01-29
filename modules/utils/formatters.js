@@ -6,23 +6,19 @@
 export const formatCurrency = (value) => {
     if (typeof value !== 'number') return '$0.00';
 
-    // Always use absolute value - colors indicate direction, not signs
-    const absValue = Math.abs(value);
-
     // Auto-expand precision for sub-dollar penny stocks (e.g. $0.004)
-    // But drop trailing zeros for cleaner display
+    const absValue = Math.abs(value);
     if (absValue !== 0 && absValue < 1.0) {
-        // Format with 3 decimals, then strip trailing zeros if the 3rd decimal is 0
         const formatted = new Intl.NumberFormat('en-AU', {
             style: 'currency',
             currency: 'AUD',
             minimumFractionDigits: 2,
             maximumFractionDigits: 3
-        }).format(absValue);
+        }).format(value);
         return formatted;
     }
 
-    return new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD' }).format(absValue);
+    return new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD' }).format(value);
 };
 
 export const formatPercent = (value) => {

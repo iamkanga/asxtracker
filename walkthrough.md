@@ -137,3 +137,17 @@ Key files involved in this refactor:
 > [!IMPORTANT]
 > **Apps Script Deployment Required**:
 > The final step to make the badge persist is to **Deploy the Apps Script** as a new version. This will start stamping new alerts with the correct time, which the frontend is now ready to detect as "New".
+
+## Alert Container UI Refinement
+
+### 1. Alert Card Restructuring
+- **Icon Standardization**: Implemented coffee-colored icons (`var(--color-accent)`) for all alert types in the explainer line.
+- **Icon Logic**:
+    - **Target Hits**: Displays `fa-crosshairs`. Removed text "Target hit", now shows target price only.
+    - **52-Week High/Low**: Displays `fa-hourglass-half`. Text format: "[Threshold] min".
+    - **Market Movers**: Displays `fa-chart-line`. Text format: "[Threshold]% or $[Threshold] min".
+- **AI Integration**: Repositioned the "AI.Why" magic button to the bottom-right corner of the card for better visual balance.
+
+### 2. Rendering Optimization
+- **JIT Enrichment**: Enhanced `_renderCard` to perform Just-In-Time data enrichment using `AppState.livePrices` to ensure the most up-to-date price and change data is used for alert context.
+- **Garbage Collection**: Cleaned up duplicated rendering logic to prevent ghost elements and syntax errors.

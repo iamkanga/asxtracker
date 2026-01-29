@@ -183,6 +183,13 @@ export class AppController {
         });
         document.addEventListener(EVENTS.SHOW_DAILY_BRIEFING, () => BriefingUI.show());
 
+        document.addEventListener(EVENTS.OPEN_PORTFOLIO_CHART, () => {
+            // Lazy import to keep boot fast
+            import('../ui/PortfolioChartUI.js?v=1061').then(module => {
+                module.PortfolioChartUI.show();
+            });
+        });
+
         // CUSTOM NAVIGATION EVENTS (Briefing / External)
         document.addEventListener('open-portfolio-view', () => {
             // Check if we are in Dashboard view or Watchlist view?
