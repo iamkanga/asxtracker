@@ -1599,6 +1599,8 @@ export const UI_LABELS = {
     ASKING_GEMINI: 'Asking Gemini about',
     ANALYSIS_FAILED: 'Analysis failed:',
     GOOD_MORNING: 'Good Morning',
+    GOOD_AFTERNOON: 'Good Afternoon',
+    GOOD_EVENING: 'Good Evening',
     MY_PORTFOLIO: 'My Portfolio',
     PORTFOLIO_HIGHLIGHTS: 'Portfolio Highlights',
     WATCHLIST_HIGHLIGHTS: 'Watchlist Highlights',

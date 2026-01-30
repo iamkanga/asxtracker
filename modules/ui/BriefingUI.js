@@ -57,7 +57,7 @@ export class BriefingUI {
                 <div class="${CSS_CLASSES.BRIEFING_HEADER}">
                     <!-- Title Row: Greeting + Close Button (Perfectly Aligned) -->
                     <div class="${CSS_CLASSES.BRIEFING_TITLE_ROW}">
-                        <h1>${UI_LABELS.GOOD_MORNING}</h1>
+                        <h1>${this._getGreeting()}</h1>
                         <div style="display: flex; gap: 10px; align-items: center;">
                             <button class="${CSS_CLASSES.MODAL_CLOSE_BTN} briefing-close-btn" title="${UI_LABELS.CLOSE}">
                                 <i class="fas ${UI_ICONS.CLOSE}"></i>
@@ -96,7 +96,7 @@ export class BriefingUI {
                        <div style="position:relative;">
                           <input type="text" id="gemini-chat-input" placeholder="${UI_LABELS.GEMINI_PLACEHOLDER}" style="width:100%; padding: 10px 40px 10px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.3); color: #eee; font-family: inherit; font-size: 0.9em;">
                           <button id="btn-gemini-ask" style="position:absolute; right:2px; top:2px; bottom:2px; padding:0 12px; background: transparent; border:none; color:var(--color-accent); cursor:pointer;">
-                             <i class="fas fa-paper-plane"></i>
+                             <img src="gemini-icon.png" style="width: 20px; height: 20px; vertical-align: middle; opacity: 0.8; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.8'">
                           </button>
                        </div>
                     </div>
@@ -492,6 +492,13 @@ export class BriefingUI {
         if (askInput) askInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') handleAsk();
         });
+    }
+
+    static _getGreeting() {
+        const hour = new Date().getHours();
+        if (hour < 12) return UI_LABELS.GOOD_MORNING;
+        if (hour < 17) return UI_LABELS.GOOD_AFTERNOON;
+        return UI_LABELS.GOOD_EVENING;
     }
 
     /**
