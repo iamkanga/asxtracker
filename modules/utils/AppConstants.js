@@ -8,12 +8,21 @@ export const KANGAROO_ICON_SRC = 'favicon.svg';
 export const CASH_WATCHLIST_ID = 'CASH';
 export const DASHBOARD_WATCHLIST_ID = 'DASHBOARD';
 export const DASHBOARD_SYMBOLS = [
+    // --- USER PROVIDED GUARD LIST ---
+    '^AXJO', '^AORD', 'XKO', 'YAP=F',
+    '^GSPC', '^DJI', '^IXIC', '^VIX', '^FTSE', '^STOXX50E', '^N225', '^HSI',
+    'AUDUSD=X', 'AUDTHB=X', 'AUDGBP=X', 'AUDEUR=X', 'AUDJPY=X', 'AUDNZD=X', 'USDTHB=X',
+    'BTC-AUD', 'BTC-USD',
+    'GC=F', 'SI=F', 'HG=F', 'CL=F', 'BZ=F', 'TIO=F',
+
+    // --- ROBUSTNESS / NORMALIZED VARIANTS (Internal Safety) ---
+    // Core ASX Indices (Often transmitted without ^)
     'XJO', 'XAO', 'SPI200',
-    'AUDUSD', 'USDAUD', 'AUDGBP', 'AUDNZD', 'AUDKRW', 'AUDEUR', 'AUDHKD', 'AUDJPY',
-    'AUD/USD', 'USD/AUD', 'AUD/GBP', 'AUD/NZD', 'AUD/KRW', 'AUD/EUR', 'AUD/HKD', 'AUD/JPY',
-    'CDIC', 'RBA',
-    'GLD', 'SLV', 'OIL', 'BTC', 'ETH', 'LTC', 'NICKEL',
-    'TIO=F', 'YAP=F'
+    // Currencies (Normalized)
+    'AUDUSD', 'AUDTHB', 'AUDGBP', 'AUDEUR', 'AUDJPY', 'AUDNZD', 'USDTHB',
+    'BTC', 'ETH', 'LTC', 'BTCUSD', 'BTCAUD', 'ETHUSD',
+    // Commodities
+    'GLD', 'SLV', 'OIL', 'NICKEL'
 ];
 
 /* Pennystock Blacklist for AI Briefing (Excluded from AI calculations to prevent skewing) */

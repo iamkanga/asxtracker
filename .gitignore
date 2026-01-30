@@ -29,13 +29,17 @@ dashboard_dump.txt
 *.py
 !server.py
 !app.py
-# Assuming server.py or app.py might be real, but given the list, most seem to be one-off scripts. 
-# Explicitly ignoring the specific debris found:
+# Explicitly ignore the specific debris:
 inspect_*.py
 merge_*.py
 purge_*.py
 audit_*.py
 debug_*.js
+debug_*.gs
+system_*.gs
+system-*.gs
+integrity_*.gs
+integrity-*.gs
 expand_*.py
 find_*.py
 sample_*.py
@@ -60,6 +64,15 @@ enrich_indices.py
 detail_sample.py
 dump_sheets.py
 diagnostic_raw_dump.js
+debug-*.gs
+integrity-audit.gs
+system-*.gs
+test-*.js
+scientific-audit.html
+handover_*.md
+walkthrough.md
+FIND_MY_MASTER.gs
+git_files.txt
 
 # Artifacts
 .agent/

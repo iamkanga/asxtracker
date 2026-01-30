@@ -16,6 +16,14 @@ const APP_ID = "asx-watchlist-app";
 
 export class NotificationStore {
     constructor() {
+        this.settingsListenerUnsubscribe = null;
+
+        // --- DIAGNOSTIC EXPOSURE (Requested by User) ---
+        // usage: window.debugGSCF() in console
+        window.debugGSCF = () => this.debugGSCF_Probe();
+        // usage: window.debugDashboardLeak() in console
+        window.debugDashboardLeak = () => this.debugDashboardLeak_Probe();
+
         this.listeners = [];
         this.scanData = {
             customHits: [], // All users' hits (Raw)
@@ -177,8 +185,8 @@ export class NotificationStore {
 
         try {
             const customRef = doc(db, `artifacts/${APP_ID}/alerts/CUSTOM_TRIGGER_HITS`);
-            const moversRef = doc(db, `artifacts/${APP_ID}/alerts/GLOBAL_MOVERS_HITS`);
-            const hiloRef = doc(db, `artifacts/${APP_ID}/alerts/HI_LO_52W_HITS`);
+            const moversRef = doc(db, `artifacts/${APP_ID}/alerts/DAILY_MOVERS_HITS`);
+            const hiloRef = doc(db, `artifacts/${APP_ID}/alerts/DAILY_HILO_HITS`);
 
             // Defensive fetching: Handle individual failures gracefully
             const [customSnap, moversSnap, hiloSnap] = await Promise.allSettled([
@@ -191,7 +199,7 @@ export class NotificationStore {
                 const data = customSnap.value.data();
                 const docTime = data.updatedAt;
                 this.dataTimestamp = docTime; // Capture Source of Truth Date
-                this.scanData.customHits = normalizeHits(data.hits || [], docTime);
+                this.scanData.customHits = this._filterStale(normalizeHits(data.hits || [], null));
             } else {
                 this.scanData.customHits = [];
             }
@@ -212,6 +220,15 @@ export class NotificationStore {
                 });
             };
 
+            if (hiloSnap.status === 'fulfilled' && hiloSnap.value.exists()) {
+                const data = hiloSnap.value.data();
+                const docTime = data.updatedAt;
+                this.scanData.globalHiLo = {
+                    high: this._filterStale(filterDashboard(normalizeHits(data.highHits || data.high || [], docTime))),
+                    low: this._filterStale(filterDashboard(normalizeHits(data.lowHits || data.low || [], docTime)))
+                };
+            }
+
             if (moversSnap.status === 'fulfilled' && moversSnap.value.exists()) {
                 const data = moversSnap.value.data();
                 const docTime = data.updatedAt;
@@ -220,17 +237,8 @@ export class NotificationStore {
                 const rawDown = data.downHits || data.down || [];
 
                 this.scanData.globalMovers = {
-                    up: filterDashboard(normalizeHits(rawUp, docTime)),
-                    down: filterDashboard(normalizeHits(rawDown, docTime))
-                };
-            }
-
-            if (hiloSnap.status === 'fulfilled' && hiloSnap.value.exists()) {
-                const data = hiloSnap.value.data();
-                const docTime = data.updatedAt;
-                this.scanData.globalHiLo = {
-                    high: filterDashboard(normalizeHits(data.highHits || data.high || [], docTime)),
-                    low: filterDashboard(normalizeHits(data.lowHits || data.low || [], docTime))
+                    up: this._filterStale(filterDashboard(normalizeHits(rawUp, docTime))),
+                    down: this._filterStale(filterDashboard(normalizeHits(rawDown, docTime)))
                 };
             }
 
@@ -2097,8 +2105,125 @@ export class NotificationStore {
         console.log(`ðŸ Analysis Complete.Candidates: ${candidates}, Valid: ${passed}, Blocked: ${failed} `);
         console.groupEnd();
     }
-}
 
+    /**
+     * Filtration: 24-Hour Freshness Guard
+     * Ensures we ignore any record that is truly stale, regardless of collection name.
+     */
+    _filterStale(list) {
+        if (!Array.isArray(list)) return [];
+        const now = Date.now();
+        const limit = 24 * 60 * 60 * 1000; // 24 Hours
+
+        return list.filter(item => {
+            const timeVal = item.t || item.timestamp || item.createdAt;
+
+            // CONSTITUTIONAL HARDENING: If it has no timestamp, it's a legacy zombie. Kill it.
+            if (!timeVal) return false;
+
+            let ms = 0;
+            if (typeof timeVal === 'object' && timeVal.toMillis) ms = timeVal.toMillis();
+            else if (typeof timeVal === 'object' && timeVal.seconds) ms = timeVal.seconds * 1000;
+            else ms = new Date(timeVal).getTime();
+
+            const isFresh = (now - ms) < limit;
+
+            // PERSISTENCE GUARD: Manual target hits have strict RULES:
+            // 1. MUST have a timestamp (checked above).
+            // 2. MUST currently meet the target (Price Condition).
+            // 3. If condition met, IGNORE AGE (Persistence allowed).
+            if (item.intent === 'target-hit') {
+                const live = Number(item.live || 0);
+                const target = Number(item.target || 0);
+                // Condition Guard: If target not met, hide it (it's stale/invalid).
+                if (target > 0) {
+                    if (item.direction === 'above' && live < target) return false;
+                    if (item.direction === 'below' && live > target) return false;
+                }
+                // If we survive the guard, we keep it regardless of age (Persistence)
+                return true;
+            }
+
+            // AUTO-GENERATED (52w, Movery): Strict 24h expiry.
+            if (!isFresh) {
+                // Silently drop - it's a zombie record
+                return false;
+            }
+            return true;
+        });
+    }
+
+    /**
+     * DIAGNOSTIC: Probe GSCF Staleness Logic
+     * Run window.debugGSCF() in console to trigger.
+     */
+    debugGSCF_Probe() {
+        console.log("%c🔍 STARTING GSCF PROBE...", "color: #00ffff; font-weight: bold; font-size: 14px;");
+
+        // 1. The Raw Data from Backend (Hardcoded for fidelity)
+        const rawZombie = {
+            code: "GSCF",
+            t: "2026-01-18T19:13:25.491Z",
+            intent: "52w-high",
+            live: 18.72,
+            target: null
+        };
+
+        console.log("1. RAW ZOMBIE DATA:", rawZombie);
+
+        // 2. Test _filterStale logic
+        const input = [rawZombie];
+        const filtered = this._filterStale(input);
+
+        if (filtered.length === 0) {
+            console.log("%c2. FILTER RESULT: ✅ KILLED (Logic is working)", "color: #00ff00");
+        } else {
+            console.log("%c2. FILTER RESULT: ❌ SURVIVED (Logic FAILED)", "color: #ff0000");
+        }
+
+        // 3. Check Current Store State
+        const currentHits = this.scanData.customHits || [];
+        const foundInStore = currentHits.find(h => h.code === "GSCF");
+
+        if (foundInStore) {
+            console.log("%c3. CURRENT STORE STATE: ❌ FOUND 'GSCF' IN STORE!", "color: #ff0000; font-weight: bold;");
+            console.log("   -> It is sneaking through. Details:", foundInStore);
+        } else {
+            console.log("%c3. CURRENT STORE STATE: ✅ NOT IN STORE.", "color: #00ff00");
+        }
+        console.log("%c🔍 PROBE COMPLETE", "color: #00ffff; font-weight: bold;");
+    }
+
+    /**
+     * DIAGNOSTIC: Probe Dashboard Leak Logic (e.g. Currencies showing in 52w)
+     * Run window.debugDashboardLeak() in console to trigger.
+     */
+    debugDashboardLeak_Probe() {
+        console.log("%c🔍 STARTING DASHBOARD LEAK PROBE...", "color: #00ffff; font-weight: bold; font-size: 14px;");
+
+        const testCodes = ["XJO", "AUDUSD", "BTCUSD", "GSCF"];
+
+        testCodes.forEach(code => {
+            console.group(`Testing Code: ${code}`);
+
+            // 1. Check Function Existence
+            if (typeof this._isDashboardCode !== 'function') {
+                console.error("❌ CRITICAL: _isDashboardCode is NOT DEFINED.");
+                console.groupEnd();
+                return;
+            }
+
+            // 2. Check Logic
+            const result = this._isDashboardCode(code);
+            const status = result ? "✅ IDENTIFIED AS DASHBOARD (Blocked)" : "❌ FAILED (Allowed through)";
+            const color = result ? "color: #00ff00" : "color: #ff0000";
+
+            console.log(`%cResult: ${status}`, color);
+            console.groupEnd();
+        });
+        console.log("%c🔍 PROBE COMPLETE", "color: #00ffff; font-weight: bold;");
+    }
+}
 
 // Helper to ensure safe data
 function normalizeHits(list, fallbackTime = null) {

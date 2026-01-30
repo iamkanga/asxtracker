@@ -82,24 +82,31 @@ function isTradingDay_(dateObj) {
 function isMarketActive_(dateObj) {
   const d = dateObj || new Date();
   
-  // 1. Day Check (Weekend/Holiday)
-  if (!isTradingDay_(d)) return false;
+  // 1. Robust Day Check (using explicit Sydney day name to avoid pattern support issues with 'u')
+  const sydDay = Utilities.formatDate(d, ASX_TIME_ZONE, 'EEEE'); // 'Monday', 'Tuesday', etc.
+  const isWeekend = (sydDay === 'Saturday' || sydDay === 'Sunday');
+  if (isWeekend) return false;
   
-  // 2. Hour Check (Sydney Time)
+  // 2. Holiday Check
+  const dayStr = Utilities.formatDate(d, ASX_TIME_ZONE, 'yyyy-MM-dd');
+  if (ASX_HOLIDAYS_CURRENT.has(dayStr)) return false;
+  
+  // 3. Hour Check (Sydney Time)
   const hour = Number(Utilities.formatDate(d, ASX_TIME_ZONE, 'H')); // 0-23
   const min = Number(Utilities.formatDate(d, ASX_TIME_ZONE, 'mm'));
-  
   const currentTimeVal = hour * 100 + min; // e.g. 10:30 -> 1030
   
   // Market starts 10:00 (Pre-market 7am-10am). We start at 9:00 for data readiness.
-  // Market closes 4:30. We run until 6:30 for final reconciliation / Daily Digest prep.
+  // Market closes 4:00 PM. We run until 6:30 PM (1830) to capture closing auctions,
+  // final settlement prices, and prepare for the 4:15 PM Daily Digest.
   const start = 900;
   const end = 1830;
   
   const active = (currentTimeVal >= start && currentTimeVal <= end);
   
   if (!active) {
-    console.log('[MarketGuard] Inactive hour: ' + hour + ':' + min + '. No scan required.');
+    // Only log once per hour to keep logs clean
+    if (min === 0) console.log('[MarketGuard] Inactive hour: ' + hour + ':' + min + '. No scan required.');
   }
   
   return active;
@@ -311,8 +318,9 @@ function runGlobal52WeekScan() {
       if (appliedMinPrice && live < appliedMinPrice) { skippedBelowPrice++; return; }
       if (appliedMinMarketCap && mcap != null && mcap < appliedMinMarketCap) { skippedBelowMcap++; return; }
       afterFilter++;
-      const reachedLow = (!isNaN(stock.low52) && stock.low52 != null && stock.low52 > 0 && live <= stock.low52);
-      const reachedHigh = (!isNaN(stock.high52) && stock.high52 != null && stock.high52 > 0 && live >= stock.high52);
+      const hasMoved = (stock.prevClose != null && !isNaN(stock.prevClose) && Math.abs(live - stock.prevClose) > 0.0001);
+      const reachedLow = hasMoved && (!isNaN(stock.low52) && stock.low52 != null && stock.low52 > 0 && live <= stock.low52);
+      const reachedHigh = hasMoved && (!isNaN(stock.high52) && stock.high52 != null && stock.high52 > 0 && live >= stock.high52);
       if (reachedLow || reachedHigh) {
         // Normalize object shape for frontend cards
         const o = {
@@ -701,6 +709,22 @@ function appendDailyHiLoHits_(highsArr, lowsArr) {
     dayKey = todayKey;
   }
   const nowIso = new Date().toISOString();
+  
+  // --- SELF-HEALING FIX: Prune stale alerts (>24h) ---
+  const nowMs = Date.now();
+  const STALE_LIMIT = 24 * 60 * 60 * 1000;
+  
+  // Prune existing lists
+  highHits = highHits.filter(h => {
+      const t = h.t ? new Date(h.t).getTime() : 0;
+      return (nowMs - t) < STALE_LIMIT;
+  });
+  lowHits = lowHits.filter(h => {
+      const t = h.t ? new Date(h.t).getTime() : 0;
+      return (nowMs - t) < STALE_LIMIT;
+  });
+  // ---------------------------------------------------
+
   const seenHigh = new Set(highHits.map(h => h && h.code));
   const seenLow = new Set(lowHits.map(h => h && h.code));
   // Normalize existing seen sets to canonical uppercase codes (defensive)
@@ -726,17 +750,17 @@ function appendDailyHiLoHits_(highsArr, lowsArr) {
 
   (Array.isArray(highsArr) ? highsArr : []).forEach(e => {
     const item = normHiLoItem(e);
-  if (!item) return;
-  const c = _normCode(item.code);
-  item.code = c;
-  if (!seenHighNorm.has(c)) { highHits.push(item); seenHighNorm.add(c); }
+    if (!item) return;
+    const c = _normCode(item.code);
+    item.code = c;
+    if (!seenHighNorm.has(c)) { highHits.push(item); seenHighNorm.add(c); }
   });
   (Array.isArray(lowsArr) ? lowsArr : []).forEach(e => {
     const item = normHiLoItem(e);
-  if (!item) return;
-  const c = _normCode(item.code);
-  item.code = c;
-  if (!seenLowNorm.has(c)) { lowHits.push(item); seenLowNorm.add(c); }
+    if (!item) return;
+    const c = _normCode(item.code);
+    item.code = c;
+    if (!seenLowNorm.has(c)) { lowHits.push(item); seenLowNorm.add(c); }
   });
 
   writeDailyHiLoHits_({ dayKey, highHits, lowHits });
@@ -751,9 +775,22 @@ function appendDailyHiLoHits_(highsArr, lowsArr) {
 
 function runGlobalMoversScan() {
   try {
-    if (!isMarketActive_()) return;
-
     const now = new Date();
+    
+    // --- FINAL CAPTURE WINDOW LOGIC ---
+    // Specifically target the window after Market Close but before Email/Night
+    // SYDNEY TIME: 4:00 PM - 6:30 PM
+    const hour = Number(Utilities.formatDate(now, ASX_TIME_ZONE, 'H'));
+    const min = Number(Utilities.formatDate(now, ASX_TIME_ZONE, 'mm'));
+    const timeVal = hour * 100 + min;
+    const isFinalCaptureWindow = (timeVal >= 1600 && timeVal <= 1830);
+
+    const inHours = isMarketActive_(now);
+    
+    // EXIT: Skip only if we are outside both active hours AND the capture window.
+    // Note: isMarketActive_ already covers 1600-1830, but this explicit check
+    // prevents any confusion and allows us to decouple the requirements later.
+    if (!inHours && !isFinalCaptureWindow) return;
 
     const guaranteed = fetchGlobalSettingsGuaranteedLatest_(3, 200);
     if (!guaranteed.ok || !guaranteed.data) { console.log('[MoversScan] FAILED settings fetch: ' + (guaranteed.error || 'unknown')); return; }
@@ -1126,15 +1163,39 @@ function writeDailyMoversHits_(payload) {
 function appendDailyMoversHits_(upArr, downArr) {
   const todayKey = getSydneyDayKey_();
   const current = fetchDailyMoversHits_();
-  if (!current.ok) { Logger.log('[Movers][DailyHits] fetch failed: %s', current.error); return; }
+  // --- PERSISTENCE HARDENING: Handle fetch failure gracefully ---
+  // If we can't read yesterday's history (e.g. network glitch), we MUST NOT abort.
+  // We should default to an empty list and SAVE the new data so we don't lose today's alerts.
+  if (!current.ok) {
+     Logger.log('[Movers][DailyHits] Read failed (%s). Defaulting to empty history to preserve new data.', current.error);
+     current.data = { dayKey: todayKey, upHits: [], downHits: [] };
+  }
+
   let upHits = current.data.upHits || [];
   let downHits = current.data.downHits || [];
   let dayKey = current.data.dayKey || todayKey;
+
   if (dayKey !== todayKey) {
     // New day: reset lists
     upHits = []; downHits = []; dayKey = todayKey;
   }
   const nowIso = new Date().toISOString();
+  
+  // --- SELF-HEALING FIX: Prune stale alerts (>24h) ---
+  const nowMs = Date.now();
+  const STALE_LIMIT = 24 * 60 * 60 * 1000;
+  
+  // Prune existing lists
+  upHits = upHits.filter(h => {
+      const t = h.t ? new Date(h.t).getTime() : 0;
+      return (nowMs - t) < STALE_LIMIT;
+  });
+  downHits = downHits.filter(h => {
+      const t = h.t ? new Date(h.t).getTime() : 0;
+      return (nowMs - t) < STALE_LIMIT;
+  });
+  // ---------------------------------------------------
+
   const seenUp = new Set(upHits.map(h => h && h.code));
   const seenDown = new Set(downHits.map(h => h && h.code));
   // Normalize existing seen sets to uppercase codes
@@ -2434,7 +2495,18 @@ function sendCombinedDailyDigest_() {
         }
       };
 
+      // Filter Movers (Global Sections - Relaxed to show Top Market Moves)
+      // Use a lighter filter for 'Global Movers' (Sector + Price only) to ensure visibility of the 
+      // Market Top 15 even if they don't meet strict personal Notification triggers.
+      function qualifiesMover(o) {
+        if (!_isSectorAllowed_(o, prefs)) return false;
+        const live = _parseNum_(o.live);
+        if (t.minPrice && live < t.minPrice) return false;
+        return true;
+      }
+
       // Filter Movers (Global Sections - Strict, no bypass)
+      // Restored Strict Thresholds: Mover must meet the user's personal % or $ trigger to appear.
       const userDown = allDown.filter(o => qualifies(o, false)).sort((a,b)=> Math.abs(num(b.pct)||0) - Math.abs(num(a.pct)||0));
       const userUp = allUp.filter(o => qualifies(o, false)).sort((a,b)=> (num(b.pct)||0) - (num(a.pct)||0));
       
@@ -2457,9 +2529,6 @@ function sendCombinedDailyDigest_() {
           // Respect Override setting for Personal Alerts
           if (h.intent === 'mover') {
             const rich = moverMap.get(h.code);
-            // If we can't find the rich data, we default to filtering it OUT (safety) 
-            // or we could check 'live' vs 'prev' if we had it, but 'qualifies' needs pct/change.
-            // Since it came from duplicateMoversIntoCustom_, it SHOULD be in allUp/allDown.
             if (!rich) return false;
             return qualifies(rich, overrideFilters);
           }
@@ -2470,19 +2539,21 @@ function sendCombinedDailyDigest_() {
              return true;
           }
 
-          // Default: allow other unknown intents? Or strict? 
-          // Strict is safer to reduce noise.
           return false; 
         })
         .map(o => '<tr>'+td(o.code)+td(o.name)+td(fmtMoney(o.live))+td(fmtMoney(o.target))+td(o.direction)+td(o.intent)+'</tr>');
 
       // Assemble Tables (Order: Personal > 52W Low > 52W High > Losers > Gainers)
+      // Disclaimer Subtitles
+      const disclaimerRow52 = '<tr><td colspan="5" style="padding:4px 10px;font-size:11px;color:#777;background:#fdfdfd;border-bottom:1px solid #eee;"><em>Note: End-of-Day prices. Intraday reach may not be shown.</em></td></tr>';
+      const disclaimerRowMovers = '<tr><td colspan="5" style="padding:4px 10px;font-size:11px;color:#777;background:#fdfdfd;border-bottom:1px solid #eee;"><em>Note: Only shows movers matching your personal Alert Thresholds.</em></td></tr>';
+
       const sections = [
-        createTable('Your Personal Alerts', userCustomHits, hdrCustom, '#1976d2'), // Blue
-        createTable('52-Week Lows', userLows.map(o => '<tr>'+td(o.code)+td(o.name)+td(fmtMoney(o.live))+td(fmtMoney(o.low52))+td(fmtMoney(o.high52))+'</tr>'), hdrHiLo, '#d32f2f'), // Red
-        createTable('52-Week Highs', userHighs.map(o => '<tr>'+td(o.code)+td(o.name)+td(fmtMoney(o.live))+td(fmtMoney(o.low52))+td(fmtMoney(o.high52))+'</tr>'), hdrHiLo, '#388e3c'), // Green
-        createTable('Global Movers — Losers', userDown.map(o => '<tr>'+td(o.code)+td(o.name)+td(fmtMoney(o.live))+td(fmtPct(o.pct))+td(fmtMoney(o.change))+'</tr>'), hdrMovers, '#e53935'), // Red (lighter/distinct or same?) - Let's use similar Red
-        createTable('Global Movers — Gainers', userUp.map(o => '<tr>'+td(o.code)+td(o.name)+td(fmtMoney(o.live))+td(fmtPct(o.pct))+td(fmtMoney(o.change))+'</tr>'), hdrMovers, '#43a047')  // Green
+        createTable('Your Personal Alerts', userCustomHits, hdrCustom, '#1976d2'), 
+        createTable('52-Week Lows', [disclaimerRow52, ...userLows.map(o => '<tr>'+td(o.code)+td(o.name)+td(fmtMoney(o.live))+td(fmtMoney(o.low52))+td(fmtMoney(o.high52))+'</tr>')], hdrHiLo, '#d32f2f'), 
+        createTable('52-Week Highs', [disclaimerRow52, ...userHighs.map(o => '<tr>'+td(o.code)+td(o.name)+td(fmtMoney(o.live))+td(fmtMoney(o.low52))+td(fmtMoney(o.high52))+'</tr>')], hdrHiLo, '#388e3c'), 
+        createTable('Global Movers — Losers', [disclaimerRowMovers, ...userDown.map(o => '<tr>'+td(o.code)+td(o.name)+td(fmtMoney(o.live))+td(fmtPct(o.pct))+td(fmtMoney(o.change))+'</tr>')], hdrMovers, '#e53935'), 
+        createTable('Global Movers — Gainers', [disclaimerRowMovers, ...userUp.map(o => '<tr>'+td(o.code)+td(o.name)+td(fmtMoney(o.live))+td(fmtPct(o.pct))+td(fmtMoney(o.change))+'</tr>')], hdrMovers, '#43a047')  
       ].filter(s => !!s);
 
       if (sections.length === 0) {
@@ -3442,5 +3513,4 @@ function debug_VerifyScanData() {
     });
   });
 }
-
 
