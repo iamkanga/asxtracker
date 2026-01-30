@@ -164,13 +164,22 @@ export class SecurityController {
     _getRpId() {
         const hostname = window.location.hostname;
         // Check for IPv4 or IPv6
-        const isIp = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/.test(hostname) || hostname.includes(':');
+        const isIp = SecurityController.isIpAddress(hostname);
 
         if (isIp) {
             console.log("SecurityController: Hostname is IP, omitting rpId.");
             return undefined; // Let browser default to origin
         }
         return hostname;
+    }
+
+    /**
+     * STATIC HELPER: Checks if a hostname is an IP address.
+     * @param {string} hostname 
+     * @returns {boolean}
+     */
+    static isIpAddress(hostname) {
+        return /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/.test(hostname) || hostname.includes(':');
     }
 
     /**

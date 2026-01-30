@@ -9,6 +9,7 @@ import { AppState } from '../state/AppState.js';
 import { ToastManager } from './ToastManager.js';
 import { navManager } from '../utils/NavigationManager.js';
 import { SecurityUI } from './SecurityUI.js';
+import { SecurityController } from '../controllers/SecurityController.js';
 import { userStore } from '../data/DataService.js';
 import { SyncManager } from '../controllers/SyncManager.js';
 import { DataManagementUI } from './DataManagementUI.js';
@@ -25,6 +26,23 @@ export class GeneralSettingsUI {
 
         const prefs = AppState.preferences.security;
         const isBiometricSupported = controller.securityController.isBiometricSupported;
+        const hostname = window.location.hostname;
+        const isIp = SecurityController.isIpAddress(hostname);
+        const isLocalIP = hostname === '127.0.0.1';
+        const isSecureContext = window.isSecureContext;
+
+        let biometricHint = '';
+        let bioEnabled = isBiometricSupported && isSecureContext && !isIp;
+
+        if (!isSecureContext) {
+            biometricHint = `<div style="font-size: 0.7rem; color: var(--color-negative); margin-top: 4px;"><i class="fas fa-exclamation-triangle"></i> Requires HTTPS or localhost</div>`;
+        } else if (isLocalIP) {
+            biometricHint = `<div style="font-size: 0.7rem; color: var(--color-negative); margin-top: 4px;"><i class="fas fa-exclamation-triangle"></i> Use 'localhost' instead of '127.0.0.1'</div>`;
+        } else if (isIp) {
+            biometricHint = `<div style="font-size: 0.7rem; color: var(--color-negative); margin-top: 4px;"><i class="fas fa-exclamation-triangle"></i> Not available on IP Addresses</div>`;
+        } else if (!isBiometricSupported) {
+            biometricHint = `<div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 4px;">Device not supported</div>`;
+        }
 
         modal.innerHTML = `
             <div class="${CSS_CLASSES.MODAL_OVERLAY}"></div>
@@ -38,31 +56,35 @@ export class GeneralSettingsUI {
                     
                      <!-- 1. SECURITY SECTION -->
                     <div class="${CSS_CLASSES.SETTINGS_SECTION}" style="margin-bottom: 50px;">
-                        <h4 class="${CSS_CLASSES.SIDEBAR_SECTION_TITLE}" style="margin-bottom: 15px; color: var(--color-accent); font-size: 0.85rem; letter-spacing: 1.5px; text-transform: uppercase; border-bottom: 1px solid rgba(var(--color-accent-rgb), 0.2); padding-bottom: 8px; font-weight: 800;">Security</h4>
+                        <h3 class="${CSS_CLASSES.DETAIL_LABEL}" style="margin-bottom: 0px; color: white !important; font-size: 1.1rem !important; display: flex; align-items: center; gap: 8px; text-transform: none; font-weight: 700;">
+                            <i class="fas ${UI_ICONS.SHIELD}" style="color: var(--color-accent); width: 18px; text-align: center;"></i> Security
+                        </h3>
+                        <div style="font-size: 0.73rem; color: var(--text-muted); opacity: 0.8; font-style: italic; margin-bottom: 20px;">Manage app access and biometric authentication</div>
                         
                         <!-- Biometric Toggle -->
-                        <div class="${CSS_CLASSES.SETTING_ROW}" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 0;">
+                         <label class="${CSS_CLASSES.SETTING_ROW}" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border: none !important; cursor: pointer; ${bioEnabled ? '' : 'opacity: 0.6; cursor: not-allowed;'}">
                             <div>
                                 <div class="${CSS_CLASSES.FONT_BOLD}" style="font-size: 0.95rem;">Biometric Access</div>
                                 <div class="${CSS_CLASSES.TEXT_SM} ${CSS_CLASSES.TEXT_MUTED}">Unlock using Face ID or Fingerprint</div>
+                                ${biometricHint}
                             </div>
-                            <label class="toggle-switch">
-                                <input type="checkbox" id="${IDS.GEN_BIO_TOGGLE}" ${prefs.isBiometricEnabled ? 'checked' : ''} ${isBiometricSupported ? '' : 'disabled'}>
-                                <span class="slider round"></span>
-                            </label>
-                        </div>
+                            <div class="square-radio-wrapper">
+                                <input type="checkbox" id="${IDS.GEN_BIO_TOGGLE}" ${prefs.isBiometricEnabled ? 'checked' : ''} ${bioEnabled ? '' : 'disabled'}>
+                                <div class="square-radio-visual"></div>
+                            </div>
+                        </label>
 
                         <!-- PIN Toggle -->
-                        <div class="${CSS_CLASSES.SETTING_ROW}" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 0;">
+                        <label class="${CSS_CLASSES.SETTING_ROW}" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border: none !important; cursor: pointer;">
                             <div>
                                 <div class="${CSS_CLASSES.FONT_BOLD}" style="font-size: 0.95rem;">PIN Access</div>
                                 <div class="${CSS_CLASSES.TEXT_SM} ${CSS_CLASSES.TEXT_MUTED}">Require 4-digit PIN</div>
                             </div>
-                             <label class="toggle-switch">
+                             <div class="square-radio-wrapper">
                                 <input type="checkbox" id="${IDS.GEN_PIN_TOGGLE}" ${prefs.isPinEnabled ? 'checked' : ''}>
-                                <span class="slider round"></span>
-                            </label>
-                        </div>
+                                <div class="square-radio-visual"></div>
+                            </div>
+                        </label>
                          <div id="${IDS.GEN_PIN_SETUP_AREA}" style="margin-top: 5px; ${prefs.isPinEnabled ? '' : 'display: none;'}">
                             <button id="${IDS.GEN_CHANGE_PIN_BTN}" class="${CSS_CLASSES.BTN_TEXT_SMALL} ${CSS_CLASSES.TEXT_ACCENT}" style="padding: 0; font-weight: 600;">Change PIN</button>
                         </div>
@@ -70,10 +92,13 @@ export class GeneralSettingsUI {
 
                         <!-- 3. DATA SECTION -->
                     <div class="${CSS_CLASSES.SETTINGS_SECTION}">
-                        <h4 class="${CSS_CLASSES.SIDEBAR_SECTION_TITLE}" style="margin-bottom: 15px; color: var(--color-accent); font-size: 0.85rem; letter-spacing: 1.5px; text-transform: uppercase; border-bottom: 1px solid rgba(var(--color-accent-rgb), 0.2); padding-bottom: 8px; font-weight: 800;">Data Management</h4>
+                        <h3 class="${CSS_CLASSES.DETAIL_LABEL}" style="margin-bottom: 0px; color: white !important; font-size: 1.1rem !important; display: flex; align-items: center; gap: 8px; text-transform: none; font-weight: 700;">
+                            <i class="fas fa-database" style="color: var(--color-accent); width: 18px; text-align: center;"></i> Data Management
+                        </h3>
+                        <div style="font-size: 0.73rem; color: var(--text-muted); opacity: 0.8; font-style: italic; margin-bottom: 20px;">Backup, restore and synchronization tools</div>
                         
                         <!-- NEW: Unified Data Management Hub -->
-                        <div class="${CSS_CLASSES.SETTING_ROW}" id="${IDS.GEN_DATA_MGMT_ROW}" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between; padding: 12px 0;">
+                        <div class="${CSS_CLASSES.SETTING_ROW}" id="${IDS.GEN_DATA_MGMT_ROW}" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border: none !important;">
                             <div>
                                 <div class="${CSS_CLASSES.FONT_BOLD}" style="font-size: 0.95rem;">Data Tools</div>
                                 <div class="${CSS_CLASSES.TEXT_SM} ${CSS_CLASSES.TEXT_MUTED}">Export, Import & Sync</div>
@@ -87,7 +112,7 @@ export class GeneralSettingsUI {
 
 
                         <!-- Delete Data (No Border, just icon red) -->
-                        <div class="${CSS_CLASSES.SETTING_ROW}" id="${IDS.GEN_DELETE_ROW}" style="cursor: pointer; margin-top: 5px; display: flex; align-items: center; justify-content: space-between; padding: 10px 0;">
+                        <div class="${CSS_CLASSES.SETTING_ROW}" id="${IDS.GEN_DELETE_ROW}" style="cursor: pointer; margin-top: 5px; display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border: none !important;">
                             <div>
                                 <div class="${CSS_CLASSES.FONT_BOLD}" style="color: var(--color-negative); font-size: 0.95rem;">Delete Data</div>
                                 <div class="${CSS_CLASSES.TEXT_SM} ${CSS_CLASSES.TEXT_MUTED}">Reset app and clear cache</div>

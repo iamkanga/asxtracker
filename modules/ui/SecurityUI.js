@@ -5,6 +5,7 @@
 
 import { CSS_CLASSES, IDS, EVENTS, UI_ICONS } from '../utils/AppConstants.js';
 import { AppState } from '../state/AppState.js';
+import { SecurityController } from '../controllers/SecurityController.js';
 import { ToastManager } from './ToastManager.js';
 import { navManager } from '../utils/NavigationManager.js';
 
@@ -159,17 +160,31 @@ export const SecurityUI = {
         });
 
         const isBiometricSupported = controller.isBiometricSupported;
+        const hostname = window.location.hostname;
+        const isIp = SecurityController.isIpAddress(hostname);
+        const isLocalIP = hostname === '127.0.0.1';
         const isSecureContext = window.isSecureContext;
 
-        // Biometrics require Secure Context (HTTPS or localhost)
-        const biometricHint = !isSecureContext ?
-            `<div class="${CSS_CLASSES.BIOMETRIC_HINT} ${CSS_CLASSES.BIOMETRIC_HINT_DANGER}">
+        let biometricHint = '';
+        let bioEnabled = isBiometricSupported && isSecureContext && !isIp;
+
+        if (!isSecureContext) {
+            biometricHint = `<div class="${CSS_CLASSES.BIOMETRIC_HINT} ${CSS_CLASSES.BIOMETRIC_HINT_DANGER}">
                 <i class="fas ${UI_ICONS.EXCLAMATION_TRIANGLE}"></i> Biometrics require <b>HTTPS</b> or <b>localhost</b>
-            </div>` :
-            (!isBiometricSupported ?
-                `<div class="${CSS_CLASSES.BIOMETRIC_HINT} ${CSS_CLASSES.BIOMETRIC_HINT_MUTED}">
+            </div>`;
+        } else if (isLocalIP) {
+            biometricHint = `<div class="${CSS_CLASSES.BIOMETRIC_HINT} ${CSS_CLASSES.BIOMETRIC_HINT_DANGER}">
+                <i class="fas ${UI_ICONS.EXCLAMATION_TRIANGLE}"></i> Use <b>localhost</b> instead of 127.0.0.1
+            </div>`;
+        } else if (isIp) {
+            biometricHint = `<div class="${CSS_CLASSES.BIOMETRIC_HINT} ${CSS_CLASSES.BIOMETRIC_HINT_DANGER}">
+                <i class="fas ${UI_ICONS.EXCLAMATION_TRIANGLE}"></i> Biometrics unavailable on IP addresses
+            </div>`;
+        } else if (!isBiometricSupported) {
+            biometricHint = `<div class="${CSS_CLASSES.BIOMETRIC_HINT} ${CSS_CLASSES.BIOMETRIC_HINT_MUTED}">
                 Your device doesn't support biometric login
-            </div>` : '');
+            </div>`;
+        }
 
         modal.innerHTML = `
             <div class="${CSS_CLASSES.MODAL_OVERLAY}"></div>
@@ -180,46 +195,51 @@ export const SecurityUI = {
                 </div>
                 <div class="${CSS_CLASSES.MODAL_BODY}">
                     <div class="${CSS_CLASSES.SETTINGS_SECTION}">
+                        <h3 class="${CSS_CLASSES.DETAIL_LABEL}" style="margin-bottom: 0px; color: white !important; font-size: 1.1rem !important; display: flex; align-items: center; gap: 8px; text-transform: none; font-weight: 700;">
+                            <i class="fas ${UI_ICONS.LOCK}" style="color: var(--color-accent); width: 18px; text-align: center;"></i> Security Controls
+                        </h3>
+                        <div style="font-size: 0.73rem; color: var(--text-muted); opacity: 0.8; font-style: italic; margin-bottom: 20px;">Configure your privacy and access preferences</div>
+
                         <!-- PIN Toggle -->
-                        <div class="${CSS_CLASSES.SETTING_ROW}">
+                        <label class="${CSS_CLASSES.SETTING_ROW}" style="border: none !important; display: flex; align-items: center; justify-content: space-between; cursor: pointer;">
                             <div>
                                 <div class="${CSS_CLASSES.FONT_BOLD}">PIN Access</div>
                                 <div class="${CSS_CLASSES.TEXT_SM} ${CSS_CLASSES.TEXT_MUTED}">Require a PIN to unlock the app</div>
                             </div>
-                            <label class="${CSS_CLASSES.SWITCH}">
+                            <div class="square-radio-wrapper">
                                 <input type="checkbox" id="${IDS.PIN_TOGGLE}" ${prefs.isPinEnabled ? 'checked' : ''}>
-                                <span class="${CSS_CLASSES.SLIDER_ROUND}"></span>
-                            </label>
-                        </div>
+                                <div class="square-radio-visual"></div>
+                            </div>
+                        </label>
 
                         <div id="${IDS.PIN_SETUP_AREA}" class="${CSS_CLASSES.PIN_SETUP_AREA}" style="${prefs.isPinEnabled ? '' : 'display: none;'}">
                             <button id="${IDS.CHANGE_PIN_BTN}" class="${CSS_CLASSES.BTN_TEXT_SMALL} ${CSS_CLASSES.TEXT_ACCENT}">Change PIN</button>
                         </div>
 
                         <!-- Biometric Toggle -->
-                        <div class="${CSS_CLASSES.SETTING_ROW} ${isBiometricSupported ? '' : CSS_CLASSES.DISABLED}">
+                        <label class="${CSS_CLASSES.SETTING_ROW} ${bioEnabled ? '' : CSS_CLASSES.DISABLED}" style="border: none !important; display: flex; align-items: center; justify-content: space-between; cursor: pointer; ${bioEnabled ? '' : 'opacity: 0.6; cursor: not-allowed;'}">
                             <div>
                                 <div class="${CSS_CLASSES.FONT_BOLD}">Biometric Access</div>
                                 <div class="${CSS_CLASSES.TEXT_SM} ${CSS_CLASSES.TEXT_MUTED}">Use Fingerprint or Face ID</div>
                                 ${biometricHint}
                             </div>
-                            <label class="${CSS_CLASSES.SWITCH}">
-                                <input type="checkbox" id="${IDS.BIO_TOGGLE}" ${prefs.isBiometricEnabled ? 'checked' : ''} ${isBiometricSupported ? '' : 'disabled'}>
-                                <span class="${CSS_CLASSES.SLIDER_ROUND}"></span>
-                            </label>
-                        </div>
+                            <div class="square-radio-wrapper">
+                                <input type="checkbox" id="${IDS.BIO_TOGGLE}" ${prefs.isBiometricEnabled ? 'checked' : ''} ${bioEnabled ? '' : 'disabled'}>
+                                <div class="square-radio-visual"></div>
+                            </div>
+                        </label>
 
                         <!-- Require Lock on Resume -->
-                        <div class="${CSS_CLASSES.SETTING_ROW}">
+                        <label class="${CSS_CLASSES.SETTING_ROW}" style="border: none !important; display: flex; align-items: center; justify-content: space-between; cursor: pointer;">
                             <div>
                                 <div class="${CSS_CLASSES.FONT_BOLD}">Lock on Resume</div>
                                 <div class="${CSS_CLASSES.TEXT_SM} ${CSS_CLASSES.TEXT_MUTED}">Re-lock app when returning from background</div>
                             </div>
-                            <label class="${CSS_CLASSES.SWITCH}">
+                            <div class="square-radio-wrapper">
                                 <input type="checkbox" id="${IDS.LOCK_RESUME_TOGGLE}" ${prefs.requireLockOnResume ? 'checked' : ''}>
-                                <span class="${CSS_CLASSES.SLIDER_ROUND}"></span>
-                            </label>
-                        </div>
+                                <div class="square-radio-visual"></div>
+                            </div>
+                        </label>
                     </div>
                 </div>
             </div>
