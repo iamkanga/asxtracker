@@ -8535,16 +8535,20 @@ body.dark-theme .calc-result-card {
 .favorite-links-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
+    justify-items: center;
+    justify-content: center;
     gap: 16px;
-    padding: 20px 12px;
+    padding: 20px;
 }
 
 /* Fallback for very small screens */
 @media (max-width: 600px) {
     .favorite-links-grid {
         grid-template-columns: repeat(3, 1fr);
+        justify-items: center;
+        justify-content: center;
         gap: 12px;
-        padding: 16px 8px;
+        padding: 16px;
     }
 
     .link-favicon {
@@ -8853,8 +8857,10 @@ body.dark-theme .calc-result-card {
 @media (max-width: 600px) {
     .favorite-links-grid {
         grid-template-columns: repeat(3, 1fr);
+        justify-items: center;
+        justify-content: center;
         gap: 12px;
-        padding: 16px 8px;
+        padding: 16px;
     }
 
     .link-favicon {
