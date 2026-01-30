@@ -291,7 +291,7 @@ export class SearchDiscoveryUI {
                 </div>
 
                 <!-- INLINE CHART -->
-                <div id="inlineChartContainer" style="height:320px; width:100%; border-radius:8px; overflow:hidden; margin-top:1.5rem; border:1px solid var(--border-color);"></div>
+                <div id="inlineChartContainer" style="height:320px; width:100%; border-radius:8px; overflow:hidden; margin-top:1.5rem; border:1px solid var(--border-color); touch-action: pan-y;"></div>
             </div>
 
             <!-- ACTION BUTTONS -->

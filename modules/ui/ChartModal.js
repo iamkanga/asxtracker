@@ -46,6 +46,7 @@ export class ChartComponent {
                     margin: 0;
                     padding: 0;
                     overflow: hidden;
+                    touch-action: pan-y; /* Allow vertical scroll gesture to bubble up to page */
                 }
                 .${CSS_CLASSES.CHART_CONTROLS} {
                     display: flex;
@@ -264,6 +265,9 @@ export class ChartComponent {
             grid: { vertLines: { color: '#333' }, horzLines: { color: '#333' } },
             width: div.clientWidth,
             height: div.clientHeight,
+            handleScroll: {
+                vertTouchDrag: false, // Allow page scroll on mobile touch-drag
+            },
             timeScale: {
                 timeVisible: true,
                 secondsVisible: false,
@@ -723,6 +727,7 @@ export class MiniChartPreview {
                     border: 1px solid var(--color-accent);
                     border-radius: 0;
                     overflow: hidden;
+                    touch-action: pan-y; /* Allow page scroll */
                     cursor: pointer;
                     transition: opacity 0.2s;
                 }

@@ -102,7 +102,7 @@ export class PortfolioChartUI {
                 </div>
                 
                 <div class="${CSS_CLASSES.MODAL_BODY}" style="flex:1; position:relative; padding:0; overflow:hidden; background:#111;">
-                    <div id="portfolio-chart-container" style="width:100%; height:100%;"></div>
+                    <div id="portfolio-chart-container" style="width:100%; height:100%; touch-action: pan-y;"></div>
                     <div id="portfolio-chart-loading" style="position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center; flex-direction:column; z-index:10; backdrop-filter: blur(2px);">
                         <i class="fas ${UI_ICONS.SPINNER} fa-2x" style="color:var(--color-accent);"></i>
                         <span style="margin-top:16px; font-weight:600; font-size: 0.9rem; color: #fff;">Calculating Performance...</span>
@@ -201,6 +201,9 @@ export class PortfolioChartUI {
                 /* Default Desktop/Landscape Alignment */
                  .chart-stats-summary > div {
                     align-items: flex-end; /* Default right align for desktop */
+                }
+                #portfolio-chart-container {
+                    touch-action: pan-y;
                 }
             </style>
         `;
@@ -310,6 +313,9 @@ export class PortfolioChartUI {
         this.chart = LightweightCharts.createChart(container, {
             layout: { background: { type: 'solid', color: 'transparent' }, textColor: '#d1d4dc' },
             grid: { vertLines: { color: 'rgba(42, 46, 57, 0.05)' }, horzLines: { color: 'rgba(42, 46, 57, 0.05)' } },
+            handleScroll: {
+                vertTouchDrag: false, // Allow page scroll on mobile
+            },
             rightPriceScale: { borderVisible: false, scaleMargins: { top: 0.1, bottom: 0.1 } },
             timeScale: { borderVisible: false, rightOffset: 5 },
             crosshair: {
