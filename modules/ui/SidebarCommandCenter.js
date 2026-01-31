@@ -266,8 +266,14 @@ export class SidebarCommandCenter {
                                 <i class="fas fa-pen sub-icon" style="font-size: 0.9rem; right: -2px; bottom: -2px;"></i>
                             </div>
                         </button>
+                        <button class="command-grid-item" id="nav-settings" title="App Settings">
+                            <i class="fas fa-cog command-icon"></i>
+                        </button>
+                        <button class="command-grid-item" id="nav-reload" title="Reload App">
+                            <i class="fas fa-sync-alt command-icon"></i>
+                        </button>
                         
-                        <!-- REORDERED: Notifications moved ABOVE Settings/Reload -->
+                        <!-- Moved Kangaroo Icons to Bottom -->
                          <button class="command-grid-item" id="act-alert-config" title="Alert Settings">
                             <div class="composite-icon">
                                 <span class="main-icon command-icon" style="display: flex; align-items: center; justify-content: center; width: 3.5rem; height: 3.5rem;">
@@ -280,14 +286,6 @@ export class SidebarCommandCenter {
                             <span class="command-icon" style="display: flex; align-items: center; justify-content: center; width: 3.5rem; height: 3.5rem;">
                                 ${kangarooSVG}
                             </span>
-                        </button>
-
-                        <!-- REORDERED: Settings/Reload moved DOWN -->
-                        <button class="command-grid-item" id="nav-settings" title="App Settings">
-                            <i class="fas fa-cog command-icon"></i>
-                        </button>
-                        <button class="command-grid-item" id="nav-reload" title="Reload App">
-                            <i class="fas fa-sync-alt command-icon"></i>
                         </button>
                     </div>
                      <!-- Notification Count Text -->
@@ -384,7 +382,6 @@ export class SidebarCommandCenter {
                 break;
 
             case 'act-add':
-                this._closeSidebar(); // ADDED: Auto-close
                 if (AppState.controller) {
                     const isCash = AppState.watchlist.id === CASH_WATCHLIST_ID;
                     if (isCash) {
@@ -399,7 +396,6 @@ export class SidebarCommandCenter {
                 break;
 
             case 'act-search':
-                this._closeSidebar(); // ADDED: Auto-close
                 document.dispatchEvent(new CustomEvent(EVENTS.REQUEST_OPEN_DISCOVERY_MODAL));
                 break;
 

@@ -12,7 +12,6 @@ import { formatCurrency, formatPercent } from '../utils/formatters.js';
 import { BriefingUI } from './BriefingUI.js?v=327';
 import { SnapshotUI } from './SnapshotUI.js';
 import { ToastManager } from './ToastManager.js';
-import { LinkHelper } from '../utils/LinkHelper.js';
 
 export class NotificationUI {
 
@@ -565,7 +564,30 @@ export class NotificationUI {
                     return;
                 }
 
+                // 1.5 Smart Alert Delegation (AI)
+                const smartBtn = e.target.closest('.btn-smart-alert');
+                if (smartBtn) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const symbol = smartBtn.dataset.symbol;
+                    const change = smartBtn.dataset.change;
+                    const sector = smartBtn.dataset.sector;
 
+                    ToastManager.show(`${UI_LABELS.ASKING_GEMINI} ${symbol}...`, 'info');
+
+                    import('../data/DataService.js').then(({ DataService }) => {
+                        const ds = new DataService();
+                        // console.log('Asking Gemini explain:', symbol);
+                        ds.askGemini('explain', '', { symbol, change, sector }).then(res => {
+                            if (res.ok) {
+                                alert(`${UI_LABELS.AI_INSIGHT_FOR} ${symbol}:\n\n${res.text}`);
+                            } else {
+                                ToastManager.show(`${UI_LABELS.ANALYSIS_FAILED} ` + (res.error || 'Unknown error'), 'error');
+                            }
+                        });
+                    });
+                    return;
+                }
 
                 // 2. Card Click Navigation
                 const card = e.target.closest('.notification-card');
@@ -1054,8 +1076,6 @@ export class NotificationUI {
         // NOTIFICATION CARD CLICK LISTENER (Delegated)
         // Dispatches ASX_CODE_CLICK to trigger AppController's logic (Watchlist Open OR Search Fallback)
         modal.addEventListener('click', (e) => {
-
-
             const card = e.target.closest(`.${CSS_CLASSES.NOTIFICATION_CARD_GRID}`);
             if (card && card.dataset.code) {
                 console.log(`[NotificationUI] Card Clicked: ${card.dataset.code}`);
@@ -1067,7 +1087,7 @@ export class NotificationUI {
                     detail: { code: card.dataset.code }
                 }));
 
-                // Optional: Close Notification Modal if successful?
+                // Optional: Close Notification Modal if successful? 
                 // AppController logic opens new modals, so we should probably close this one to avoid clutter.
                 // notificationStore.markAsViewed? No, that happens on open/dismiss.
 
@@ -1426,20 +1446,15 @@ export class NotificationUI {
             </div>`;
         }
 
-
         // --- SMART ALERT BUTTON (AI Integration) ---
         // Repositioned to bottom-right of container (Absolute)
         // User requested image replacement
         let smartAlertBtn = '';
         // ALWAYS SHOW if we have a code (Relaxed threshold from 2.0%)
         if (code) {
-            const prompt = `Summarize the technical & fundamental outlook for the ASX stock ${code}`;
-            const url = LinkHelper.getGeminiUrl(prompt);
-
-            smartAlertBtn = `<a href="${url}" target="_blank" class="btn-smart-alert-gemini" title="Ask Gemini Why" 
-                                style="text-decoration:none; border:none; background:none; cursor:pointer; font-size:1.1rem; color: #9c27b0; position: absolute; bottom: 6px; right: 6px; z-index: 150 !important; display: inline-block;">
-                               <img src="gemini-icon.png" style="width: 20px; height: 20px; vertical-align: middle;">
-                            </a>`;
+            smartAlertBtn = `<button class="btn-smart-alert" title="Ask AI Why" data-symbol="${code}" data-change="${(changePct || 0).toFixed(2)}" data-sector="${sector || ''}" style="border:none; background:none; cursor:pointer; font-size:1.1rem; color: #9c27b0; position: absolute; bottom: 6px; right: 6px; z-index: 10;">
+                                <img src="gemini-icon.png" style="width: 20px; height: 20px; vertical-align: middle;">
+                             </button>`;
         }
 
         //GRID LAYOUT IMPLEMENTATION
@@ -1458,19 +1473,15 @@ export class NotificationUI {
                     ${explainerText}
                 </div>
                 <div class="${CSS_CLASSES.NOTIF_CELL_RANGE}">${explainerRange}</div>
-
+                
                 <!-- R4: SECTOR (Full Width) -->
                 ${sectorHtml}
 
                 <!-- AI Button (Floating Bottom Right) -->
                 ${smartAlertBtn}
-
-
             </div>
         `;
     }
-
-
 
     static async renderFloatingBell() {
         if (document.getElementById('floating-bell-container')) return;
