@@ -524,19 +524,10 @@ export class BriefingUI {
         const askBtn = modal.querySelector('#btn-gemini-ask');
         const askInput = modal.querySelector('#gemini-chat-input');
 
-        const handleAsk = async (e) => {
+        const handleAsk = async (e, forceDeepDive = false) => {
             const query = askInput.value.trim();
 
-            // --- LONG PRESS DETECTION ---
-            // If the event is a 'click' but triggered after a long delay, it's a hold.
-            // However, a simpler way for BriefingUI (which uses a standard button) 
-            // is to check the event type or a timer.
-
-            // Since this uses handleAsk for BOTH button click and Enter key,
-            // we'll primarily support long-press on the BUTTON.
-            const isButtonContext = e && e.type === 'click';
-
-            const handleDeepDive = async () => {
+            if (forceDeepDive) {
                 const data = AppState.controller.calculateBriefingDigest();
                 const port = data.portfolio;
                 const sentiment = data.marketSentiment.sentiment;
@@ -549,7 +540,6 @@ Key Losers: ${data.highlights.portfolio.filter(h => h.pctChange < 0).slice(0, 3)
 
 Please summarize the current trends and what I should be watching.`;
 
-                // If user has typed something, use that instead
                 if (query) {
                     prompt = `Regarding the ASX market and my question "${query}": Please provide a comprehensive analysis including technical trends and relevant news.`;
                 }
@@ -562,15 +552,7 @@ Please summarize the current trends and what I should be watching.`;
                     console.error('Clipboard failed:', err);
                     ToastManager.show('Failed to copy prompt.', 'error');
                 }
-            };
-
-            // Setup Long Press on the button specifically
-            if (isButtonContext) {
-                // Check if this was a long-press via custom property we'll set
-                if (askBtn._isLongPress) {
-                    askBtn._isLongPress = false;
-                    return; // Already handled by onEnd
-                }
+                return;
             }
 
             if (!query) return;
@@ -605,7 +587,7 @@ Please summarize the current trends and what I should be watching.`;
 
                 const finalEl = document.getElementById('briefing-ai-summary');
 
-                if (result && result.ok && result.text) { // FIX: Ensure text exists to catch version mismatch
+                if (result && result.ok && result.text) {
                     if (finalEl) {
                         finalEl.innerHTML = `<div style="color:#fff; font-weight:700; margin-bottom:8px; border-bottom:1px solid #333; padding-bottom:4px;">Q: ${query}</div><div style="font-size:0.95em; opacity:0.9; line-height:1.5;">${result.text.replace(/\n/g, '<br>')}</div>`;
                         // Ensure text alignment is left for reading
@@ -614,9 +596,7 @@ Please summarize the current trends and what I should be watching.`;
                     askInput.value = '';
                 } else {
                     // If result.ok is true but text is missing, it's likely hitting the old backend code (Sync Settings).
-                    const err = (result && result.error)
-                        ? result.error
-                        : 'Backend Version Mismatch: Please Deploy New Script Version';
+                    const err = (result && result.error) ? result.error : 'Backend Error';
 
                     if (finalEl) finalEl.innerHTML = `<span style="color:red; font-size:0.9em;">Error: ${err}</span>`;
                 }
@@ -628,31 +608,39 @@ Please summarize the current trends and what I should be watching.`;
 
         if (askBtn) {
             let pressTimer;
+            let isLongPress = false;
             const LONG_PRESS_MS = 600;
 
-            const onStart = () => {
-                askBtn._isLongPress = false;
+            const onStart = (e) => {
+                e.preventDefault();
+                isLongPress = false;
                 pressTimer = setTimeout(() => {
-                    askBtn._isLongPress = true;
-                    handleAsk({ type: 'click' }); // Trigger with long-press logic
+                    isLongPress = true;
+                    if ('vibrate' in navigator) navigator.vibrate(50);
                 }, LONG_PRESS_MS);
             };
 
-            const onEnd = () => {
+            const onEnd = (e) => {
                 clearTimeout(pressTimer);
+                if (isLongPress) {
+                    handleAsk(e, true);
+                } else {
+                    handleAsk(e, false);
+                }
+                isLongPress = false;
             };
 
             askBtn.addEventListener('mousedown', onStart);
-            askBtn.addEventListener('touchstart', onStart, { passive: true });
+            askBtn.addEventListener('touchstart', onStart, { passive: false });
             askBtn.addEventListener('mouseup', onEnd);
             askBtn.addEventListener('mouseleave', onEnd);
-            askBtn.addEventListener('touchend', onEnd, { passive: true });
+            askBtn.addEventListener('touchend', onEnd, { passive: false });
 
-            askBtn.addEventListener('click', handleAsk);
+            askBtn.addEventListener('contextmenu', (e) => e.preventDefault());
         }
 
         if (askInput) askInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') handleAsk(e);
+            if (e.key === 'Enter') handleAsk(e, false);
         });
     }
 

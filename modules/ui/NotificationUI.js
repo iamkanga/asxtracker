@@ -588,30 +588,50 @@ export class NotificationUI {
                 const smartBtn = e.target.closest('.btn-smart-alert');
                 if (!smartBtn) return;
 
+                e.preventDefault(); // Prevent ghost clicks
                 activeBtn = smartBtn;
                 isLongPress = false;
+
                 pressTimer = setTimeout(() => {
                     isLongPress = true;
-                    handleDeepDive(activeBtn);
+                    // Haptic feedback if available
+                    if ('vibrate' in navigator) navigator.vibrate(50);
                 }, LONG_PRESS_MS);
             };
 
-            const onEnd = (e) => {
+            const onEnd = async (e) => {
                 if (!activeBtn) return;
                 clearTimeout(pressTimer);
 
-                // If it was NOT a long press, and we are still on the button, trigger short press
-                if (!isLongPress && e.target.closest('.btn-smart-alert') === activeBtn) {
-                    handleShortPress(activeBtn);
+                // Sync detection: Did we stay on the button?
+                const currentBtn = e.target.closest('.btn-smart-alert');
+                const isStillOnBtn = (currentBtn === activeBtn);
+
+                if (isStillOnBtn) {
+                    if (isLongPress) {
+                        await handleDeepDive(activeBtn);
+                    } else {
+                        handleShortPress(activeBtn);
+                    }
                 }
+
                 activeBtn = null;
+                isLongPress = false;
             };
 
+            // Prevent native context menu on Gemini buttons
+            list.addEventListener('contextmenu', (e) => {
+                if (e.target.closest('.btn-smart-alert')) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+            });
+
             list.addEventListener('mousedown', onStart);
-            list.addEventListener('touchstart', onStart, { passive: true });
+            list.addEventListener('touchstart', onStart, { passive: false });
             list.addEventListener('mouseup', onEnd);
             list.addEventListener('mouseleave', onEnd);
-            list.addEventListener('touchend', onEnd, { passive: true });
+            list.addEventListener('touchend', onEnd, { passive: false });
 
             list.addEventListener('click', (e) => {
                 // 1. Pin/Unpin Delegation
