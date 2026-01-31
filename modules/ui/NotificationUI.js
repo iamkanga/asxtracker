@@ -551,10 +551,10 @@ export class NotificationUI {
         // Accordion Toggle Delegation (Card Clicks)
         const list = modal.querySelector(`#${IDS.NOTIFICATION_LIST}`);
         if (list) {
-            let pressTimer = null;
-            let isLongPress = false;
-            let activeBtn = null;
-            const LONG_PRESS_MS = 600;
+            const getPrompt = (btn) => {
+                const { symbol } = btn.dataset;
+                return `Summarize the latest technical and fundamental developments for ${symbol} on the ASX. Focus on recent price action, volume, and any relevant news or upcoming announcements. Provide a comprehensive outlook.`;
+            };
 
             const handleShortPress = (smartBtn) => {
                 const { symbol, change, sector } = smartBtn.dataset;
@@ -571,69 +571,28 @@ export class NotificationUI {
                 });
             };
 
-            const handleDeepDive = async (smartBtn) => {
-                const { symbol } = smartBtn.dataset;
-                const prompt = `Summarize the latest technical and fundamental developments for ${symbol} on the ASX. Focus on recent price action, volume, and any relevant news or upcoming announcements. Provide a comprehensive outlook.`;
-                try {
-                    await navigator.clipboard.writeText(prompt);
-                    ToastManager.show(`Deep-dive prompt for ${symbol} copied!`, 'success');
-                    window.open('https://gemini.google.com/app', '_blank');
-                } catch (err) {
-                    console.error('Clipboard failed:', err);
-                    ToastManager.show('Failed to copy prompt.', 'error');
-                }
-            };
-
-            const onStart = (e) => {
+            // Prep clipboard on contextmenu (native long-press trigger) 
+            // This is the cleanest way to support native menus without event interference
+            list.addEventListener('contextmenu', async (e) => {
                 const smartBtn = e.target.closest('.btn-smart-alert');
-                if (!smartBtn) return;
-
-                e.preventDefault(); // Prevent ghost clicks
-                activeBtn = smartBtn;
-                isLongPress = false;
-
-                pressTimer = setTimeout(() => {
-                    isLongPress = true;
-                    // Haptic feedback if available
-                    if ('vibrate' in navigator) navigator.vibrate(50);
-                }, LONG_PRESS_MS);
-            };
-
-            const onEnd = async (e) => {
-                if (!activeBtn) return;
-                clearTimeout(pressTimer);
-
-                // Sync detection: Did we stay on the button?
-                const currentBtn = e.target.closest('.btn-smart-alert');
-                const isStillOnBtn = (currentBtn === activeBtn);
-
-                if (isStillOnBtn) {
-                    if (isLongPress) {
-                        await handleDeepDive(activeBtn);
-                    } else {
-                        handleShortPress(activeBtn);
+                if (smartBtn) {
+                    try {
+                        const prompt = getPrompt(smartBtn);
+                        await navigator.clipboard.writeText(prompt);
+                    } catch (err) {
+                        console.warn('Clipboard prep failed', err);
                     }
-                }
-
-                activeBtn = null;
-                isLongPress = false;
-            };
-
-            // Prevent native context menu on Gemini buttons
-            list.addEventListener('contextmenu', (e) => {
-                if (e.target.closest('.btn-smart-alert')) {
-                    e.preventDefault();
-                    e.stopPropagation();
                 }
             });
 
-            list.addEventListener('mousedown', onStart);
-            list.addEventListener('touchstart', onStart, { passive: false });
-            list.addEventListener('mouseup', onEnd);
-            list.addEventListener('mouseleave', onEnd);
-            list.addEventListener('touchend', onEnd, { passive: false });
-
             list.addEventListener('click', (e) => {
+                const smartBtn = e.target.closest('.btn-smart-alert');
+                if (smartBtn) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleShortPress(smartBtn);
+                    return;
+                }
                 // 1. Pin/Unpin Delegation
                 const btn = e.target.closest(`.${CSS_CLASSES.PIN_BTN}`);
                 if (btn) {
@@ -1512,9 +1471,9 @@ export class NotificationUI {
         let smartAlertBtn = '';
         // ALWAYS SHOW if we have a code (Relaxed threshold from 2.0%)
         if (code) {
-            smartAlertBtn = `<button class="btn-smart-alert" title="Ask AI Why" data-symbol="${code}" data-change="${(changePct || 0).toFixed(2)}" data-sector="${sector || ''}" style="border:none; background:none; cursor:pointer; font-size:1.1rem; color: #9c27b0; position: absolute; bottom: 6px; right: 6px; z-index: 10;">
-                                <img src="gemini-icon.png" style="width: 20px; height: 20px; vertical-align: middle;">
-                             </button>`;
+            smartAlertBtn = `<a href="https://gemini.google.com/app" target="_blank" class="btn-smart-alert" role="link" aria-label="Ask AI Deep Dive" title="Ask AI Why" data-symbol="${code}" data-change="${(changePct || 0).toFixed(2)}" data-sector="${sector || ''}" style="border:none; background:none; cursor:pointer; font-size:1.1rem; color: #9c27b0; position: absolute; bottom: 6px; right: 6px; z-index: 10; text-decoration: none; -webkit-touch-callout: default !important; user-select: auto !important;">
+                                <img src="gemini-icon.png" style="width: 20px; height: 20px; vertical-align: middle; pointer-events: none;">
+                             </a>`;
         }
 
         //GRID LAYOUT IMPLEMENTATION

@@ -88,9 +88,9 @@ export class BriefingUI {
                        <div style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 8px;">${UI_LABELS.ASK_THE_MARKET}</div>
                        <div style="position:relative;">
                           <input type="text" id="gemini-chat-input" placeholder="${UI_LABELS.GEMINI_PLACEHOLDER}" style="width:100%; padding: 10px 40px 10px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.3); color: #eee; font-family: inherit; font-size: 0.9em;">
-                          <button id="btn-gemini-ask" style="position:absolute; right:2px; top:2px; bottom:2px; padding:0 12px; background: transparent; border:none; color:var(--color-accent); cursor:pointer;">
-                             <img src="gemini-icon.png" style="width: 20px; height: 20px; vertical-align: middle; opacity: 0.8; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.8'">
-                          </button>
+                          <a id="btn-gemini-ask" href="https://gemini.google.com/app" target="_blank" role="link" aria-label="Ask AI Deep Dive" style="position:absolute; right:2px; top:2px; bottom:2px; padding:0 12px; background: transparent; border:none; color:var(--color-accent); cursor:pointer; display: flex; align-items: center; text-decoration: none; -webkit-touch-callout: default !important; user-select: auto !important;">
+                             <img src="gemini-icon.png" style="width: 20px; height: 20px; vertical-align: middle; opacity: 0.8; transition: opacity 0.2s; pointer-events: none;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.8'">
+                          </a>
                        </div>
                     </div>
 
@@ -524,15 +524,13 @@ export class BriefingUI {
         const askBtn = modal.querySelector('#btn-gemini-ask');
         const askInput = modal.querySelector('#gemini-chat-input');
 
-        const handleAsk = async (e, forceDeepDive = false) => {
+        const getDeepDivePrompt = () => {
             const query = askInput.value.trim();
+            const data = AppState.controller.calculateBriefingDigest();
+            const port = data.portfolio;
+            const sentiment = data.marketSentiment.sentiment;
 
-            if (forceDeepDive) {
-                const data = AppState.controller.calculateBriefingDigest();
-                const port = data.portfolio;
-                const sentiment = data.marketSentiment.sentiment;
-
-                let prompt = `Provide a deep-dive analysis of the ASX market and my portfolio context. 
+            let prompt = `Provide a deep-dive analysis of the ASX market and my portfolio context.
 Market Sentiment: ${sentiment}
 Portfolio Performance: ${port.totalPctChange.toFixed(2)}% Today.
 Key Winners: ${data.highlights.portfolio.filter(h => h.pctChange > 0).slice(0, 3).map(h => h.code).join(', ')}
@@ -540,21 +538,14 @@ Key Losers: ${data.highlights.portfolio.filter(h => h.pctChange < 0).slice(0, 3)
 
 Please summarize the current trends and what I should be watching.`;
 
-                if (query) {
-                    prompt = `Regarding the ASX market and my question "${query}": Please provide a comprehensive analysis including technical trends and relevant news.`;
-                }
-
-                try {
-                    await navigator.clipboard.writeText(prompt);
-                    ToastManager.show('Market deep-dive prompt copied!', 'success');
-                    window.open('https://gemini.google.com/app', '_blank');
-                } catch (err) {
-                    console.error('Clipboard failed:', err);
-                    ToastManager.show('Failed to copy prompt.', 'error');
-                }
-                return;
+            if (query) {
+                prompt = `Regarding the ASX market and my question "${query}": Please provide a comprehensive analysis including technical trends and relevant news.`;
             }
+            return prompt;
+        };
 
+        const handleAsk = async (e) => {
+            const query = askInput.value.trim();
             if (!query) return;
 
             const heroCard = modal.querySelector(`#${IDS.BRIEFING_PORTFOLIO_HERO}`);
@@ -607,40 +598,25 @@ Please summarize the current trends and what I should be watching.`;
         };
 
         if (askBtn) {
-            let pressTimer;
-            let isLongPress = false;
-            const LONG_PRESS_MS = 600;
-
-            const onStart = (e) => {
-                e.preventDefault();
-                isLongPress = false;
-                pressTimer = setTimeout(() => {
-                    isLongPress = true;
-                    if ('vibrate' in navigator) navigator.vibrate(50);
-                }, LONG_PRESS_MS);
-            };
-
-            const onEnd = (e) => {
-                clearTimeout(pressTimer);
-                if (isLongPress) {
-                    handleAsk(e, true);
-                } else {
-                    handleAsk(e, false);
+            // Prep clipboard on contextmenu (native long-press trigger)
+            askBtn.addEventListener('contextmenu', async (e) => {
+                try {
+                    const prompt = getDeepDivePrompt();
+                    await navigator.clipboard.writeText(prompt);
+                } catch (err) {
+                    console.warn('Clipboard prep failed', err);
                 }
-                isLongPress = false;
-            };
+            });
 
-            askBtn.addEventListener('mousedown', onStart);
-            askBtn.addEventListener('touchstart', onStart, { passive: false });
-            askBtn.addEventListener('mouseup', onEnd);
-            askBtn.addEventListener('mouseleave', onEnd);
-            askBtn.addEventListener('touchend', onEnd, { passive: false });
-
-            askBtn.addEventListener('contextmenu', (e) => e.preventDefault());
+            askBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleAsk(e);
+            });
         }
 
         if (askInput) askInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') handleAsk(e, false);
+            if (e.key === 'Enter') handleAsk(e);
         });
     }
 
