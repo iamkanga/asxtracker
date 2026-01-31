@@ -566,7 +566,7 @@ export class NotificationUI {
                 }
 
                 // 1.5 Smart Alert Delegation (AI)
-                const smartBtn = e.target.closest('.btn-smart-alert');
+                const smartBtn = e.target.closest('.btn-smart-alert-gemini');
                 if (smartBtn) {
                     // DO NOT preventDefault() - Let the <a> tag navigate naturally!
                     e.stopPropagation(); // Prevent card expansion
@@ -1448,8 +1448,9 @@ export class NotificationUI {
             const prompt = `Summarize the latest for ${code}`;
             const url = LinkHelper.getGeminiUrl(prompt);
 
-            // Native Anchor Tag: The Gold Standard for Mobile Links
-            smartAlertBtn = `<a href="${url}" target="_blank" class="btn-smart-alert" title="Ask AI Why" data-symbol="${code}" style="text-decoration:none; border:none; background:none; cursor:pointer; font-size:1.1rem; color: #9c27b0; position: absolute; bottom: 6px; right: 6px; z-index: 10; display: inline-block;">
+            // NATIVE GEMINI LINK: Optimized for Mobile Deep Linking
+            // We use a unique class to avoid any generic button listeners.
+            smartAlertBtn = `<a href="${url}" target="_blank" class="btn-smart-alert-gemini" title="Ask AI Why" data-symbol="${code}" style="text-decoration:none; border:none; background:none; cursor:pointer; font-size:1.1rem; color: #9c27b0; position: absolute; bottom: 6px; right: 6px; z-index: 100 !important; display: inline-block;">
                                 <img src="gemini-icon.png" style="width: 20px; height: 20px; vertical-align: middle;">
                              </a>`;
         }
