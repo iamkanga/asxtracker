@@ -587,11 +587,14 @@ export class NotificationUI {
                         // Fallback: Could use deprecated execCommand here if really needed, but ignoring for now to prioritize navigation.
                     }
 
-                    // 3. Navigate (Reverted to Emulator-Safe Method)
-                    // Uses standard location.href which worked on Localhost/Emulator.
-                    setTimeout(() => {
+                    // 3. Navigate (Synchronous - Preservation of User Gesture)
+                    // We remove setTimeout completely. The navigation must happen in the same tick as the click
+                    // to be trusted by Android WebView / App Links.
+                    try {
                         window.location.href = url;
-                    }, 100);
+                    } catch (e) {
+                        console.error('Nav failed', e);
+                    }
                     return;
                 }
 
