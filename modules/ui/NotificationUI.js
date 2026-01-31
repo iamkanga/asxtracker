@@ -1057,14 +1057,12 @@ export class NotificationUI {
             // GEMINI BREAKOUT isolation: Prevents any other global listeners from interfering
             const geminiBtn = e.target.closest('.btn-smart-alert-gemini');
             if (geminiBtn) {
+                e.preventDefault();
                 e.stopPropagation();
                 e.stopImmediatePropagation();
-                e.preventDefault();
 
-                // Get symbol from the dataset
                 const s = geminiBtn.dataset.symbol || '';
-                // EXPLICIT BREAKOUT: Navigate directly to the jump page
-                window.location.href = `gemini-jump.html?s=${s}`;
+                NotificationUI.showAIBridge(s);
                 return;
             }
 
@@ -1447,13 +1445,11 @@ export class NotificationUI {
             const prompt = `Summarize the technical & fundamental outlook for the ASX stock ${code}`;
             const url = LinkHelper.getGeminiUrl(prompt);
 
-            // JUMP PAGE ESCAPE: Links to a local file to bypass PWA sandbox.
-            // Final prompt construction and clipboard copy happen on the jump page itself for reliability.
-            const jumpUrl = `gemini-jump.html?s=${code}`;
-            smartAlertBtn = `<a href="${jumpUrl}" target="_self" class="btn-smart-alert-gemini" title="Ask Gemini Why" 
+            // IN-APP AI BRIDGE: Opens a full-screen overlay to avoid PWA reboots and breakout blocks.
+            smartAlertBtn = `<div class="btn-smart-alert-gemini" title="Ask Gemini Why" data-symbol="${code}" 
                                 style="text-decoration:none; border:none; background:none; cursor:pointer; font-size:1.1rem; color: #9c27b0; position: absolute; bottom: 6px; right: 6px; z-index: 150 !important; display: inline-block;">
                                <img src="gemini-icon.png" style="width: 20px; height: 20px; vertical-align: middle;">
-                            </a>`;
+                            </div>`;
         }
 
         //GRID LAYOUT IMPLEMENTATION
@@ -1480,6 +1476,123 @@ export class NotificationUI {
                 ${smartAlertBtn}
             </div>
         `;
+    }
+
+    /**
+     * Shows a state-preserving full-screen overlay that acts as the "Analysis Bridge".
+     * This avoids PWA reboots and provides a high-trust gesture for the breakout.
+     */
+    static showAIBridge(symbol) {
+        const s = (symbol || '').toUpperCase().trim();
+        const display = s || 'STOCK';
+        const prompt = `Summarize the technical and fundamental outlook for the ASX stock: ${display}`;
+
+        // 1. Inject Styles if not already present
+        if (!document.getElementById('gemini-bridge-styles')) {
+            const style = document.createElement('style');
+            style.id = 'gemini-bridge-styles';
+            style.textContent = `
+                .ai-bridge-overlay {
+                    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                    background: #0f1115; color: white; z-index: 10000;
+                    display: flex; justify-content: center; align-items: center;
+                    animation: bridgeFadeIn 0.3s ease;
+                }
+                .ai-bridge-container {
+                    text-align: center; padding: 40px 24px; width: 85%; max-width: 360px;
+                    background: #1a1d21; border-radius: 36px;
+                    box-shadow: 0 40px 100px rgba(0,0,0,1);
+                    border: 1px solid rgba(255,255,255,0.06);
+                }
+                @keyframes bridgeFadeIn { from { opacity: 0; } to { opacity: 1; } }
+                .ai-icon-hub {
+                    width: 76px; height: 76px; margin: 0 auto 20px;
+                    background: linear-gradient(135deg, #9c27b0, #673ab7);
+                    border-radius: 20px; display: flex; align-items: center; justify-content: center;
+                    box-shadow: 0 8px 20px rgba(156, 39, 176, 0.3);
+                }
+                .ai-icon-hub img { width: 44px; height: 44px; filter: brightness(1.2); }
+                .ai-hub-title { font-size: 1.7rem; font-weight: 800; margin-bottom: 8px; color: #fff; }
+                .ai-hub-subtitle { font-size: 0.9rem; color: #9c27b0; margin-bottom: 35px; font-weight: 700; text-transform: uppercase; }
+                .ai-hub-btn-stack { display: flex; flex-direction: column; gap: 14px; }
+                .ai-btn-main {
+                    background: #9c27b0; color: white; padding: 20px; border-radius: 18px;
+                    font-weight: 700; font-size: 1.25rem; border: none; cursor: pointer;
+                    box-shadow: 0 10px 30px rgba(156, 39, 176, 0.4);
+                }
+                .ai-btn-copy {
+                    background: rgba(255,255,255,0.05); border: 1px dashed rgba(255,255,255,0.2);
+                    color: #ccc; font-size: 0.9rem; padding: 14px; border-radius: 16px; border: 1px dashed #444; 
+                    background: transparent; cursor: pointer;
+                }
+                .ai-btn-back {
+                    background: transparent; color: #666; font-size: 0.9rem; border: none;
+                    text-decoration: underline; padding: 10px; margin-top: 10px; cursor: pointer;
+                }
+                .ai-hub-hint { color: #555; font-size: 0.85rem; margin-top: 30px; line-height: 1.6; }
+                .ai-hub-status {
+                    background: rgba(0,255,100,0.1); color: #00ff64;
+                    display: inline-block; padding: 4px 12px; border-radius: 100px;
+                    font-size: 0.75rem; font-weight: 600; margin-bottom: 30px;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        // 2. Create Overlay
+        const overlay = document.createElement('div');
+        overlay.className = 'ai-bridge-overlay';
+        overlay.innerHTML = `
+            <div class="ai-bridge-container">
+                <div class="ai-icon-hub">
+                    <img src="gemini-icon.png" alt="Gemini">
+                </div>
+                <div class="ai-hub-title">${display} Outlook</div>
+                <div class="ai-hub-subtitle">STOCK AI ANALYSIS</div>
+                <div class="ai-hub-status" id="bridge-status">READY TO ANALYZE</div>
+                
+                <div class="ai-hub-btn-stack">
+                    <button class="ai-btn-main" id="ai-hub-explore">Explore in Gemini</button>
+                    <button class="ai-btn-copy" id="ai-hub-copy">Manually Copy Prompt</button>
+                    <button class="ai-btn-back" id="ai-hub-back">Back to Portfolio</button>
+                </div>
+                
+                <div class="ai-hub-hint">
+                    Tap <b>Explore</b> to view the technical and fundamental outlook on Gemini.
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(overlay);
+
+        // 3. Bind Actions
+        const copyFn = () => {
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(prompt).then(() => {
+                    document.getElementById('bridge-status').innerText = 'PROMPT COPIED!';
+                    document.getElementById('bridge-status').style.color = '#00ff64';
+                }).catch(() => {
+                    document.getElementById('bridge-status').innerText = 'COPY FAILED';
+                    document.getElementById('bridge-status').style.color = '#ff4444';
+                });
+            }
+        };
+
+        overlay.querySelector('#ai-hub-explore').onclick = () => {
+            copyFn();
+            const url = `https://gemini.google.com/app?q=${encodeURIComponent(prompt)}`;
+            // Open in a new tab/app
+            window.open(url, '_blank', 'noopener,noreferrer');
+        };
+
+        overlay.querySelector('#ai-hub-copy').onclick = copyFn;
+
+        overlay.querySelector('#ai-hub-back').onclick = () => {
+            overlay.remove();
+        };
+
+        // Auto-copy on open
+        setTimeout(copyFn, 500);
     }
 
     static async renderFloatingBell() {
