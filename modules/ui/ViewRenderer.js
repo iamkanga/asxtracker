@@ -7,9 +7,10 @@
 
 import { formatCurrency, formatPercent, formatFriendlyDate } from '../utils/formatters.js';
 import { AppState } from '../state/AppState.js';
-import { SORT_OPTIONS, UI_ICONS, USER_MESSAGES, RESEARCH_LINKS_TEMPLATE, CSS_CLASSES, IDS, EVENTS, SUMMARY_TYPES, STORAGE_KEYS, PORTFOLIO_ID, KANGAROO_ICON_SRC, KANGAROO_ICON_SVG, VIEW_MODES, FALLBACK_SECTOR_MAP } from '../utils/AppConstants.js?v=1029';
+import { SORT_OPTIONS, UI_ICONS, UI_LABELS, USER_MESSAGES, RESEARCH_LINKS_TEMPLATE, CSS_CLASSES, IDS, EVENTS, SUMMARY_TYPES, STORAGE_KEYS, PORTFOLIO_ID, KANGAROO_ICON_SRC, KANGAROO_ICON_SVG, VIEW_MODES, FALLBACK_SECTOR_MAP } from '../utils/AppConstants.js?v=1029';
 import { SnapshotUI } from './SnapshotUI.js';
 import { LinkHelper } from '../utils/LinkHelper.js';
+import { ToastManager } from './ToastManager.js';
 
 import { navManager } from '../utils/NavigationManager.js';
 import { MiniChartPreview, ChartModal } from './ChartModal.js';
@@ -741,17 +742,21 @@ export class ViewRenderer {
                     <div class="${CSS_CLASSES.MODAL_HEADER}">
                         <div class="${CSS_CLASSES.MODAL_HEADER_LEFT} ${CSS_CLASSES.FLEX_1}">
                             <div class="${CSS_CLASSES.TEXT_LEFT} ${CSS_CLASSES.W_FULL}">
-                                <div class="${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.ALIGN_CENTER} ${CSS_CLASSES.JUSTIFY_START} ${CSS_CLASSES.GAP_0}">
-                                    <h1 class="${CSS_CLASSES.MODAL_TITLE} ${CSS_CLASSES.DISPLAY_TITLE} ${CSS_CLASSES.MB_0} ${CSS_CLASSES.TEXT_LEFT} ${CSS_CLASSES.MODAL_TITLE_AUTO}">${stock.code}</h1>
-                                    ${stock.starRating > 0 ? `
-                                        <div class="${CSS_CLASSES.STAR_RATING} ${CSS_CLASSES.STAR_GAP_ML}">
-                                            ${Array.from({ length: stock.starRating }, () => `
-                                                <i class="fas ${UI_ICONS.STAR} ${CSS_CLASSES.TEXT_COFFEE}"></i>
-                                            `).join('')}
-                                        </div>
-                                    ` : ''}
-                                </div>
-                                <div class="${CSS_CLASSES.MODAL_SUBTITLE} ${CSS_CLASSES.TEXT_LEFT}">${stock.name || 'ASX Share'}</div>
+                                <a href="https://gemini.google.com/app" target="_blank" id="gemini-header-link" role="link" aria-label="Ask AI Deep Dive" style="text-decoration: none; color: inherit; display: block; -webkit-touch-callout: default !important; user-select: auto !important;">
+                                    <div class="${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.ALIGN_CENTER} ${CSS_CLASSES.JUSTIFY_START} ${CSS_CLASSES.GAP_0}">
+                                        <h1 class="${CSS_CLASSES.MODAL_TITLE} ${CSS_CLASSES.DISPLAY_TITLE} ${CSS_CLASSES.MB_0} ${CSS_CLASSES.TEXT_LEFT} ${CSS_CLASSES.MODAL_TITLE_AUTO}">${stock.code}</h1>
+                                        <span style="display: inline-block; width: 2.5ch;"></span>
+                                        <img src="gemini-icon.png" style="width: 20px; height: 20px; pointer-events: none; vertical-align: middle;">
+                                    </div>
+                                    <div class="${CSS_CLASSES.MODAL_SUBTITLE} ${CSS_CLASSES.TEXT_LEFT}" style="margin-top: 2px;">${stock.name || 'ASX Share'}</div>
+                                </a>
+                                ${stock.starRating > 0 ? `
+                                    <div class="${CSS_CLASSES.STAR_RATING} ${CSS_CLASSES.MT_TINY}" style="justify-content: flex-start;">
+                                        ${Array.from({ length: stock.starRating }, () => `
+                                            <i class="fas ${UI_ICONS.STAR} ${CSS_CLASSES.TEXT_COFFEE}"></i>
+                                        `).join('')}
+                                    </div>
+                                ` : ''}
                             </div>
                         </div>
                         <div class="${CSS_CLASSES.MODAL_ACTIONS}">
@@ -1022,6 +1027,49 @@ export class ViewRenderer {
         `;
 
         document.body.appendChild(modal);
+
+        // Gemini Interaction Binding
+        const geminiLink = modal.querySelector('#gemini-header-link');
+        if (geminiLink) {
+            const getPrompt = () => {
+                return `Summarize the latest technical and fundamental developments for ${stock.code} on the ASX. Focus on recent price action, volume, and any relevant news or upcoming announcements. Provide a comprehensive outlook.`;
+            };
+
+            const handleShortPress = () => {
+                const symbol = stock.code;
+                const change = stock.change || stock.dayChangeValue || 0;
+                const sector = stock.sector || '';
+
+                ToastManager.show(`${UI_LABELS.ASKING_GEMINI} ${symbol}...`, 'info');
+                import('../data/DataService.js').then(({ DataService }) => {
+                    const ds = new DataService();
+                    ds.askGemini('explain', '', { symbol, change, sector }).then(res => {
+                        if (res.ok) {
+                            alert(`${UI_LABELS.AI_INSIGHT_FOR} ${symbol}:\n\n${res.text}`);
+                        } else {
+                            ToastManager.show(`${UI_LABELS.ANALYSIS_FAILED} ` + (res.error || 'Unknown error'), 'error');
+                        }
+                    });
+                });
+            };
+
+            // Deep Dive Clipboard Prep on contextmenu (native long-press trigger)
+            geminiLink.addEventListener('contextmenu', async (e) => {
+                try {
+                    const prompt = getPrompt();
+                    await navigator.clipboard.writeText(prompt);
+                } catch (err) {
+                    console.warn('Clipboard prep failed', err);
+                }
+            });
+
+            // Tap Interception for Internal AI
+            geminiLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleShortPress();
+            });
+        }
 
         // Events
         const close = () => {
