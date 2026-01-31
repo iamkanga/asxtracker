@@ -1427,6 +1427,20 @@ export class NotificationUI {
         }
 
 
+        // --- SMART ALERT BUTTON (AI Integration) ---
+        // Repositioned to bottom-right of container (Absolute)
+        // User requested image replacement
+        let smartAlertBtn = '';
+        // ALWAYS SHOW if we have a code (Relaxed threshold from 2.0%)
+        if (code) {
+            const prompt = `Summarize the technical & fundamental outlook for the ASX stock ${code}`;
+            const url = LinkHelper.getGeminiUrl(prompt);
+
+            smartAlertBtn = `<a href="${url}" target="_blank" class="btn-smart-alert-gemini" title="Ask Gemini Why" 
+                                style="text-decoration:none; border:none; background:none; cursor:pointer; font-size:1.1rem; color: #9c27b0; position: absolute; bottom: 6px; right: 6px; z-index: 150 !important; display: inline-block;">
+                               <img src="gemini-icon.png" style="width: 20px; height: 20px; vertical-align: middle;">
+                            </a>`;
+        }
 
         //GRID LAYOUT IMPLEMENTATION
         return `
@@ -1447,6 +1461,9 @@ export class NotificationUI {
 
                 <!-- R4: SECTOR (Full Width) -->
                 ${sectorHtml}
+
+                <!-- AI Button (Floating Bottom Right) -->
+                ${smartAlertBtn}
 
 
             </div>

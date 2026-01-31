@@ -132,5 +132,13 @@ export class LinkHelper {
         return this.getYahooFinanceUrl(symbol);
     }
 
-
+    /**
+     * Generates a link to open the Gemini Web Interface.
+     * @param {string} promptText
+     * @returns {string} The launch URL.
+     */
+    static getGeminiUrl(promptText) {
+        if (!promptText) return 'https://gemini.google.com/app';
+        return `https://gemini.google.com/app?q=${encodeURIComponent(promptText)}`;
+    }
 }
