@@ -266,15 +266,12 @@ export class SidebarCommandCenter {
                                 <i class="fas fa-pen sub-icon" style="font-size: 0.9rem; right: -2px; bottom: -2px;"></i>
                             </div>
                         </button>
-                        <button class="command-grid-item" id="nav-settings" title="App Settings">
-                            <i class="fas fa-cog command-icon"></i>
+                        <button class="command-grid-item" id="nav-notify" title="Notifications">
+                            <span class="command-icon" style="display: flex; align-items: center; justify-content: center; width: 3.5rem; height: 3.5rem;">
+                                ${kangarooSVG}
+                            </span>
                         </button>
-                        <button class="command-grid-item" id="nav-reload" title="Reload App">
-                            <i class="fas fa-sync-alt command-icon"></i>
-                        </button>
-                        
-                        <!-- Moved Kangaroo Icons to Bottom -->
-                         <button class="command-grid-item" id="act-alert-config" title="Alert Settings">
+                        <button class="command-grid-item" id="act-alert-config" title="Alert Settings">
                             <div class="composite-icon">
                                 <span class="main-icon command-icon" style="display: flex; align-items: center; justify-content: center; width: 3.5rem; height: 3.5rem;">
                                     ${kangarooSVG}
@@ -282,10 +279,11 @@ export class SidebarCommandCenter {
                                 <i class="fas fa-cog sub-icon" style="font-size: 0.9rem; right: 6px; bottom: 4px;"></i>
                             </div>
                         </button>
-                        <button class="command-grid-item" id="nav-notify" title="Notifications">
-                            <span class="command-icon" style="display: flex; align-items: center; justify-content: center; width: 3.5rem; height: 3.5rem;">
-                                ${kangarooSVG}
-                            </span>
+                        <button class="command-grid-item" id="nav-reload" title="Reload App">
+                            <i class="fas fa-sync-alt command-icon"></i>
+                        </button>
+                        <button class="command-grid-item" id="nav-settings" title="App Settings">
+                            <i class="fas fa-cog command-icon"></i>
                         </button>
                     </div>
                      <!-- Notification Count Text -->
