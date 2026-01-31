@@ -2,7 +2,7 @@
 <html>
 
 <head>
-    <title>Opening Gemini...</title>
+    <title>Gemini Analysis</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         body {
@@ -12,70 +12,69 @@
             align-items: center;
             height: 100vh;
             margin: 0;
-            background: #212529;
+            background: #1a1d21;
             color: white;
         }
 
         .container {
             text-align: center;
-            padding: 30px;
-            max-width: 320px;
-            background: #2a2e33;
-            border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            padding: 40px 20px;
+            width: 85%;
+            max-width: 340px;
+            background: #252a30;
+            border-radius: 24px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.05);
         }
 
-        .loader {
-            border: 4px solid #333;
-            border-top: 4px solid #9c27b0;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 20px;
+        .logo {
+            width: 70px;
+            height: 70px;
+            margin-bottom: 24px;
         }
 
-        @keyframes spin {
-            0% {
-                transform: rotate(0deg);
-            }
+        .title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: #fff;
+        }
 
-            100% {
-                transform: rotate(360deg);
-            }
+        .subtitle {
+            font-size: 0.95rem;
+            color: #9c27b0;
+            margin-bottom: 30px;
+            font-weight: 600;
         }
 
         .btn {
-            display: inline-block;
+            display: block;
             background: #9c27b0;
             color: white;
-            padding: 18px 36px;
-            border-radius: 14px;
+            padding: 18px;
+            border-radius: 16px;
             text-decoration: none;
-            font-weight: bold;
-            margin-top: 10px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
-            font-size: 1.1rem;
-            transition: transform 0.2s, background 0.2s;
+            font-weight: 700;
+            font-size: 1.15rem;
+            box-shadow: 0 8px 20px rgba(156, 39, 176, 0.3);
+            transition: transform 0.1s, background 0.2s;
+            -webkit-tap-highlight-color: transparent;
         }
 
         .btn:active {
-            transform: scale(0.95);
+            transform: scale(0.96);
             background: #7b1fa2;
         }
 
         .hint {
-            color: #aaa;
-            font-size: 0.9rem;
-            margin-top: 25px;
-            line-height: 1.4;
+            color: #888;
+            font-size: 0.85rem;
+            margin-top: 30px;
+            line-height: 1.5;
         }
 
-        .logo {
-            width: 60px;
-            height: 60px;
-            margin-bottom: 20px;
-            border-radius: 12px;
+        b {
+            color: #ccc;
         }
     </style>
 </head>
@@ -83,38 +82,49 @@
 <body>
     <div class="container">
         <img src="gemini-icon.png" class="logo" alt="Gemini">
-        <div style="font-size: 1.3rem; font-weight: bold; margin-bottom: 25px;">Ready for Gemini</div>
+        <div class="title">Stock Analysis</div>
+        <div id="stockCode" class="subtitle">ASX Tracker AI</div>
 
-        <a id="manualBtn" href="#" class="btn" rel="external">Continue</a>
+        <a id="mainBtn" href="#" class="btn" onclick="copyAndGo(event)">Explore in Gemini</a>
 
         <div class="hint">
-            Tap <b>Continue</b> to break out of the app and launch Gemini.
-        </div>
-        <div style="font-size: 0.75rem; color: #666; margin-top: 15px;">
-            (Prompt is already in your clipboard)
+            The analysis prompt has been copied to your clipboard.<br><br>
+            Tap <b>Explore</b> to view the technical and fundamental outlook.
         </div>
     </div>
 
     <script>
-        // Extract query from URL
         const params = new URLSearchParams(window.location.search);
-        let q = params.get('q');
+        const symbol = params.get('s') || 'the stock';
+        const codeText = symbol.toUpperCase();
 
-        // Ensure prompt has "ASX stock" if missing (extra safety)
-        if (q && !q.includes("ASX")) {
-            q = q.replace("for ", "for the ASX stock ");
+        if (symbol) {
+            document.getElementById('stockCode').innerText = symbol.toUpperCase() + " • ASX";
         }
 
-        // Build Target
-        const target = "https://gemini.google.com/app" + (q ? "?q=" + encodeURIComponent(q) : "");
+        const prompt = `Summarize the technical and fundamental outlook for the ASX stock ${symbol.toUpperCase()}`;
+        const targetUrl = "https://gemini.google.com/app?q=" + encodeURIComponent(prompt);
 
-        // Setup Button
-        const btn = document.getElementById('manualBtn');
-        btn.href = target;
+        // Pre-set the link href
+        const btn = document.getElementById('mainBtn');
+        btn.href = targetUrl;
 
-        // CRITICAL: We REMOVED the automatic redirect. 
-        // Modern PWA shells kill windows that perform automatic "silent" redirects.
-        // Requiring a manual tap provides the "User Gesture" that the OS needs to open external apps.
+        function copyAndGo(e) {
+            // Re-assert clipboard right at the moment of click (highest trust gesture)
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(prompt).catch(() => { });
+            }
+            // Let the native href navigation happen
+        }
+
+        // AUTO-COPY on load (Best effort)
+        window.onload = function () {
+            setTimeout(() => {
+                if (navigator.clipboard) {
+                    navigator.clipboard.writeText(prompt).catch(() => { });
+                }
+            }, 500);
+        };
     </script>
 </body>
 

@@ -1054,13 +1054,12 @@ export class NotificationUI {
         // NOTIFICATION CARD CLICK LISTENER (Delegated)
         // Dispatches ASX_CODE_CLICK to trigger AppController's logic (Watchlist Open OR Search Fallback)
         modal.addEventListener('click', (e) => {
-            // NATIVE BREAKOUT: Handle clipboard and let the <a> tag navigate to local jump page
+            // GEMINI BREAKOUT isolation: Prevents any other global listeners from interfering
             const geminiBtn = e.target.closest('.btn-smart-alert-gemini');
             if (geminiBtn) {
-                const s = geminiBtn.dataset.symbol;
-                const p = `Summarize the technical & fundamental outlook for the ASX stock ${s}`;
-                if (navigator.clipboard) navigator.clipboard.writeText(p).catch(() => { });
-                return;
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+                return; // Let the native <a> link handle the navigation to gemini-jump.html
             }
 
             const card = e.target.closest(`.${CSS_CLASSES.NOTIFICATION_CARD_GRID}`);
@@ -1442,10 +1441,11 @@ export class NotificationUI {
             const prompt = `Summarize the technical & fundamental outlook for the ASX stock ${code}`;
             const url = LinkHelper.getGeminiUrl(prompt);
 
-            // LOCAL JUMP STRATEGY: Links to a local file first to "escape" the PWA manifest scope.
-            // gemini-jump.html then handles the final redirect to gemini.google.com
-            const jumpUrl = `gemini-jump.html?q=${encodeURIComponent(prompt)}`;
-            smartAlertBtn = `<a href="${jumpUrl}" target="_blank" rel="noopener noreferrer" class="btn-smart-alert-gemini" title="Ask Gemini Why" data-symbol="${code}" style="text-decoration:none; border:none; background:none; cursor:pointer; font-size:1.1rem; color: #9c27b0; position: absolute; bottom: 6px; right: 6px; z-index: 150 !important; display: inline-block;">
+            // JUMP PAGE ESCAPE: Links to a local file to bypass PWA sandbox.
+            // Final prompt construction and clipboard copy happen on the jump page itself for reliability.
+            const jumpUrl = `gemini-jump.html?s=${code}`;
+            smartAlertBtn = `<a href="${jumpUrl}" target="_blank" rel="noopener noreferrer" class="btn-smart-alert-gemini" title="Ask Gemini Why" 
+                                style="text-decoration:none; border:none; background:none; cursor:pointer; font-size:1.1rem; color: #9c27b0; position: absolute; bottom: 6px; right: 6px; z-index: 150 !important; display: inline-block;">
                                <img src="gemini-icon.png" style="width: 20px; height: 20px; vertical-align: middle;">
                             </a>`;
         }
