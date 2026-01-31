@@ -90,7 +90,10 @@ export const STORAGE_KEYS = {
     BADGE_SCOPE: 'ASX_NEXT_badgeScope',
     GRADIENT_STRENGTH: 'ASX_NEXT_gradientStrength',
     BORDER_PREFS: 'ASX_NEXT_borderPrefs',
-    QUICK_NAV: 'ASX_NEXT_quickNav'
+    QUICK_NAV: 'ASX_NEXT_quickNav',
+    ACCENT_COLOR: 'ASX_NEXT_accentColor',
+    ACCENT_OPACITY: 'ASX_NEXT_accentOpacity',
+    CARD_CHART_OPACITY: 'ASX_NEXT_cardChartOpacity'
 };
 
 export const EVENTS = {

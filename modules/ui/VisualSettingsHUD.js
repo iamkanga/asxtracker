@@ -426,9 +426,9 @@ export class VisualSettingsHUD {
 
                 const val = parseFloat(btn.dataset.val);
 
-                // Manual Persistence
+                // Standardization Persistence
                 AppState.preferences.gradientStrength = val;
-                localStorage.setItem('asx_gradient_strength', val);
+                localStorage.setItem(STORAGE_KEYS.GRADIENT_STRENGTH, val);
                 document.documentElement.style.setProperty('--gradient-strength', val);
                 AppState.triggerSync();
 
@@ -483,7 +483,7 @@ export class VisualSettingsHUD {
                 AppState.saveBorderPreferences({ sides: newSides, thickness: newThickness });
 
                 AppState.preferences.gradientStrength = newOpacity;
-                localStorage.setItem('asx_gradient_strength', newOpacity);
+                localStorage.setItem(STORAGE_KEYS.GRADIENT_STRENGTH, newOpacity);
                 document.documentElement.style.setProperty('--gradient-strength', newOpacity);
                 AppState.triggerSync();
 
@@ -504,7 +504,7 @@ export class VisualSettingsHUD {
 
             // Persist
             AppState.preferences.cardChartOpacity = val;
-            localStorage.setItem('asx_card_chart_opacity', val);
+            localStorage.setItem(STORAGE_KEYS.CARD_CHART_OPACITY, val);
             AppState.triggerSync();
 
             // Note: No need to refresh watchlist if we use CSS variable, unless charts are re-rendered based on logic.

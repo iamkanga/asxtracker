@@ -121,6 +121,20 @@ export class AppController {
         document.documentElement.style.setProperty('--gradient-strength', sVal);
         document.documentElement.style.setProperty('--gradient-tint', tVal);
 
+        // Apply Accent Color & Opacity (USER REQUEST)
+        const accentHex = AppState.preferences.accentColor || '#a49393';
+        const accentOpacity = AppState.preferences.accentOpacity || '1';
+        const r = parseInt(accentHex.slice(1, 3), 16);
+        const g = parseInt(accentHex.slice(3, 5), 16);
+        const b = parseInt(accentHex.slice(5, 7), 16);
+        document.documentElement.style.setProperty('--color-accent', `rgba(${r}, ${g}, ${b}, ${accentOpacity})`);
+        document.documentElement.style.setProperty('--color-accent-rgb', `${r}, ${g}, ${b}`);
+        document.documentElement.style.setProperty('--accent-opacity', accentOpacity);
+
+        // Apply Card Chart Opacity
+        const cardChartOpacity = AppState.preferences.cardChartOpacity ?? 1.0;
+        document.documentElement.style.setProperty('--card-chart-opacity', cardChartOpacity);
+
 
 
         // Update Badge Listener (Single)
@@ -495,7 +509,10 @@ export class AppController {
                     containerBorders: AppState.preferences.containerBorders, // Fresh Read (USER REQUEST)
                     badgeScope: AppState.preferences.badgeScope, // Fresh Read
                     showBadges: AppState.preferences.showBadges,  // Fresh Read
-                    customWatchlistNames: AppState.preferences.customWatchlistNames || {} // Fresh Read
+                    customWatchlistNames: AppState.preferences.customWatchlistNames || {}, // Fresh Read
+                    accentColor: AppState.preferences.accentColor, // Fresh Read
+                    accentOpacity: AppState.preferences.accentOpacity, // Fresh Read
+                    cardChartOpacity: AppState.preferences.cardChartOpacity // Fresh Read
                 };
 
                 if (freshPrefs.userCategories) {
@@ -871,6 +888,43 @@ export class AppController {
                             document.documentElement.style.setProperty('--gradient-tint', tVal);
                             needsRender = true;
                         }
+                    }
+
+                    // 0a.1 Sync Accent Color & Opacity
+                    if (prefs.accentColor !== undefined || prefs.accentOpacity !== undefined) {
+                        const color = prefs.accentColor || AppState.preferences.accentColor || '#a49393';
+                        const opacity = prefs.accentOpacity || AppState.preferences.accentOpacity || '1';
+
+                        AppState.preferences.accentColor = color;
+                        AppState.preferences.accentOpacity = opacity;
+                        localStorage.setItem(STORAGE_KEYS.ACCENT_COLOR, color);
+                        localStorage.setItem(STORAGE_KEYS.ACCENT_OPACITY, opacity);
+
+                        const r = parseInt(color.slice(1, 3), 16);
+                        const g = parseInt(color.slice(3, 5), 16);
+                        const b = parseInt(color.slice(5, 7), 16);
+                        document.documentElement.style.setProperty('--color-accent', `rgba(${r}, ${g}, ${b}, ${opacity})`);
+                        document.documentElement.style.setProperty('--color-accent-rgb', `${r}, ${g}, ${b}`);
+                        document.documentElement.style.setProperty('--accent-opacity', opacity);
+                        needsRender = true;
+                    }
+
+                    // 0a.2 Sync Card Chart Opacity
+                    if (prefs.cardChartOpacity !== undefined && prefs.cardChartOpacity !== null) {
+                        const val = parseFloat(prefs.cardChartOpacity);
+                        if (!isNaN(val)) {
+                            AppState.preferences.cardChartOpacity = val;
+                            localStorage.setItem(STORAGE_KEYS.CARD_CHART_OPACITY, val);
+                            document.documentElement.style.setProperty('--card-chart-opacity', val);
+                            needsRender = true;
+                        }
+                    }
+
+                    // 0a.3 Sync Container Borders
+                    if (prefs.containerBorders) {
+                        AppState.preferences.containerBorders = { ...AppState.preferences.containerBorders, ...prefs.containerBorders };
+                        localStorage.setItem(STORAGE_KEYS.BORDER_PREFS, JSON.stringify(AppState.preferences.containerBorders));
+                        needsRender = true;
                     }
 
                     // 0b. Sync Notification Prefs

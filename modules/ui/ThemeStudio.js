@@ -296,9 +296,7 @@ export class ThemeStudio {
             title.style.textShadow = `0 0 10px rgba(${r}, ${g}, ${b}, 0.8)`;
         }
 
-        localStorage.setItem('asx_accent_color', hex);
-        AppState.preferences.accentColor = hex;
-
+        AppState.saveAccentPreferences(hex, undefined);
         document.dispatchEvent(new CustomEvent(EVENTS.REFRESH_WATCHLIST));
     }
 
@@ -319,6 +317,6 @@ export class ThemeStudio {
             title.style.color = `rgba(${rgbVals}, ${opacity})`;
         }
 
-        localStorage.setItem('asx_accent_opacity', opacity);
+        AppState.saveAccentPreferences(undefined, opacity);
     }
 }

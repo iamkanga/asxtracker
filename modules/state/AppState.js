@@ -149,6 +149,12 @@ export const AppState = {
             } catch (e) {
                 return {};
             }
+        })(),
+        accentColor: localStorage.getItem(STORAGE_KEYS.ACCENT_COLOR) || localStorage.getItem('asx_accent_color') || '#a49393',
+        accentOpacity: localStorage.getItem(STORAGE_KEYS.ACCENT_OPACITY) || localStorage.getItem('asx_accent_opacity') || '1',
+        cardChartOpacity: (() => {
+            const stored = localStorage.getItem(STORAGE_KEYS.CARD_CHART_OPACITY) || localStorage.getItem('asx_card_chart_opacity');
+            return stored !== null ? parseFloat(stored) : 1.0;
         })()
     },
 
@@ -290,7 +296,10 @@ export const AppState = {
                 badgeScope: this.preferences.badgeScope || 'all',
                 showBadges: this.preferences.showBadges !== false,
                 quickNav: this.preferences.quickNav || null,
-                historicalData: this.preferences.historicalData || {}
+                historicalData: this.preferences.historicalData || {},
+                accentColor: this.preferences.accentColor || '#a49393',
+                accentOpacity: this.preferences.accentOpacity || '1',
+                cardChartOpacity: this.preferences.cardChartOpacity ?? 1.0
             };
             this.onPersistenceUpdate(payload);
         } else {
@@ -300,6 +309,18 @@ export const AppState = {
     saveBorderPreferences(newPrefs) {
         this.preferences.containerBorders = { ...this.preferences.containerBorders, ...newPrefs };
         localStorage.setItem(STORAGE_KEYS.BORDER_PREFS, JSON.stringify(this.preferences.containerBorders));
+        this._triggerSync();
+    },
+
+    saveAccentPreferences(color, opacity) {
+        if (color !== undefined) {
+            this.preferences.accentColor = color;
+            localStorage.setItem(STORAGE_KEYS.ACCENT_COLOR, color);
+        }
+        if (opacity !== undefined) {
+            this.preferences.accentOpacity = opacity;
+            localStorage.setItem(STORAGE_KEYS.ACCENT_OPACITY, opacity);
+        }
         this._triggerSync();
     },
 
