@@ -1444,7 +1444,7 @@ export class NotificationUI {
             // JUMP PAGE ESCAPE: Links to a local file to bypass PWA sandbox.
             // Final prompt construction and clipboard copy happen on the jump page itself for reliability.
             const jumpUrl = `gemini-jump.html?s=${code}`;
-            smartAlertBtn = `<a href="${jumpUrl}" target="_blank" rel="noopener noreferrer" class="btn-smart-alert-gemini" title="Ask Gemini Why" 
+            smartAlertBtn = `<a href="${jumpUrl}" target="_self" class="btn-smart-alert-gemini" title="Ask Gemini Why" 
                                 style="text-decoration:none; border:none; background:none; cursor:pointer; font-size:1.1rem; color: #9c27b0; position: absolute; bottom: 6px; right: 6px; z-index: 150 !important; display: inline-block;">
                                <img src="gemini-icon.png" style="width: 20px; height: 20px; vertical-align: middle;">
                             </a>`;
