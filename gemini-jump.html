@@ -19,7 +19,10 @@
         .container {
             text-align: center;
             padding: 30px;
-            max-width: 300px;
+            max-width: 320px;
+            background: #2a2e33;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
         }
 
         .loader {
@@ -46,51 +49,54 @@
             display: inline-block;
             background: #9c27b0;
             color: white;
-            padding: 16px 32px;
-            border-radius: 12px;
+            padding: 18px 36px;
+            border-radius: 14px;
             text-decoration: none;
             font-weight: bold;
-            margin-top: 20px;
+            margin-top: 10px;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
             font-size: 1.1rem;
-            animation: fadeIn 0.5s ease;
+            transition: transform 0.2s, background 0.2s;
         }
 
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+        .btn:active {
+            transform: scale(0.95);
+            background: #7b1fa2;
         }
 
         .hint {
-            color: #888;
-            font-size: 0.85rem;
-            margin-top: 20px;
+            color: #aaa;
+            font-size: 0.9rem;
+            margin-top: 25px;
+            line-height: 1.4;
+        }
+
+        .logo {
+            width: 60px;
+            height: 60px;
+            margin-bottom: 20px;
+            border-radius: 12px;
         }
     </style>
 </head>
 
 <body>
     <div class="container">
-        <div id="status">
-            <div class="loader"></div>
-            <div style="font-size: 1.1rem; margin-bottom: 10px;">Launching Gemini...</div>
+        <img src="gemini-icon.png" class="logo" alt="Gemini">
+        <div style="font-size: 1.3rem; font-weight: bold; margin-bottom: 25px;">Ready for Gemini</div>
+
+        <a id="manualBtn" href="#" class="btn" rel="external">Continue</a>
+
+        <div class="hint">
+            Tap <b>Continue</b> to break out of the app and launch Gemini.
         </div>
-
-        <a id="manualBtn" href="#" class="btn" rel="external">Continue to Gemini</a>
-
-        <div id="hint" class="hint">
-            Tap the button above to break out of the app sandbox.
+        <div style="font-size: 0.75rem; color: #666; margin-top: 15px;">
+            (Prompt is already in your clipboard)
         </div>
     </div>
 
     <script>
+        // Extract query from URL
         const params = new URLSearchParams(window.location.search);
         let q = params.get('q');
 
@@ -99,15 +105,16 @@
             q = q.replace("for ", "for the ASX stock ");
         }
 
+        // Build Target
         const target = "https://gemini.google.com/app" + (q ? "?q=" + encodeURIComponent(q) : "");
+
+        // Setup Button
         const btn = document.getElementById('manualBtn');
         btn.href = target;
 
-        // AUTOMATIC REDIRECT
-        // We still try it, but we keep the button visible from the start now
-        setTimeout(() => {
-            window.location.replace(target);
-        }, 500);
+        // CRITICAL: We REMOVED the automatic redirect. 
+        // Modern PWA shells kill windows that perform automatic "silent" redirects.
+        // Requiring a manual tap provides the "User Gesture" that the OS needs to open external apps.
     </script>
 </body>
 
