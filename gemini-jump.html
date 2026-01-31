@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         body {
-            font-family: sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -16,14 +16,20 @@
             color: white;
         }
 
+        .container {
+            text-align: center;
+            padding: 30px;
+            max-width: 300px;
+        }
+
         .loader {
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #9c27b0;
+            border: 4px solid #333;
+            border-top: 4px solid #9c27b0;
             border-radius: 50%;
-            width: 30px;
-            height: 30px;
+            width: 40px;
+            height: 40px;
             animation: spin 1s linear infinite;
-            margin-bottom: 20px;
+            margin: 0 auto 20px;
         }
 
         @keyframes spin {
@@ -36,31 +42,75 @@
             }
         }
 
-        .container {
-            text-align: center;
+        .btn {
+            display: none;
+            background: #9c27b0;
+            color: white;
+            padding: 16px 32px;
+            border-radius: 12px;
+            text-decoration: none;
+            font-weight: bold;
+            margin-top: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+            font-size: 1.1rem;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .hint {
+            color: #888;
+            font-size: 0.85rem;
+            margin-top: 20px;
         }
     </style>
 </head>
 
 <body>
     <div class="container">
-        <div class="loader"></div>
-        <div>Launching Gemini...</div>
+        <div id="status">
+            <div class="loader"></div>
+            <div style="font-size: 1.1rem; margin-bottom: 10px;">Launching Gemini...</div>
+        </div>
+
+        <a id="manualBtn" href="#" class="btn">Continue to Gemini</a>
+
+        <div id="hint" class="hint" style="display:none;">
+            If the app doesn't open, tap the button above.
+        </div>
     </div>
+
     <script>
-        // Extract query from URL
         const params = new URLSearchParams(window.location.search);
         const q = params.get('q');
 
-        // Build Target
-        // We use the standard HTTPS link. Because this is a fresh page (not trapped in the PWA manifest scope),
-        // the OS should handle this much more reliably.
+        // Use the standard app URL
         const target = "https://gemini.google.com/app" + (q ? "?q=" + encodeURIComponent(q) : "");
 
-        // Final handoff
+        const btn = document.getElementById('manualBtn');
+        const hint = document.getElementById('hint');
+
+        btn.href = target;
+
+        // Show fallback button after 1.5 seconds if redirect is swallowed
         setTimeout(() => {
-            window.location.replace(target);
-        }, 100);
+            btn.style.display = 'inline-block';
+            hint.style.display = 'block';
+            document.getElementById('status').style.opacity = '0.3';
+        }, 1500);
+
+        // Immediate Attempt: window.location.replace is usually better for mobile-to-app handoffs
+        window.location.replace(target);
     </script>
 </body>
 
