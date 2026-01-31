@@ -2082,19 +2082,19 @@ function handleGeminiQuery_(payload) {
 
     if (mode === 'explain') {
        // SMART ALERT PROMPT
-       // Goal: Plausible market theory without needing live news feed (unless we add it)
-       prompt = `
+@         // Goal: Plausible market theory without needing live news feed (unless we add it)
+        prompt = `
 Analyze this stock movement:
 Symbol: ${context.symbol || 'Unknown'}
 Change: ${context.change || 'Unknown'}
 Sector: ${context.sector || 'Unknown'}
 Current Market Sentiment: ${context.sentiment || 'Unknown'}
 
-Task: Explain WHY this stock might be moving in 1-2 sentences. 
-- If specific news is unknown, speculate based on the Sector performance and Market Sentiment.
-- use specific financial terminology (e.g. "sector rotation", "taking profits", "correlation with iron ore").
+Task: Provide a concise but detailed analysis of WHY this stock might be moving in 3-4 sentences. 
+- If specific news is unknown, speculate based on the Sector performance, Market Sentiment, and characteristic behavior of stocks in this category.
+- use specific financial terminology (e.g. "sector rotation", "taking profits", "correlation with iron ore", "short covering").
 - DO NOT say "I am an AI without real-time news". Just give the most likely market theory.
-       `;
+        `;
     } else if (mode === 'chat') {
        // ASK THE MARKET PROMPT
        prompt = `

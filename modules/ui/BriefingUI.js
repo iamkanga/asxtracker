@@ -524,8 +524,55 @@ export class BriefingUI {
         const askBtn = modal.querySelector('#btn-gemini-ask');
         const askInput = modal.querySelector('#gemini-chat-input');
 
-        const handleAsk = async () => {
+        const handleAsk = async (e) => {
             const query = askInput.value.trim();
+
+            // --- LONG PRESS DETECTION ---
+            // If the event is a 'click' but triggered after a long delay, it's a hold.
+            // However, a simpler way for BriefingUI (which uses a standard button) 
+            // is to check the event type or a timer.
+
+            // Since this uses handleAsk for BOTH button click and Enter key,
+            // we'll primarily support long-press on the BUTTON.
+            const isButtonContext = e && e.type === 'click';
+
+            const handleDeepDive = async () => {
+                const data = AppState.controller.calculateBriefingDigest();
+                const port = data.portfolio;
+                const sentiment = data.marketSentiment.sentiment;
+
+                let prompt = `Provide a deep-dive analysis of the ASX market and my portfolio context. 
+Market Sentiment: ${sentiment}
+Portfolio Performance: ${port.totalPctChange.toFixed(2)}% Today.
+Key Winners: ${data.highlights.portfolio.filter(h => h.pctChange > 0).slice(0, 3).map(h => h.code).join(', ')}
+Key Losers: ${data.highlights.portfolio.filter(h => h.pctChange < 0).slice(0, 3).map(h => h.code).join(', ')}
+
+Please summarize the current trends and what I should be watching.`;
+
+                // If user has typed something, use that instead
+                if (query) {
+                    prompt = `Regarding the ASX market and my question "${query}": Please provide a comprehensive analysis including technical trends and relevant news.`;
+                }
+
+                try {
+                    await navigator.clipboard.writeText(prompt);
+                    ToastManager.show('Market deep-dive prompt copied!', 'success');
+                    window.open('https://gemini.google.com/app', '_blank');
+                } catch (err) {
+                    console.error('Clipboard failed:', err);
+                    ToastManager.show('Failed to copy prompt.', 'error');
+                }
+            };
+
+            // Setup Long Press on the button specifically
+            if (isButtonContext) {
+                // Check if this was a long-press via custom property we'll set
+                if (askBtn._isLongPress) {
+                    askBtn._isLongPress = false;
+                    return; // Already handled by onEnd
+                }
+            }
+
             if (!query) return;
 
             const heroCard = modal.querySelector(`#${IDS.BRIEFING_PORTFOLIO_HERO}`);
@@ -579,9 +626,33 @@ export class BriefingUI {
             }
         };
 
-        if (askBtn) askBtn.addEventListener('click', handleAsk);
+        if (askBtn) {
+            let pressTimer;
+            const LONG_PRESS_MS = 600;
+
+            const onStart = () => {
+                askBtn._isLongPress = false;
+                pressTimer = setTimeout(() => {
+                    askBtn._isLongPress = true;
+                    handleAsk({ type: 'click' }); // Trigger with long-press logic
+                }, LONG_PRESS_MS);
+            };
+
+            const onEnd = () => {
+                clearTimeout(pressTimer);
+            };
+
+            askBtn.addEventListener('mousedown', onStart);
+            askBtn.addEventListener('touchstart', onStart, { passive: true });
+            askBtn.addEventListener('mouseup', onEnd);
+            askBtn.addEventListener('mouseleave', onEnd);
+            askBtn.addEventListener('touchend', onEnd, { passive: true });
+
+            askBtn.addEventListener('click', handleAsk);
+        }
+
         if (askInput) askInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') handleAsk();
+            if (e.key === 'Enter') handleAsk(e);
         });
     }
 

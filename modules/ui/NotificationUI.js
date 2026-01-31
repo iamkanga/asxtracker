@@ -551,6 +551,68 @@ export class NotificationUI {
         // Accordion Toggle Delegation (Card Clicks)
         const list = modal.querySelector(`#${IDS.NOTIFICATION_LIST}`);
         if (list) {
+            let pressTimer = null;
+            let isLongPress = false;
+            let activeBtn = null;
+            const LONG_PRESS_MS = 600;
+
+            const handleShortPress = (smartBtn) => {
+                const { symbol, change, sector } = smartBtn.dataset;
+                ToastManager.show(`${UI_LABELS.ASKING_GEMINI} ${symbol}...`, 'info');
+                import('../data/DataService.js').then(({ DataService }) => {
+                    const ds = new DataService();
+                    ds.askGemini('explain', '', { symbol, change, sector }).then(res => {
+                        if (res.ok) {
+                            alert(`${UI_LABELS.AI_INSIGHT_FOR} ${symbol}:\n\n${res.text}`);
+                        } else {
+                            ToastManager.show(`${UI_LABELS.ANALYSIS_FAILED} ` + (res.error || 'Unknown error'), 'error');
+                        }
+                    });
+                });
+            };
+
+            const handleDeepDive = async (smartBtn) => {
+                const { symbol } = smartBtn.dataset;
+                const prompt = `Summarize the latest technical and fundamental developments for ${symbol} on the ASX. Focus on recent price action, volume, and any relevant news or upcoming announcements. Provide a comprehensive outlook.`;
+                try {
+                    await navigator.clipboard.writeText(prompt);
+                    ToastManager.show(`Deep-dive prompt for ${symbol} copied!`, 'success');
+                    window.open('https://gemini.google.com/app', '_blank');
+                } catch (err) {
+                    console.error('Clipboard failed:', err);
+                    ToastManager.show('Failed to copy prompt.', 'error');
+                }
+            };
+
+            const onStart = (e) => {
+                const smartBtn = e.target.closest('.btn-smart-alert');
+                if (!smartBtn) return;
+
+                activeBtn = smartBtn;
+                isLongPress = false;
+                pressTimer = setTimeout(() => {
+                    isLongPress = true;
+                    handleDeepDive(activeBtn);
+                }, LONG_PRESS_MS);
+            };
+
+            const onEnd = (e) => {
+                if (!activeBtn) return;
+                clearTimeout(pressTimer);
+
+                // If it was NOT a long press, and we are still on the button, trigger short press
+                if (!isLongPress && e.target.closest('.btn-smart-alert') === activeBtn) {
+                    handleShortPress(activeBtn);
+                }
+                activeBtn = null;
+            };
+
+            list.addEventListener('mousedown', onStart);
+            list.addEventListener('touchstart', onStart, { passive: true });
+            list.addEventListener('mouseup', onEnd);
+            list.addEventListener('mouseleave', onEnd);
+            list.addEventListener('touchend', onEnd, { passive: true });
+
             list.addEventListener('click', (e) => {
                 // 1. Pin/Unpin Delegation
                 const btn = e.target.closest(`.${CSS_CLASSES.PIN_BTN}`);
@@ -564,34 +626,12 @@ export class NotificationUI {
                     return;
                 }
 
-                // 1.5 Smart Alert Delegation (AI)
-                const smartBtn = e.target.closest('.btn-smart-alert');
-                if (smartBtn) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    const symbol = smartBtn.dataset.symbol;
-                    const change = smartBtn.dataset.change;
-                    const sector = smartBtn.dataset.sector;
-
-                    ToastManager.show(`${UI_LABELS.ASKING_GEMINI} ${symbol}...`, 'info');
-
-                    import('../data/DataService.js').then(({ DataService }) => {
-                        const ds = new DataService();
-                        // console.log('Asking Gemini explain:', symbol);
-                        ds.askGemini('explain', '', { symbol, change, sector }).then(res => {
-                            if (res.ok) {
-                                alert(`${UI_LABELS.AI_INSIGHT_FOR} ${symbol}:\n\n${res.text}`);
-                            } else {
-                                ToastManager.show(`${UI_LABELS.ANALYSIS_FAILED} ` + (res.error || 'Unknown error'), 'error');
-                            }
-                        });
-                    });
-                    return;
-                }
-
                 // 2. Card Click Navigation
                 const card = e.target.closest('.notification-card');
                 if (card) {
+                    // Check if we clicked the Gemini button (ignore card click)
+                    if (e.target.closest('.btn-smart-alert')) return;
+
                     const code = card.dataset.code;
                     if (code) {
 
