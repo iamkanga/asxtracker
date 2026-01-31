@@ -587,17 +587,11 @@ export class NotificationUI {
                         // Fallback: Could use deprecated execCommand here if really needed, but ignoring for now to prioritize navigation.
                     }
 
-                    // 3. Navigate (Anchor Injection Strategy + New Tab)
-                    // We switch to _blank. The "Flash" user saw previously with window.open was likely the browser blocking the *scripted* popup.
-                    // But a programmatic click on an <a> element with _blank is usually allowed as a "popunder" or tab.
-                    // This prevents the current page from "Stalling" (freezing) if the external link hangs.
-                    const link = document.createElement('a');
-                    link.href = url;
-                    link.target = '_blank';
-                    link.rel = 'noopener noreferrer'; // Security & Performance best practice
-                    document.body.appendChild(link);
-                    link.click();
-                    setTimeout(() => link.remove(), 100);
+                    // 3. Navigate (Reverted to Emulator-Safe Method)
+                    // Uses standard location.href which worked on Localhost/Emulator.
+                    setTimeout(() => {
+                        window.location.href = url;
+                    }, 100);
                     return;
                 }
 
