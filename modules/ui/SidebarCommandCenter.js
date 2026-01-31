@@ -380,6 +380,7 @@ export class SidebarCommandCenter {
                 break;
 
             case 'act-add':
+                this._closeSidebar();
                 if (AppState.controller) {
                     const isCash = AppState.watchlist.id === CASH_WATCHLIST_ID;
                     if (isCash) {
@@ -394,14 +395,17 @@ export class SidebarCommandCenter {
                 break;
 
             case 'act-search':
+                this._closeSidebar();
                 document.dispatchEvent(new CustomEvent(EVENTS.REQUEST_OPEN_DISCOVERY_MODAL));
                 break;
 
             case 'act-create-wl':
+                this._closeSidebar();
                 document.getElementById(IDS.BTN_CREATE_WATCHLIST)?.click();
                 break;
 
             case 'act-edit-wl':
+                this._closeSidebar();
                 document.getElementById(IDS.BTN_EDIT_WATCHLIST)?.click();
                 break;
         }
