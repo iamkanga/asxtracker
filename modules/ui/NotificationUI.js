@@ -568,33 +568,17 @@ export class NotificationUI {
                 // 1.5 Smart Alert Delegation (AI)
                 const smartBtn = e.target.closest('.btn-smart-alert');
                 if (smartBtn) {
-                    e.preventDefault();
-                    e.stopPropagation();
+                    // DO NOT preventDefault() - Let the <a> tag navigate naturally!
+                    e.stopPropagation(); // Prevent card expansion
+
+                    // JUST copy to clipboard (Best Effort)
                     const symbol = smartBtn.dataset.symbol;
-                    const change = smartBtn.dataset.change;
-                    const sector = smartBtn.dataset.sector;
-
-                    // NEW: Deep Link directly to Gemini App
-                    // 1. Generate URL immediately (Synchronous)
                     const prompt = `Summarize the latest for ${symbol}`;
-                    const url = LinkHelper.getGeminiUrl(prompt);
 
-                    // 2. Copy Key to Clipboard (Best Effort, requires Secure Context i.e. HTTPS or Localhost)
                     if (navigator.clipboard && navigator.clipboard.writeText) {
                         navigator.clipboard.writeText(prompt).catch(err => console.warn('Clipboard failed', err));
-                    } else {
-                        console.warn('Clipboard API unavailable (Insecure Context?)');
-                        // Fallback: Could use deprecated execCommand here if really needed, but ignoring for now to prioritize navigation.
                     }
 
-                    // 3. Navigate (Synchronous - Preservation of User Gesture)
-                    // We remove setTimeout completely. The navigation must happen in the same tick as the click
-                    // to be trusted by Android WebView / App Links.
-                    try {
-                        window.location.href = url;
-                    } catch (e) {
-                        console.error('Nav failed', e);
-                    }
                     return;
                 }
 
@@ -1461,9 +1445,13 @@ export class NotificationUI {
         let smartAlertBtn = '';
         // ALWAYS SHOW if we have a code (Relaxed threshold from 2.0%)
         if (code) {
-            smartAlertBtn = `<button class="btn-smart-alert" title="Ask AI Why" data-symbol="${code}" data-change="${(changePct || 0).toFixed(2)}" data-sector="${sector || ''}" style="border:none; background:none; cursor:pointer; font-size:1.1rem; color: #9c27b0; position: absolute; bottom: 6px; right: 6px; z-index: 10;">
+            const prompt = `Summarize the latest for ${code}`;
+            const url = LinkHelper.getGeminiUrl(prompt);
+
+            // Native Anchor Tag: The Gold Standard for Mobile Links
+            smartAlertBtn = `<a href="${url}" target="_blank" class="btn-smart-alert" title="Ask AI Why" data-symbol="${code}" style="text-decoration:none; border:none; background:none; cursor:pointer; font-size:1.1rem; color: #9c27b0; position: absolute; bottom: 6px; right: 6px; z-index: 10; display: inline-block;">
                                 <img src="gemini-icon.png" style="width: 20px; height: 20px; vertical-align: middle;">
-                             </button>`;
+                             </a>`;
         }
 
         //GRID LAYOUT IMPLEMENTATION
