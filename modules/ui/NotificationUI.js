@@ -1058,7 +1058,7 @@ export class NotificationUI {
             const geminiBtn = e.target.closest('.btn-smart-alert-gemini');
             if (geminiBtn) {
                 const s = geminiBtn.dataset.symbol;
-                const p = `Summarize the latest for ${s}`;
+                const p = `Summarize the technical & fundamental outlook for the ASX stock ${s}`;
                 if (navigator.clipboard) navigator.clipboard.writeText(p).catch(() => { });
                 return;
             }
@@ -1439,13 +1439,13 @@ export class NotificationUI {
         let smartAlertBtn = '';
         // ALWAYS SHOW if we have a code (Relaxed threshold from 2.0%)
         if (code) {
-            const prompt = `Summarize the latest for ${code}`;
+            const prompt = `Summarize the technical & fundamental outlook for the ASX stock ${code}`;
             const url = LinkHelper.getGeminiUrl(prompt);
 
             // LOCAL JUMP STRATEGY: Links to a local file first to "escape" the PWA manifest scope.
             // gemini-jump.html then handles the final redirect to gemini.google.com
             const jumpUrl = `gemini-jump.html?q=${encodeURIComponent(prompt)}`;
-            smartAlertBtn = `<a href="${jumpUrl}" target="_self" rel="noopener noreferrer" class="btn-smart-alert-gemini" title="Ask Gemini Why" data-symbol="${code}" style="text-decoration:none; border:none; background:none; cursor:pointer; font-size:1.1rem; color: #9c27b0; position: absolute; bottom: 6px; right: 6px; z-index: 150 !important; display: inline-block;">
+            smartAlertBtn = `<a href="${jumpUrl}" target="_blank" rel="noopener noreferrer" class="btn-smart-alert-gemini" title="Ask Gemini Why" data-symbol="${code}" style="text-decoration:none; border:none; background:none; cursor:pointer; font-size:1.1rem; color: #9c27b0; position: absolute; bottom: 6px; right: 6px; z-index: 150 !important; display: inline-block;">
                                <img src="gemini-icon.png" style="width: 20px; height: 20px; vertical-align: middle;">
                             </a>`;
         }

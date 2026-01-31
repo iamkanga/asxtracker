@@ -43,7 +43,7 @@
         }
 
         .btn {
-            display: none;
+            display: inline-block;
             background: #9c27b0;
             color: white;
             padding: 16px 32px;
@@ -83,34 +83,31 @@
             <div style="font-size: 1.1rem; margin-bottom: 10px;">Launching Gemini...</div>
         </div>
 
-        <a id="manualBtn" href="#" class="btn">Continue to Gemini</a>
+        <a id="manualBtn" href="#" class="btn" rel="external">Continue to Gemini</a>
 
-        <div id="hint" class="hint" style="display:none;">
-            If the app doesn't open, tap the button above.
+        <div id="hint" class="hint">
+            Tap the button above to break out of the app sandbox.
         </div>
     </div>
 
     <script>
         const params = new URLSearchParams(window.location.search);
-        const q = params.get('q');
+        let q = params.get('q');
 
-        // Use the standard app URL
+        // Ensure prompt has "ASX stock" if missing (extra safety)
+        if (q && !q.includes("ASX")) {
+            q = q.replace("for ", "for the ASX stock ");
+        }
+
         const target = "https://gemini.google.com/app" + (q ? "?q=" + encodeURIComponent(q) : "");
-
         const btn = document.getElementById('manualBtn');
-        const hint = document.getElementById('hint');
-
         btn.href = target;
 
-        // Show fallback button after 1.5 seconds if redirect is swallowed
+        // AUTOMATIC REDIRECT
+        // We still try it, but we keep the button visible from the start now
         setTimeout(() => {
-            btn.style.display = 'inline-block';
-            hint.style.display = 'block';
-            document.getElementById('status').style.opacity = '0.3';
-        }, 1500);
-
-        // Immediate Attempt: window.location.replace is usually better for mobile-to-app handoffs
-        window.location.replace(target);
+            window.location.replace(target);
+        }, 500);
     </script>
 </body>
 
