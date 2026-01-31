@@ -1054,8 +1054,14 @@ export class NotificationUI {
         // NOTIFICATION CARD CLICK LISTENER (Delegated)
         // Dispatches ASX_CODE_CLICK to trigger AppController's logic (Watchlist Open OR Search Fallback)
         modal.addEventListener('click', (e) => {
-            // NATIVE BREAKOUT GUARD: If clicking the AI button, let the <a> tag navigate naturally (bypasses PWA sandbox)
-            if (e.target.closest('.btn-smart-alert-gemini')) return;
+            // NATIVE BREAKOUT: Handle clipboard and let the <a> tag navigate to local jump page
+            const geminiBtn = e.target.closest('.btn-smart-alert-gemini');
+            if (geminiBtn) {
+                const s = geminiBtn.dataset.symbol;
+                const p = `Summarize the latest for ${s}`;
+                if (navigator.clipboard) navigator.clipboard.writeText(p).catch(() => { });
+                return;
+            }
 
             const card = e.target.closest(`.${CSS_CLASSES.NOTIFICATION_CARD_GRID}`);
             if (card && card.dataset.code) {
@@ -1436,14 +1442,12 @@ export class NotificationUI {
             const prompt = `Summarize the latest for ${code}`;
             const url = LinkHelper.getGeminiUrl(prompt);
 
-            // NATIVE GEMINI LINK: Optimized for PWA Breakout (Android/iOS)
-            // We use rel="external" and a pure <a> tag to force the OS to handle the navigation instead of the PWA shell.
-            // Clipboard copy is handled by onmousedown to ensure it fires before the browser navigates.
-            smartAlertBtn = `<a href="${url}" target="_blank" rel="external noopener noreferrer" class="btn-smart-alert-gemini" title="Ask AI Why" 
-                               onmousedown="if(navigator.clipboard) navigator.clipboard.writeText('${prompt.replace(/'/g, "\\'")}').catch(()=>{});"
-                               style="text-decoration:none; border:none; background:none; cursor:pointer; font-size:1.1rem; color: #9c27b0; position: absolute; bottom: 6px; right: 6px; z-index: 110 !important; display: inline-block;">
-                                <img src="gemini-icon.png" style="width: 20px; height: 20px; vertical-align: middle;">
-                             </a>`;
+            // LOCAL JUMP STRATEGY: Links to a local file first to "escape" the PWA manifest scope.
+            // gemini-jump.html then handles the final redirect to gemini.google.com
+            const jumpUrl = `gemini-jump.html?q=${encodeURIComponent(prompt)}`;
+            smartAlertBtn = `<a href="${jumpUrl}" target="_blank" rel="noopener noreferrer" class="btn-smart-alert-gemini" title="Ask Gemini Why" data-symbol="${code}" style="text-decoration:none; border:none; background:none; cursor:pointer; font-size:1.1rem; color: #9c27b0; position: absolute; bottom: 6px; right: 6px; z-index: 150 !important; display: inline-block;">
+                               <img src="gemini-icon.png" style="width: 20px; height: 20px; vertical-align: middle;">
+                            </a>`;
         }
 
         //GRID LAYOUT IMPLEMENTATION

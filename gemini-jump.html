@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Opening Gemini...</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {
+            font-family: sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background: #212529;
+            color: white;
+        }
+
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #9c27b0;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .container {
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="loader"></div>
+        <div>Launching Gemini...</div>
+    </div>
+    <script>
+        // Extract query from URL
+        const params = new URLSearchParams(window.location.search);
+        const q = params.get('q');
+
+        // Build Target
+        // We use the standard HTTPS link. Because this is a fresh page (not trapped in the PWA manifest scope),
+        // the OS should handle this much more reliably.
+        const target = "https://gemini.google.com/app" + (q ? "?q=" + encodeURIComponent(q) : "");
+
+        // Final handoff
+        setTimeout(() => {
+            window.location.replace(target);
+        }, 100);
+    </script>
+</body>
+
+</html>
