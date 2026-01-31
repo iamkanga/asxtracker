@@ -1059,7 +1059,13 @@ export class NotificationUI {
             if (geminiBtn) {
                 e.stopPropagation();
                 e.stopImmediatePropagation();
-                return; // Let the native <a> link handle the navigation to gemini-jump.html
+                e.preventDefault();
+
+                // Get symbol from the dataset
+                const s = geminiBtn.dataset.symbol || '';
+                // EXPLICIT BREAKOUT: Navigate directly to the jump page
+                window.location.href = `gemini-jump.html?s=${s}`;
+                return;
             }
 
             const card = e.target.closest(`.${CSS_CLASSES.NOTIFICATION_CARD_GRID}`);
