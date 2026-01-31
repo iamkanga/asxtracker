@@ -132,14 +132,5 @@ export class LinkHelper {
         return this.getYahooFinanceUrl(symbol);
     }
 
-    /**
-     * Generates a Deep Link to open the Gemini App (Android) or Web Interface.
-     * Uses intent:// scheme for Android to target the specific app package.
-     * @param {string} promptText
-     * @returns {string} The launch URL.
-     */
-    static getGeminiUrl(promptText) {
-        if (!promptText) return 'https://gemini.google.com/app';
-        return `https://gemini.google.com/app?q=${encodeURIComponent(promptText)}`;
-    }
+
 }
