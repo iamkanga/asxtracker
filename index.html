@@ -48,10 +48,118 @@
             border-left: none !important;
         }
 
+        /* ICON ONLY GRID UPDATE (V1081) */
+        .command-grid.icon-only-grid {
+            row-gap: 30px !important;
+            /* Increased from 20px */
+            column-gap: 15px;
+            /* Increased column gap for breathing room */
+            margin-top: 20px;
+            /* Increased top margin */
+            margin-bottom: 20px;
+            /* Increased bottom margin */
+        }
+
+        .command-grid.icon-only-grid .command-icon {
+            margin-right: 0;
+            /* Remove right margin since no label */
+            font-size: 1.7rem;
+            /* Increased from 1.4rem */
+            /* Make icons slightly larger */
+            width: auto;
+            opacity: 0.7;
+            /* Default dimmed */
+            transition: opacity 0.2s ease, transform 0.2s ease;
+        }
+
+        .command-grid.icon-only-grid .command-grid-item:hover .command-icon {
+            opacity: 1;
+            /* Brighten on hover */
+            transform: scale(1.1);
+            /* Subtle grow */
+        }
+
+        .command-grid.icon-only-grid .command-grid-item:active .command-icon {
+            transform: scale(0.95);
+            /* Click press effect */
+        }
+
+        .command-grid.icon-only-grid .command-grid-item {
+            justify-content: center;
+            /* Center horizontally */
+            align-items: center;
+            /* Center vertically */
+            padding: 0;
+            /* Remove padding */
+            background: transparent;
+            /* Floating Look */
+            border: none;
+            /* Remove borders */
+            box-shadow: none;
+            /* Remove any shadow */
+        }
+
         /* Portfolio Summary Gap */
         /* Portfolio Spacing Fix: target Content Container directly */
         #content-container {
             padding-top: 12px !important;
+        }
+
+        /* Visual Settings Modal Buttons */
+        .visual-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-muted);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            flex: 1;
+        }
+
+        .visual-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            color: var(--text-color);
+            border-color: var(--color-accent);
+        }
+
+        .visual-btn:active {
+            transform: scale(0.96);
+        }
+
+        /* COMPOSITE ICONS (Folder+Pencil, Bell+Cog) */
+        .composite-icon {
+            position: relative;
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            width: auto;
+            height: auto;
+        }
+
+        .composite-icon .main-icon {
+            font-size: 1.7rem;
+            /* Match base size */
+        }
+
+        .composite-icon .sub-icon {
+            position: absolute;
+            bottom: -4px;
+            right: -6px;
+            font-size: 0.85rem;
+            background: #212529;
+            /* Match modal/sidebar bg to create "cutout" look */
+            border-radius: 50%;
+            padding: 1px;
+            color: var(--color-accent) !important;
+            /* Force Coffee Color as requested */
+        }
+
+        .composite-icon .sub-icon.top-right {
+            bottom: auto;
+            top: -4px;
+            right: -6px;
         }
     </style>
 </head>
@@ -2152,7 +2260,10 @@ m-31 -123 c3 -5 1 -10 -4 -10 -6 0 -11 5 -11 10 0 6 2 10 4 10 3 0 8 -4 11
         </div>
 
         <div class="sidebar-content">
-            <div class="sidebar-section">
+            <!-- New Sidebar Command Center Injection Point -->
+            <div id="sidebar-command-center" class="command-center"></div>
+
+            <div class="sidebar-section hidden">
                 <h4 class="sidebar-section-title">Manage</h4>
                 <button id="add-share-sidebar-btn" class="sidebar-btn">
                     <i class="fas fa-plus-circle"></i> Add Share
@@ -2169,7 +2280,7 @@ m-31 -123 c3 -5 1 -10 -4 -10 -6 0 -11 5 -11 10 0 6 2 10 4 10 3 0 8 -4 11
             </div>
 
             <!-- UTILITIES SECTION (Merged Discovery & Calculators) -->
-            <div class="sidebar-section">
+            <div class="sidebar-section hidden">
                 <h4 class="sidebar-section-title">Utilities</h4>
 
                 <!-- Notifications (Top-level now) -->
@@ -2219,57 +2330,30 @@ m-31 -123 c3 -5 1 -10 -4 -10 -6 0 -11 5 -11 10 0 6 2 10 4 10 3 0 8 -4 11
             </div>
 
             <!-- CONFIGURATION SECTION -->
+            <!-- LEGACY: Configuration & Calculators (REMOVED: Handled by SidebarCommandCenter)
             <div class="sidebar-section">
                 <h4 class="sidebar-section-title">Configuration</h4>
-                <!-- "Global Settings" here refers to Trigger Config -->
                 <button id="btn-settings" class="sidebar-btn">
                     <i class="fas fa-globe"></i> Notification Settings
                 </button>
-                <!-- "Settings" here refers to General App Settings -->
                 <button id="btn-general-settings" class="sidebar-btn">
                     <i class="fas fa-cog"></i> Settings
                 </button>
-
-                <!-- Visual Style (Aesthetic Integration) -->
-                <button id="btn-sidebar-coloring-toggle" class="sidebar-btn sidebar-accordion-btn">
-                    <span
-                        style="display: flex; justify-content: space-between; align-items: center; width: 100%; pointer-events: none;">
-                        <span><i class="fas fa-magic"></i> Visual Style</span>
-                        <span id="active-visual-style-label"
-                            style="font-size: 0.65rem; opacity: 0.6; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;">Subtle</span>
-                    </span>
-                </button>
-                <div id="sidebar-coloring-container" class="sidebar-accordion-content collapsed">
-                    <div class="sidebar-vertical-list">
-                        <!-- Border Settings Direct Trigger -->
-                        <div class="sidebar-list-item" id="sidebar-border-settings-btn"
-                            style="color: var(--color-accent); font-weight: 700;">
-                            Cards
-                        </div>
-
-                        <div
-                            style="padding: 10px 15px 5px 15px; font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;">
-                            Tone Intensity</div>
-                        <div class="sidebar-list-item" data-value="0.0" data-tint="0%">None</div>
-                        <div class="sidebar-list-item" data-value="0.125" data-tint="22%">Muted</div>
-                        <div class="sidebar-list-item" data-value="0.25" data-tint="0%">Subtle</div>
-                        <div class="sidebar-list-item" data-value="0.4" data-tint="0%">Light</div>
-                        <div class="sidebar-list-item" data-value="0.6" data-tint="0%">Medium</div>
-                        <div class="sidebar-list-item" data-value="0.85" data-tint="0%">Strong</div>
-
-                        <div
-                            style="padding: 10px 15px 5px 15px; font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;">
-                            Quick Styles</div>
-                        <div class="sidebar-list-item sidebar-preset-item" data-preset="minimal">Minimal</div>
-                        <div class="sidebar-list-item sidebar-preset-item" data-preset="classic">Classic</div>
-                        <div class="sidebar-list-item sidebar-preset-item" data-preset="rich">Rich</div>
-                    </div>
-                </div>
-
-                <button id="hardReloadBtn" class="sidebar-btn">
-                    <i class="fas fa-sync-alt"></i> Reload App
-                </button>
             </div>
+            <div class="sidebar-section">
+                <h4 class="sidebar-section-title">Tools</h4>
+                <button id="btn-calculators" class="sidebar-btn">
+                    <i class="fas fa-calculator sidebar-icon"></i>
+                    <span class="sidebar-text">Calculators</span>
+                </button>
+                <div class="sidebar-link-group">
+                    <a href="https://www.ig.com/au/shares/markets-shares/components-asx-200" class="sidebar-link" target="_blank">
+                        <i class="fas fa-external-link-alt"></i> ASX 200 List
+                    </a>
+                </div>
+            </div>
+            -->
+        </div>
         </div>
 
         <div class="user-auth-section">

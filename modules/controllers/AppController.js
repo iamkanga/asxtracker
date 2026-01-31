@@ -141,8 +141,27 @@ export class AppController {
             // Note: NotificationUI handles its own (Floating Bell) badge update via internal listener.
         });
         // General App Settings (Formerly Security/Data) - REINSTATED
+        // General App Settings (Unified Hub)
         document.addEventListener(EVENTS.OPEN_GENERAL_SETTINGS, () => {
             GeneralSettingsUI.showModal(this);
+        });
+
+        document.addEventListener('open-calculator', () => {
+            // Dynamically import or just assume global availability if imported in index (it's not).
+            // But we imported CalculatorUI in HeaderLayout? No.
+            // We need to import it here or in AppController imports.
+            import('../ui/CalculatorUI.js').then(module => {
+                module.default.showModal();
+            });
+        });
+
+        document.addEventListener('open-visual-settings', () => {
+            GeneralSettingsUI.showAppearanceModal();
+        });
+
+        // Sidebar Control
+        document.addEventListener('close-sidebar', () => {
+            if (this.headerLayout) this.headerLayout.closeSidebar();
         });
 
 

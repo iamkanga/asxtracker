@@ -413,7 +413,11 @@ function handleGenerateBriefing_(payload) {
     // Ensure we don't send gigantic JSONs that might confuse the model or hit limits (though 1.5 Flash has huge context)
     const prompt = `
 You are a witty, professional financial analyst for the "ASX Tracker" app. 
-Write a ONE-paragraph (max 3 sentences) daily briefing for the user based on their portfolio performance today.
+Write a ONE-paragraph (max 3 sentences) daily briefing for the user based on their portfolio performance.
+
+Context:
+- Current Time: ${context.currentTime || 'Unknown'}
+- Market Status: ${context.marketStatus || 'Unknown'} (Sydney Time)
 
 Portfolio Stats:
 - Day Change: ${p.dayChangePercent}% (${p.dayChangeValue})
@@ -422,7 +426,11 @@ Portfolio Stats:
 - Key Losers: ${JSON.stringify(p.losers || [])}
 - Market Sentiment: ${context.sentiment}
 
-Tone:
+Tone & Instructions:
+- VERY IMPORTANT: Check the "Current Time" and "Market Status". 
+    - If WEEKEND (Sat/Sun): Refer to "Friday" or "The last session". Do NOT say "Today".
+    - If CLOSED (Weeknight): Speak in PAST tense.
+    - If OPEN: Speak in PRESENT tense.
 - If up > 1%: Enthusiastic, congratulatory.
 - If down > 1%: Empathetic, "hang in there".
 - If flat: Calm, "steady as she goes".

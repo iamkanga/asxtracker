@@ -68,19 +68,12 @@ export class BriefingUI {
                     <div class="${CSS_CLASSES.BRIEFING_DATE}">${dateStr}</div>
                 </div>
 
-                <!-- NEW SHORTCUT: Market Pulse (Understated) -->
-                <!-- Top Actions Row: Market Pulse + Roast -->
-                <div class="${CSS_CLASSES.BRIEFING_SUB_SHORTCUT}" style="display: flex; gap: 20px; align-items: center; padding: 0 0 8px 24px; margin-top: -5px;">
+                <!-- NEW SHORTCUT: Roast Portfolio Only (Centered) -->
+                <!-- Top Actions Row: Roast Only -->
+                <div class="${CSS_CLASSES.BRIEFING_SUB_SHORTCUT}" style="display: flex; justify-content: center; align-items: center; padding: 0 0 8px 0; margin-top: -5px;">
                     
-                    <!-- Market Pulse -->
-                    <div id="${IDS.BRIEFING_PULSE_SHORTCUT}" style="cursor: pointer; display: flex; align-items: center; gap: 6px; transition: opacity 0.2s;">
-                        <span style="font-size: 0.8rem; color: var(--color-accent); letter-spacing: 0.5px; font-weight: 500; display: flex; align-items: center; gap: 6px;">
-                             <i class="fas fa-heartbeat"></i> ${UI_LABELS.MARKET_PULSE_TITLE}
-                        </span>
-                    </div>
-
                     <!-- Roast Portfolio -->
-                    <div id="btn-roast-portfolio" style="margin-left: auto; margin-right: 24px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: opacity 0.2s;">
+                    <div id="btn-roast-portfolio" style="cursor: pointer; display: flex; align-items: center; gap: 6px; transition: opacity 0.2s;">
                          <span style="font-size: 0.8rem; color: var(--color-negative); letter-spacing: 0.5px; font-weight: 500; display: flex; align-items: center; gap: 6px;">
                              <i class="fas fa-fire"></i> ${UI_LABELS.ROAST_PORTFOLIO}
                          </span>
@@ -100,18 +93,15 @@ export class BriefingUI {
                           </button>
                        </div>
                     </div>
-                    
-                    <!-- 2. Hero Section: Portfolio + Pulse Partner -->
+
+                    <!-- NEW: Consolidated Smart Hero (Portfolio + Market Context) -->
                     <div class="${CSS_CLASSES.BRIEFING_SECTION}">
-                        <div class="${CSS_CLASSES.BRIEFING_HERO_ROW}" style="display: flex; gap: 16px; align-items: stretch; flex-wrap: wrap;">
-                            
-                            <!-- Portfolio Hero -->
+                        <div class="${CSS_CLASSES.BRIEFING_HERO_ROW}" style="display: flex; gap: 16px; align-items: stretch; flex-wrap: wrap;"> 
                             <div class="${CSS_CLASSES.BRIEFING_HERO_CARD}" id="${IDS.BRIEFING_PORTFOLIO_HERO}" style="flex: 2; min-width: 250px;">
+                                <!-- Dynamic Content Injected via _updateDigest -->
                                 <div class="${CSS_CLASSES.HERO_LABEL}">${UI_LABELS.MY_PORTFOLIO}</div>
                                 <div class="${CSS_CLASSES.HERO_MAIN_STAT} skeleton-text">${UI_LABELS.COMPUTING}</div>
-                                <div class="${CSS_CLASSES.HERO_SUB_STAT} skeleton-text">...</div>
                             </div>
-
                         </div>
                     </div>
 
@@ -168,6 +158,18 @@ export class BriefingUI {
         const data = AppState.controller.calculateBriefingDigest();
         const { portfolio, highlights, marketSentiment } = data;
 
+        // Helper to get index data safely
+        const getIndexHtml = (code, fallbackCode) => {
+            const item = AppState.livePrices.get(code) || AppState.livePrices.get(fallbackCode) || { pctChange: 0 };
+            const pct = item.pctChange || 0;
+            const isUp = pct >= 0;
+            // Force inline color with !important to override Hero Card white text
+            const colorHex = isUp ? '#4cd964' : '#ff3b30';
+            return `<span style="color: ${colorHex} !important;">${isUp ? '+' : ''}${pct.toFixed(2)}%</span>`;
+        };
+
+        // (Legacy Top Row Removed)
+
         // Render Hero
         const heroCard = modal.querySelector(`#${IDS.BRIEFING_PORTFOLIO_HERO}`);
         if (heroCard) {
@@ -175,46 +177,121 @@ export class BriefingUI {
             const bgClass = portfolio.isUp ? CSS_CLASSES.HERO_BG_POSITIVE : CSS_CLASSES.HERO_BG_NEGATIVE;
             const arrow = portfolio.isUp ? '↗' : '↘';
 
-            // Dynamic Styling & Branding
-            // Calculate Border Styles based on global preferences
+            // Calculate Border Styles
             const borderStyle = this._getBorderStyles(portfolio.totalPctChange);
-
+            // Add click Hint class
             heroCard.className = `${CSS_CLASSES.BRIEFING_HERO_CARD} ${bgClass} ${CSS_CLASSES.CLICKABLE_HERO}`;
-            // Apply border style directly. Note: The helper includes !important for box-shadow and border-radius.
             heroCard.setAttribute('style', `flex: 2; min-width: 250px; ${borderStyle}`);
+
+            // Interaction: Open Portfolio on Tap
             heroCard.onclick = () => {
                 this._close(modal);
                 const notifModal = document.getElementById(IDS.NOTIFICATION_MODAL);
-                if (notifModal) {
-                    notifModal.remove();
-                }
+                if (notifModal) { notifModal.remove(); }
                 document.dispatchEvent(new CustomEvent('open-portfolio-view'));
             };
 
+            // NEW INTEGRATED LAYOUT
+            const asxHtml = getIndexHtml('^AXJO', 'XJO');
+            const spxHtml = getIndexHtml('^GSPC', 'INX');
+
             heroCard.innerHTML = `
-                <div class="${CSS_CLASSES.HERO_HEADER_ROW}" style="display: flex; flex-direction: column; align-items: flex-start; gap: 4px;">
-                    <div class="${CSS_CLASSES.HERO_BRAND}">ASX TRACKER AI</div>
-                    <div class="${CSS_CLASSES.HERO_LABEL}" style="margin-bottom: 0;">Daily Briefing</div>
+                <!-- 1. Header Row: Branding + Icons -->
+                <div class="${CSS_CLASSES.HERO_HEADER_ROW}" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
+                    
+                    <!-- Left: Title with Gemini Icon -->
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <div class="${CSS_CLASSES.HERO_BRAND}" style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; letter-spacing: 1px;">
+                            ASX TRACKER <img src="gemini-icon.png" style="width: 16px; height: 16px; opacity: 1;">
+                        </div>
+                        <div class="${CSS_CLASSES.HERO_LABEL}" style="margin-bottom: 0;">Daily Briefing</div>
+                    </div>
+
+                    <!-- Right: Actions (Market Pulse & Portfolio) -->
+                    <div style="display: flex; gap: 16px; align-items: center;">
+                        
+                        <!-- Market Pulse Icon (Coffee Color) -->
+                        <div style="opacity: 1; cursor: pointer;" id="hero-pulse-btn" title="Market Pulse">
+                            <i class="fas fa-heartbeat" style="font-size: 1.4rem; color: var(--color-accent);"></i>
+                        </div>
+
+                        <!-- Portfolio Icon (Coffee Color) -->
+                        <div style="opacity: 1; cursor: pointer;" id="hero-briefcase-btn" title="View Portfolio">
+                            <i class="fas fa-briefcase" style="font-size: 1.4rem; color: var(--color-accent);"></i>
+                        </div>
+                    </div>
                 </div>
                 
-                <div id="briefing-ai-summary" style="font-size: 0.95em; line-height: 1.5; color: var(--text-normal); margin: 12px 0 16px 0; min-height: 40px; font-weight: 400;">
-                    <span style="opacity: 0.7; font-size: 0.9em;"><i class="fas fa-circle-notch fa-spin"></i> ${UI_LABELS.ANALYZING_PORTFOLIO}</span>
+                <!-- 2. Main Content Grid -->
+                <!-- Equal Width Columns (1fr 1fr) to prevent wrapping | 50% split -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 12px;">
+                    
+                    <!-- LEFT: Portfolio Stats -->
+                    <div style="display: flex; flex-direction: column; justify-content: flex-start;">
+                        <!-- Title (Reference for alignment) -->
+                        <div style="font-size: 0.75rem; text-transform: uppercase; opacity: 0.7; margin-bottom: 6px;">My Portfolio</div>
+                        
+                        <!-- Big Number -->
+                        <div class="${CSS_CLASSES.HERO_MAIN_STAT} ${colorClass}" style="line-height: 1; font-size: 2.2rem; margin-bottom: 4px;">
+                            ${Math.abs(portfolio.totalPctChange).toFixed(2)}% <span class="hero-arrow" style="font-size: 0.6em; vertical-align: middle;">${arrow}</span>
+                        </div>
+                        <div class="${CSS_CLASSES.HERO_SUB_STAT} ${colorClass}" style="font-size: 0.95rem; font-weight: 500;">
+                            ${formatCurrency(portfolio.totalDayChangeVal)} Today
+                        </div>
+                        
+                        <!-- Total moved slightly down -->
+                        <div style="margin-top: 16px;">
+                             <span class="${CSS_CLASSES.HERO_TOTAL_LABEL}" style="font-size: 0.75rem;">Total Balance</span><br>
+                             <span class="${CSS_CLASSES.HERO_TOTAL_VALUE}" style="font-size: 1.1rem;">${formatCurrency(portfolio.totalValue)}</span>
+                        </div>
+                    </div>
+
+                    <!-- RIGHT: Market Comparators (Grid Table) -->
+                    <div style="display: flex; flex-direction: column;">
+                        <!-- SPACER: Mimics 'My Portfolio' Title height so ASX 200 aligns with the Big Percentage Number -->
+                        <div style="font-size: 0.75rem; text-transform: uppercase; opacity: 0; margin-bottom: 6px; visibility: hidden;">My Portfolio</div>
+                        
+                        <!-- Comparisons Box: CSS Grid for alignment -->
+                        <!-- grid-template-columns: min-content min-content -> tight fit -->
+                        <!-- justify-content: end -> pushes entire block to right -->
+                        <div style="display: grid; grid-template-columns: min-content min-content; justify-content: end; align-items: center; column-gap: 12px; row-gap: 8px;">
+                            <!-- ASX 200 -->
+                            <span style="font-size: 0.7rem; font-weight: 600; color: rgba(255,255,255,0.7); white-space: nowrap; text-align: left;">ASX&nbsp;200</span>
+                            <span style="font-size: 0.9rem; font-weight: 700; text-align: right;">${asxHtml}</span>
+                            
+                            <!-- S&P 500 -->
+                            <span style="font-size: 0.7rem; font-weight: 600; color: rgba(255,255,255,0.7); white-space: nowrap; text-align: left;">S&P&nbsp;500</span>
+                            <span style="font-size: 0.9rem; font-weight: 700; text-align: right;">${spxHtml}</span>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="${CSS_CLASSES.HERO_MAIN_STAT} ${colorClass}">
-                    ${Math.abs(portfolio.totalPctChange).toFixed(2)}% <span class="hero-arrow">${arrow}</span>
+                <!-- 3. AI Summary (Integrated, No Border) -->
+                <div style="margin-top: 16px; padding-top: 0px;">
+                    <div id="briefing-ai-summary" style="font-size: 0.95em; line-height: 1.5; color: rgba(255,255,255,0.9); font-weight: 400; min-height: 20px;">
+                        <span style="opacity: 0.7;"><i class="fas fa-circle-notch fa-spin"></i> ${UI_LABELS.ANALYZING_PORTFOLIO}</span>
+                    </div>
                 </div>
-                <div class="${CSS_CLASSES.HERO_SUB_STAT} ${colorClass}">
-                    ${formatCurrency(portfolio.totalDayChangeVal)} Today
-                </div>
-                
-                <div class="${CSS_CLASSES.HERO_FOOTER_ROW}">
-                    <span class="${CSS_CLASSES.HERO_TOTAL_LABEL}">Total Balance</span>
-                    <span class="${CSS_CLASSES.HERO_TOTAL_VALUE}">${formatCurrency(portfolio.totalValue)}</span>
-                </div>
-                
-                <div class="${CSS_CLASSES.HERO_CLICK_HINT}">${UI_LABELS.TAP_TO_VIEW_PORTFOLIO} <i class="fas fa-chevron-right"></i></div>
             `;
+
+            // Interaction: Pulse
+            const pulseBtn = heroCard.querySelector('#hero-pulse-btn');
+            if (pulseBtn) {
+                pulseBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    const { SnapshotUI } = require('./SnapshotUI.js'); // Ensure scope? No, use global import or reference
+                    // Actually SnapshotUI is imported at top of module.
+                    SnapshotUI.show();
+                };
+            }
+
+            heroCard.querySelector('#hero-briefcase-btn').onclick = (e) => {
+                e.stopPropagation(); // Prevent card click
+                this._close(modal);
+                const notifModal = document.getElementById(IDS.NOTIFICATION_MODAL);
+                if (notifModal) { notifModal.remove(); }
+                document.dispatchEvent(new CustomEvent('open-portfolio-view'));
+            };
 
             // TRIGGER AI GENERATION (Async)
             (async () => {
@@ -222,8 +299,22 @@ export class BriefingUI {
                     const { DataService } = await import('../data/DataService.js');
                     const ds = new DataService();
 
+                    // Market Context & Time (Fix for "Closed Market" assumption)
+                    const now = new Date();
+                    const timeStr = now.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit', timeZone: 'Australia/Sydney' });
+                    const day = now.toLocaleDateString('en-AU', { weekday: 'long', timeZone: 'Australia/Sydney' });
+                    // Basic heuristic for status
+                    const hour = now.getHours();
+                    const isWknd = day === 'Saturday' || day === 'Sunday';
+                    const isOpen = !isWknd && hour >= 10 && hour < 16;
+                    const statusStr = isOpen ? "Market is OPEN" : "Market is CLOSED";
+
                     // Construct minimal context for the AI
                     const context = {
+                        isWeekend: isWknd,
+                        currentTime: `${day} ${timeStr} (Sydney Time)`,
+                        marketStatus: statusStr,
+                        marketStatus: statusStr,
                         portfolio: {
                             dayChangePercent: portfolio.totalPctChange.toFixed(2),
                             dayChangeValue: formatCurrency(portfolio.totalDayChangeVal),

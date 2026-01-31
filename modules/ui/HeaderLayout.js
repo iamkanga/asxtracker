@@ -10,6 +10,7 @@ import { ToastManager } from './ToastManager.js';
 import { EVENTS, UI_ICONS, IDS, WATCHLIST_NAMES, ALL_SHARES_ID, PORTFOLIO_ID, CASH_WATCHLIST_ID, DASHBOARD_WATCHLIST_ID, STORAGE_KEYS } from '../utils/AppConstants.js';
 import { navManager } from '../utils/NavigationManager.js';
 import { GeneralSettingsUI } from './GeneralSettingsUI.js';
+import { SidebarCommandCenter } from './SidebarCommandCenter.js?v=1080';
 
 export class HeaderLayout {
     /**
@@ -23,6 +24,7 @@ export class HeaderLayout {
         this._navActive = false; // Tracks if sidebar is in history stack
         this._isTitleListenerBound = false;
         this.container = document.getElementById(IDS.APP_HEADER); // Use ID constant
+        this.commandCenter = new SidebarCommandCenter('#sidebar-command-center');
         // console.log('HeaderLayout: Instantiated. Container found:', !!this.container);
     }
 
@@ -139,6 +141,9 @@ export class HeaderLayout {
         this.editWatchlistSubmit = document.getElementById(IDS.EDIT_WL_SUBMIT);
         this.editWatchlistDelete = document.getElementById(IDS.EDIT_WL_DELETE);
         this.currentEditWatchlistId = null; // Track which watchlist is being edited
+
+        // Initialize Command Center
+        if (this.commandCenter) this.commandCenter.init();
     }
 
 
@@ -648,6 +653,11 @@ export class HeaderLayout {
                 this._navActive = false;
                 navManager.popStateSilently();
             }
+        }
+
+        // Always re-render Command Center on toggle to ensure fresh data/state
+        if (this.sidebarState && this.commandCenter) {
+            this.commandCenter.render();
         }
     }
 

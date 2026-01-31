@@ -12,6 +12,7 @@ import { formatCurrency, formatPercent } from '../utils/formatters.js';
 import { BriefingUI } from './BriefingUI.js?v=327';
 import { SnapshotUI } from './SnapshotUI.js';
 import { ToastManager } from './ToastManager.js';
+import { LinkHelper } from '../utils/LinkHelper.js';
 
 export class NotificationUI {
 
@@ -573,19 +574,30 @@ export class NotificationUI {
                     const change = smartBtn.dataset.change;
                     const sector = smartBtn.dataset.sector;
 
-                    ToastManager.show(`${UI_LABELS.ASKING_GEMINI} ${symbol}...`, 'info');
+                    // NEW: Deep Link directly to Gemini App
+                    // 1. Generate URL immediately (Synchronous)
+                    const prompt = `Summarize the latest for ${symbol}`;
+                    const url = LinkHelper.getGeminiUrl(prompt);
 
-                    import('../data/DataService.js').then(({ DataService }) => {
-                        const ds = new DataService();
-                        // console.log('Asking Gemini explain:', symbol);
-                        ds.askGemini('explain', '', { symbol, change, sector }).then(res => {
-                            if (res.ok) {
-                                alert(`${UI_LABELS.AI_INSIGHT_FOR} ${symbol}:\n\n${res.text}`);
-                            } else {
-                                ToastManager.show(`${UI_LABELS.ANALYSIS_FAILED} ` + (res.error || 'Unknown error'), 'error');
-                            }
-                        });
-                    });
+                    // 2. Copy Key to Clipboard (Best Effort, requires Secure Context i.e. HTTPS or Localhost)
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText(prompt).catch(err => console.warn('Clipboard failed', err));
+                    } else {
+                        console.warn('Clipboard API unavailable (Insecure Context?)');
+                        // Fallback: Could use deprecated execCommand here if really needed, but ignoring for now to prioritize navigation.
+                    }
+
+                    // 3. Navigate (Anchor Injection Strategy + New Tab)
+                    // We switch to _blank. The "Flash" user saw previously with window.open was likely the browser blocking the *scripted* popup.
+                    // But a programmatic click on an <a> element with _blank is usually allowed as a "popunder" or tab.
+                    // This prevents the current page from "Stalling" (freezing) if the external link hangs.
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.target = '_blank';
+                    link.rel = 'noopener noreferrer'; // Security & Performance best practice
+                    document.body.appendChild(link);
+                    link.click();
+                    setTimeout(() => link.remove(), 100);
                     return;
                 }
 

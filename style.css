@@ -9633,3 +9633,193 @@ body.dashboard-active .sidebar {
 .portfolio-card-chart-bg .mini-chart-loader {
     display: none !important;
 }
+
+/* --- Sidebar Command Center --- */
+.command-center {
+    padding: 15px 20px;
+}
+
+.command-center-inner {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+/* Market Sentiment Tile */
+/* --- Sidebar Command Center --- */
+.command-center-inner {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 10px 0;
+}
+
+.sentiment-tile {
+    padding: 16px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.sentiment-tile:hover {
+    background: rgba(255, 255, 255, 0.05);
+    transform: translateY(-2px);
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+.sentiment-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.market-label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+}
+
+.market-status {
+    font-size: 0.6rem;
+    font-weight: 800;
+    padding: 2px 6px;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+}
+
+.market-status.status-open {
+    color: #4caf50;
+    background: rgba(76, 175, 80, 0.1);
+}
+
+.market-status.status-closed {
+    color: #ff5252;
+    background: rgba(255, 82, 82, 0.1);
+}
+
+.sentiment-body {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.sentiment-trend {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1.4rem;
+    font-weight: 700;
+}
+
+.sentiment-tile.bullish .sentiment-trend {
+    color: #ffd700;
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+}
+
+.sentiment-tile.bearish .sentiment-trend {
+    color: #ff5252;
+    text-shadow: 0 0 10px rgba(255, 82, 82, 0.3);
+}
+
+.sentiment-tile.neutral .sentiment-trend {
+    color: var(--text-muted);
+}
+
+.sentiment-subtext {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+/* Redesigned Sections & Grids */
+.command-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+/* First section doesn't need top border */
+.sentiment-tile+.command-section {
+    border-top: none;
+    padding-top: 0;
+}
+
+.command-section-title {
+    font-size: 0.65rem;
+    font-weight: 800;
+    color: var(--text-muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin: 0;
+    padding-left: 4px;
+    opacity: 0.6;
+}
+
+.command-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+}
+
+.command-grid-item {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    padding: 14px 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    color: var(--text-color);
+}
+
+.command-grid-item:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.15);
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.command-icon {
+    font-size: 1.35rem;
+    color: var(--color-accent);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.command-grid-item:hover .command-icon {
+    color: var(--color-accent);
+    text-shadow: 0 0 8px rgba(164, 147, 147, 0.6);
+    /* Coffee Glow */
+    transform: scale(1.15);
+}
+
+/* Management Action styling refined */
+.command-grid-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.command-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: color 0.2s;
+}
+
+.command-grid-item:hover .command-label {
+    color: var(--text-color);
+}
