@@ -1283,10 +1283,16 @@ export class ViewRenderer {
             <div class="${CSS_CLASSES.MODAL_OVERLAY}"></div>
                 <div class="${CSS_CLASSES.MODAL_CONTENT} ${CSS_CLASSES.MODAL_CONTENT_MEDIUM} ${CSS_CLASSES.RESEARCH_MODAL_CONTENT}">
                     <div class="${CSS_CLASSES.MODAL_HEADER}">
-                        <div>
-                            <h2 class="${CSS_CLASSES.MODAL_TITLE}">${stock.code}</h2>
-                            <div class="${CSS_CLASSES.MODAL_SUBTITLE}">${stock.name}</div>
-                        </div>
+                        <a href="https://gemini.google.com/app" target="_blank" id="gemini-research-link" role="link" aria-label="Ask AI Deep Dive" style="text-decoration: none; color: inherit; display: block; -webkit-touch-callout: default !important; user-select: auto !important;">
+                            <div>
+                                <div class="${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.ALIGN_CENTER} ${CSS_CLASSES.JUSTIFY_START} ${CSS_CLASSES.GAP_0}">
+                                    <h2 class="${CSS_CLASSES.MODAL_TITLE}" style="margin-bottom: 0;">${stock.code}</h2>
+                                    <span style="display: inline-block; width: 2.5ch;"></span>
+                                    <img src="gemini-icon.png" style="width: 18px; height: 18px; pointer-events: none; vertical-align: middle;">
+                                </div>
+                                <div class="${CSS_CLASSES.MODAL_SUBTITLE}" style="margin-top: 2px;">${stock.name}</div>
+                            </div>
+                        </a>
                         <div class="${CSS_CLASSES.MODAL_ACTIONS}">
                             <button class="${CSS_CLASSES.MODAL_ACTION_BTN} ${CSS_CLASSES.DELETE_BTN} ${CSS_CLASSES.HIDDEN}" title="Delete">
                                 <i class="fas ${UI_ICONS.DELETE}"></i>
@@ -1367,6 +1373,49 @@ export class ViewRenderer {
                 onAddCallback(stock.code);
             }, 150);
         });
+
+        // Gemini Interaction Binding
+        const geminiLink = modal.querySelector('#gemini-research-link');
+        if (geminiLink) {
+            const getPrompt = () => {
+                return `Summarize the latest technical and fundamental developments for ${stock.code} on the ASX. Focus on recent price action, volume, and any relevant news or upcoming announcements. Provide a comprehensive outlook.`;
+            };
+
+            const handleShortPress = () => {
+                const symbol = stock.code;
+                const change = stock.change || stock.dayChangeValue || 0;
+                const sector = stock.sector || '';
+
+                ToastManager.show(`${UI_LABELS.ASKING_GEMINI} ${symbol}...`, 'info');
+                import('../data/DataService.js').then(({ DataService }) => {
+                    const ds = new DataService();
+                    ds.askGemini('explain', '', { symbol, change, sector }).then(res => {
+                        if (res.ok) {
+                            alert(`${UI_LABELS.AI_INSIGHT_FOR} ${symbol}:\n\n${res.text}`);
+                        } else {
+                            ToastManager.show(`${UI_LABELS.ANALYSIS_FAILED} ` + (res.error || 'Unknown error'), 'error');
+                        }
+                    });
+                });
+            };
+
+            // Deep Dive Clipboard Prep on contextmenu (native long-press trigger)
+            geminiLink.addEventListener('contextmenu', async (e) => {
+                try {
+                    const prompt = getPrompt();
+                    await navigator.clipboard.writeText(prompt);
+                } catch (err) {
+                    console.warn('Clipboard prep failed', err);
+                }
+            });
+
+            // Tap Interception for Internal AI
+            geminiLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleShortPress();
+            });
+        }
 
         document.body.appendChild(modal);
     }
