@@ -1,4 +1,4 @@
-import { STORAGE_KEYS, CASH_WATCHLIST_ID, ALL_SHARES_ID, PORTFOLIO_ID } from '../utils/AppConstants.js';
+import { STORAGE_KEYS, CASH_WATCHLIST_ID, ALL_SHARES_ID, PORTFOLIO_ID, EVENTS } from '../utils/AppConstants.js';
 
 /**
  * AppState.js

@@ -202,6 +202,7 @@ export default class ResearchLinksUI {
 
         container.addEventListener('drop', (e) => {
             e.preventDefault();
+            e.stopPropagation();
             const row = e.target.closest('.research-manage-row');
             if (!row || draggedIndex === null) return;
 
@@ -236,8 +237,8 @@ export default class ResearchLinksUI {
 
         if (!url.includes('${code}')) {
             const patterns = [
-                /([\/.:=-])([A-Z]{3,4})(?=[\/.:=-]|$)/,
-                /([A-Z]{3,4})(?=\.(?:AX|ASX))/
+                /([\/.:=-])([A-Z]{3,4})(?=[\/.:=-]|$)/i,
+                /([A-Z]{3,4})(?=\.(?:AX|ASX))/i
             ];
 
             let detectedCode = null;

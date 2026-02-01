@@ -5,6 +5,7 @@
 
 import { db } from '../auth/AuthService.js';
 import { AppState } from '../state/AppState.js';
+import { ToastManager } from '../ui/ToastManager.js';
 import {
     collection,
     query,
@@ -44,6 +45,8 @@ export class UserStore {
         if (error.code === 'permission-denied') {
             document.dispatchEvent(new CustomEvent('auth-reconnect-needed'));
         } else {
+            console.error(`UserStore Error in ${context}:`, error);
+            ToastManager.error(`Failed to save data: ${error.message}`);
         }
     }
 

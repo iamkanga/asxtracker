@@ -15,8 +15,6 @@ export class FavoriteLinksUI {
         document.addEventListener('click', (e) => {
             const modal = document.getElementById(IDS.MODAL_FAVORITE_LINKS);
             if (!modal || modal.classList.contains(CSS_CLASSES.HIDDEN)) {
-                // If the modal isn't visible, our work here is done.
-                // This prevents actions firing when the modal is not the target.
                 const openBtn = e.target.closest(`#${IDS.BTN_FAVORITE_LINKS}`);
                 if (openBtn) {
                     this.showModal();
@@ -24,7 +22,6 @@ export class FavoriteLinksUI {
                 return;
             }
 
-            // Actions inside the modal
             const addBtn = e.target.closest(`#${IDS.ADD_FAVORITE_BTN}`);
             if (addBtn) {
                 this._showLinkDialog();
@@ -44,7 +41,7 @@ export class FavoriteLinksUI {
             }
             
             const overlay = e.target.closest(`.${CSS_CLASSES.MODAL_OVERLAY}`);
-            if (overlay && e.target === overlay) { // Ensure it's the overlay itself
+            if (overlay && e.target === overlay) {
                  this.closeModal();
                  return;
             }
@@ -115,9 +112,7 @@ export class FavoriteLinksUI {
                 <div class="${CSS_CLASSES.MODAL_HEADER}">
                     <h2 id="${IDS.FAVORITE_LINKS_TITLE}" class="${CSS_CLASSES.MODAL_TITLE}" style="cursor: pointer; user-select: none; display: flex; align-items: center;">
                         Favorite URLs
-                        <svg id="${IDS.FAV_LINKS_CHEVRON}" class="chevron-premium-v5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="transform: rotate(0deg);">
-                            <polyline points="6 9 12 15 18 9"></polyline>
-                        </svg>
+                        <span id="fav-links-chevron" class="chevron-icon">▼</span>
                     </h2>
                     <div class="${CSS_CLASSES.MODAL_ACTIONS}">
                         <button id="${IDS.ADD_FAVORITE_BTN}" class="${CSS_CLASSES.MODAL_ACTION_BTN}" title="Add Link" style="display: none;">
@@ -140,7 +135,7 @@ export class FavoriteLinksUI {
     static _updateTitleAndControls(modal) {
         const titleEl = modal.querySelector(`#${IDS.FAVORITE_LINKS_TITLE}`);
         const addBtn = modal.querySelector(`#${IDS.ADD_FAVORITE_BTN}`);
-        const chevron = modal.querySelector(`#${IDS.FAV_LINKS_CHEVRON}`);
+        const chevron = modal.querySelector(`#fav-links-chevron`);
 
         const isManage = this._currentMode === 'manage';
 
@@ -316,6 +311,7 @@ export class FavoriteLinksUI {
 
         container.addEventListener('drop', (e) => {
             e.preventDefault();
+            e.stopPropagation();
             const row = e.target.closest('.favorite-manage-row');
             if (!row || draggedIndex === null) return;
 
@@ -372,6 +368,3 @@ export class FavoriteLinksUI {
         this.render(document.getElementById(IDS.MODAL_FAVORITE_LINKS));
     }
 }
-
-
-// Global assignment removed - use ES module import instead
