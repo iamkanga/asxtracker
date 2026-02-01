@@ -246,8 +246,12 @@ export class SearchDiscoveryUI {
         };
 
         // Research Links
-        const linksHtml = RESEARCH_LINKS_TEMPLATE.map(link => {
-            const url = link.url.replace(/\${code}/g, stock.code);
+        const rawLinks = AppState.preferences.researchLinks && AppState.preferences.researchLinks.length > 0
+            ? AppState.preferences.researchLinks
+            : RESEARCH_LINKS_TEMPLATE;
+
+        const linksHtml = rawLinks.map(link => {
+            const url = link.url.split('${code}').join(stock.code);
             let hostname = '';
             try {
                 hostname = new URL(url).hostname;
@@ -257,9 +261,12 @@ export class SearchDiscoveryUI {
             const faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
 
             return `
-                <a href="${url}" target="_blank" rel="noopener noreferrer" class="${CSS_CLASSES.RESEARCH_LINK_CARD}">
-                    <img src="${faviconUrl}" alt="" style="width: 16px; height: 16px; border-radius: 2px;">
-                    <span class="${CSS_CLASSES.LINK_TEXT}">${link.name}</span>
+                <a href="${url}" target="_blank" rel="noopener noreferrer" class="research-link-btn">
+                    <img src="${faviconUrl}" class="link-favicon" alt="">
+                    <div class="link-info-stack">
+                        <span class="link-name">${link.displayName}</span>
+                        <span class="link-desc">${link.description || ''}</span>
+                    </div>
                 </a>
             `;
         }).join('');
@@ -323,12 +330,23 @@ export class SearchDiscoveryUI {
             </div>
             
             <div style="margin-top: 2rem;">
-                <h4 class="${CSS_CLASSES.SECTION_TITLE}" style="font-weight: 700; color: var(--color-accent); border-bottom: none; display: inline-block; padding-bottom: 4px; margin-bottom: 1.5rem;">Research Tools</h4>
-                <div class="${CSS_CLASSES.RESEARCH_LINKS_GRID}">
+                <h4 id="discovery-research-manage-title" class="${CSS_CLASSES.SECTION_TITLE} clickable" style="font-weight: 700; color: var(--color-accent); border-bottom: none; display: inline-block; padding-bottom: 4px; margin-bottom: 1.5rem;">
+                    Research Tools <i class="fas fa-chevron-right research-chevron"></i>
+                </h4>
+                <div class="research-links-grid">
                     ${linksHtml}
                 </div>
             </div>
         `;
+
+        // Bind Research Manage Title
+        const researchTitle = container.querySelector('#discovery-research-manage-title');
+        if (researchTitle) {
+            researchTitle.addEventListener('click', () => {
+                const event = new CustomEvent('REQUEST_RESEARCH_LINKS_MANAGE');
+                document.dispatchEvent(event);
+            });
+        }
 
         // Instantiate Chart and wire up zoom button
         try {
@@ -389,5 +407,12 @@ export class SearchDiscoveryUI {
                 }
             );
         }
+
+        window.addEventListener(EVENTS.RESEARCH_LINKS_UPDATED, () => {
+            const discoveryModal = document.getElementById(IDS.DISCOVERY_MODAL);
+            if (discoveryModal && !discoveryModal.classList.contains(CSS_CLASSES.HIDDEN) && discoveryModal.dataset.viewingCode === stock.code) {
+                this._renderDetail(container, stock, modal);
+            }
+        }, { once: true });
     }
 }

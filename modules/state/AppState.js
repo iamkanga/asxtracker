@@ -124,6 +124,14 @@ export const AppState = {
                 return null;
             }
         })(),
+        researchLinks: (() => {
+            try {
+                const stored = localStorage.getItem(STORAGE_KEYS.RESEARCH_LINKS);
+                return stored ? JSON.parse(stored) : null;
+            } catch (e) {
+                return null;
+            }
+        })(),
         colorSeed: (() => {
             const stored = localStorage.getItem('ASX_NEXT_colorSeed');
             return stored ? parseInt(stored) : 0;
@@ -286,6 +294,7 @@ export const AppState = {
                     }
                     return out;
                 })(),
+                researchLinks: this.preferences.researchLinks || [],
                 favoriteLinks: this.preferences.favoriteLinks || [],
                 colorSeed: this.preferences.colorSeed || 0,
                 dailyEmail: this.preferences.dailyEmail || false,
@@ -532,6 +541,13 @@ export const AppState = {
         this.preferences.favoriteLinks = links;
         localStorage.setItem(STORAGE_KEYS.FAVORITE_LINKS, JSON.stringify(links));
         this._triggerSync();
+    },
+
+    saveResearchLinks(links) {
+        this.preferences.researchLinks = links;
+        localStorage.setItem(STORAGE_KEYS.RESEARCH_LINKS, JSON.stringify(links));
+        this._triggerSync();
+        window.dispatchEvent(new CustomEvent(EVENTS.RESEARCH_LINKS_UPDATED));
     },
 
     saveQuickNav(config) {

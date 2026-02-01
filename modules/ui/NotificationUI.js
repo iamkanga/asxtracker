@@ -1840,8 +1840,13 @@ export class NotificationUI {
                     <div style="font-size: 0.75rem; color: var(--text-muted); line-height: 1.4; margin-bottom: 10px;">
                         If prices appear "stuck" or stale in the backend, you can force a server-side repair cycle. This updates the master spreadsheet via Yahoo Finance fallback.
                     </div>
-                    <button id="btn-force-repair" class="${CSS_CLASSES.BTN_SECONDARY}" style="width: 100%; border: 1px solid var(--color-accent); padding: 8px; font-size: 0.8rem; border-radius: 4px; background: transparent; color: var(--color-accent); cursor: pointer;">
-                        <i class="fas fa-sync-alt"></i> FORCE SERVER-SIDE REPAIR
+                    <!-- 
+                        Kanga Roo asked to disable this button (2026-02-01). 
+                        It triggers a legacy Google Apps Script and could cause backend issues. 
+                        It is being investigated before being re-enabled.
+                    -->
+                    <button id="btn-force-repair" class="${CSS_CLASSES.BTN_SECONDARY}" disabled style="width: 100%; border: 1px solid var(--color-accent); padding: 8px; font-size: 0.8rem; border-radius: 4px; background: transparent; color: var(--text-muted); cursor: not-allowed; opacity: 0.5;">
+                        <i class="fas fa-sync-alt"></i> FORCE SERVER-SIDE REPAIR (Disabled)
                     </button>
                 </div>
             </div>
@@ -1864,6 +1869,7 @@ export class NotificationUI {
         if (closeBtn) closeBtn.onclick = () => container.classList.remove('visible');
 
         const repairBtn = container.querySelector('#btn-force-repair');
+        /*
         if (repairBtn) {
             repairBtn.onclick = async (e) => {
                 e.stopPropagation();
@@ -1895,5 +1901,6 @@ export class NotificationUI {
                 }
             };
         }
+        */
     }
 }

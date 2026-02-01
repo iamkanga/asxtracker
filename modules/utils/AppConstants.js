@@ -85,6 +85,7 @@ export const STORAGE_KEYS = {
     SNAPSHOT_SORT: 'ASX_NEXT_snapshotSort',
     DASHBOARD_HIDDEN: 'ASX_NEXT_dashboardHidden',
     FAVORITE_LINKS: 'ASX_NEXT_favoriteLinks',
+    RESEARCH_LINKS: 'ASX_NEXT_researchLinks',
     DAILY_EMAIL: 'ASX_NEXT_dailyEmail',
     EMAIL_RECIPIENTS: 'ASX_NEXT_emailRecipients',
     BADGE_SCOPE: 'ASX_NEXT_badgeScope',
@@ -159,6 +160,7 @@ export const EVENTS = {
     FIREBASE_DATA_LOADED: 'firebase-data-loaded', // Splash Screen Trigger
     OPEN_FAVORITE_LINKS: 'open-favorite-links',
     FAVORITE_LINKS_UPDATED: 'favorite-links-updated',
+    RESEARCH_LINKS_UPDATED: 'research-links-updated',
     TOGGLE_SORT_DIRECTION: 'toggle-sort-direction',
     SAVE_BORDER_PREFS: 'save-border-prefs',
     OPEN_PORTFOLIO_CHART: 'open-portfolio-chart'
@@ -451,20 +453,20 @@ export const USER_MESSAGES = {
 };
 
 export const RESEARCH_LINKS_TEMPLATE = [
-    { name: 'Yahoo Finance', url: 'https://au.finance.yahoo.com/quote/${code}.AX' },
-    { name: 'Google Finance', url: 'https://www.google.com/finance/quote/${code}:ASX' },
-    { name: 'ASX Official', url: 'https://www2.asx.com.au/markets/company/${code}' },
-    { name: 'Market Index', url: 'https://www.marketindex.com.au/asx/${code}' },
-    { name: 'Market Announcements', url: 'https://www.marketindex.com.au/asx/${code}/announcements' },
-    { name: 'MarketWatch', url: 'https://www.marketwatch.com/investing/stock/${code}?countrycode=au&mod=search_symbol' },
-    { name: 'Small Caps', url: 'https://smallcaps.com.au/stocks/asx-${code}#overview' },
-    { name: 'Listcorp', url: 'https://www.listcorp.com/asx:${code}#news' },
-    { name: 'HotCopper', url: 'https://hotcopper.com.au/asx/${code}/' },
-    { name: 'CommSec', url: 'https://www2.commsec.com.au/quotes/summary?stockCode=${code}&exchangeCode=ASX' },
-    { name: 'Rask Media', url: 'https://www.raskmedia.com.au/asx/${code}/' },
-    { name: 'TradingView', url: 'https://www.tradingview.com/symbols/ASX-${code}/' },
-    { name: 'Google News', url: 'https://www.google.com/search?q=${code}+ASX&tbm=nws' },
-    { name: 'Motley Fool', url: 'https://www.fool.com.au/tickers/asx-${code}/' }
+    { displayName: 'Yahoo Finance', url: 'https://au.finance.yahoo.com/quote/${code}.AX', description: 'Financial news, data and stock quotes.' },
+    { displayName: 'Google Finance', url: 'https://www.google.com/finance/quote/${code}:ASX', description: 'Real-time stock quotes and financial news.' },
+    { displayName: 'ASX Official', url: 'https://www2.asx.com.au/markets/company/${code}', description: 'Official ASX company page and data.' },
+    { displayName: 'Market Index', url: 'https://www.marketindex.com.au/asx/${code}', description: 'ASX stock market data and insights.' },
+    { displayName: 'Market Announcements', url: 'https://www.marketindex.com.au/asx/${code}/announcements', description: 'Latest company announcements and filings.' },
+    { displayName: 'MarketWatch', url: 'https://www.marketwatch.com/investing/stock/${code}?countrycode=au&mod=search_symbol', description: 'Stock market news and financial information.' },
+    { displayName: 'Small Caps', url: 'https://smallcaps.com.au/stocks/asx-${code}#overview', description: 'News on ASX listed small cap companies.' },
+    { displayName: 'Listcorp', url: 'https://www.listcorp.com/asx:${code}#news', description: 'Company information and investor relations.' },
+    { displayName: 'HotCopper', url: 'https://hotcopper.com.au/asx/${code}/', description: 'Australias largest stock market forum.' },
+    { displayName: 'CommSec', url: 'https://www2.commsec.com.au/quotes/summary?stockCode=${code}&exchangeCode=ASX', description: 'Online stockbroking and investment platform.' },
+    { displayName: 'Rask Media', url: 'https://www.raskmedia.com.au/asx/${code}/', description: 'Investment news and financial education.' },
+    { displayName: 'TradingView', url: 'https://www.tradingview.com/symbols/ASX-${code}/', description: 'Charting platform and social network.' },
+    { displayName: 'Google News', url: 'https://www.google.com/search?q=${code}+ASX&tbm=nws', description: 'Latest news headlines for this stock.' },
+    { displayName: 'Motley Fool', url: 'https://www.fool.com.au/tickers/asx-${code}/', description: 'Investing news and stock analysis.' }
 ];
 
 
@@ -1478,6 +1480,12 @@ export const IDS = {
     NEW_STOCK_CODE: 'new-stock-code',
 
     // Research & Sort Modals
+    MODAL_RESEARCH_LINKS: 'modal-research-links',
+    RESEARCH_LINKS_LIST: 'research-links-list',
+    ADD_RESEARCH_LINK_BTN: 'add-research-link-btn',
+    RESEARCH_LINKS_TITLE: 'research-links-title',
+    RESEARCH_LINKS_CHEVRON: 'research-links-chevron',
+    RESEARCH_LINKS_TITLE_DETAILS: 'research-links-title-details',
     RESEARCH_MODAL: 'research-modal',
     SORT_PICKER_MODAL: 'sort-picker-modal',
     SORT_MODE_CONTAINER: 'sort-mode-container',

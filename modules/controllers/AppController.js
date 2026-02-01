@@ -24,6 +24,7 @@ import { QuickNavUI } from '../ui/QuickNavUI.js'; // Added
 import { notificationStore } from '../state/NotificationStore.js';
 import { DashboardViewRenderer } from '../ui/DashboardViewRenderer.js?v=1075';
 import { ModalController } from './ModalController.js?v=1040';
+import ResearchLinksUI from '../ui/ResearchLinksUI.js';
 import { CashController } from './CashController.js';
 import { SecurityController } from './SecurityController.js';
 import { SecurityUI } from '../ui/SecurityUI.js';
@@ -209,9 +210,7 @@ export class AppController {
         document.addEventListener(EVENTS.OPEN_SETTINGS, () => {
             SettingsUI.showModal(AppState.user?.uid);
         });
-        document.addEventListener(EVENTS.OPEN_FAVORITE_LINKS, () => {
-            FavoriteLinksUI.showModal();
-        });
+
         document.addEventListener(EVENTS.SHOW_DAILY_BRIEFING, () => BriefingUI.show());
 
         document.addEventListener(EVENTS.OPEN_PORTFOLIO_CHART, () => {
@@ -427,8 +426,13 @@ export class AppController {
         // Logic in main.js used 'headerLayout.closeSidebar' in callbacks. 
         // We can expose a method on AppController for this.
 
+        // 3d. Initialize Core Feature UIs
+        ResearchLinksUI.init();
+        FavoriteLinksUI.init();
+
         // 4. Auth Observation
         AuthService.observeState((user) => this.handleAuthStateChange(user));
+
 
         // 5. Default Dark Theme Enforced
         document.body.classList.add(CSS_CLASSES.DARK_THEME);
@@ -2373,11 +2377,20 @@ export class AppController {
             }
         });
 
-        // === DISCOVERY MODAL EVENT LISTENERS ===
         // Open Search Discovery Modal (from sidebar button)
         document.addEventListener(EVENTS.REQUEST_OPEN_DISCOVERY_MODAL, () => {
             // Already includes delay in HeaderLayout, but for redundancy/consistency:
             SearchDiscoveryUI.showModal();
+        });
+
+        // Research Links Management Listener
+        document.addEventListener('REQUEST_RESEARCH_LINKS_MANAGE', () => {
+            // Delay to ensure the detail modal's historical context is clear
+            setTimeout(() => {
+                import('../ui/ResearchLinksUI.js').then(module => {
+                    module.default.show();
+                });
+            }, 150);
         });
 
         // Handle Add Share Pre-fill (from Discovery Modal -> Add Share Modal handoff)

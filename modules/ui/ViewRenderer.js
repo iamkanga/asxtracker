@@ -729,13 +729,29 @@ export class ViewRenderer {
         const trendBgClass = isPos ? CSS_CLASSES.TREND_UP_BG : (isNeg ? CSS_CLASSES.TREND_DOWN_BG : CSS_CLASSES.TREND_NEUTRAL_BG);
 
         const modal = document.createElement('div');
-        modal.id = IDS.STOCK_DETAILS_MODAL;
         modal.className = `${CSS_CLASSES.MODAL} ${CSS_CLASSES.HIDDEN}`;
+        modal.dataset.stockCode = stock.code;
 
-        // Research Links Map
-        const links = RESEARCH_LINKS_TEMPLATE.map(link => ({
-            name: link.name,
-            url: link.url.replace(/\${code}/g, stock.code)
+        window.addEventListener(EVENTS.RESEARCH_LINKS_UPDATED, () => {
+            const modalToUpdate = document.getElementById(IDS.STOCK_DETAILS_MODAL);
+            if (modalToUpdate && !modalToUpdate.classList.contains(CSS_CLASSES.HIDDEN) && modalToUpdate.dataset.stockCode === stock.code) {
+                const freshStock = AppState.data.shares.find(s => s.id === stock.id);
+                if (freshStock) {
+                    this.renderStockDetailsModal(freshStock);
+                }
+            }
+        }, { once: true });
+
+
+        // Research Links
+        const rawLinks = AppState.preferences.researchLinks && AppState.preferences.researchLinks.length > 0
+            ? AppState.preferences.researchLinks
+            : RESEARCH_LINKS_TEMPLATE;
+
+        const links = rawLinks.map(link => ({
+            displayName: link.displayName || link.name,
+            url: link.url.split('${code}').join(stock.code),
+            description: link.description || ''
         }));
 
         const safeVal = (v, fmt) => (v !== undefined && v !== null && v !== 0) ? fmt(v) : '-';
@@ -1015,24 +1031,29 @@ export class ViewRenderer {
                             <!-- Card 6: Research -->
                             <div class="${CSS_CLASSES.DETAIL_CARD} ${trendBgClass}">
                                 <div class="${CSS_CLASSES.DETAIL_CARD_HEADER}">
-                                    <h3 class="${CSS_CLASSES.DETAIL_LABEL}">
+                                    <h3 id="${IDS.RESEARCH_LINKS_TITLE_DETAILS}" class="${CSS_CLASSES.DETAIL_LABEL} clickable" style="width: 100%;">
                                         <i class="fas ${UI_ICONS.GLOBE}"></i> Research
+                                        <i class="fas fa-chevron-right research-chevron"></i>
                                     </h3>
                                 </div>
-                                <div class="${CSS_CLASSES.EXTERNAL_LINKS_GRID}">
+                                <div class="research-links-grid">
                                     ${links.map(link => {
+            const finalLink = typeof link === 'string' ? { name: link, url: link } : link;
             let hostname = '';
             try {
-                hostname = new URL(link.url).hostname;
+                hostname = new URL(finalLink.url).hostname;
             } catch (e) {
-                console.warn('Invalid URL for favicon:', link.url);
+                console.warn('Invalid URL for favicon:', finalLink.url);
             }
             const faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
 
             return `
-                                            <a href="${link.url}" target="_blank" class="${CSS_CLASSES.EXTERNAL_LINK}">
-                                                <img src="${faviconUrl}" alt="" style="width: 16px; height: 16px; border-radius: 2px;">
-                                                <span class="${CSS_CLASSES.LINK_TEXT}">${link.name}</span>
+                                            <a href="${finalLink.url}" target="_blank" class="research-link-btn">
+                                                <img src="${faviconUrl}" class="link-favicon" alt="">
+                                                <div class="link-info-stack">
+                                                    <span class="link-name">${finalLink.displayName || finalLink.name}</span>
+                                                    <span class="link-desc">${finalLink.description || ''}</span>
+                                                </div>
                                             </a>
                                         `;
         }).join('')}
@@ -1139,11 +1160,19 @@ export class ViewRenderer {
                 // REMOVED close() to allow stacking and "Step Back" support.
                 // Details modal stays open, Edit modal pushes on top.
 
-                // Delay opening new modal to allow history to settle (lock safety)
                 setTimeout(() => {
                     const event = new CustomEvent(EVENTS.REQUEST_EDIT_SHARE, { detail: { code: stock.code, id: stock.id } });
                     document.dispatchEvent(event);
                 }, 150);
+            });
+        }
+
+        // Research Links Management Handler
+        const researchTitle = modal.querySelector(`#${IDS.RESEARCH_LINKS_TITLE_DETAILS}`);
+        if (researchTitle) {
+            researchTitle.addEventListener('click', () => {
+                const event = new CustomEvent('REQUEST_RESEARCH_LINKS_MANAGE');
+                document.dispatchEvent(event);
             });
         }
 
@@ -1264,9 +1293,13 @@ export class ViewRenderer {
         // cleanup
         document.getElementById(IDS.RESEARCH_MODAL)?.remove();
 
-        // Template Replacement
-        const linksHtml = RESEARCH_LINKS_TEMPLATE.map(link => {
-            const url = link.url.replace(/\${code}/g, stock.code);
+        // Research Links
+        const rawLinks = AppState.preferences.researchLinks && AppState.preferences.researchLinks.length > 0
+            ? AppState.preferences.researchLinks
+            : RESEARCH_LINKS_TEMPLATE;
+
+        const linksHtml = rawLinks.map(link => {
+            const url = link.url.split('${code}').join(stock.code);
             let hostname = '';
             try {
                 hostname = new URL(url).hostname;
@@ -1276,9 +1309,12 @@ export class ViewRenderer {
             const faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
 
             return `
-                <a href="${url}" target="_blank" rel="noopener noreferrer" class="${CSS_CLASSES.RESEARCH_LINK_CARD}">
-                     <img src="${faviconUrl}" alt="" style="width: 16px; height: 16px; border-radius: 2px;">
-                    <span class="${CSS_CLASSES.LINK_TEXT}">${link.name}</span>
+                <a href="${url}" target="_blank" rel="noopener noreferrer" class="research-link-btn">
+                    <img src="${faviconUrl}" class="link-favicon" alt="">
+                    <div class="link-info-stack">
+                        <span class="link-name">${link.displayName || link.name}</span>
+                        <span class="link-desc">${link.description || ''}</span>
+                    </div>
                 </a>
             `;
         }).join('');
@@ -1342,13 +1378,21 @@ export class ViewRenderer {
                         </div>
 
                         <!-- Research Links Grid -->
-                        <h4 class="${CSS_CLASSES.SECTION_TITLE}">Research Tools</h4>
-                        <div class="${CSS_CLASSES.RESEARCH_LINKS_GRID}">
+                        <h4 id="research-discovery-tools-title" class="${CSS_CLASSES.SECTION_TITLE} clickable">
+                            Research Tools <i class="fas fa-chevron-right research-chevron"></i>
+                        </h4>
+                        <div class="research-links-grid">
                             ${linksHtml}
                         </div>
                     </div>
                 </div>
         `;
+
+        // Bind Events
+        modal.querySelector('#research-discovery-tools-title').addEventListener('click', () => {
+            const event = new CustomEvent('REQUEST_RESEARCH_LINKS_MANAGE');
+            document.dispatchEvent(event);
+        });
 
         // Bind Events
         const close = () => {

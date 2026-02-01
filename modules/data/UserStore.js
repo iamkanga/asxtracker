@@ -596,11 +596,11 @@ export class UserStore {
         }
         const docRef = doc(db, `artifacts/${APP_ID}/users/${userId}/preferences/config`);
         try {
-            // DEEP EQUALITY CHECK: Skip update if data hasn't changed
-            const currentJson = JSON.stringify(data);
-            if (this._lastPrefsJson === currentJson) {
-                return;
-            }
+            // DEEP EQUALITY CHECK REMOVED FOR RELIABILITY
+            // const currentJson = JSON.stringify(data);
+            // if (this._lastPrefsJson === currentJson) {
+            //     return;
+            // }
 
             // Debug check for the specific failure point
             if (data.userCategories) {
@@ -611,7 +611,7 @@ export class UserStore {
                 updatedAt: serverTimestamp()
             }, { merge: true });
 
-            this._lastPrefsJson = currentJson; // Update cache
+            // this._lastPrefsJson = currentJson; // Update cache
 
         } catch (e) {
             this._handleWriteError(e, 'savePreferences');
