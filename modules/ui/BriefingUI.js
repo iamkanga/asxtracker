@@ -11,6 +11,7 @@ import { navManager } from '../utils/NavigationManager.js';
 import { formatCurrency, formatPercent } from '../utils/formatters.js';
 import { SnapshotUI } from './SnapshotUI.js';
 import { NotificationUI } from './NotificationUI.js';
+import { LinkHelper } from '../utils/LinkHelper.js';
 
 
 export class BriefingUI {
@@ -598,21 +599,11 @@ Please summarize the current trends and what I should be watching.`;
         };
 
         if (askBtn) {
-            // Prep clipboard on contextmenu (native long-press trigger)
-            askBtn.addEventListener('contextmenu', async (e) => {
-                try {
-                    const prompt = getDeepDivePrompt();
-                    await navigator.clipboard.writeText(prompt);
-                } catch (err) {
-                    console.warn('Clipboard prep failed', err);
-                }
-            });
-
-            askBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                handleAsk(e);
-            });
+            LinkHelper.bindGeminiInteraction(
+                askBtn,
+                () => getDeepDivePrompt(),
+                (e) => handleAsk(e)
+            );
         }
 
         if (askInput) askInput.addEventListener('keypress', (e) => {

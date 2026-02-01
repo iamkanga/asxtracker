@@ -1,9 +1,10 @@
-import { UI_ICONS, CSS_CLASSES, RESEARCH_LINKS_TEMPLATE, IDS, EVENTS, UI_LABELS } from '../utils/AppConstants.js';
+import { UI_ICONS, CSS_CLASSES, RESEARCH_LINKS_TEMPLATE, IDS, EVENTS, UI_LABELS, KANGAROO_ICON_SRC } from '../utils/AppConstants.js';
 import { formatCurrency, formatPercent } from '../utils/formatters.js';
 import { AppState } from '../state/AppState.js';
 import { navManager } from '../utils/NavigationManager.js';
 import { ChartModal, ChartComponent } from './ChartModal.js';
 import { ToastManager } from './ToastManager.js';
+import { LinkHelper } from '../utils/LinkHelper.js';
 
 /**
  * SearchDiscoveryUI.js
@@ -270,9 +271,12 @@ export class SearchDiscoveryUI {
                     <div style="flex: 1;">
                         <a href="https://gemini.google.com/app" target="_blank" id="gemini-discovery-link" role="link" aria-label="Ask AI Deep Dive" style="text-decoration: none; color: inherit; display: block; -webkit-touch-callout: default !important; user-select: auto !important;">
                             <div style="display: flex; flex-direction: column; gap: 4px;">
-                                <div style="display: flex; align-items: center; gap: 0;">
-                                    <h2 style="font-size: 1.8rem; font-weight: 800; margin: 0; line-height: 1; letter-spacing: -0.5px; color: var(--text-color);">${stock.code}</h2>
-                                    <span style="display: inline-block; width: 2.5ch;"></span>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <div class="card-code-pill" style="background: none; border: none; padding: 0; gap: 8px; display: inline-flex; align-items: center;">
+                                        <img src="https://files.marketindex.com.au/xasx/96x96-png/${stock.code.toLowerCase()}.png" class="favicon-icon" style="width: 24px; height: 24px;" onerror="this.src='${KANGAROO_ICON_SRC}'" alt="">
+                                        <h2 style="font-size: 1.8rem; font-weight: 800; margin: 0; line-height: 1; letter-spacing: -0.5px; color: var(--text-color);">${stock.code}</h2>
+                                    </div>
+                                    <span style="display: inline-block; width: 1.5ch;"></span>
                                     <img src="gemini-icon.png" style="width: 20px; height: 20px; pointer-events: none; vertical-align: middle;">
                                 </div>
                                 <span style="font-size: 0.95rem; color: var(--text-muted); font-weight: 500; opacity: 0.9;">${stock.name}</span>
@@ -363,44 +367,27 @@ export class SearchDiscoveryUI {
         // Gemini Interaction Binding
         const geminiLink = container.querySelector('#gemini-discovery-link');
         if (geminiLink) {
-            const getPrompt = () => {
-                return `Summarize the latest technical and fundamental developments for ${stock.code} on the ASX. Focus on recent price action, volume, and any relevant news or upcoming announcements. Provide a comprehensive outlook.`;
-            };
+            LinkHelper.bindGeminiInteraction(
+                geminiLink,
+                () => `Summarize the latest technical and fundamental developments for ${stock.code} on the ASX. Focus on recent price action, volume, and any relevant news or upcoming announcements. Provide a comprehensive outlook.`,
+                () => {
+                    const symbol = stock.code;
+                    const change = stock.change || 0;
+                    const sector = stock.sector || '';
 
-            const handleShortPress = () => {
-                const symbol = stock.code;
-                const change = stock.change || 0;
-                const sector = stock.sector || '';
-
-                ToastManager.show(`${UI_LABELS.ASKING_GEMINI} ${symbol}...`, 'info');
-                import('../data/DataService.js').then(({ DataService }) => {
-                    const ds = new DataService();
-                    ds.askGemini('explain', '', { symbol, change, sector }).then(res => {
-                        if (res.ok) {
-                            alert(`${UI_LABELS.AI_INSIGHT_FOR} ${symbol}:\n\n${res.text}`);
-                        } else {
-                            ToastManager.show(`${UI_LABELS.ANALYSIS_FAILED} ` + (res.error || 'Unknown error'), 'error');
-                        }
+                    ToastManager.show(`${UI_LABELS.ASKING_GEMINI} ${symbol}...`, 'info');
+                    import('../data/DataService.js').then(({ DataService }) => {
+                        const ds = new DataService();
+                        ds.askGemini('explain', '', { symbol, change, sector }).then(res => {
+                            if (res.ok) {
+                                alert(`${UI_LABELS.AI_INSIGHT_FOR} ${symbol}:\n\n${res.text}`);
+                            } else {
+                                ToastManager.show(`${UI_LABELS.ANALYSIS_FAILED} ` + (res.error || 'Unknown error'), 'error');
+                            }
+                        });
                     });
-                });
-            };
-
-            // Deep Dive Clipboard Prep on contextmenu (native long-press trigger)
-            geminiLink.addEventListener('contextmenu', async (e) => {
-                try {
-                    const prompt = getPrompt();
-                    await navigator.clipboard.writeText(prompt);
-                } catch (err) {
-                    console.warn('Clipboard prep failed', err);
                 }
-            });
-
-            // Tap Interception for Internal AI
-            geminiLink.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                handleShortPress();
-            });
+            );
         }
     }
 }

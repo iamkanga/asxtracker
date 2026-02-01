@@ -1,5 +1,5 @@
 import { formatCurrency } from '../utils/formatters.js';
-import { UI_ICONS, CSS_CLASSES, IDS } from '../utils/AppConstants.js';
+import { UI_ICONS, CSS_CLASSES, IDS, KANGAROO_ICON_SRC } from '../utils/AppConstants.js';
 import { AppState } from '../state/AppState.js';
 import { navManager } from '../utils/NavigationManager.js';
 
@@ -542,7 +542,8 @@ export class ChartModal {
             <div class="${CSS_CLASSES.CHART_MODAL_CONTENT}" style="width: 95%; height: 85%; max-width: 900px; display:flex; flex-direction:column; background:var(--card-bg); border-radius:12px; overflow:hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
                 <!-- Header -->
                 <div class="chart-modal-header" style="display:flex; justify-content:space-between; align-items:center; padding:8px 16px; border-bottom:1px solid var(--border-color);">
-                    <div>
+                    <div class="card-code-pill" style="background: none; border: none; padding: 0; gap: 8px; display: inline-flex; align-items: center;">
+                        <img src="https://files.marketindex.com.au/xasx/96x96-png/${code.toLowerCase()}.png" class="favicon-icon" style="width: 20px; height: 20px;" onerror="this.src='${KANGAROO_ICON_SRC}'" alt="">
                         <h3 style="margin:0; font-size:1.2rem; font-weight:700;">${code}</h3>
                     </div>
                     <div style="display:flex; gap:12px;">

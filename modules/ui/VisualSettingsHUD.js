@@ -127,8 +127,9 @@ export class VisualSettingsHUD {
                  <div class="hud-section" style="display: flex; flex-direction: row; gap: 20px; align-items: center; padding: 0 10px; width: 100%; box-sizing: border-box; justify-content: space-between;">
                     <!-- Design Studio Button -->
                     <div style="flex: 1; display: flex;">
-                        <button class="hud-action-btn" id="open-theme-studio" style="width: 100%; padding: 12px 0; background: transparent; border: none; color: var(--color-accent); font-weight: 700; cursor: pointer; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.5px; text-align: left;">
-                            <i class="fas fa-paint-brush" style="margin-right: 6px;"></i> Design Studio
+                        <button class="hud-action-btn" id="open-theme-studio" style="width: 100%; padding: 12px 0; background: transparent; border: none; color: var(--color-accent); font-weight: 700; cursor: pointer; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.5px; display: flex; align-items: center; justify-content: flex-start; gap: 10px;">
+                            <span><i class="fas fa-paint-brush"></i> Design Studio</span>
+                            <i class="fas fa-chevron-up" style="font-size: 0.7rem; opacity: 0.5;"></i>
                         </button>
                     </div>
 
@@ -376,7 +377,11 @@ export class VisualSettingsHUD {
         // --- BINDINGS ---
 
         // Close
-        container.querySelector('#hud-close-btn').addEventListener('click', () => this.hide());
+        container.querySelector('#hud-close-btn').addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.hide();
+        });
 
         // Borders (Edges)
         const edges = container.querySelectorAll('.b-edge');
@@ -408,12 +413,24 @@ export class VisualSettingsHUD {
             document.dispatchEvent(new CustomEvent(EVENTS.REFRESH_WATCHLIST));
         });
 
+        // Global Listeners (First time only)
+        if (!VisualSettingsHUD._globalBound) {
+            VisualSettingsHUD._globalBound = true;
+            document.addEventListener('hide-visual-hud', () => VisualSettingsHUD.hide());
+            document.addEventListener('show-visual-hud', () => {
+                const hud = document.getElementById(VisualSettingsHUD.ID);
+                if (hud) hud.classList.add('visible');
+            });
+        }
+
         // Theme Studio Trigger
         const studioBtn = container.querySelector('#open-theme-studio');
         if (studioBtn) {
             studioBtn.addEventListener('click', () => {
-                VisualSettingsHUD.hide(); // Hide current HUD
-                ThemeStudio.show();      // Show Studio
+                // User Requirement: Stacked Navigation.
+                // We slide the primary HUD down but don't destroy it.
+                container.classList.remove('visible');
+                ThemeStudio.show();
             });
         }
 

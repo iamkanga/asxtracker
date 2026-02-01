@@ -2359,6 +2359,103 @@ h1#dynamicWatchlistTitle.active {
     box-sizing: border-box;
 }
 
+/* --- Balanced 2-Row Unified Overhaul --- */
+.share-card.unified-layout {
+    height: 74px;
+    /* Reduced from 88px */
+    padding: 8px 14px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.card-main-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.card-left-col {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+    flex: 2;
+}
+
+.card-right-col {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: center;
+    flex: 1.2;
+    text-align: right;
+    gap: 0px;
+}
+
+.card-row-utility {
+    display: flex;
+    justify-content: flex-start;
+    gap: 12px;
+    align-items: center;
+    height: 20px;
+    margin-top: 2px;
+    padding-top: 0;
+}
+
+.card-code-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0;
+    background: transparent;
+    border: none !important;
+    border-radius: 0;
+    font-weight: 700;
+    font-size: 1.15rem;
+    color: #ffffff;
+}
+
+.favicon-icon {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    object-fit: contain;
+    background: white;
+    padding: 2px;
+}
+
+.utility-slot {
+    display: flex;
+    align-items: center;
+    font-size: 0.82rem;
+    color: var(--color-accent);
+    opacity: 0.6;
+    font-weight: 500;
+}
+
+.card-change-stack {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: -2px;
+}
+
+.utility-slot.has-content {
+    opacity: 0.5;
+    /* Maintain ghosted even with content */
+}
+
+.utility-icon {
+    margin-right: 5px;
+    font-size: 0.9rem;
+    color: inherit !important;
+    /* Force heritage over global trend overrides */
+    opacity: 1;
+    /* Opacity handled by parent slot */
+}
+
 .share-card.trend-up {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
 }
@@ -2372,8 +2469,35 @@ h1#dynamicWatchlistTitle.active {
 }
 
 .share-card.ghosted {
-    opacity: 0.35;
-    filter: grayscale(0.8);
+    opacity: 0.85;
+    /* Increased for readability */
+    filter: saturate(0.2);
+    background: linear-gradient(135deg, #1e1e1e 0%, #121212 100%) !important;
+    border: 2px dashed rgba(255, 255, 255, 0.15) !important;
+    box-shadow: none !important;
+    transform: scale(0.99);
+    transition: all 0.3s ease;
+}
+
+.share-card.ghosted:hover {
+    opacity: 1;
+    transform: scale(1);
+    background: linear-gradient(135deg, #252525 0%, #181818 100%) !important;
+}
+
+/* Stock Code remains Full Strength for identification */
+.share-card.ghosted .card-code {
+    color: #ffffff !important;
+    opacity: 1 !important;
+}
+
+.share-card.ghosted .card-price,
+.share-card.ghosted .change-value,
+.share-card.ghosted .change-percent,
+.share-card.ghosted .detail-label,
+.share-card.ghosted .detail-value {
+    color: var(--text-muted) !important;
+    opacity: 0.7;
 }
 
 .share-card.ghosted .visibility-toggle-btn {
@@ -2406,7 +2530,6 @@ h1#dynamicWatchlistTitle.active {
 .card-price {
     font-size: 1.3rem;
     color: var(--text-color);
-    /* Was var(--text-inverse), likely causing white-on-white issues */
     flex: 2;
     text-align: center;
     font-weight: 500;
@@ -2416,6 +2539,23 @@ h1#dynamicWatchlistTitle.active {
     line-height: 1.1;
     flex: 1;
     text-align: right;
+}
+
+.unified-layout .card-price {
+    font-size: 1.15rem;
+    color: var(--text-color);
+    flex: none;
+    text-align: right;
+    font-weight: 700;
+}
+
+.unified-layout .card-change-col {
+    line-height: 1.1;
+    flex: none;
+    text-align: right;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
 }
 
 .change-value {
@@ -2467,6 +2607,31 @@ h1#dynamicWatchlistTitle.active {
 .visibility-toggle-btn:hover {
     opacity: 1;
     transform: scale(1.1);
+}
+
+.portfolio-visibility-btn {
+    position: absolute;
+    bottom: 2px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-accent) !important;
+    opacity: 0.4;
+    padding: 0;
+    margin: 0;
+}
+
+.portfolio-visibility-btn i {
+    font-size: 0.85rem;
+}
+
+.portfolio-visibility-btn:hover {
+    opacity: 1;
 }
 
 /* Removed old card styles */

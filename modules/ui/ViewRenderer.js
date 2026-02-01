@@ -335,10 +335,15 @@ export class ViewRenderer {
 
         return `
             <tr data-id="${item.id}" data-code="${item.code}" class="${trendClass} ${gradeClass}" style="${borderStyle}">
-                <td class="${CSS_CLASSES.CODE_CELL} ${CSS_CLASSES.FONT_BOLD}">${item.code}</td>
+                <td class="${CSS_CLASSES.CODE_CELL} ${CSS_CLASSES.FONT_BOLD}">
+                    <div class="card-code-pill" style="background: none; border: none; padding: 0; gap: 6px; display: inline-flex; align-items: center; vertical-align: middle;">
+                        <img src="https://files.marketindex.com.au/xasx/96x96-png/${item.code.toLowerCase()}.png" class="favicon-icon" style="width: 14px; height: 14px;" onerror="this.src='${KANGAROO_ICON_SRC}'" alt="">
+                        <span>${item.code}</span>
+                    </div>
+                </td>
                 <td>${formatCurrency(price)}</td>
                 <td class="${CSS_CLASSES.DESKTOP_ONLY} ${changeValue >= 0 ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE} ${CSS_CLASSES.CHANGE_VALUE}">
-                    ${formatCurrency(changeValue)} (${formatPercent(changePercent)})
+                    ${formatCurrency(Math.abs(changeValue))} (${formatPercent(changePercent)})
                 </td>
                 ${extraCells}
             </tr>
@@ -379,7 +384,7 @@ export class ViewRenderer {
         if (type === PORTFOLIO_ID) {
             const value = item.value || 0;
             const capitalGain = item.capitalGain || 0;
-            const ghostClass = item.isGhost ? CSS_CLASSES.GHOSTED : '';
+            const ghostClass = (item.isGhost || item.isHidden) ? CSS_CLASSES.GHOSTED : '';
             const eyeIcon = item.isHidden ? UI_ICONS.EYE_SLASH : UI_ICONS.EYE;
 
             // For the new Portfolio Card, always use TOTAL holding change
@@ -396,18 +401,16 @@ export class ViewRenderer {
                 <div class="${CSS_CLASSES.CARD} ${trendClass} ${gradeClass} ${ghostClass}" data-id="${item.id}" data-code="${item.code}" style="${borderStyle}">
                     ${chartBgHtml}
                     <div class="${CSS_CLASSES.CARD_HEADER_ROW} ${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.JUSTIFY_BETWEEN} ${CSS_CLASSES.ALIGN_START} ${CSS_CLASSES.W_FULL} ${CSS_CLASSES.MB_2PX} ${CSS_CLASSES.BORDER_NONE}" style="position:relative; z-index:1;">
-                        <div class="${CSS_CLASSES.CARD_HEADER_LEFT} ${CSS_CLASSES.FLEX_COLUMN} ${CSS_CLASSES.ALIGN_START} ${CSS_CLASSES.GAP_SMALL}">
-                            <span class="${CSS_CLASSES.CARD_CODE}" data-code="${item.code}">${item.code}</span>
-                            <button class="${CSS_CLASSES.ICON_BTN_GHOST} ${CSS_CLASSES.VISIBILITY_TOGGLE_BTN} ${CSS_CLASSES.P_0} ${CSS_CLASSES.TEXT_SM} ${CSS_CLASSES.MT_NEG_2PX}" 
-                                    onclick="event.stopPropagation(); document.dispatchEvent(new CustomEvent('${EVENTS.SHARE_TOGGLE_VISIBILITY}', { detail: { id: '${item.id}' } }))"
-                                    title="${item.isHidden ? 'Show Share' : 'Hide Share'}">
-                                <i class="fas ${eyeIcon}"></i>
-                            </button>
+                        <div class="${CSS_CLASSES.CARD_HEADER_LEFT} ${CSS_CLASSES.FLEX_COLUMN} ${CSS_CLASSES.ALIGN_START}">
+                            <div class="card-code-pill" style="background: none; border: none; padding: 0; gap: 6px;">
+                                <img src="https://files.marketindex.com.au/xasx/96x96-png/${item.code.toLowerCase()}.png" class="favicon-icon" onerror="this.src='${KANGAROO_ICON_SRC}'" alt="">
+                                <span class="${CSS_CLASSES.CARD_CODE}" data-code="${item.code}">${item.code}</span>
+                            </div>
                         </div>
                         <span class="${CSS_CLASSES.CARD_PRICE} ${CSS_CLASSES.TEXT_CENTER} ${CSS_CLASSES.FLEX_2}">${formatCurrency(price)}</span>
                         <div class="${CSS_CLASSES.CARD_CHANGE_COL} ${CSS_CLASSES.FLEX_COLUMN} ${CSS_CLASSES.ALIGN_END}">
                             <span class="${CSS_CLASSES.CHANGE_VALUE} ${displayChangeValue >= 0 ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}">
-                                ${formatCurrency(displayChangeValue)}
+                                ${formatCurrency(Math.abs(displayChangeValue))}
                             </span>
                             <span class="${CSS_CLASSES.CHANGE_PERCENT} ${CSS_CLASSES.TEXT_SM} ${changePercent >= 0 ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}">
                                 ${formatPercent(changePercent)}
@@ -427,6 +430,13 @@ export class ViewRenderer {
                             </span>
                         </div>
                     </div>
+
+                    <!-- Visibility Toggle (Portfolio Corner) -->
+                    <button class="${CSS_CLASSES.ICON_BTN_GHOST} ${CSS_CLASSES.VISIBILITY_TOGGLE_BTN} portfolio-visibility-btn" 
+                            onclick="event.stopPropagation(); document.dispatchEvent(new CustomEvent('${EVENTS.SHARE_TOGGLE_VISIBILITY}', { detail: { id: '${item.id}' } }))"
+                            title="${item.isHidden ? 'Show Share' : 'Hide Share'}">
+                        <i class="fas ${eyeIcon}"></i>
+                    </button>
                 </div>
             `;
         } else if (type === 'watchlist') {
@@ -434,65 +444,55 @@ export class ViewRenderer {
             const hasStars = item.starRating && item.starRating !== 0;
             const hasComments = item.comments && item.comments.length > 0;
 
-            const alertHtml = hasAlert ? (() => {
-                const isSell = item.buySell === 'sell';
-                const letter = isSell ? 'S' : 'B';
-                const icon = isSell ? UI_ICONS.CARET_UP : UI_ICONS.CARET_DOWN;
-                const colorClass = isSell ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE;
-                return `
-                <div class="${CSS_CLASSES.DETAIL_ROW} ${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.JUSTIFY_BETWEEN} ${CSS_CLASSES.MB_4PX} ${CSS_CLASSES.ALIGN_BASELINE}">
-                    <span class="${CSS_CLASSES.DETAIL_LABEL} ${CSS_CLASSES.LINE_HEIGHT_1} ${CSS_CLASSES.FONT_SIZE_0_7_REM} ${CSS_CLASSES.TEXT_NORMAL_CASE}">Alert target</span>
-                    <span class="${CSS_CLASSES.DETAIL_VALUE} ${CSS_CLASSES.TEXT_MUTED} ${CSS_CLASSES.LINE_HEIGHT_1} ${CSS_CLASSES.FONT_SIZE_0_7_REM}" data-target="${item.targetPrice}">
-                        <span class="${CSS_CLASSES.PRIMARY_TEXT} ${CSS_CLASSES.TEXT_700} ${CSS_CLASSES.MR_TINY}">${letter}</span><i class="fas ${icon} ${colorClass} ${CSS_CLASSES.FONT_SIZE_0_7_REM} ${CSS_CLASSES.MR_2PX} ${CSS_CLASSES.OPACITY_100}"></i>${formatCurrency(item.targetPrice)}
-                    </span>
-                </div>`;
-            })() : '';
+            const faviconUrl = `https://files.marketindex.com.au/xasx/96x96-png/${item.code.toLowerCase()}.png`;
 
-            const starsHtml = hasStars ? `
-                <div class="${CSS_CLASSES.DETAIL_ROW} ${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.JUSTIFY_END} ${CSS_CLASSES.MB_4PX} ${CSS_CLASSES.ALIGN_BASELINE} ${CSS_CLASSES.W_FULL}">
-                    <span class="${CSS_CLASSES.DETAIL_VALUE} ${CSS_CLASSES.TEXT_MUTED} ${CSS_CLASSES.LINE_HEIGHT_1} ${CSS_CLASSES.FONT_SIZE_0_7_REM}">
-                        ${Array(item.starRating).fill(`<i class="fas ${UI_ICONS.STAR} ${CSS_CLASSES.FONT_SIZE_0_7_REM} ${CSS_CLASSES.TEXT_COFFEE} ${CSS_CLASSES.OPACITY_70}"></i>`).join('')}
-                    </span>
-                </div>` : '';
+            // Row 2: Utility Slots (Status Badges)
+            const targetSlot = hasAlert ? `
+                <div class="utility-slot has-content" data-action="deep-link" data-id="${item.id}" data-section="target">
+                    <i class="fas ${item.buySell === 'sell' ? UI_ICONS.CARET_UP : UI_ICONS.CARET_DOWN} utility-icon"></i>
+                    ${formatCurrency(item.targetPrice)}
+                </div>` : '<div class="utility-slot"></div>';
 
-            const commentsHtml = hasComments ? `
-                <div class="${CSS_CLASSES.DETAIL_ROW} ${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.JUSTIFY_START} ${CSS_CLASSES.MB_0PX}">
-                    <span class="${CSS_CLASSES.DETAIL_VALUE} ${CSS_CLASSES.TEXT_MUTED} ${CSS_CLASSES.TEXT_XXS} ${CSS_CLASSES.W_FULL} ${CSS_CLASSES.TEXT_OVERFLOW_ELLIPSIS} ${CSS_CLASSES.OVERFLOW_HIDDEN} ${CSS_CLASSES.WHITESPACE_NOWRAP} ${CSS_CLASSES.LINE_HEIGHT_1} ${CSS_CLASSES.FONT_SIZE_0_7_REM}">${item.comments[item.comments.length - 1].body}</span>
-                </div>` : '';
+            const starsSlot = hasStars ? `
+                <div class="utility-slot has-content" data-action="deep-link" data-id="${item.id}" data-section="rating">
+                    <i class="fas ${UI_ICONS.STAR} utility-icon"></i>
+                    ${item.starRating}
+                </div>` : '<div class="utility-slot"></div>';
 
-            const hasMetadata = hasAlert || hasStars || hasComments;
-            const metadataSection = hasMetadata ? `
-                <div class="${CSS_CLASSES.CARD_BODY_SECTION} ${CSS_CLASSES.W_FULL} ${CSS_CLASSES.MT_4PX} ${CSS_CLASSES.BORDER_TOP_NONE} ${CSS_CLASSES.PT_0}">
-                    <!-- Alerts Deep Link -->
-                    <div data-action="deep-link" data-id="${item.id}" data-section="target" class="${CSS_CLASSES.CURSOR_POINTER} ${CSS_CLASSES.RELATIVE} ${CSS_CLASSES.Z_10}">
-                        ${alertHtml}
-                    </div>
-                    
-                    ${starsHtml}
-
-                    <!-- Comments Deep Link -->
-                    <div data-action="deep-link" data-id="${item.id}" data-section="notes" class="${CSS_CLASSES.CURSOR_POINTER} ${CSS_CLASSES.RELATIVE} ${CSS_CLASSES.Z_10}">
-                        ${commentsHtml}
-                    </div>
-                </div>` : '';
+            const notesSlot = hasComments ? `
+                <div class="utility-slot has-content" data-action="deep-link" data-id="${item.id}" data-section="notes">
+                    <i class="fas ${UI_ICONS.COMMENTS} utility-icon" style="margin-right: 0;"></i>
+                </div>` : '<div class="utility-slot"></div>';
 
             return `
-                <div class="${CSS_CLASSES.CARD} ${trendClass} ${gradeClass} ${CSS_CLASSES.PB_4PX}" data-id="${item.id}" data-code="${item.code}" style="${borderStyle}">
-                    <div class="${CSS_CLASSES.CARD_HEADER_ROW} ${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.JUSTIFY_BETWEEN} ${CSS_CLASSES.ALIGN_START} ${CSS_CLASSES.W_FULL} ${CSS_CLASSES.MB_2PX}">
-                        <div class="${CSS_CLASSES.CARD_HEADER_LEFT} ${CSS_CLASSES.FLEX_COLUMN} ${CSS_CLASSES.ALIGN_START}">
-                            <span class="${CSS_CLASSES.CARD_CODE}" data-code="${item.code}">${item.code}</span>
+                <div class="${CSS_CLASSES.CARD} unified-layout ${trendClass} ${gradeClass}" data-id="${item.id}" data-code="${item.code}" style="${borderStyle}">
+                    <div class="card-main-content">
+                        <!-- Left Column: Identity & Utilities -->
+                        <div class="card-left-col">
+                            <div class="card-code-pill">
+                                <img src="${faviconUrl}" class="favicon-icon" onerror="this.src='${KANGAROO_ICON_SRC}'" alt="">
+                                <span>${item.code}</span>
+                            </div>
+                            
+                            <!-- Row 2: Utility Bar (Underneath Code) -->
+                            <div class="card-row-utility">
+                                ${targetSlot}
+                                ${starsSlot}
+                                ${notesSlot}
+                            </div>
                         </div>
-                        <span class="${CSS_CLASSES.CARD_PRICE} ${CSS_CLASSES.TEXT_CENTER} ${CSS_CLASSES.FLEX_2}">${formatCurrency(price)}</span>
-                        <div class="${CSS_CLASSES.CARD_CHANGE_COL} ${CSS_CLASSES.FLEX_COLUMN} ${CSS_CLASSES.ALIGN_END}">
-                            <span class="${CSS_CLASSES.CHANGE_VALUE} ${changeValue >= 0 ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}">
-                                ${formatCurrency(changeValue)}
-                            </span>
-                            <span class="${CSS_CLASSES.CHANGE_PERCENT} ${CSS_CLASSES.TEXT_SM} ${changePercent >= 0 ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}">
-                                ${formatPercent(changePercent)}
-                            </span>
+
+                        <!-- Right Column: Value & Change -->
+                        <div class="card-right-col">
+                            <span class="${CSS_CLASSES.CARD_PRICE}">${formatCurrency(price)}</span>
+                            <div class="card-change-stack">
+                                <span class="${CSS_CLASSES.CHANGE_VALUE} ${changeValue >= 0 ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}">${formatCurrency(Math.abs(changeValue))}</span>
+                                <span class="${CSS_CLASSES.CHANGE_PERCENT} ${changePercent >= 0 ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}">
+                                    (${formatPercent(changePercent)})
+                                </span>
+                            </div>
                         </div>
                     </div>
-                    ${metadataSection}
                 </div>
             `;
         } else if (type === 'compact') {
@@ -514,7 +514,10 @@ export class ViewRenderer {
                 <div class="${CSS_CLASSES.CARD} ${trendClass} ${gradeClass}" data-id="${item.id}" data-code="${item.code}" data-view="compact" style="${borderStyle}">
                     ${iconHtml}
                     <div class="${CSS_CLASSES.CARD_HEADER} ${CSS_CLASSES.FLEX_COLUMN} ${CSS_CLASSES.ALIGN_START} ${CSS_CLASSES.W_FULL}">
-                        <span class="${CSS_CLASSES.CARD_CODE} ${CSS_CLASSES.TEXT_LG} ${CSS_CLASSES.CODE_PILL} ${CSS_CLASSES.JUSTIFY_START}" data-code="${item.code}">${item.code}</span>
+                        <div class="card-code-pill" style="background: none; border: none; padding: 0; gap: 6px;">
+                            <img src="https://files.marketindex.com.au/xasx/96x96-png/${item.code.toLowerCase()}.png" class="favicon-icon" style="width: 14px; height: 14px;" onerror="this.src='${KANGAROO_ICON_SRC}'" alt="">
+                            <span class="${CSS_CLASSES.CARD_CODE} ${CSS_CLASSES.TEXT_LG} ${CSS_CLASSES.CODE_PILL} ${CSS_CLASSES.JUSTIFY_START}" style="font-size: 1.1rem;" data-code="${item.code}">${item.code}</span>
+                        </div>
                         
                         <div class="${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.JUSTIFY_START} ${CSS_CLASSES.ALIGN_BASELINE} ${CSS_CLASSES.W_FULL} ${CSS_CLASSES.MT_TINY}">
                             <span class="${CSS_CLASSES.CARD_PRICE} ${CSS_CLASSES.PRIMARY_TEXT} ${CSS_CLASSES.TEXT_LG} ${CSS_CLASSES.TEXT_LEFT}">${formatCurrency(price)}</span>
@@ -522,7 +525,7 @@ export class ViewRenderer {
                         </div>
                     </div>
                     <div class="${CSS_CLASSES.SNAPSHOT_FOOTER}">
-                        <span class="${CSS_CLASSES.CHANGE_VALUE} ${CSS_CLASSES.TEXT_SM}">${formatCurrency(changeValue)}</span>
+                        <span class="${CSS_CLASSES.CHANGE_VALUE} ${CSS_CLASSES.TEXT_SM}">${formatCurrency(Math.abs(changeValue))}</span>
                         <span class="${CSS_CLASSES.CHANGE_PERCENT} ${CSS_CLASSES.TEXT_SM}">${formatPercent(changePercent)}</span>
                     </div>
                 </div>
@@ -531,11 +534,14 @@ export class ViewRenderer {
             return `
                 <div class="${CSS_CLASSES.CARD} ${trendClass} ${gradeClass}" data-id="${item.id}" data-code="${item.code}" data-view="snapshot" style="${borderStyle}">
                     <div class="${CSS_CLASSES.CARD_HEADER} ${CSS_CLASSES.FLEX_COLUMN} ${CSS_CLASSES.ALIGN_START} ${CSS_CLASSES.W_FULL}">
-                        <span class="${CSS_CLASSES.CARD_CODE} ${CSS_CLASSES.TEXT_LG} ${CSS_CLASSES.CODE_PILL} ${CSS_CLASSES.JUSTIFY_START}" data-code="${item.code}">${item.code}</span>
+                        <div class="card-code-pill" style="background: none; border: none; padding: 0; gap: 4px;">
+                            <img src="https://files.marketindex.com.au/xasx/96x96-png/${item.code.toLowerCase()}.png" class="favicon-icon" style="width: 12px; height: 12px;" onerror="this.src='${KANGAROO_ICON_SRC}'" alt="">
+                            <span class="${CSS_CLASSES.CARD_CODE} ${CSS_CLASSES.TEXT_LG} ${CSS_CLASSES.CODE_PILL} ${CSS_CLASSES.JUSTIFY_START}" style="font-size: 1rem;" data-code="${item.code}">${item.code}</span>
+                        </div>
                         <span class="${CSS_CLASSES.CARD_PRICE} ${CSS_CLASSES.PRIMARY_TEXT} ${CSS_CLASSES.TEXT_LG} ${CSS_CLASSES.MT_TINY} ${CSS_CLASSES.TEXT_LEFT}">${formatCurrency(price)}</span>
                     </div>
                     <div class="${CSS_CLASSES.SNAPSHOT_FOOTER}">
-                        <span class="${CSS_CLASSES.CHANGE_VALUE} ${CSS_CLASSES.TEXT_SM}">${formatCurrency(changeValue)}</span>
+                        <span class="${CSS_CLASSES.CHANGE_VALUE} ${CSS_CLASSES.TEXT_SM}">${formatCurrency(Math.abs(changeValue))}</span>
                         <span class="${CSS_CLASSES.CHANGE_PERCENT} ${CSS_CLASSES.TEXT_SM}">${formatPercent(changePercent)}</span>
                     </div>
                 </div>
@@ -744,7 +750,10 @@ export class ViewRenderer {
                             <div class="${CSS_CLASSES.TEXT_LEFT} ${CSS_CLASSES.W_FULL}">
                                 <a href="https://gemini.google.com/app" target="_blank" id="gemini-header-link" role="link" aria-label="Ask AI Deep Dive" style="text-decoration: none; color: inherit; display: block; -webkit-touch-callout: default !important; user-select: auto !important;">
                                     <div class="${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.ALIGN_CENTER} ${CSS_CLASSES.JUSTIFY_START} ${CSS_CLASSES.GAP_0}">
-                                        <h1 class="${CSS_CLASSES.MODAL_TITLE} ${CSS_CLASSES.DISPLAY_TITLE} ${CSS_CLASSES.MB_0} ${CSS_CLASSES.TEXT_LEFT} ${CSS_CLASSES.MODAL_TITLE_AUTO}">${stock.code}</h1>
+                                        <div class="card-code-pill" style="background: none; border: none; padding: 0; gap: 8px; display: inline-flex; align-items: center;">
+                                            <img src="https://files.marketindex.com.au/xasx/96x96-png/${stock.code.toLowerCase()}.png" class="favicon-icon" style="width: 24px; height: 24px;" onerror="this.src='${KANGAROO_ICON_SRC}'" alt="">
+                                            <h1 class="${CSS_CLASSES.MODAL_TITLE} ${CSS_CLASSES.DISPLAY_TITLE} ${CSS_CLASSES.MB_0} ${CSS_CLASSES.TEXT_LEFT} ${CSS_CLASSES.MODAL_TITLE_AUTO}">${stock.code}</h1>
+                                        </div>
                                         <span style="display: inline-block; width: 2.5ch;"></span>
                                         <img src="gemini-icon.png" style="width: 20px; height: 20px; pointer-events: none; vertical-align: middle;">
                                     </div>
@@ -1041,44 +1050,27 @@ export class ViewRenderer {
         // Gemini Interaction Binding
         const geminiLink = modal.querySelector('#gemini-header-link');
         if (geminiLink) {
-            const getPrompt = () => {
-                return `Summarize the latest technical and fundamental developments for ${stock.code} on the ASX. Focus on recent price action, volume, and any relevant news or upcoming announcements. Provide a comprehensive outlook.`;
-            };
+            LinkHelper.bindGeminiInteraction(
+                geminiLink,
+                () => `Summarize the latest technical and fundamental developments for ${stock.code} on the ASX. Focus on recent price action, volume, and any relevant news or upcoming announcements. Provide a comprehensive outlook.`,
+                () => {
+                    const symbol = stock.code;
+                    const change = stock.change || stock.dayChangeValue || 0;
+                    const sector = stock.sector || '';
 
-            const handleShortPress = () => {
-                const symbol = stock.code;
-                const change = stock.change || stock.dayChangeValue || 0;
-                const sector = stock.sector || '';
-
-                ToastManager.show(`${UI_LABELS.ASKING_GEMINI} ${symbol}...`, 'info');
-                import('../data/DataService.js').then(({ DataService }) => {
-                    const ds = new DataService();
-                    ds.askGemini('explain', '', { symbol, change, sector }).then(res => {
-                        if (res.ok) {
-                            alert(`${UI_LABELS.AI_INSIGHT_FOR} ${symbol}:\n\n${res.text}`);
-                        } else {
-                            ToastManager.show(`${UI_LABELS.ANALYSIS_FAILED} ` + (res.error || 'Unknown error'), 'error');
-                        }
+                    ToastManager.show(`${UI_LABELS.ASKING_GEMINI} ${symbol}...`, 'info');
+                    import('../data/DataService.js').then(({ DataService }) => {
+                        const ds = new DataService();
+                        ds.askGemini('explain', '', { symbol, change, sector }).then(res => {
+                            if (res.ok) {
+                                alert(`${UI_LABELS.AI_INSIGHT_FOR} ${symbol}:\n\n${res.text}`);
+                            } else {
+                                ToastManager.show(`${UI_LABELS.ANALYSIS_FAILED} ` + (res.error || 'Unknown error'), 'error');
+                            }
+                        });
                     });
-                });
-            };
-
-            // Deep Dive Clipboard Prep on contextmenu (native long-press trigger)
-            geminiLink.addEventListener('contextmenu', async (e) => {
-                try {
-                    const prompt = getPrompt();
-                    await navigator.clipboard.writeText(prompt);
-                } catch (err) {
-                    console.warn('Clipboard prep failed', err);
                 }
-            });
-
-            // Tap Interception for Internal AI
-            geminiLink.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                handleShortPress();
-            });
+            );
         }
 
         // Events
@@ -1395,44 +1387,27 @@ export class ViewRenderer {
         // Gemini Interaction Binding
         const geminiLink = modal.querySelector('#gemini-research-link');
         if (geminiLink) {
-            const getPrompt = () => {
-                return `Summarize the latest technical and fundamental developments for ${stock.code} on the ASX. Focus on recent price action, volume, and any relevant news or upcoming announcements. Provide a comprehensive outlook.`;
-            };
+            LinkHelper.bindGeminiInteraction(
+                geminiLink,
+                () => `Summarize the latest technical and fundamental developments for ${stock.code} on the ASX. Focus on recent price action, volume, and any relevant news or upcoming announcements. Provide a comprehensive outlook.`,
+                () => {
+                    const symbol = stock.code;
+                    const change = stock.change || stock.dayChangeValue || 0;
+                    const sector = stock.sector || '';
 
-            const handleShortPress = () => {
-                const symbol = stock.code;
-                const change = stock.change || stock.dayChangeValue || 0;
-                const sector = stock.sector || '';
-
-                ToastManager.show(`${UI_LABELS.ASKING_GEMINI} ${symbol}...`, 'info');
-                import('../data/DataService.js').then(({ DataService }) => {
-                    const ds = new DataService();
-                    ds.askGemini('explain', '', { symbol, change, sector }).then(res => {
-                        if (res.ok) {
-                            alert(`${UI_LABELS.AI_INSIGHT_FOR} ${symbol}:\n\n${res.text}`);
-                        } else {
-                            ToastManager.show(`${UI_LABELS.ANALYSIS_FAILED} ` + (res.error || 'Unknown error'), 'error');
-                        }
+                    ToastManager.show(`${UI_LABELS.ASKING_GEMINI} ${symbol}...`, 'info');
+                    import('../data/DataService.js').then(({ DataService }) => {
+                        const ds = new DataService();
+                        ds.askGemini('explain', '', { symbol, change, sector }).then(res => {
+                            if (res.ok) {
+                                alert(`${UI_LABELS.AI_INSIGHT_FOR} ${symbol}:\n\n${res.text}`);
+                            } else {
+                                ToastManager.show(`${UI_LABELS.ANALYSIS_FAILED} ` + (res.error || 'Unknown error'), 'error');
+                            }
+                        });
                     });
-                });
-            };
-
-            // Deep Dive Clipboard Prep on contextmenu (native long-press trigger)
-            geminiLink.addEventListener('contextmenu', async (e) => {
-                try {
-                    const prompt = getPrompt();
-                    await navigator.clipboard.writeText(prompt);
-                } catch (err) {
-                    console.warn('Clipboard prep failed', err);
                 }
-            });
-
-            // Tap Interception for Internal AI
-            geminiLink.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                handleShortPress();
-            });
+            );
         }
 
         document.body.appendChild(modal);

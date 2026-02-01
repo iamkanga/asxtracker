@@ -131,4 +131,58 @@ export class LinkHelper {
     static getFinanceUrl(symbol) {
         return this.getYahooFinanceUrl(symbol);
     }
+
+    /**
+     * Binds Gemini dual-interaction to an element.
+     * Tapping triggers an internal summary.
+     * Long-holding (or right-clicking) pre-pops the clipboard with a prompt and shows the native menu.
+     * @param {HTMLElement} el - The element to bind.
+     * @param {Function} getPrompt - Callback returning the deep-dive prompt string.
+     * @param {Function} onShortPress - Callback for the internal AI analysis.
+     */
+    static bindGeminiInteraction(el, getPrompt, onShortPress) {
+        if (!el) return;
+        let holdTimer;
+
+        const startHold = () => {
+            holdTimer = setTimeout(async () => {
+                try {
+                    const prompt = getPrompt();
+                    await navigator.clipboard.writeText(prompt);
+                } catch (err) {
+                    console.warn('Gemini clipboard prep failed', err);
+                }
+            }, 400); // Prime clipboard just before context menu (usually 500ms+)
+        };
+
+        const cancelHold = () => {
+            if (holdTimer) {
+                clearTimeout(holdTimer);
+                holdTimer = null;
+            }
+        };
+
+        // Pointer events for robust multi-device support
+        el.addEventListener('pointerdown', startHold);
+        ['pointerup', 'pointerleave', 'pointercancel', 'pointermove'].forEach(evt => {
+            el.addEventListener(evt, cancelHold);
+        });
+
+        // Native menu fallback (Right click / Long press)
+        el.addEventListener('contextmenu', (e) => {
+            // We do NOT preventDefault to allow native browser menus
+            // But we ensure clipboard is ready even if timer was tight
+            try {
+                const prompt = getPrompt();
+                navigator.clipboard.writeText(prompt).catch(() => { });
+            } catch (err) { }
+        });
+
+        // Short press interception
+        el.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onShortPress();
+        });
+    }
 }

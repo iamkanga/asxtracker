@@ -82,11 +82,12 @@ export class ThemeStudio {
 
         container.innerHTML = `
             <div class="studio-header">
+                <button class="studio-back" id="studio-back-btn" title="Back to Visual Studio"><i class="fas fa-chevron-left"></i></button>
                 <!-- Title Glows for Preview -->
                 <span class="studio-title" id="studio-title-preview" style="text-shadow: 0 0 10px rgba(var(--color-accent-rgb), 0.8); color: rgba(var(--color-accent-rgb), var(--accent-opacity, 1));">
                     <i class="fas fa-paint-brush"></i> Design Studio
                 </span>
-                <button class="studio-close" id="studio-close-btn" title="Close"><i class="fas fa-times"></i></button>
+                <button class="studio-close" id="studio-close-btn" title="Close Everything"><i class="fas fa-times"></i></button>
             </div>
             
             <div class="studio-content">
@@ -132,7 +133,7 @@ export class ThemeStudio {
                     background: rgba(20,20,24,0.98);
                     backdrop-filter: blur(20px);
                     border-top: 1px solid rgba(255,255,255,0.1);
-                    z-index: 9999;
+                    z-index: 10001;
                     transform: translateY(100%);
                     transition: transform 0.3s cubic-bezier(0.19, 1, 0.22, 1);
                     display: flex;
@@ -144,22 +145,28 @@ export class ThemeStudio {
                     transform: translateY(0);
                 }
                 .studio-header {
-                    display: flex;
-                    justify-content: space-between;
+                    display: grid;
+                    grid-template-columns: 40px 1fr 40px;
                     align-items: center;
-                    padding: 20px 30px;
-                    border-bottom: none;
+                    padding: 10px 15px;
+                    border-bottom: 1px solid rgba(255,255,255,0.05);
+                    background: rgba(255,255,255,0.02);
                 }
                 .studio-title {
-                    font-size: 1.1rem;
+                    font-size: 0.9rem;
                     font-weight: 700;
                     color: rgba(var(--color-accent-rgb), var(--accent-opacity, 1)); /* Dynamic Opacity */
                     letter-spacing: 0.5px;
                     text-transform: uppercase;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 10px;
+                    text-align: center;
                     transition: text-shadow 0.2s, color 0.2s;
                     text-shadow: 0 0 10px rgba(var(--color-accent-rgb), 0.8); /* Fixed Glow */
                 }
-                .studio-close {
+                .studio-back, .studio-close {
                     background: transparent;
                     color: var(--color-accent); /* Accent Colored */
                     border: none;
@@ -172,8 +179,9 @@ export class ThemeStudio {
                     justify-content: center;
                     transition: all 0.2s;
                 }
-                .studio-close:hover {
+                .studio-back:hover, .studio-close:hover {
                     transform: scale(1.1);
+                    color: #fff;
                 }
                 .studio-content {
                     padding: 0 30px 30px 30px;
@@ -252,7 +260,21 @@ export class ThemeStudio {
         }
 
         // Logic
-        container.querySelector('#studio-close-btn').addEventListener('click', () => this.hide());
+        container.querySelector('#studio-close-btn').addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.hide();
+            // Global Close: Hide the underlying parent as well
+            document.dispatchEvent(new CustomEvent('hide-visual-hud'));
+        });
+
+        container.querySelector('#studio-back-btn').addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.hide();
+            // Just return: Ensure parent is visible (it usually already is, but safety first)
+            document.dispatchEvent(new CustomEvent('show-visual-hud'));
+        });
 
         // Color Logic
         container.querySelectorAll('.color-swatch').forEach(btn => {

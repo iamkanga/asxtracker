@@ -12,6 +12,7 @@ import { formatCurrency, formatPercent } from '../utils/formatters.js';
 import { BriefingUI } from './BriefingUI.js?v=327';
 import { SnapshotUI } from './SnapshotUI.js';
 import { ToastManager } from './ToastManager.js';
+import { LinkHelper } from '../utils/LinkHelper.js';
 
 export class NotificationUI {
 
@@ -571,28 +572,23 @@ export class NotificationUI {
                 });
             };
 
-            // Prep clipboard on contextmenu (native long-press trigger) 
-            // This is the cleanest way to support native menus without event interference
-            list.addEventListener('contextmenu', async (e) => {
+            // Delegate Gemini Interaction
+            list.addEventListener('pointerdown', (e) => {
                 const smartBtn = e.target.closest('.btn-smart-alert');
-                if (smartBtn) {
-                    try {
-                        const prompt = getPrompt(smartBtn);
-                        await navigator.clipboard.writeText(prompt);
-                    } catch (err) {
-                        console.warn('Clipboard prep failed', err);
-                    }
+                if (smartBtn && !smartBtn.dataset.geminiBound) {
+                    smartBtn.dataset.geminiBound = 'true';
+                    LinkHelper.bindGeminiInteraction(
+                        smartBtn,
+                        () => getPrompt(smartBtn),
+                        () => handleShortPress(smartBtn)
+                    );
+                    // Re-trigger the event for this instance since it's already down
+                    const downEvt = new PointerEvent('pointerdown', e);
+                    smartBtn.dispatchEvent(downEvt);
                 }
             });
 
             list.addEventListener('click', (e) => {
-                const smartBtn = e.target.closest('.btn-smart-alert');
-                if (smartBtn) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handleShortPress(smartBtn);
-                    return;
-                }
                 // 1. Pin/Unpin Delegation
                 const btn = e.target.closest(`.${CSS_CLASSES.PIN_BTN}`);
                 if (btn) {

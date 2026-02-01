@@ -11,6 +11,7 @@ import { EVENTS, UI_ICONS, IDS, WATCHLIST_NAMES, ALL_SHARES_ID, PORTFOLIO_ID, CA
 import { navManager } from '../utils/NavigationManager.js';
 import { GeneralSettingsUI } from './GeneralSettingsUI.js';
 import { SidebarCommandCenter } from './SidebarCommandCenter.js?v=1080';
+import { VisualSettingsHUD } from './VisualSettingsHUD.js';
 
 export class HeaderLayout {
     /**
@@ -220,15 +221,51 @@ export class HeaderLayout {
         // Core Header Controls (Moved from main.js)
         const viewToggleBtn = document.getElementById(IDS.VIEW_TOGGLE_BTN);
         if (viewToggleBtn) {
-            if (this.callbacks.onViewToggle) {
-                viewToggleBtn.addEventListener('click', () => {
-                    // console.log('HeaderLayout: View Toggle Clicked');
+            let pressTimer = null;
+            let isLongPress = false;
+            const LONG_PRESS_DURATION = 600;
+
+            const startPress = (e) => {
+                // Only left click or single touch
+                if (e.type === 'mousedown' && e.button !== 0) return;
+
+                isLongPress = false;
+                pressTimer = setTimeout(() => {
+                    isLongPress = true;
+                    if (navigator.vibrate) navigator.vibrate(50);
+                    VisualSettingsHUD.show();
+                }, LONG_PRESS_DURATION);
+            };
+
+            const cancelPress = () => {
+                if (pressTimer) {
+                    clearTimeout(pressTimer);
+                    pressTimer = null;
+                }
+            };
+
+            // Bind Press Events
+            viewToggleBtn.addEventListener('mousedown', startPress);
+            viewToggleBtn.addEventListener('mouseup', cancelPress);
+            viewToggleBtn.addEventListener('mouseleave', cancelPress);
+            viewToggleBtn.addEventListener('touchstart', startPress, { passive: true });
+            viewToggleBtn.addEventListener('touchend', cancelPress);
+            viewToggleBtn.addEventListener('touchmove', cancelPress);
+
+            // Bind Click Action
+            viewToggleBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+
+                if (isLongPress) {
+                    isLongPress = false;
+                    return;
+                }
+
+                if (this.callbacks.onViewToggle) {
                     this.callbacks.onViewToggle();
-                });
-                // console.log('HeaderLayout: View Toggle Button Bound Successfully');
-            } else {
-                console.warn('HeaderLayout: onViewToggle callback missing');
-            }
+                }
+            });
         } else {
             console.warn('HeaderLayout: View Toggle Button Not Found', IDS.VIEW_TOGGLE_BTN);
         }
