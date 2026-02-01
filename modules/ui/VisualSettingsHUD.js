@@ -426,11 +426,8 @@ export class VisualSettingsHUD {
 
                 const val = parseFloat(btn.dataset.val);
 
-                // Standardization Persistence
-                AppState.preferences.gradientStrength = val;
-                localStorage.setItem(STORAGE_KEYS.GRADIENT_STRENGTH, val);
-                document.documentElement.style.setProperty('--gradient-strength', val);
-                AppState.triggerSync();
+                // Centralized Persistence (Fixes Tinting bug)
+                AppState.saveGradientStrength(val);
 
                 document.dispatchEvent(new CustomEvent(EVENTS.REFRESH_WATCHLIST));
             });
@@ -442,9 +439,6 @@ export class VisualSettingsHUD {
             btn.addEventListener('click', () => {
                 // Deactivate others
                 styleBtns.forEach(b => b.classList.remove('active'));
-                // Note: Logic for 'active' style button is tricky as it's a preset. 
-                // We'll just highlight it momentarily or keep logic simple.
-                // For now, let's just highlight the clicked one.
                 btn.classList.add('active');
 
                 const preset = btn.dataset.preset;
@@ -473,19 +467,15 @@ export class VisualSettingsHUD {
                 slider.value = newThickness;
                 thickLabel.textContent = newThickness + 'px';
 
-                // Update Tone UI
+                // Update Tone UI (Fixes User Disconnect)
                 toneBtns.forEach(b => {
                     const bVal = parseFloat(b.dataset.val);
                     b.classList.toggle('active', Math.abs(bVal - newOpacity) < 0.05);
                 });
 
-                // Save All
+                // Centralized Persistence
                 AppState.saveBorderPreferences({ sides: newSides, thickness: newThickness });
-
-                AppState.preferences.gradientStrength = newOpacity;
-                localStorage.setItem(STORAGE_KEYS.GRADIENT_STRENGTH, newOpacity);
-                document.documentElement.style.setProperty('--gradient-strength', newOpacity);
-                AppState.triggerSync();
+                AppState.saveGradientStrength(newOpacity);
 
                 document.dispatchEvent(new CustomEvent(EVENTS.REFRESH_WATCHLIST));
             });

@@ -113,15 +113,7 @@ export class AppController {
         // Notification System Bindings (Unified)
         NotificationUI.init(); // Initialize Floating Bell
 
-        // Initialize Global CSS Variables from Prefs (Unified Strength & Shine logic)
-        const strength = AppState.preferences.gradientStrength || 0.25;
-        const isMuted = strength === 0.125;
-        const sVal = strength;
-        const tVal = isMuted ? '22%' : '0%';
-        document.documentElement.style.setProperty('--gradient-strength', sVal);
-        document.documentElement.style.setProperty('--gradient-tint', tVal);
-
-        // Apply Accent Color & Opacity (USER REQUEST)
+        // Initialize Global CSS Variables from Prefs (USER REQUEST - Standardized)
         const accentHex = AppState.preferences.accentColor || '#a49393';
         const accentOpacity = AppState.preferences.accentOpacity || '1';
         const r = parseInt(accentHex.slice(1, 3), 16);
@@ -130,6 +122,12 @@ export class AppController {
         document.documentElement.style.setProperty('--color-accent', `rgba(${r}, ${g}, ${b}, ${accentOpacity})`);
         document.documentElement.style.setProperty('--color-accent-rgb', `${r}, ${g}, ${b}`);
         document.documentElement.style.setProperty('--accent-opacity', accentOpacity);
+
+        // Standardized Gradient & Tint (Directive 025 Alignment)
+        const strength = AppState.preferences.gradientStrength ?? 0.25;
+        const tint = strength === 0.125 ? '22%' : '0%';
+        document.documentElement.style.setProperty('--gradient-strength', strength);
+        document.documentElement.style.setProperty('--gradient-tint', tint);
 
         // Apply Card Chart Opacity
         const cardChartOpacity = AppState.preferences.cardChartOpacity ?? 1.0;
@@ -875,17 +873,16 @@ export class AppController {
 
 
                     // 0a. Sync Gradient Preference
+                    // 0a. Sync Gradient Preference (Fixes Tinting Bug)
                     if (prefs.gradientStrength !== undefined && prefs.gradientStrength !== null) {
                         const strength = parseFloat(prefs.gradientStrength);
                         if (!isNaN(strength)) {
                             AppState.preferences.gradientStrength = strength;
                             localStorage.setItem(STORAGE_KEYS.GRADIENT_STRENGTH, strength);
-                            const isMuted = strength === 0.125;
-                            const sVal = strength;
-                            const tVal = isMuted ? '22%' : '0%';
 
-                            document.documentElement.style.setProperty('--gradient-strength', sVal);
-                            document.documentElement.style.setProperty('--gradient-tint', tVal);
+                            const tint = strength === 0.125 ? '22%' : '0%';
+                            document.documentElement.style.setProperty('--gradient-strength', strength);
+                            document.documentElement.style.setProperty('--gradient-tint', tint);
                             needsRender = true;
                         }
                     }

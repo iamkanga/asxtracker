@@ -324,6 +324,23 @@ export const AppState = {
         this._triggerSync();
     },
 
+    saveGradientStrength(val) {
+        const strength = parseFloat(val);
+        if (isNaN(strength)) return;
+
+        this.preferences.gradientStrength = strength;
+        localStorage.setItem(STORAGE_KEYS.GRADIENT_STRENGTH, strength);
+
+        // Standardized Tint Logic (Directive 025 Alignment)
+        const isMuted = strength === 0.125;
+        const tint = isMuted ? '22%' : '0%';
+
+        document.documentElement.style.setProperty('--gradient-strength', strength);
+        document.documentElement.style.setProperty('--gradient-tint', tint);
+
+        this._triggerSync();
+    },
+
     // Internal helper to persist all preferences under a single key
     _persistPreferences() {
         localStorage.setItem('asx_preferences', JSON.stringify(this.preferences));
