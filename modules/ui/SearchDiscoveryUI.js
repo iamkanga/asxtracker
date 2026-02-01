@@ -247,10 +247,18 @@ export class SearchDiscoveryUI {
         // Research Links
         const linksHtml = RESEARCH_LINKS_TEMPLATE.map(link => {
             const url = link.url.replace(/\${code}/g, stock.code);
+            let hostname = '';
+            try {
+                hostname = new URL(url).hostname;
+            } catch (e) {
+                console.warn('Invalid URL for favicon:', url);
+            }
+            const faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
+
             return `
                 <a href="${url}" target="_blank" rel="noopener noreferrer" class="${CSS_CLASSES.RESEARCH_LINK_CARD}">
+                    <img src="${faviconUrl}" alt="" style="width: 16px; height: 16px; border-radius: 2px;">
                     <span class="${CSS_CLASSES.LINK_TEXT}">${link.name}</span>
-                    <i class="fas ${CSS_CLASSES.EXTERNAL_LINK_ALT}"></i>
                 </a>
             `;
         }).join('');

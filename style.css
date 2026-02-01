@@ -6021,8 +6021,9 @@ body.dark-theme .sort-picker-row.active {
 
 .research-link-card {
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-start;
     align-items: center;
+    gap: 4px;
     padding: 14px 18px;
     background: rgba(255, 255, 255, 0.02);
     border: 1px solid var(--border-color);
