@@ -2431,8 +2431,8 @@ h1#dynamicWatchlistTitle.active {
     align-items: center;
     font-size: 0.82rem;
     color: var(--color-accent);
-    opacity: 0.6;
-    font-weight: 500;
+    opacity: 0.8;
+    font-weight: 600;
 }
 
 .card-change-stack {
@@ -2443,8 +2443,8 @@ h1#dynamicWatchlistTitle.active {
 }
 
 .utility-slot.has-content {
-    opacity: 0.5;
-    /* Maintain ghosted even with content */
+    opacity: 0.9;
+    /* Reduced ghosting for better visibility */
 }
 
 .utility-icon {

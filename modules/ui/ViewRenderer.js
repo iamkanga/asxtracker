@@ -512,11 +512,10 @@ export class ViewRenderer {
 
             return `
                 <div class="${CSS_CLASSES.CARD} ${trendClass} ${gradeClass}" data-id="${item.id}" data-code="${item.code}" data-view="compact" style="${borderStyle}">
-                    ${iconHtml}
                     <div class="${CSS_CLASSES.CARD_HEADER} ${CSS_CLASSES.FLEX_COLUMN} ${CSS_CLASSES.ALIGN_START} ${CSS_CLASSES.W_FULL}">
-                        <div class="card-code-pill" style="background: none; border: none; padding: 0; gap: 6px;">
-                            <img src="https://files.marketindex.com.au/xasx/96x96-png/${item.code.toLowerCase()}.png" class="favicon-icon" style="width: 14px; height: 14px;" onerror="this.src='${KANGAROO_ICON_SRC}'" alt="">
+                        <div class="${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.JUSTIFY_BETWEEN} ${CSS_CLASSES.W_FULL} ${CSS_CLASSES.ALIGN_CENTER}">
                             <span class="${CSS_CLASSES.CARD_CODE} ${CSS_CLASSES.TEXT_LG} ${CSS_CLASSES.CODE_PILL} ${CSS_CLASSES.JUSTIFY_START}" style="font-size: 1.1rem;" data-code="${item.code}">${item.code}</span>
+                            <img src="https://files.marketindex.com.au/xasx/96x96-png/${item.code.toLowerCase()}.png" class="favicon-icon" style="width: 1.1rem; height: 1.1rem;" onerror="this.src='${KANGAROO_ICON_SRC}'" alt="">
                         </div>
                         
                         <div class="${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.JUSTIFY_START} ${CSS_CLASSES.ALIGN_BASELINE} ${CSS_CLASSES.W_FULL} ${CSS_CLASSES.MT_TINY}">
@@ -534,9 +533,9 @@ export class ViewRenderer {
             return `
                 <div class="${CSS_CLASSES.CARD} ${trendClass} ${gradeClass}" data-id="${item.id}" data-code="${item.code}" data-view="snapshot" style="${borderStyle}">
                     <div class="${CSS_CLASSES.CARD_HEADER} ${CSS_CLASSES.FLEX_COLUMN} ${CSS_CLASSES.ALIGN_START} ${CSS_CLASSES.W_FULL}">
-                        <div class="card-code-pill" style="background: none; border: none; padding: 0; gap: 4px;">
-                            <img src="https://files.marketindex.com.au/xasx/96x96-png/${item.code.toLowerCase()}.png" class="favicon-icon" style="width: 12px; height: 12px;" onerror="this.src='${KANGAROO_ICON_SRC}'" alt="">
+                        <div class="${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.JUSTIFY_BETWEEN} ${CSS_CLASSES.W_FULL} ${CSS_CLASSES.ALIGN_CENTER}">
                             <span class="${CSS_CLASSES.CARD_CODE} ${CSS_CLASSES.TEXT_LG} ${CSS_CLASSES.CODE_PILL} ${CSS_CLASSES.JUSTIFY_START}" style="font-size: 1rem;" data-code="${item.code}">${item.code}</span>
+                            <img src="https://files.marketindex.com.au/xasx/96x96-png/${item.code.toLowerCase()}.png" class="favicon-icon" style="width: 1rem; height: 1rem;" onerror="this.src='${KANGAROO_ICON_SRC}'" alt="">
                         </div>
                         <span class="${CSS_CLASSES.CARD_PRICE} ${CSS_CLASSES.PRIMARY_TEXT} ${CSS_CLASSES.TEXT_LG} ${CSS_CLASSES.MT_TINY} ${CSS_CLASSES.TEXT_LEFT}">${formatCurrency(price)}</span>
                     </div>
