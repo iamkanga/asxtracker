@@ -236,25 +236,29 @@ export default class ResearchLinksUI {
         if (!url.includes('$(code)') && !url.includes('${code}')) {
             let detectedCode = null;
 
-            // Priority: Container Context
+            // Priority 1: Container Context (Highest accuracy)
             if (this._activeCode && url.toUpperCase().includes(this._activeCode.toUpperCase())) {
                 detectedCode = this._activeCode;
             } else {
-                // Secondary: Pattern Match
-                const patterns = [
-                    /([\/.:=\-?&]|^)([A-Z]{3,4})(?=[\/.:=\-?&]|$)/i,
-                    /([A-Z]{3,4})(?=\.(?:AX|ASX))/i
-                ];
-                for (const pattern of patterns) {
-                    const match = url.match(pattern);
-                    if (match) {
-                        const candidate = (match[2] || match[1]).toUpperCase();
-                        const exclusions = ['COM', 'NET', 'ORG', 'WWW', 'ASX', 'INFO', 'BIZ', 'CO', 'AU', 'STOCK', 'SHARE', 'URL', 'HTTP', 'HTTPS', 'FINANCE', 'YAHOO', 'GOOGLE'];
-                        if (!exclusions.includes(candidate)) {
-                            detectedCode = candidate;
-                            break;
-                        }
+                // Priority 2: Exhaustive Pattern Match (Scanning all occurrences)
+                // Expanded pattern to catch tickers followed by colon (e.g., ARB:AU)
+                const pattern = /([\/.:=\-?&]|^)([A-Z]{3,4})(?=[\/.:=\-?&]|$)/gi;
+                const exclusions = ['COM', 'NET', 'ORG', 'WWW', 'ASX', 'INFO', 'BIZ', 'CO', 'AU', 'STOCK', 'SHARE', 'URL', 'HTTP', 'HTTPS', 'FINANCE', 'YAHOO', 'GOOGLE', 'TRADING', 'ECONOMICS'];
+
+                let match;
+                while ((match = pattern.exec(url)) !== null) {
+                    const candidate = (match[2] || match[1]).toUpperCase();
+                    if (!exclusions.includes(candidate)) {
+                        detectedCode = candidate;
+                        break; // Found a valid candidate that isn't a TLD/reserved term
                     }
+                }
+
+                // Priority 3: Market-specific suffix match (e.g. CBA.AX)
+                if (!detectedCode) {
+                    const pattern2 = /([A-Z]{3,4})(?=\.(?:AX|ASX))/i;
+                    const match2 = url.match(pattern2);
+                    if (match2) detectedCode = match2[1].toUpperCase();
                 }
             }
 
