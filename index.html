@@ -2449,7 +2449,7 @@ m-31 -123 c3 -5 1 -10 -4 -10 -6 0 -11 5 -11 10 0 6 2 10 4 10 3 0 8 -4 11
             <div class="modal-content modal-content-large">
                 <div class="modal-header">
                     <h2 id="favorite-links-title" class="modal-title clickable">
-                        Favorite Links <i class="fas fa-chevron-down text-coffee"></i>
+                        Favorite Links <i id="fav-links-chevron" class="fas fa-chevron-down chevron-discreet"></i>
                     </h2>
                     <div class="modal-actions">
                         <button id="add-favorite-btn" class="modal-action-btn" title="Add Link">
@@ -2475,7 +2475,7 @@ m-31 -123 c3 -5 1 -10 -4 -10 -6 0 -11 5 -11 10 0 6 2 10 4 10 3 0 8 -4 11
             <div class="modal-content modal-content-large">
                 <div class="modal-header">
                     <h2 id="research-links-title" class="modal-title clickable">
-                        Research Tools <i id="research-links-chevron" class="fas fa-chevron-down research-chevron"></i>
+                        Edit Research
                     </h2>
                     <div class="modal-actions">
                         <button id="add-research-link-btn" class="modal-action-btn" title="Add Research Link">
@@ -2487,6 +2487,11 @@ m-31 -123 c3 -5 1 -10 -4 -10 -6 0 -11 5 -11 10 0 6 2 10 4 10 3 0 8 -4 11
                     </div>
                 </div>
                 <div class="modal-body scrollable-body">
+                    <p class="text-xs text-muted mb-small"
+                        style="padding: 0.5rem 1rem; opacity: 0.9; background: rgba(var(--color-accent-rgb), 0.05); border-radius: 8px; margin: 0 1rem 1rem 1rem;">
+                        <i class="fas fa-magic" style="margin-right: 8px; color: var(--color-accent);"></i>
+                        <b>Smart Links:</b> Paste any stock URL and we'll automatically generalize it for all tickers.
+                    </p>
                     <div id="research-links-list" class="research-links-grid"></div>
                 </div>
             </div>

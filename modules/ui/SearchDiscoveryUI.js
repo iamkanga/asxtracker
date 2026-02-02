@@ -147,6 +147,9 @@ export class SearchDiscoveryUI {
                     console.log(`[SearchDiscoveryUI] Auto-selecting exact match: ${exactMatch.code}`);
                     modal.dataset.viewingCode = exactMatch.code;
 
+                    // Update dataset for Preview sync
+                    modal.dataset.viewingCode = exactMatch.code;
+
                     this._renderDetail(detail, exactMatch, modal);
                     list.classList.add(CSS_CLASSES.HIDDEN);
                     empty.classList.add(CSS_CLASSES.HIDDEN);
@@ -202,6 +205,23 @@ export class SearchDiscoveryUI {
 
         document.addEventListener(EVENTS.UPDATE_DISCOVERY_RESULTS, resultsHandler);
         document.addEventListener(EVENTS.UPDATE_MODAL_PREVIEW, previewHandler);
+
+        // RESEARCH LINKS AUTO-REFRESH
+        window.addEventListener(EVENTS.RESEARCH_LINKS_UPDATED, () => {
+            const currentModal = document.getElementById(IDS.DISCOVERY_MODAL);
+            if (currentModal && currentModal.dataset.viewingCode) {
+                // If we have a viewing code, it means we're in detail view
+                // We need the latest stock data, which we can approximate from the modal if it's stored
+                // but a full refresh of the detail pane is safer if we can find the data.
+                // For now, if detail is visible, we'll try to re-render.
+                const detailPane = currentModal.querySelector(`#${IDS.DISCOVERY_DETAIL_VIEW}`);
+                if (detailPane && !detailPane.classList.contains(CSS_CLASSES.HIDDEN)) {
+                    // We don't have the full stock object here easily without re-fetching or keeping it
+                    // but we can trigger a refresh if we know the code.
+                    document.dispatchEvent(new CustomEvent(EVENTS.REQUEST_LIVE_PRICE, { detail: { code: currentModal.dataset.viewingCode } }));
+                }
+            }
+        });
     }
 
     static _renderResults(listContainer, results, onSelect) {
@@ -251,21 +271,22 @@ export class SearchDiscoveryUI {
             : RESEARCH_LINKS_TEMPLATE;
 
         const linksHtml = rawLinks.map(link => {
-            const url = link.url.split('${code}').join(stock.code);
+            const finalLink = typeof link === 'string' ? { displayName: 'Link', url: link } : link;
+
+            const codeRegex = /\$(?:\{code\}|\(code\)|code)/gi;
+            const substitutedUrl = (finalLink.url || '').replace(codeRegex, stock.code);
+            const substitutedName = (finalLink.displayName || finalLink.name || 'Link').replace(codeRegex, stock.code);
+
             let hostname = '';
-            try {
-                hostname = new URL(url).hostname;
-            } catch (e) {
-                console.warn('Invalid URL for favicon:', url);
-            }
+            try { hostname = new URL(substitutedUrl).hostname; } catch (e) { }
             const faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
 
             return `
-                <a href="${url}" target="_blank" rel="noopener noreferrer" class="research-link-btn">
+                <a href="${substitutedUrl}" target="_blank" rel="noopener noreferrer" class="research-link-btn">
                     <img src="${faviconUrl}" class="link-favicon" alt="">
                     <div class="link-info-stack">
-                        <span class="link-name">${link.displayName}</span>
-                        <span class="link-desc">${link.description || ''}</span>
+                        <span class="link-name">${substitutedName}</span>
+                        <span class="link-desc">${finalLink.description || ''}</span>
                     </div>
                 </a>
             `;
@@ -331,7 +352,7 @@ export class SearchDiscoveryUI {
             
             <div style="margin-top: 2rem;">
                 <h4 id="discovery-research-manage-title" class="${CSS_CLASSES.SECTION_TITLE} clickable" style="font-weight: 700; color: var(--color-accent); border-bottom: none; display: inline-block; padding-bottom: 4px; margin-bottom: 1.5rem;">
-                    Research Tools <i class="fas fa-chevron-right research-chevron"></i>
+                    Edit Research <i class="fas fa-chevron-right research-chevron"></i>
                 </h4>
                 <div class="research-links-grid">
                     ${linksHtml}
@@ -343,7 +364,9 @@ export class SearchDiscoveryUI {
         const researchTitle = container.querySelector('#discovery-research-manage-title');
         if (researchTitle) {
             researchTitle.addEventListener('click', () => {
-                const event = new CustomEvent('REQUEST_RESEARCH_LINKS_MANAGE');
+                const event = new CustomEvent('REQUEST_RESEARCH_LINKS_MANAGE', {
+                    detail: { code: stock.code }
+                });
                 document.dispatchEvent(event);
             });
         }
@@ -408,11 +431,5 @@ export class SearchDiscoveryUI {
             );
         }
 
-        window.addEventListener(EVENTS.RESEARCH_LINKS_UPDATED, () => {
-            const discoveryModal = document.getElementById(IDS.DISCOVERY_MODAL);
-            if (discoveryModal && !discoveryModal.classList.contains(CSS_CLASSES.HIDDEN) && discoveryModal.dataset.viewingCode === stock.code) {
-                this._renderDetail(container, stock, modal);
-            }
-        }, { once: true });
     }
 }

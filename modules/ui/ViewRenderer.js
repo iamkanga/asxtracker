@@ -28,6 +28,51 @@ export class ViewRenderer {
         // Drag state flags (for Sort Picker modal)
         this._isDraggingOrCoolingDown = false;
         this._draggedSortItem = null;
+
+        // Track current stock for live updates
+        this._currentDetailsStock = null;
+
+        this._setupGlobalListeners();
+    }
+
+    _setupGlobalListeners() {
+        document.addEventListener(EVENTS.RESEARCH_LINKS_UPDATED, () => {
+            const modal = document.getElementById(IDS.STOCK_DETAILS_MODAL);
+            if (modal && !modal.classList.contains(CSS_CLASSES.HIDDEN) && this._currentDetailsStock) {
+                this._refreshResearchLinks(modal, this._currentDetailsStock);
+            }
+        });
+    }
+
+    _refreshResearchLinks(modal, stock) {
+        const grid = modal.querySelector('.research-links-grid');
+        if (!grid) return;
+
+        // Re-get links from AppState via the static helper or direct prefs
+        const custom = AppState.preferences.researchLinks || [];
+        const links = custom.length > 0 ? custom : JSON.parse(JSON.stringify(RESEARCH_LINKS_TEMPLATE));
+
+        grid.innerHTML = links.map(link => {
+            const finalLink = typeof link === 'string' ? { name: link, url: link } : link;
+            let hostname = '';
+            try {
+                hostname = new URL(finalLink.url.replace(/\${code}/gi, 'ASX')).hostname;
+            } catch (e) {
+                hostname = 'research';
+            }
+            const faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
+            const substitutedUrl = (finalLink.url || '').replace(/\${code}/gi, stock.code);
+
+            return `
+                <a href="${substitutedUrl}" target="_blank" class="research-link-btn">
+                    <img src="${faviconUrl}" class="link-favicon" alt="">
+                    <div class="link-info-stack">
+                        <span class="link-name">${finalLink.displayName || finalLink.name}</span>
+                        <span class="link-desc">${finalLink.description || ''}</span>
+                    </div>
+                </a>
+            `;
+        }).join('');
     }
 
     /**
@@ -140,9 +185,7 @@ export class ViewRenderer {
             return;
         }
 
-        const isPortfolioView = AppState.watchlist.name === 'Portfolio' ||
-            AppState.isPortfolioVisible ||
-            AppState.watchlist.id === PORTFOLIO_ID;
+        const isPortfolioView = AppState.watchlist.id === PORTFOLIO_ID || AppState.isPortfolioVisible;
 
         if (isPortfolioView) {
             // 1. Portfolio Grid (Now for both Desktop and Mobile)
@@ -262,10 +305,7 @@ export class ViewRenderer {
         const changePercent = item.dayChangePercent || 0;
 
         // Consistent check for Portfolio view content
-        const isPortfolioView = AppState.watchlist.id === PORTFOLIO_ID ||
-            AppState.watchlist.type === PORTFOLIO_ID ||
-            AppState.watchlist.name === 'Portfolio' ||
-            AppState.isPortfolioVisible;
+        const isPortfolioView = AppState.watchlist.id === PORTFOLIO_ID || AppState.isPortfolioVisible;
 
         const changeValue = isPortfolioView ? (item.dayChangeValue || 0) : (item.dayChangePerShare || 0);
 
@@ -355,10 +395,7 @@ export class ViewRenderer {
         const price = item.currentPrice || 0;
         const changePercent = item.dayChangePercent || 0;
 
-        const isPortfolioView = AppState.watchlist.id === PORTFOLIO_ID ||
-            AppState.watchlist.type === PORTFOLIO_ID ||
-            AppState.watchlist.name === 'Portfolio' ||
-            AppState.isPortfolioVisible;
+        const isPortfolioView = AppState.watchlist.id === PORTFOLIO_ID || AppState.isPortfolioVisible;
 
         // In NON-portfolio views, we always use per-share change
         const changeValue = isPortfolioView ? (item.dayChangeValue || 0) : (item.dayChangePerShare || 0);
@@ -449,8 +486,7 @@ export class ViewRenderer {
             // Row 2: Utility Slots (Status Badges)
             const targetSlot = hasAlert ? `
                 <div class="utility-slot has-content" data-action="deep-link" data-id="${item.id}" data-section="target">
-                    <i class="fas ${item.buySell === 'sell' ? UI_ICONS.CARET_UP : UI_ICONS.CARET_DOWN} utility-icon"></i>
-                    ${formatCurrency(item.targetPrice)}
+                    <i class="fas fa-crosshairs utility-icon"></i>
                 </div>` : '<div class="utility-slot"></div>';
 
             const starsSlot = hasStars ? `
@@ -515,7 +551,7 @@ export class ViewRenderer {
                     <div class="${CSS_CLASSES.CARD_HEADER} ${CSS_CLASSES.FLEX_COLUMN} ${CSS_CLASSES.ALIGN_START} ${CSS_CLASSES.W_FULL}">
                         <div class="${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.JUSTIFY_BETWEEN} ${CSS_CLASSES.W_FULL} ${CSS_CLASSES.ALIGN_CENTER}">
                             <span class="${CSS_CLASSES.CARD_CODE} ${CSS_CLASSES.TEXT_LG} ${CSS_CLASSES.CODE_PILL} ${CSS_CLASSES.JUSTIFY_START}" style="font-size: 1.1rem;" data-code="${item.code}">${item.code}</span>
-                            <img src="https://files.marketindex.com.au/xasx/96x96-png/${item.code.toLowerCase()}.png" class="favicon-icon" style="width: 1.1rem; height: 1.1rem;" onerror="this.src='${KANGAROO_ICON_SRC}'" alt="">
+                            <img src="https://files.marketindex.com.au/xasx/96x96-png/${item.code.toLowerCase()}.png" class="favicon-icon" onerror="this.src='${KANGAROO_ICON_SRC}'" alt="">
                         </div>
                         
                         <div class="${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.JUSTIFY_START} ${CSS_CLASSES.ALIGN_BASELINE} ${CSS_CLASSES.W_FULL} ${CSS_CLASSES.MT_TINY}">
@@ -535,7 +571,7 @@ export class ViewRenderer {
                     <div class="${CSS_CLASSES.CARD_HEADER} ${CSS_CLASSES.FLEX_COLUMN} ${CSS_CLASSES.ALIGN_START} ${CSS_CLASSES.W_FULL}">
                         <div class="${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.JUSTIFY_BETWEEN} ${CSS_CLASSES.W_FULL} ${CSS_CLASSES.ALIGN_CENTER}">
                             <span class="${CSS_CLASSES.CARD_CODE} ${CSS_CLASSES.TEXT_LG} ${CSS_CLASSES.CODE_PILL} ${CSS_CLASSES.JUSTIFY_START}" style="font-size: 1rem;" data-code="${item.code}">${item.code}</span>
-                            <img src="https://files.marketindex.com.au/xasx/96x96-png/${item.code.toLowerCase()}.png" class="favicon-icon" style="width: 1rem; height: 1rem;" onerror="this.src='${KANGAROO_ICON_SRC}'" alt="">
+                            <img src="https://files.marketindex.com.au/xasx/96x96-png/${item.code.toLowerCase()}.png" class="favicon-icon" onerror="this.src='${KANGAROO_ICON_SRC}'" alt="">
                         </div>
                         <span class="${CSS_CLASSES.CARD_PRICE} ${CSS_CLASSES.PRIMARY_TEXT} ${CSS_CLASSES.TEXT_LG} ${CSS_CLASSES.MT_TINY} ${CSS_CLASSES.TEXT_LEFT}">${formatCurrency(price)}</span>
                     </div>
@@ -697,6 +733,7 @@ export class ViewRenderer {
     }
 
     renderStockDetailsModal(stock) {
+        this._currentDetailsStock = stock;
         const existingModal = document.getElementById(IDS.STOCK_DETAILS_MODAL);
         if (existingModal) existingModal.remove();
 
@@ -729,28 +766,20 @@ export class ViewRenderer {
         const trendBgClass = isPos ? CSS_CLASSES.TREND_UP_BG : (isNeg ? CSS_CLASSES.TREND_DOWN_BG : CSS_CLASSES.TREND_NEUTRAL_BG);
 
         const modal = document.createElement('div');
+        modal.id = IDS.STOCK_DETAILS_MODAL;
         modal.className = `${CSS_CLASSES.MODAL} ${CSS_CLASSES.HIDDEN}`;
         modal.dataset.stockCode = stock.code;
 
-        window.addEventListener(EVENTS.RESEARCH_LINKS_UPDATED, () => {
-            const modalToUpdate = document.getElementById(IDS.STOCK_DETAILS_MODAL);
-            if (modalToUpdate && !modalToUpdate.classList.contains(CSS_CLASSES.HIDDEN) && modalToUpdate.dataset.stockCode === stock.code) {
-                const freshStock = AppState.data.shares.find(s => s.id === stock.id);
-                if (freshStock) {
-                    this.renderStockDetailsModal(freshStock);
-                }
-            }
-        }, { once: true });
 
 
-        // Research Links
-        const rawLinks = AppState.preferences.researchLinks && AppState.preferences.researchLinks.length > 0
+        // Research Links - Use the static seeding logic
+        const rawLinks = (AppState.preferences.researchLinks && AppState.preferences.researchLinks.length > 0)
             ? AppState.preferences.researchLinks
             : RESEARCH_LINKS_TEMPLATE;
 
         const links = rawLinks.map(link => ({
             displayName: link.displayName || link.name,
-            url: link.url.split('${code}').join(stock.code),
+            url: (link.url || '').replace(/\${code}/gi, stock.code),
             description: link.description || ''
         }));
 
@@ -1031,9 +1060,10 @@ export class ViewRenderer {
                             <!-- Card 6: Research -->
                             <div class="${CSS_CLASSES.DETAIL_CARD} ${trendBgClass}">
                                 <div class="${CSS_CLASSES.DETAIL_CARD_HEADER}">
-                                    <h3 id="${IDS.RESEARCH_LINKS_TITLE_DETAILS}" class="${CSS_CLASSES.DETAIL_LABEL} clickable" style="width: 100%;">
-                                        <i class="fas ${UI_ICONS.GLOBE}"></i> Research
-                                        <i class="fas fa-chevron-right research-chevron"></i>
+                                    <h3 id="${IDS.RESEARCH_LINKS_TITLE_DETAILS}" class="${CSS_CLASSES.DETAIL_LABEL} clickable" style="width: 100%; display: flex; align-items: center; justify-content: flex-start;">
+                                        <i class="fas ${UI_ICONS.GLOBE}"></i> 
+                                        <span style="margin-left: 8px;">Research</span>
+                                        <i class="fas fa-chevron-down chevron-discreet"></i>
                                     </h3>
                                 </div>
                                 <div class="research-links-grid">
@@ -1047,8 +1077,10 @@ export class ViewRenderer {
             }
             const faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
 
+            const substitutedUrl = (finalLink.url || '').replace(/\${code}/gi, stock.code);
+
             return `
-                                            <a href="${finalLink.url}" target="_blank" class="research-link-btn">
+                                            <a href="${substitutedUrl}" target="_blank" class="research-link-btn">
                                                 <img src="${faviconUrl}" class="link-favicon" alt="">
                                                 <div class="link-info-stack">
                                                     <span class="link-name">${finalLink.displayName || finalLink.name}</span>
@@ -1171,10 +1203,52 @@ export class ViewRenderer {
         const researchTitle = modal.querySelector(`#${IDS.RESEARCH_LINKS_TITLE_DETAILS}`);
         if (researchTitle) {
             researchTitle.addEventListener('click', () => {
-                const event = new CustomEvent('REQUEST_RESEARCH_LINKS_MANAGE');
+                const event = new CustomEvent('REQUEST_RESEARCH_LINKS_MANAGE', {
+                    detail: { code: stock.code }
+                });
                 document.dispatchEvent(event);
             });
         }
+
+        // AUTO-REFRESH RESEARCH SECTION
+        const researchUpdateHandler = () => {
+            if (document.contains(modal)) {
+                // Determine new links
+                const newLinks = AppState.preferences.researchLinks && AppState.preferences.researchLinks.length > 0
+                    ? AppState.preferences.researchLinks
+                    : RESEARCH_LINKS_TEMPLATE;
+
+                const grid = modal.querySelector('.research-links-grid');
+                if (grid) {
+                    grid.innerHTML = newLinks.map(link => {
+                        const finalLink = typeof link === 'string' ? { displayName: 'Link', url: link } : link;
+
+                        // Robust substitution for both URL and Display Name
+                        const codeRegex = /\$(?:\{code\}|\(code\)|code)/gi;
+                        const substitutedUrl = (finalLink.url || '').replace(codeRegex, stock.code);
+                        const substitutedName = (finalLink.displayName || finalLink.name || 'Link').replace(codeRegex, stock.code);
+
+                        let hostname = '';
+                        try { hostname = new URL(substitutedUrl).hostname; } catch (e) { }
+                        const faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
+
+                        return `
+                            <a href="${substitutedUrl}" target="_blank" class="research-link-btn">
+                                <img src="${faviconUrl}" class="link-favicon" alt="">
+                                <div class="link-info-stack">
+                                    <span class="link-name">${substitutedName}</span>
+                                    <span class="link-desc">${finalLink.description || ''}</span>
+                                </div>
+                            </a>
+                        `;
+                    }).join('');
+                }
+            } else {
+                window.removeEventListener(EVENTS.RESEARCH_LINKS_UPDATED, researchUpdateHandler);
+            }
+        };
+        window.addEventListener(EVENTS.RESEARCH_LINKS_UPDATED, researchUpdateHandler);
+
 
         // Mini Chart Preview - instantiate and wire click to expand
         const miniChartHost = modal.querySelector(`#miniChartHost_${stock.code}`);
@@ -1379,7 +1453,7 @@ export class ViewRenderer {
 
                         <!-- Research Links Grid -->
                         <h4 id="research-discovery-tools-title" class="${CSS_CLASSES.SECTION_TITLE} clickable">
-                            Research Tools <i class="fas fa-chevron-right research-chevron"></i>
+                            Edit Research <i class="fas fa-chevron-right research-chevron"></i>
                         </h4>
                         <div class="research-links-grid">
                             ${linksHtml}
@@ -1390,7 +1464,9 @@ export class ViewRenderer {
 
         // Bind Events
         modal.querySelector('#research-discovery-tools-title').addEventListener('click', () => {
-            const event = new CustomEvent('REQUEST_RESEARCH_LINKS_MANAGE');
+            const event = new CustomEvent('REQUEST_RESEARCH_LINKS_MANAGE', {
+                detail: { code: stock.code }
+            });
             document.dispatchEvent(event);
         });
 
@@ -2256,6 +2332,10 @@ export class ViewRenderer {
             } else {
                 this._isDraggingOrCoolingDown = false; // Safety reset
             }
+
+            // Clean up lines
+            const rows = container.querySelectorAll(`.${CSS_CLASSES.SORT_PICKER_ROW}`);
+            rows.forEach(r => r.classList.remove('drag-over', 'drag-over-bottom'));
         });
 
         container.addEventListener('dragover', (e) => {
@@ -2268,9 +2348,17 @@ export class ViewRenderer {
             }
 
             const afterElement = this._getSortDragAfterElement(container, e.clientY);
+
+            // Visual Line Logic
+            const rows = [...container.querySelectorAll(`.${CSS_CLASSES.SORT_PICKER_ROW}:not(.${CSS_CLASSES.DRAGGING})`)];
+            rows.forEach(r => r.classList.remove('drag-over', 'drag-over-bottom'));
+
             if (afterElement == null) {
+                const lastRow = rows[rows.length - 1];
+                if (lastRow) lastRow.classList.add('drag-over-bottom');
                 container.appendChild(this._draggedSortItem);
             } else {
+                afterElement.classList.add('drag-over');
                 container.insertBefore(this._draggedSortItem, afterElement);
             }
         });

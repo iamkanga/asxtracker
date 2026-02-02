@@ -773,6 +773,10 @@ export class WatchlistUI {
 
                 this._saveWatchlistOrder(container); // Pass container explicitly
             }
+
+            // Clean up lines
+            const rows = container.querySelectorAll(`.${CSS_CLASSES.WATCHLIST_ITEM}`);
+            rows.forEach(r => r.classList.remove('drag-over', 'drag-over-bottom'));
         });
 
         container.addEventListener('dragover', (e) => {
@@ -783,8 +787,17 @@ export class WatchlistUI {
             }
 
             const afterElement = this._getDragAfterElement(container, e.clientY);
+
+            // Visual Line Logic
+            const rows = [...container.querySelectorAll(`.${CSS_CLASSES.WATCHLIST_ITEM}:not(.${CSS_CLASSES.DRAGGING})`)];
+            rows.forEach(r => r.classList.remove('drag-over', 'drag-over-bottom'));
+
             if (afterElement == null) {
+                const lastRow = rows[rows.length - 1];
+                if (lastRow) lastRow.classList.add('drag-over-bottom');
+                container.appendChild(this._draggedWatchlistItem);
             } else {
+                afterElement.classList.add('drag-over');
                 container.insertBefore(this._draggedWatchlistItem, afterElement);
             }
         });

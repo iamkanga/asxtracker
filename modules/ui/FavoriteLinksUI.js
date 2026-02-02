@@ -2,61 +2,41 @@ import { IDS, CSS_CLASSES, UI_ICONS, EVENTS } from '../utils/AppConstants.js';
 import { AppState } from '../state/AppState.js';
 import { navManager } from '../utils/NavigationManager.js';
 
+/**
+ * FavoriteLinksUI - Handles the Favorite Links modal and management tools.
+ * Complies with Constitution: Specialized UI logic, Registry Rule (AppConstants), No Global Pollution.
+ */
 export class FavoriteLinksUI {
-    static _currentMode = 'open'; // 'open' or 'manage'
+    static _currentMode = 'open'; // Default to grid view
 
     static init() {
-        this._setupEventListeners();
+        document.addEventListener(EVENTS.OPEN_FAVORITE_LINKS, () => {
+            this._currentMode = 'open';
+            this.showModal();
+        });
+        this._setupGlobalListeners();
+
+        // Delegation for actions within the modal
+        document.addEventListener('click', (e) => {
+            const target = e.target.closest('[data-action]');
+            if (!target || !target.closest(`#${IDS.MODAL_FAVORITE_LINKS}`)) return;
+
+            const action = target.dataset.action;
+            const index = parseInt(target.dataset.index, 10);
+
+            if (action === 'edit' && !isNaN(index)) {
+                this._editLinkDetails(index);
+            } else if (action === 'delete' && !isNaN(index)) {
+                this._deleteLink(index);
+            }
+        });
     }
 
-    static _setupEventListeners() {
-        document.addEventListener(EVENTS.OPEN_FAVORITE_LINKS, () => this.showModal());
-
-        document.addEventListener('click', (e) => {
+    static _setupGlobalListeners() {
+        window.addEventListener(EVENTS.FAVORITE_LINKS_UPDATED, () => {
             const modal = document.getElementById(IDS.MODAL_FAVORITE_LINKS);
-            if (!modal || modal.classList.contains(CSS_CLASSES.HIDDEN)) {
-                const openBtn = e.target.closest(`#${IDS.BTN_FAVORITE_LINKS}`);
-                if (openBtn) {
-                    this.showModal();
-                }
-                return;
-            }
-
-            const addBtn = e.target.closest(`#${IDS.ADD_FAVORITE_BTN}`);
-            if (addBtn) {
-                this._showLinkDialog();
-                return;
-            }
-
-            const title = e.target.closest(`#${IDS.FAVORITE_LINKS_TITLE}`);
-            if (title) {
-                this._toggleMode();
-                return;
-            }
-
-            const closeBtn = e.target.closest(`#${IDS.MODAL_FAVORITE_LINKS} .modal-close-btn`);
-            if (closeBtn) {
-                this.closeModal();
-                return;
-            }
-            
-            const overlay = e.target.closest(`.${CSS_CLASSES.MODAL_OVERLAY}`);
-            if (overlay && e.target === overlay) {
-                 this.closeModal();
-                 return;
-            }
-
-            const actionBtn = e.target.closest('[data-action]');
-            if (actionBtn) {
-                const action = actionBtn.dataset.action;
-                const index = parseInt(actionBtn.dataset.index, 10);
-
-                if (action === 'edit' && !isNaN(index)) {
-                    const links = this._getEffectiveLinks();
-                    this._showLinkDialog(links[index], index);
-                } else if (action === 'delete' && !isNaN(index)) {
-                    this._deleteLink(index);
-                }
+            if (modal && !modal.classList.contains(CSS_CLASSES.HIDDEN)) {
+                this._renderContent(modal);
             }
         });
     }
@@ -66,25 +46,31 @@ export class FavoriteLinksUI {
         if (!modal) {
             modal = this._createModal();
             document.body.appendChild(modal);
+        } else {
+            this._bindEvents(modal);
         }
 
-        this._currentMode = 'open';
-        this._updateTitleAndControls(modal);
-
-        if (!this._liveUpdateListener) {
-            this._liveUpdateListener = () => {
-                const openModal = document.getElementById(IDS.MODAL_FAVORITE_LINKS);
-                if (openModal) this.render(openModal);
-            };
-            window.addEventListener(EVENTS.FAVORITE_LINKS_UPDATED, this._liveUpdateListener);
+        // Standardized Header
+        const titleEl = modal.querySelector(`#${IDS.FAVORITE_LINKS_TITLE}`);
+        if (titleEl) {
+            if (this._currentMode === 'open') {
+                titleEl.innerHTML = `
+                    Favorite Links
+                    <i id="fav-links-chevron" class="fas fa-chevron-down chevron-discreet"></i>
+                `;
+            } else {
+                // MANAGEMENT MODE Title: "Edit Favourites"
+                titleEl.innerHTML = `Edit Favourites`;
+            }
         }
 
-        this.render(modal);
+        this._renderContent(modal);
         modal.classList.remove(CSS_CLASSES.HIDDEN);
 
         modal._navActive = true;
         navManager.pushState(() => {
             if (modal.parentElement) {
+                modal._navActive = false;
                 this.closeModal();
             }
         });
@@ -101,6 +87,11 @@ export class FavoriteLinksUI {
         }
     }
 
+    static _toggleMode() {
+        this._currentMode = this._currentMode === 'open' ? 'manage' : 'open';
+        this.showModal();
+    }
+
     static _createModal() {
         const modal = document.createElement('div');
         modal.id = IDS.MODAL_FAVORITE_LINKS;
@@ -108,17 +99,19 @@ export class FavoriteLinksUI {
 
         modal.innerHTML = `
             <div class="${CSS_CLASSES.MODAL_OVERLAY}"></div>
-            <div class="${CSS_CLASSES.MODAL_CONTENT} modal-content-large">
+            <div class="${CSS_CLASSES.MODAL_CONTENT} ${CSS_CLASSES.MODAL_CONTENT_LARGE}">
                 <div class="${CSS_CLASSES.MODAL_HEADER}">
                     <h2 id="${IDS.FAVORITE_LINKS_TITLE}" class="${CSS_CLASSES.MODAL_TITLE}" style="cursor: pointer; user-select: none; display: flex; align-items: center;">
-                        Favorite URLs
-                        <span id="fav-links-chevron" class="chevron-icon">▼</span>
+                        Favorite Links
                     </h2>
                     <div class="${CSS_CLASSES.MODAL_ACTIONS}">
-                        <button id="${IDS.ADD_FAVORITE_BTN}" class="${CSS_CLASSES.MODAL_ACTION_BTN}" title="Add Link" style="display: none;">
+                        <button id="${IDS.RESTORE_FAVORITES_BTN}" class="${CSS_CLASSES.MODAL_ACTION_BTN}" title="Restore Defaults">
+                            <i class="fas fa-undo-alt"></i>
+                        </button>
+                        <button id="${IDS.ADD_FAVORITE_BTN}" class="${CSS_CLASSES.MODAL_ACTION_BTN}" title="Add Link">
                             <i class="fas ${UI_ICONS.ADD}"></i>
                         </button>
-                        <button class="${CSS_CLASSES.MODAL_CLOSE_BTN}">
+                        <button class="${CSS_CLASSES.MODAL_CLOSE_BTN} ${CSS_CLASSES.MODAL_ACTION_BTN}">
                             <i class="fas ${UI_ICONS.CLOSE}"></i>
                         </button>
                     </div>
@@ -129,36 +122,35 @@ export class FavoriteLinksUI {
                 </div>
             </div>
         `;
+
+        this._bindEvents(modal);
         return modal;
     }
 
-    static _updateTitleAndControls(modal) {
-        const titleEl = modal.querySelector(`#${IDS.FAVORITE_LINKS_TITLE}`);
+    static _bindEvents(modal) {
+        const closeBtn = modal.querySelector(`.${CSS_CLASSES.MODAL_CLOSE_BTN}`);
+        if (closeBtn) closeBtn.onclick = () => this.closeModal();
+
+        const overlay = modal.querySelector(`.${CSS_CLASSES.MODAL_OVERLAY}`);
+        if (overlay) overlay.onclick = () => this.closeModal();
+
         const addBtn = modal.querySelector(`#${IDS.ADD_FAVORITE_BTN}`);
-        const chevron = modal.querySelector(`#fav-links-chevron`);
+        if (addBtn) addBtn.onclick = () => this._showAddLinkForm();
 
-        const isManage = this._currentMode === 'manage';
+        const title = modal.querySelector(`#${IDS.FAVORITE_LINKS_TITLE}`);
+        if (title) {
+            title.onclick = () => this._toggleMode();
+        }
 
-        if (titleEl) {
-            const titleText = isManage ? 'Favorite Tools' : 'Favorite URLs';
-            const textNode = Array.from(titleEl.childNodes).find(node => node.nodeType === Node.TEXT_NODE);
-            if (textNode) {
-                textNode.nodeValue = titleText + ' ';
-            }
+        const restoreBtn = modal.querySelector(`#${IDS.RESTORE_FAVORITES_BTN}`);
+        if (restoreBtn) {
+            restoreBtn.onclick = () => {
+                if (confirm('Restore default links? This will overwrite your current list.')) {
+                    AppState.saveFavoriteLinks(this.DEFAULTS);
+                    this._renderContent(modal);
+                }
+            };
         }
-        if (addBtn) {
-            addBtn.style.display = isManage ? 'block' : 'none';
-        }
-        if (chevron) {
-            chevron.style.transform = isManage ? 'rotate(180deg)' : 'rotate(0deg)';
-        }
-    }
-
-    static _toggleMode() {
-        this._currentMode = this._currentMode === 'open' ? 'manage' : 'open';
-        const modal = document.getElementById(IDS.MODAL_FAVORITE_LINKS);
-        this._updateTitleAndControls(modal);
-        this.render(modal);
     }
 
     static get DEFAULTS() {
@@ -168,95 +160,71 @@ export class FavoriteLinksUI {
             { name: 'Market Index', url: 'https://www.marketindex.com.au' },
             { name: 'ASX Official', url: 'https://www2.asx.com.au' },
             { name: 'InvestorServe', url: 'https://www.investorserve.com.au/' },
+            { name: 'InvestorPort', url: 'https://portals.linkmarketservices.com.au/' },
             { name: 'Automic Investor', url: 'https://automic.com.au' },
             { name: 'MUFG Corporate Markets', url: 'https://www.mpms.mufg.com/en/mufg-corporate-markets/' },
             { name: 'Computershare', url: 'https://www-au.computershare.com/Investor/#Home' },
             { name: 'Yahoo Finance', url: 'https://au.finance.yahoo.com' },
-            { name: 'Motley Fool', url: 'https://www.fool.com.au' },
-            { name: 'HotCopper', url: 'https://hotcopper.com.au' },
-            { name: 'CommSec', url: 'https://www.commsec.com.au' },
             { name: 'TradingView', url: 'https://www.tradingview.com' },
-            { name: 'AFR', url: 'https://www.afr.com' },
-            { name: 'Livewire', url: 'https://www.livewiremarkets.com' },
-            { name: 'Smallcaps', url: 'https://smallcaps.com.au' },
-            { name: 'Listcorp', url: 'https://www.listcorp.com' },
-            { name: 'Marketwatch', url: 'https://www.marketwatch.com' },
-            { name: 'Morningstar', url: 'https://www.morningstar.com.au' },
-            { name: 'Stockhead', url: 'https://stockhead.com.au' },
-            { name: 'Intelligent Investor', url: 'https://www.intelligentinvestor.com.au' },
-            { name: 'Rask', url: 'https://www.rask.com.au' }
+            { name: 'HotCopper', url: 'https://hotcopper.com.au' },
+            { name: 'Simply Wall St', url: 'https://simplywall.st/stocks/asx' },
+            { name: 'CommSec', url: 'https://www.commsec.com.au' }
         ];
     }
 
     static _getEffectiveLinks() {
-        const links = AppState.preferences.favoriteLinks;
-        if (!links || links.length === 0) {
+        // CONSTITUTIONAL FIX: Reinstating defaults if user list is empty or missing
+        const userLinks = AppState.preferences.favoriteLinks;
+        if (!userLinks || userLinks.length === 0) {
             return JSON.parse(JSON.stringify(this.DEFAULTS));
         }
-
-        const defaultSharesight = 'https://www.sharesight.com/au/login/';
-        const defaultAFR = 'https://www.afr.com';
-        const oldAutomic = 'https://portal.automic.com.au/investor/home';
-        const oldLink = 'https://au.investorcentre.mpms.mufg.com/Login/Login';
-
-        let sanitzed = links.filter(link => {
-            if (link.name === 'Sharesight' && link.url !== defaultSharesight) return false;
-            if (link.name === 'AFR' && link.url !== defaultAFR) return false;
-            if (link.url === oldAutomic) return false;
-            if (link.url === oldLink) return false;
-            return true;
-        });
-
-        let modified = false;
-        if (modified) {
-            AppState.saveFavoriteLinks(sanitzed);
-        }
-
-        return [...sanitzed];
+        return userLinks;
     }
 
-    static render(modal) {
+    static _renderContent(modal) {
         const container = modal.querySelector(`#${IDS.FAVORITE_LINKS_LIST}`);
         const links = this._getEffectiveLinks();
 
-        if (this._currentMode === 'open') {
-            this._renderGrid(container, links);
-        } else {
+        if (this._currentMode === 'manage') {
             this._renderList(container, links);
+            const addBtn = modal.querySelector(`#${IDS.ADD_FAVORITE_BTN}`);
+            const restoreBtn = modal.querySelector(`#${IDS.RESTORE_FAVORITES_BTN}`);
+            if (addBtn) addBtn.classList.remove(CSS_CLASSES.HIDDEN);
+            if (restoreBtn) restoreBtn.classList.remove(CSS_CLASSES.HIDDEN);
+        } else {
+            this._renderGrid(container, links);
+            const addBtn = modal.querySelector(`#${IDS.ADD_FAVORITE_BTN}`);
+            const restoreBtn = modal.querySelector(`#${IDS.RESTORE_FAVORITES_BTN}`);
+            if (addBtn) addBtn.classList.add(CSS_CLASSES.HIDDEN);
+            if (restoreBtn) restoreBtn.classList.add(CSS_CLASSES.HIDDEN);
         }
     }
 
-    // Grid View (Open Mode)
     static _renderGrid(container, links) {
-        container.className = 'favorite-links-grid';
+        container.className = CSS_CLASSES.FAVORITE_LINKS_GRID;
         container.innerHTML = links.map((link, index) => {
             let hostname = '';
             try { hostname = new URL(link.url).hostname; } catch (e) { hostname = 'unknown'; }
-
-            const iconSrc = link.customIcon || `https://www.google.com/s2/favicons?domain=${hostname}&sz=64`;
+            const iconSrc = `https://www.google.com/s2/favicons?domain=${hostname}&sz=64`;
 
             return `
-                <div class="favorite-link-item" data-index="${index}">
-                    <a href="${link.url}" target="_blank" rel="noopener noreferrer" class="favorite-link-btn">
-                        <img src="${iconSrc}" class="link-favicon" alt="">
-                        <span class="link-name">${link.name}</span>
-                    </a>
-                </div>
+                <a href="${link.url}" target="_blank" class="${CSS_CLASSES.FAVORITE_LINK_CARD}">
+                    <img src="${iconSrc}" alt="" class="link-favicon">
+                    <span class="link-text">${link.name}</span>
+                </a>
             `;
         }).join('');
     }
 
-    // List View (Manage Mode)
     static _renderList(container, links) {
-        container.className = 'favorite-manage-list';
+        container.className = CSS_CLASSES.FAVORITE_MANAGE_LIST;
         container.innerHTML = links.map((link, index) => {
             let hostname = '';
             try { hostname = new URL(link.url).hostname; } catch (e) { hostname = 'unknown'; }
-
-            const iconSrc = link.customIcon || `https://www.google.com/s2/favicons?domain=${hostname}&sz=64`;
+            const iconSrc = `https://www.google.com/s2/favicons?domain=${hostname}&sz=64`;
 
             return `
-                <div class="favorite-manage-row" data-index="${index}" draggable="true">
+                <div class="${CSS_CLASSES.FAVORITE_MANAGE_ROW}" data-index="${index}" draggable="true">
                     <div class="drag-handle" title="Hold to Drag">
                         <i class="fas fa-bars"></i>
                     </div>
@@ -270,7 +238,6 @@ export class FavoriteLinksUI {
                     </div>
                     
                     <div class="manage-controls">
-                        <!-- Delete -->
                         <button class="btn-delete" data-action="delete" data-index="${index}">
                             <i class="fas fa-trash-alt"></i>
                         </button>
@@ -283,50 +250,96 @@ export class FavoriteLinksUI {
     }
 
     static _setupDragDrop(container) {
-        let draggedIndex = null;
+        // PREVENT LISTENER STACKING
+        if (container._dragDropInitialized) return;
+        container._dragDropInitialized = true;
+
+        this._draggedItem = null;
 
         container.addEventListener('dragstart', (e) => {
-            const row = e.target.closest('.favorite-manage-row');
+            const row = e.target.closest(`.${CSS_CLASSES.FAVORITE_MANAGE_ROW}`);
             if (!row) return;
-            draggedIndex = parseInt(row.dataset.index);
-            row.classList.add('dragging');
-            e.dataTransfer.effectAllowed = 'move';
 
-            if (navigator.vibrate) {
-                navigator.vibrate(50); // Haptic feedback
+            // Block drag if clicking buttons
+            if (e.target.closest('button') || e.target.closest('input')) {
+                e.preventDefault();
+                return;
             }
+
+            this._draggedItem = row;
+            row.classList.add(CSS_CLASSES.DRAGGING);
+            e.dataTransfer.effectAllowed = 'move';
+            // Set some data for Firefox support
+            e.dataTransfer.setData('text/plain', '');
         });
 
         container.addEventListener('dragover', (e) => {
+            if (!this._draggedItem) return;
             e.preventDefault();
-            const row = e.target.closest('.favorite-manage-row');
-            if (!row || draggedIndex === null) return;
-            row.classList.add('drag-over');
-        });
+            e.dataTransfer.dropEffect = 'move';
 
-        container.addEventListener('dragleave', (e) => {
-            const row = e.target.closest('.favorite-manage-row');
-            if (row) row.classList.remove('drag-over');
+            const afterElement = this._getDragAfterElement(container, e.clientY);
+
+            // Visual Line Logic
+            const rows = [...container.querySelectorAll(`.${CSS_CLASSES.FAVORITE_MANAGE_ROW}:not(.${CSS_CLASSES.DRAGGING})`)];
+            rows.forEach(r => r.classList.remove('drag-over', 'drag-over-bottom'));
+
+            if (afterElement == null) {
+                const lastRow = rows[rows.length - 1];
+                if (lastRow) lastRow.classList.add('drag-over-bottom');
+                container.appendChild(this._draggedItem);
+            } else {
+                afterElement.classList.add('drag-over');
+                container.insertBefore(this._draggedItem, afterElement);
+            }
         });
 
         container.addEventListener('drop', (e) => {
             e.preventDefault();
-            e.stopPropagation();
-            const row = e.target.closest('.favorite-manage-row');
-            if (!row || draggedIndex === null) return;
-
-            const dropIndex = parseInt(row.dataset.index);
-            if (draggedIndex !== dropIndex) {
-                this._reorderLinks(draggedIndex, dropIndex);
-            }
-            draggedIndex = null;
+            this._finalizeReorder(container);
         });
 
         container.addEventListener('dragend', (e) => {
-            const rows = container.querySelectorAll('.favorite-manage-row');
-            rows.forEach(r => r.classList.remove('dragging', 'drag-over'));
-            draggedIndex = null;
+            if (this._draggedItem) {
+                this._draggedItem.classList.remove(CSS_CLASSES.DRAGGING);
+            }
+            this._draggedItem = null;
+            const rows = container.querySelectorAll(`.${CSS_CLASSES.FAVORITE_MANAGE_ROW}`);
+            rows.forEach(r => r.classList.remove('drag-over', 'drag-over-bottom'));
         });
+    }
+
+    static _getDragAfterElement(container, y) {
+        const draggableElements = [...container.querySelectorAll(`.${CSS_CLASSES.FAVORITE_MANAGE_ROW}:not(.${CSS_CLASSES.DRAGGING})`)];
+
+        return draggableElements.reduce((closest, child) => {
+            const box = child.getBoundingClientRect();
+            const offset = y - box.top - box.height / 2;
+            if (offset < 0 && offset > closest.offset) {
+                return { offset: offset, element: child };
+            } else {
+                return closest;
+            }
+        }, { offset: Number.NEGATIVE_INFINITY }).element;
+    }
+
+    static _finalizeReorder(container) {
+        const rows = Array.from(container.querySelectorAll(`.${CSS_CLASSES.FAVORITE_MANAGE_ROW}`));
+        const currentLinks = this._getEffectiveLinks();
+
+        // Match links by URL/Name to current DOM order
+        const newLinks = rows.map(row => {
+            const idx = parseInt(row.dataset.index, 10);
+            return currentLinks[idx];
+        });
+
+        AppState.saveFavoriteLinks(newLinks);
+
+        // Re-render to update data-index attributes
+        const modal = document.getElementById(IDS.MODAL_FAVORITE_LINKS);
+        if (modal) this._renderContent(modal);
+
+        if (AppState._triggerSync) AppState._triggerSync();
     }
 
     static _reorderLinks(from, to) {
@@ -334,30 +347,33 @@ export class FavoriteLinksUI {
         const [moved] = links.splice(from, 1);
         links.splice(to, 0, moved);
         AppState.saveFavoriteLinks(links);
-        this.render(document.getElementById(IDS.MODAL_FAVORITE_LINKS));
-    }
 
-    static _showLinkDialog(existingLink = null, editIndex = -1) {
-        const name = prompt('Name:', existingLink ? existingLink.name : '');
-        if (name === null) return;
-
-        const url = prompt('URL:', existingLink ? existingLink.url : 'https://');
-        if (url === null) return;
-
-        const newLink = {
-            name: name.trim() || 'Untitled',
-            url: url.trim()
-        };
-
-        const links = this._getEffectiveLinks();
-        if (editIndex >= 0) {
-            links[editIndex] = newLink;
-        } else {
-            links.push(newLink);
+        const modal = document.getElementById(IDS.MODAL_FAVORITE_LINKS);
+        if (modal) {
+            // Re-render will trigger _setupDragDrop again but the flag will block new listeners
+            this._renderContent(modal);
         }
 
-        AppState.saveFavoriteLinks(links);
-        this.render(document.getElementById(IDS.MODAL_FAVORITE_LINKS));
+        if (AppState._triggerSync) AppState._triggerSync();
+    }
+
+    static _editLinkDetails(index) {
+        const links = this._getEffectiveLinks();
+        const link = links[index];
+
+        const newName = prompt("Edit Name:", link.name);
+        if (newName === null) return;
+
+        const newUrl = prompt("Edit URL:", link.url);
+        if (newUrl === null) return;
+
+        if (newName && newUrl) {
+            links[index] = { name: newName, url: newUrl };
+            AppState.saveFavoriteLinks(links);
+            const modal = document.getElementById(IDS.MODAL_FAVORITE_LINKS);
+            if (modal) this._renderContent(modal);
+            if (AppState._triggerSync) AppState._triggerSync();
+        }
     }
 
     static _deleteLink(index) {
@@ -365,6 +381,31 @@ export class FavoriteLinksUI {
         const links = this._getEffectiveLinks();
         links.splice(index, 1);
         AppState.saveFavoriteLinks(links);
-        this.render(document.getElementById(IDS.MODAL_FAVORITE_LINKS));
+
+        const modal = document.getElementById(IDS.MODAL_FAVORITE_LINKS);
+        if (modal) this._renderContent(modal);
+        if (AppState._triggerSync) AppState._triggerSync();
+    }
+
+    static _showAddLinkForm() {
+        const name = prompt("Link Name:");
+        if (!name) return;
+        const url = prompt("URL (e.g., https://google.com):");
+        if (!url) return;
+
+        let links = this._getEffectiveLinks();
+
+        // Seed if first time
+        if (!AppState.preferences.favoriteLinks || AppState.preferences.favoriteLinks.length === 0) {
+            links = [...JSON.parse(JSON.stringify(this.DEFAULTS)), { name, url }];
+        } else {
+            links.push({ name, url });
+        }
+
+        AppState.saveFavoriteLinks(links);
+
+        const modal = document.getElementById(IDS.MODAL_FAVORITE_LINKS);
+        if (modal) this._renderContent(modal);
+        if (AppState._triggerSync) AppState._triggerSync();
     }
 }

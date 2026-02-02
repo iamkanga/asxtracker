@@ -533,7 +533,7 @@ export const AppState = {
     saveCustomWatchlistName(id, name) {
         if (!this.preferences.customWatchlistNames) this.preferences.customWatchlistNames = {};
         this.preferences.customWatchlistNames[id] = name;
-        localStorage.setItem('ASX_NEXT_customWatchlistNames', JSON.stringify(this.preferences.customWatchlistNames));
+        localStorage.setItem(STORAGE_KEYS.CUSTOM_WATCHLIST_NAMES, JSON.stringify(this.preferences.customWatchlistNames));
         this._triggerSync();
     },
 
@@ -541,6 +541,7 @@ export const AppState = {
         this.preferences.favoriteLinks = links;
         localStorage.setItem(STORAGE_KEYS.FAVORITE_LINKS, JSON.stringify(links));
         this._triggerSync();
+        window.dispatchEvent(new CustomEvent(EVENTS.FAVORITE_LINKS_UPDATED));
     },
 
     saveResearchLinks(links) {

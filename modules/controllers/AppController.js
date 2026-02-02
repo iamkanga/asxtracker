@@ -1099,7 +1099,7 @@ export class AppController {
                     // 8.1 Sync Custom Watchlist Names
                     if (prefs.customWatchlistNames) {
                         AppState.preferences.customWatchlistNames = prefs.customWatchlistNames;
-                        localStorage.setItem('ASX_NEXT_customWatchlistNames', JSON.stringify(prefs.customWatchlistNames));
+                        localStorage.setItem(STORAGE_KEYS.CUSTOM_WATCHLIST_NAMES, JSON.stringify(prefs.customWatchlistNames));
                         // Force Title Update immediately if current watchlist is affected
                         const currentId = AppState.watchlist.id;
                         if (currentId && prefs.customWatchlistNames[currentId]) {
@@ -1573,10 +1573,12 @@ export class AppController {
         }
 
         // === STEP 1: Update Watchlist Identity ===
+        const customNames = AppState.preferences.customWatchlistNames || {};
+
         if (watchlistId === CASH_WATCHLIST_ID) {
             AppState.watchlist.type = 'cash';
             AppState.watchlist.id = CASH_WATCHLIST_ID;
-            AppState.watchlist.name = 'Cash';
+            AppState.watchlist.name = customNames[CASH_WATCHLIST_ID] || 'Cash & Assets';
             AppState.isPortfolioVisible = false;
         } else {
             AppState.watchlist.type = 'stock';
@@ -1584,16 +1586,18 @@ export class AppController {
 
             if (watchlistId === 'portfolio' || watchlistId === null) {
                 AppState.watchlist.id = 'portfolio';
-                AppState.watchlist.name = 'Portfolio';
-                AppState.isPortfolioVisible = true; // FIX: Was false
+                AppState.watchlist.name = customNames['portfolio'] || 'Portfolio';
+                AppState.isPortfolioVisible = true;
             } else if (watchlistId === DASHBOARD_WATCHLIST_ID) {
-                AppState.watchlist.type = 'stock'; // Or 'dashboard' if we want a separate type
                 AppState.watchlist.id = DASHBOARD_WATCHLIST_ID;
-                AppState.watchlist.name = 'Dashboard';
+                AppState.watchlist.name = customNames[DASHBOARD_WATCHLIST_ID] || 'Dashboard';
+                AppState.isPortfolioVisible = false;
+            } else if (watchlistId === ALL_SHARES_ID) {
+                AppState.watchlist.name = customNames[ALL_SHARES_ID] || 'All Shares';
                 AppState.isPortfolioVisible = false;
             } else {
                 const w = (AppState.data.watchlists || []).find(w => w.id === watchlistId);
-                AppState.watchlist.name = w ? w.name : 'Watchlist';
+                AppState.watchlist.name = w ? w.name : (customNames[watchlistId] || 'Watchlist');
                 AppState.isPortfolioVisible = false;
             }
         }
@@ -2384,11 +2388,11 @@ export class AppController {
         });
 
         // Research Links Management Listener
-        document.addEventListener('REQUEST_RESEARCH_LINKS_MANAGE', () => {
+        document.addEventListener('REQUEST_RESEARCH_LINKS_MANAGE', (e) => {
             // Delay to ensure the detail modal's historical context is clear
             setTimeout(() => {
                 import('../ui/ResearchLinksUI.js').then(module => {
-                    module.default.show();
+                    module.default.show(e.detail?.code);
                 });
             }, 150);
         });
