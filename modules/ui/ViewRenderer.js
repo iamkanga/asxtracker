@@ -36,7 +36,7 @@ export class ViewRenderer {
     }
 
     _setupGlobalListeners() {
-        document.addEventListener(EVENTS.RESEARCH_LINKS_UPDATED, () => {
+        window.addEventListener(EVENTS.RESEARCH_LINKS_UPDATED, () => {
             const modal = document.getElementById(IDS.STOCK_DETAILS_MODAL);
             if (modal && !modal.classList.contains(CSS_CLASSES.HIDDEN) && this._currentDetailsStock) {
                 this._refreshResearchLinks(modal, this._currentDetailsStock);

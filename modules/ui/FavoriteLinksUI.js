@@ -60,7 +60,7 @@ export class FavoriteLinksUI {
                 `;
             } else {
                 // MANAGEMENT MODE Title: "Edit Favourites"
-                titleEl.innerHTML = `Edit Favourites`;
+                titleEl.innerHTML = `<i class="fas fa-chevron-left"></i> Edit Favourites`;
             }
         }
 
@@ -338,8 +338,6 @@ export class FavoriteLinksUI {
         // Re-render to update data-index attributes
         const modal = document.getElementById(IDS.MODAL_FAVORITE_LINKS);
         if (modal) this._renderContent(modal);
-
-        if (AppState._triggerSync) AppState._triggerSync();
     }
 
     static _reorderLinks(from, to) {
@@ -353,8 +351,6 @@ export class FavoriteLinksUI {
             // Re-render will trigger _setupDragDrop again but the flag will block new listeners
             this._renderContent(modal);
         }
-
-        if (AppState._triggerSync) AppState._triggerSync();
     }
 
     static _editLinkDetails(index) {
@@ -372,7 +368,6 @@ export class FavoriteLinksUI {
             AppState.saveFavoriteLinks(links);
             const modal = document.getElementById(IDS.MODAL_FAVORITE_LINKS);
             if (modal) this._renderContent(modal);
-            if (AppState._triggerSync) AppState._triggerSync();
         }
     }
 
@@ -384,7 +379,6 @@ export class FavoriteLinksUI {
 
         const modal = document.getElementById(IDS.MODAL_FAVORITE_LINKS);
         if (modal) this._renderContent(modal);
-        if (AppState._triggerSync) AppState._triggerSync();
     }
 
     static _showAddLinkForm() {
@@ -406,6 +400,5 @@ export class FavoriteLinksUI {
 
         const modal = document.getElementById(IDS.MODAL_FAVORITE_LINKS);
         if (modal) this._renderContent(modal);
-        if (AppState._triggerSync) AppState._triggerSync();
     }
 }

@@ -514,7 +514,9 @@ export class AppController {
                     customWatchlistNames: AppState.preferences.customWatchlistNames || {}, // Fresh Read
                     accentColor: AppState.preferences.accentColor, // Fresh Read
                     accentOpacity: AppState.preferences.accentOpacity, // Fresh Read
-                    cardChartOpacity: AppState.preferences.cardChartOpacity // Fresh Read
+                    cardChartOpacity: AppState.preferences.cardChartOpacity, // Fresh Read
+                    researchLinks: AppState.preferences.researchLinks || [], // Fresh Read
+                    favoriteLinks: AppState.preferences.favoriteLinks || []  // Fresh Read
                 };
 
                 if (freshPrefs.userCategories) {
@@ -1041,6 +1043,18 @@ export class AppController {
                                 window.dispatchEvent(event);
                             });
                         }
+                    }
+
+                    // 5.2 Sync Research Links
+                    if (prefs.researchLinks && Array.isArray(prefs.researchLinks)) {
+                        const cloudLinks = prefs.researchLinks || [];
+
+                        // Overwrite strategy: Trust the Cloud
+                        AppState.preferences.researchLinks = cloudLinks;
+                        localStorage.setItem(STORAGE_KEYS.RESEARCH_LINKS, JSON.stringify(cloudLinks));
+
+                        // LIVE UPDATE: Trigger refresh
+                        window.dispatchEvent(new CustomEvent(EVENTS.RESEARCH_LINKS_UPDATED));
                     }
 
                     // 6. Sync Watchlist Mode

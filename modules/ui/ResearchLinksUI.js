@@ -307,8 +307,6 @@ export default class ResearchLinksUI {
         AppState.saveResearchLinks(links);
         this.render();
         ToastManager.show(editIndex >= 0 ? 'Link updated' : 'Link added', 'success');
-
-        if (AppState._triggerSync) AppState._triggerSync();
     }
 
     static deleteLink(index) {
@@ -319,7 +317,5 @@ export default class ResearchLinksUI {
         AppState.saveResearchLinks(links);
         this.render();
         ToastManager.show('Link removed', 'success');
-
-        if (AppState._triggerSync) AppState._triggerSync();
     }
 }
