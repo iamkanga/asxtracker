@@ -2244,6 +2244,29 @@ h1#dynamicWatchlistTitle.active {
 }
 
 /* Fix Notification Modal Z-Index to ensure it appears over Settings */
+/* Discreet Back Buttons */
+.modal-back-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    padding: 8px;
+    margin-right: 8px;
+    cursor: pointer;
+    transition: color 0.2s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-back-btn:hover {
+    color: var(--color-accent);
+}
+
+.modal-back-btn i {
+    font-size: 0.85rem;
+}
+
 #notification-modal {
     z-index: 200002 !important;
 }

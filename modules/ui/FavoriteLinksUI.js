@@ -60,7 +60,7 @@ export class FavoriteLinksUI {
                 `;
             } else {
                 // MANAGEMENT MODE Title: "Edit Favourites"
-                titleEl.innerHTML = `<i class="fas fa-chevron-left"></i> Edit Favourites`;
+                titleEl.innerHTML = `<button class="modal-back-btn" id="fav-modal-back"><i class="fas fa-chevron-left"></i></button> Edit Favorites`;
             }
         }
 

@@ -82,7 +82,7 @@ export class ThemeStudio {
 
         container.innerHTML = `
             <div class="studio-header">
-                <button class="studio-back" id="studio-back-btn" title="Back to Visual Studio"><i class="fas fa-chevron-left"></i></button>
+                <button class="modal-back-btn" id="studio-back-btn" title="Back to Visual Studio"><i class="fas fa-chevron-left"></i></button>
                 <!-- Title Glows for Preview -->
                 <span class="studio-title" id="studio-title-preview" style="text-shadow: 0 0 10px rgba(var(--color-accent-rgb), 0.8); color: rgba(var(--color-accent-rgb), var(--accent-opacity, 1));">
                     <i class="fas fa-paint-brush"></i> Design Studio

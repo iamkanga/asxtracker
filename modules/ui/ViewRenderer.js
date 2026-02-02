@@ -1453,7 +1453,7 @@ export class ViewRenderer {
 
                         <!-- Research Links Grid -->
                         <h4 id="research-discovery-tools-title" class="${CSS_CLASSES.SECTION_TITLE} clickable">
-                            Edit Research <i class="fas fa-chevron-right research-chevron"></i>
+                            Research <i class="fas fa-chevron-right research-chevron"></i>
                         </h4>
                         <div class="research-links-grid">
                             ${linksHtml}

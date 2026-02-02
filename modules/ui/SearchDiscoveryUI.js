@@ -352,7 +352,7 @@ export class SearchDiscoveryUI {
             
             <div style="margin-top: 2rem;">
                 <h4 id="discovery-research-manage-title" class="${CSS_CLASSES.SECTION_TITLE} clickable" style="font-weight: 700; color: var(--color-accent); border-bottom: none; display: inline-block; padding-bottom: 4px; margin-bottom: 1.5rem;">
-                    Edit Research <i class="fas fa-chevron-right research-chevron"></i>
+                    Research <i class="fas fa-chevron-right research-chevron"></i>
                 </h4>
                 <div class="research-links-grid">
                     ${linksHtml}
