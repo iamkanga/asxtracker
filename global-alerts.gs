@@ -2082,7 +2082,7 @@ function handleGeminiQuery_(payload) {
 
     if (mode === 'explain') {
        // SMART ALERT PROMPT
-@         // Goal: Plausible market theory without needing live news feed (unless we add it)
+        // Goal: Plausible market theory without needing live news feed (unless we add it)
         prompt = `
 Analyze this stock movement:
 Symbol: ${context.symbol || 'Unknown'}
@@ -2935,12 +2935,17 @@ function fetchBulkYahooPrices_(tickers) {
  * and attempts to "repair" them using Yahoo Finance data.
  */
 function repairBrokenPrices() {
-  if (!isMarketActive_()) return;
-  
-  repairSheet_('Prices');
-  Utilities.sleep(1000); // Pause between sheets
+  // 1. DASHBOARD - Always Update (Safe because it's only 27 items)
   repairSheet_('Dashboard');
-  Logger.log('Global repair cycle complete.');
+  
+  // 2. PRICES - Only update during Sydney Market Hours (Protects your Quota)
+  if (isMarketActive_()) {
+    Utilities.sleep(1000); // Small pause for stability
+    repairSheet_('Prices');
+    Logger.log('Full Portfolio repair completed during market hours.');
+  } else {
+    Logger.log('Dashboard updated. Portfolio repair skipped (Market Inactive).');
+  }
 }
 
 /**
