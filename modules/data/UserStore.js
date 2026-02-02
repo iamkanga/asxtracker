@@ -194,13 +194,11 @@ export class UserStore {
         }
 
         try {
-            const dataToSave = {
+            const dataToSave = this._sanitizeData({
                 ...shareData,
                 muted: shareData.muted ?? false,  // Ensure muted state is explicitly set
                 createdAt: serverTimestamp()
-            };
-            // Ensure no undefined values
-            Object.keys(dataToSave).forEach(key => dataToSave[key] === undefined && delete dataToSave[key]);
+            });
 
             const docRef = await addDoc(sharesRef, dataToSave);
             // console.log(`UserStore: Added share ${shareData.code} (ID: ${docRef.id})`);
@@ -212,28 +210,41 @@ export class UserStore {
     }
 
     /**
+     * Strips undefined values from an object to prevent Firestore errors.
+     * @param {Object} data 
+     * @returns {Object}
+     */
+    _sanitizeData(data) {
+        if (!data || typeof data !== 'object') return data;
+        const sanitized = { ...data };
+        Object.keys(sanitized).forEach(k => sanitized[k] === undefined && delete sanitized[k]);
+        return sanitized;
+    }
+
+    /**
      * Updates a share in the user's collection.
-     * @param {string} userId
-     * @param {string} shareId
-     * @param {Object} data
      */
     async updateShare(userId, shareId, data) {
         if (!userId || !shareId || !data) return;
         const shareRef = doc(db, `artifacts/${APP_ID}/users/${userId}/shares`, shareId);
+
+        const sanitizedData = this._sanitizeData({
+            ...data,
+            updatedAt: serverTimestamp()
+        });
+
         try {
-            await updateDoc(shareRef, {
-                ...data,
-                updatedAt: serverTimestamp()
-            });
+            await updateDoc(shareRef, sanitizedData);
         } catch (e) {
             if (e.code === 'not-found' || e.message.includes('No document to update')) {
                 // Resurrect: Use setDoc to recreate with same ID (preserve references)
                 try {
-                    await setDoc(shareRef, {
+                    const fullData = this._sanitizeData({
                         ...data,
                         createdAt: serverTimestamp(),
                         updatedAt: serverTimestamp()
                     });
+                    await setDoc(shareRef, fullData);
                 } catch (resurrectError) {
                     this._handleWriteError(resurrectError, 'updateShare-Resurrect');
                     throw resurrectError;
@@ -546,13 +557,11 @@ export class UserStore {
         if (!userId || !collectionName || !data) return null;
         const ref = collection(db, `artifacts/${APP_ID}/users/${userId}/${collectionName}`);
         try {
-            const dataToSave = {
+            const dataToSave = this._sanitizeData({
                 ...data,
                 createdAt: serverTimestamp(),
                 updatedAt: serverTimestamp()
-            };
-            // Cleanup undefined
-            Object.keys(dataToSave).forEach(k => dataToSave[k] === undefined && delete dataToSave[k]);
+            });
             const docRef = await addDoc(ref, dataToSave);
             return docRef.id;
         } catch (e) {
@@ -563,19 +572,23 @@ export class UserStore {
     async updateDocument(userId, collectionName, docId, data) {
         if (!userId || !collectionName || !docId || !data) return;
         const ref = doc(db, `artifacts/${APP_ID}/users/${userId}/${collectionName}`, docId);
+
+        const sanitizedData = this._sanitizeData({
+            ...data,
+            updatedAt: serverTimestamp()
+        });
+
         try {
-            await updateDoc(ref, {
-                ...data,
-                updatedAt: serverTimestamp()
-            });
+            await updateDoc(ref, sanitizedData);
         } catch (e) {
             // FIX: Handle Ghost Document Resurrect
             if (e.code === 'not-found' || e.message.includes('No document to update')) {
-                await setDoc(ref, {
+                const fullData = this._sanitizeData({
                     ...data,
                     createdAt: serverTimestamp(),
                     updatedAt: serverTimestamp()
                 });
+                await setDoc(ref, fullData);
             } else {
                 throw e;
             }

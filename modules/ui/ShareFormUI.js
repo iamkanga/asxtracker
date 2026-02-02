@@ -1,6 +1,6 @@
 import { AppState } from '../state/AppState.js';
 import { formatCurrency, formatPercent } from '../utils/formatters.js';
-import { UI_ICONS, HTML_TEMPLATES, CSS_CLASSES, IDS, EVENTS, USER_MESSAGES } from '../utils/AppConstants.js';
+import { UI_ICONS, HTML_TEMPLATES, CSS_CLASSES, IDS, EVENTS, USER_MESSAGES, PORTFOLIO_ID } from '../utils/AppConstants.js';
 import { ToastManager } from './ToastManager.js';
 import { navManager } from '../utils/NavigationManager.js';
 import { KeyboardModalHandler } from '../utils/KeyboardModalHandler.js';
@@ -433,6 +433,23 @@ export class ShareFormUI {
             if (row) row.classList.toggle(CSS_CLASSES.SELECTED, isChecked);
         });
 
+        // Update Holdings visibility for Edit mode
+        const holdingsSection = modal.querySelector('#holdingsAccordionItem');
+        if (holdingsSection) {
+            const isPortfolioItem = membershipIds.has(PORTFOLIO_ID);
+            const headerIcon = holdingsSection.querySelector(`.${CSS_CLASSES.ACCORDION_HEADER} i`);
+            const hintText = holdingsSection.querySelector('.unlock-hint');
+
+            if (isPortfolioItem) {
+                if (headerIcon) headerIcon.className = `fas ${UI_ICONS.CHEVRON_DOWN}`;
+                if (hintText) hintText.classList.add(CSS_CLASSES.HIDDEN);
+            } else {
+                // Keep it "Locked"
+                if (headerIcon) headerIcon.className = `fas ${UI_ICONS.LOCK}`;
+                if (hintText) hintText.classList.remove(CSS_CLASSES.HIDDEN);
+            }
+        }
+
         // Update watchlist trigger text
         const triggerText = modal.querySelector('#watchlistTriggerText');
         if (triggerText) {
@@ -538,6 +555,9 @@ export class ShareFormUI {
             }
         }
 
+        // Initialize Visibility: Holdings is ALWAYS visible (Locked if not in Portfolio)
+        const isPortfolioMember = currentMemberships.includes(PORTFOLIO_ID);
+
         modal.innerHTML = `
             <div class="${CSS_CLASSES.MODAL_OVERLAY}"></div>
             <div class="${CSS_CLASSES.MODAL_CONTENT} modal-content-medium" style="height: 85vh; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden !important; gap: 0 !important;">
@@ -597,10 +617,13 @@ export class ShareFormUI {
                             </div>
                         </div>
 
-                        <div class="${CSS_CLASSES.ACCORDION_ITEM}" data-section="holdings">
+                        <div class="${CSS_CLASSES.ACCORDION_ITEM}" data-section="holdings" id="holdingsAccordionItem">
                             <div class="${CSS_CLASSES.ACCORDION_HEADER}">
-                                <span>Holdings</span>
-                                <i class="fas ${UI_ICONS.CHEVRON_DOWN}"></i>
+                                <div style="display: flex; flex-direction: column; gap: 2px;">
+                                    <span>Holdings</span>
+                                    <span class="unlock-hint ${isPortfolioMember ? CSS_CLASSES.HIDDEN : ''}" style="font-size: 0.7em; color: var(--text-muted); opacity: 0.8;">Select Portfolio to unlock</span>
+                                </div>
+                                <i class="fas ${isPortfolioMember ? UI_ICONS.CHEVRON_DOWN : UI_ICONS.LOCK}"></i>
                             </div>
                             <div class="${CSS_CLASSES.ACCORDION_CONTENT}">
                                 <div class="${CSS_CLASSES.FORM_GROUP}">
@@ -751,6 +774,13 @@ export class ShareFormUI {
         headers.forEach(header => {
             header.addEventListener('click', () => {
                 const item = header.parentElement;
+
+                // PREVENT EXPANSION if locked (Holdings only)
+                if (item.id === 'holdingsAccordionItem' && item.querySelector(`.${UI_ICONS.LOCK}`)) {
+                    ToastManager.info("Select 'Portfolio' above to unlock holdings.");
+                    return;
+                }
+
                 const wasOpen = item.classList.contains(CSS_CLASSES.ACTIVE);
 
                 // Close all sections first
@@ -800,6 +830,36 @@ export class ShareFormUI {
 
                 if (selected.length === 0) text.innerText = "Select Watchlists...";
                 else text.innerText = selected.join(', ');
+
+                // TOGGLE HOLDINGS visibility/state based on Portfolio selection
+                const isPortfolioChecked = Array.from(checkboxes).some(c => c.value === PORTFOLIO_ID && c.checked);
+                const holdingsSection = modal.querySelector('#holdingsAccordionItem');
+
+                if (holdingsSection) {
+                    const headerIcon = holdingsSection.querySelector(`.${CSS_CLASSES.ACCORDION_HEADER} i`);
+                    const hintText = holdingsSection.querySelector('.unlock-hint');
+
+                    if (isPortfolioChecked) {
+                        // UNLOCK ONLY (Do not auto-expand or scroll)
+                        if (headerIcon) {
+                            headerIcon.className = `fas ${UI_ICONS.CHEVRON_DOWN}`;
+                        }
+                        if (hintText) hintText.classList.add(CSS_CLASSES.HIDDEN);
+                    } else {
+                        // LOCK & COLLAPSE
+                        holdingsSection.classList.remove(CSS_CLASSES.ACTIVE);
+                        if (headerIcon) {
+                            headerIcon.className = `fas ${UI_ICONS.LOCK}`;
+                        }
+                        if (hintText) hintText.classList.remove(CSS_CLASSES.HIDDEN);
+
+                        // HARDENING: Clear fields when hidden to maintain dirty-check integrity
+                        holdingsSection.querySelectorAll('input').forEach(input => {
+                            if (input.type === 'number') input.value = '';
+                            else if (input.type === 'date' || input.type === 'text') input.value = '';
+                        });
+                    }
+                }
 
                 // Run Validation
                 ShareFormUI._validateForm(modal);
