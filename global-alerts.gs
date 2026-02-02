@@ -2950,9 +2950,6 @@ function repairBrokenPrices() {
 
 /**
  * Internal helper to repair a specific sheet.
- */
-/**
- * Internal helper to repair a specific sheet.
  * ARCHITECTURAL RULE:
  * 1. 'Dashboard': Pure API-driven. Writes DIRECTLY to LivePrice/PrevClose/etc. (No formulas to protect).
  * 2. 'Prices' (or others): Formula-driven. Writes ONLY to API_* columns. (Protects GoogleFinance formulas).
@@ -3016,62 +3013,113 @@ function repairSheet_(sheetName) {
   }
 
   const problems = [];
+  const redundantCells = []; // Columns to clear if Google has recovered
+  
   // Read formulas to protect them
   const formulas = sheet.getDataRange().getFormulas();
 
   // Skip header, start at row 2
   for (let i = 1; i < data.length; i++) {
     const codeRaw = data[i][codeIdx];
-    // For Dashboard, we always update everything (it's a feed). 
-    // For Prices, we only check for broken/missing values.
     const priceVal = (priceIdx !== -1) ? data[i][priceIdx] : null;
 
-    // PROTECTION: Check if target cell has a formula (to avoid overwriting user formulas)
+    // PROTECTION: Check if target cells have formulas (to avoid overwriting user formulas)
     let targetHasFormula = false;
-    if (targetPrice !== -1 && formulas[i] && formulas[i][targetPrice] && formulas[i][targetPrice].toString().startsWith('=')) {
-      targetHasFormula = true;
-    }
+    if (targetPrice !== -1 && formulas[i] && formulas[i][targetPrice] && formulas[i][targetPrice].toString().startsWith('=')) targetHasFormula = true;
     
-    // Definition of 'Needs Update':
-    // Dashboard: Always update UNLESS it has a formula.
-    // Prices: Only if broken (0, blank, error) and NO formula in the TARGET column.
+    // Check if current LivePrice is essentially "Broken" (0, #N/A, Error)
+    let cleanVal = priceVal;
+    if (typeof priceVal === 'string') {
+      const s = priceVal.replace(/[$, ]/g, '').trim();
+      const n = Number(s);
+      if (isFinite(n) && n > 0) cleanVal = n;
+    }
+    const isExplicitError = (typeof priceVal === 'string' && (priceVal.includes('INVALID') || priceVal.includes('DELISTED') || priceVal.includes('ERROR') || priceVal.includes('#N/A')));
+    const isPriceBroken = !isExplicitError && (cleanVal === 0 || cleanVal === '' || cleanVal === null || isNaN(cleanVal)); 
+
     let needsUpdate = false;
     
     if (policy === 'DIRECT_OVERWRITE') {
-       needsUpdate = !targetHasFormula; // Always fetch fresh for dashboard
+       // Dashboard: Only update Price if it's not a formula
+       needsUpdate = (targetPrice !== -1 && !targetHasFormula); 
     } else {
-       // Safe Mode: Check if primary is broken. 
-       // We allow updating the API_* column even if the primary has a formula.
+       // --- HARDENED SMART LOGIC ---
+       const apiVal = (apiPriceIdx !== -1 && data[i][apiPriceIdx] !== '') ? parseFloat(data[i][apiPriceIdx]) : null;
+       const tickerLog = codeRaw ? String(codeRaw).toUpperCase().trim() : 'UNK';
 
-       // LOGIC FIX: Do not treat valid number-strings (e.g. "$5.50" or " 5.50 ") as broken.
-       // Convert to pure number first.
-       let cleanVal = priceVal;
-       if (typeof priceVal === 'string') {
-          // Remove currency symbols, commas, and whitespace
-          const s = priceVal.replace(/[$, ]/g, '').trim();
-          // Check if it parses
-          const n = Number(s);
-          if (isFinite(n) && n > 0) {
-             cleanVal = n; // It's a valid number disguised as text
-          }
+       // Detect if the LivePrice column is actually using our API Column as a fallback formula?
+       // OR if it's just a standard GOOGLEFINANCE formula.
+       const sourceFormula = (formulas[i] && formulas[i][priceIdx]) ? formulas[i][priceIdx].toString().toUpperCase() : '';
+       const isStandardFormula = sourceFormula.startsWith('=') && !sourceFormula.includes('API'); 
+       
+       // Rule: If Google Price and API Price match exactly, the API is currently "carrying" the price.
+       const isUsingFallback = (apiVal != null && !isNaN(apiVal) && Math.abs(cleanVal - apiVal) < 1e-9);
+       
+       // 1. CLEANUP: If Google is healthy (Formula is working) AND NOT using the fallback, clear clutter.
+       // We only clear if it's a standard formula that doesn't reference the API column.
+       const shouldCleanup = isStandardFormula && !isPriceBroken && !isExplicitError && apiVal != null && !isUsingFallback;
+
+       if (shouldCleanup) {
+          const rowNum = i + 1;
+          [apiPriceIdx, apiPrevIdx, apiHighIdx, apiLowIdx].forEach(idx => {
+            if (idx !== -1) redundantCells.push(sheet.getRange(rowNum, idx + 1).getA1Notation());
+          });
+          // Logger.log(`[Janitor] ${tickerLog} recovered. Cleaning redundant data.`);
        }
 
-       const isExplicitError = (typeof priceVal === 'string' && (priceVal.includes('INVALID') || priceVal.includes('DELISTED') || priceVal.includes('ERROR')));
-       // Now we check cleanVal instead of raw priceVal for the number check
-       const isPriceBroken = !isExplicitError && (cleanVal === 0 || cleanVal === '' || cleanVal === null || isNaN(cleanVal)); 
+       // 2. REPAIR: If broken OR using a stale fallback, update it from Yahoo.
+       const isBroken = (isPriceBroken || isExplicitError) && !targetHasFormula;
+       needsUpdate = isBroken || isUsingFallback;
        
-       needsUpdate = isPriceBroken && !targetHasFormula;
+       if (needsUpdate && tickerLog === 'FBR') {
+          // Logger.log(`[Diagnostic] FBR: Broken=${isBroken}, isUsingFallback=${isUsingFallback}, cleanVal=${cleanVal}, apiVal=${apiVal}`);
+       }
     }
-    
+
     if (codeRaw && needsUpdate) {
-        let ticker = String(codeRaw).trim().toUpperCase();
-        ticker = ticker.replace(/\u00A0/g, ' ').trim();
-        if (ticker.indexOf(':') !== -1) ticker = ticker.split(':')[1];
-        if (/^[A-Z0-9]+$/.test(ticker)) ticker += '.AX';
-        problems.push({ row: i + 1, code: ticker });
+        let ticker = String(codeRaw).replace(/\u00A0/g, ' ').trim().toUpperCase();
+        
+        // --- TRANSLATION LAYER: Google -> Yahoo ---
+        const mapper = {
+          'XJO': '^AXJO',   // ASX 200
+          'XALL': '^AORD',  // All Ords
+          '.INX': '^GSPC',  // S&P 500
+          'SPX': '^GSPC',
+          'DJI': '^DJI',
+          'IXIC': '^IXIC'   // Nasdaq
+        };
+
+        let cleanCode = ticker;
+        if (cleanCode.indexOf(':') !== -1) cleanCode = cleanCode.split(':')[1];
+        
+        if (mapper[cleanCode]) {
+          ticker = mapper[cleanCode];
+        } else if (ticker.includes('CURRENCY:')) {
+          ticker = cleanCode.replace(/([A-Z]{3})([A-Z]{3})/, '$1-$2'); // BTCAUD -> BTC-AUD
+        } else if (!ticker.includes('^') && !ticker.includes('-') && !ticker.includes('.')) {
+          ticker = cleanCode + '.AX'; // Default to ASX
+        } else {
+          ticker = cleanCode; // Preserve already mapped or global codes
+        }
+
+        problems.push({ 
+           row: i + 1, 
+           code: ticker, 
+           targetHasFormula: targetHasFormula
+        });
     }
   }
   
+  // --- EXECUTE REDUNDANT CLEANUP ---
+  if (redundantCells.length > 0) {
+    // Process in smaller chunks to avoid RangeList limits if sheet is massive
+    for (let i = 0; i < redundantCells.length; i += 200) {
+      const batch = redundantCells.slice(i, i + 200);
+      sheet.getRangeList(batch).clearContent();
+    }
+    Logger.log('[' + sheetName + '] Cleared ' + redundantCells.length + ' redundant API cells.');
+  }
+
   if (problems.length === 0) return;
   
   Logger.log('[' + sheetName + '] Updating ' + problems.length + ' items (' + policy + ')...');
@@ -3083,9 +3131,8 @@ function repairSheet_(sheetName) {
     
     try {
       const results = {};
-      // ... (Rest of fetch logic remains similar, assuming standard Yahoo fetch)
       const requests = tickers.map(t => ({
-        url: 'https://query1.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(t),
+        url: 'https://query1.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(t) + '?interval=1m&range=5d',
         muteHttpExceptions: true
       }));
       
@@ -3096,15 +3143,55 @@ function repairSheet_(sheetName) {
         if (code === 200) {
           try {
             const json = JSON.parse(resp.getContentText());
-            const meta = json.chart.result[0].meta;
+            const result = json.chart.result[0];
+            const meta = result.meta;
+            
+            // 1. Primary Price Source
             let safePrice = meta.regularMarketPrice;
+            
+            // 2. ENHANCED ACCURACY: For sub-penny stocks, if MarketPrice is stale, 
+            // check the latest Chart Candle (much more accurate).
+            let source = 'Metadata';
+            if (result.indicators && result.indicators.quote && result.indicators.quote[0].close) {
+              const quotes = result.indicators.quote[0].close;
+              for (let q = quotes.length - 1; q >= 0; q--) {
+                if (quotes[q] != null) {
+                  // If the chart candle is lower/different, it often reflects the website price
+                  if (Math.abs(safePrice - quotes[q]) > 0.0001) {
+                    safePrice = quotes[q]; 
+                    source = 'Chart Candle';
+                  }
+                  break;
+                }
+              }
+            }
+
+            // 3. FALLBACK: Use regularMarketDayLow for sub-penny if still matching prevClose incorrectly
+            if (safePrice != null && safePrice < 0.05 && meta.regularMarketDayLow < safePrice && meta.regularMarketDayLow > 0) {
+               // If it's a penny stock and DayLow is fresher than the "Price" field
+               safePrice = meta.regularMarketDayLow;
+            }
+
             const safePrev = meta.chartPreviousClose || meta.previousClose;
             if (safePrice == null && safePrev != null) safePrice = safePrev;
+            
             let status = 'OK';
             if (safePrice === 0 || safePrice == null) status = 'DELISTED';
 
-            results[ticker] = { status: 'OK', price: safePrice, prevClose: safePrev, high52: meta.fiftyTwoWeekHigh, low52: meta.fiftyTwoWeekLow };
-          } catch(e) { results[ticker] = { status: 'ERROR' }; }
+            results[ticker] = { 
+              status: 'OK', 
+              price: safePrice, 
+              prevClose: safePrev, 
+              high52: meta.fiftyTwoWeekHigh, 
+              low52: meta.fiftyTwoWeekLow
+            };
+            
+            if (ticker === 'FBR.AX' || ticker === '^AXJO') {
+              Logger.log(`[Diagnostic] ${ticker}: Price=${safePrice} (Source: ${source})`);
+            }
+          } catch(e) { 
+             results[ticker] = { status: 'ERROR' }; 
+          }
         } else { results[ticker] = { status: 'INVALID' }; }
       });
       
@@ -3112,9 +3199,15 @@ function repairSheet_(sheetName) {
         const data = results[p.code];
         if (data && data.status === 'OK' && data.price != null) {
           sheet.getRange(p.row, targetPrice + 1).setValue(data.price).setBackground(null);
-          if (targetPrev !== -1 && data.prevClose != null) sheet.getRange(p.row, targetPrev + 1).setValue(data.prevClose);
-          if (targetHigh !== -1 && data.high52 != null) sheet.getRange(p.row, targetHigh + 1).setValue(data.high52);
-          if (targetLow !== -1 && data.low52 != null) sheet.getRange(p.row, targetLow + 1).setValue(data.low52);
+          if (targetPrev !== -1 && data.prevClose != null) {
+            sheet.getRange(p.row, targetPrev + 1).setValue(data.prevClose).setBackground(null);
+          }
+          if (targetHigh !== -1 && data.high52 != null) {
+            sheet.getRange(p.row, targetHigh + 1).setValue(data.high52).setBackground(null);
+          }
+          if (targetLow !== -1 && data.low52 != null) {
+            sheet.getRange(p.row, targetLow + 1).setValue(data.low52).setBackground(null);
+          }
         } else if (data && data.status !== 'OK') {
            // For safe mode, we verify we are writing to API col before writing error status
            sheet.getRange(p.row, targetPrice + 1).setValue(data.status).setBackground(null);
@@ -3522,8 +3615,62 @@ function debug_VerifyScanData() {
          else { allowed = false; reason = 'Not in Filter'; } // Blocked
       }
       
-      console.log(`   -> ${code} (${item.sector}): ${allowed ? 'ALLOWED' : 'BLOCKED'} [${reason}]`);
     });
   });
+}
+
+/**
+ * LIVE SYSTEM VALIDATOR:
+ * Compares your Dashboard/Prices with Yahoo's high-precision data.
+ * Run this to see EXACTLY why a number changed or stayed the same.
+ */
+function forceCleanupTest() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const dash = ss.getSheetByName('Dashboard');
+  const prices = ss.getSheetByName('Prices');
+  
+  console.log("--- STARTING LIVE VALIDATION (5-Day Range) ---");
+  
+  const testItems = ['^AXJO', '^AORD', '^GSPC', 'FBR.AX', 'BTC-AUD'];
+  
+  testItems.forEach(ticker => {
+    try {
+      const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1m&range=5d`;
+      const resp = UrlFetchApp.fetch(url, {muteHttpExceptions: true});
+      const json = JSON.parse(resp.getContentText());
+      
+      if (json.chart.result) {
+        const result = json.chart.result[0];
+        const meta = result.meta;
+        let yahooPrice = meta.regularMarketPrice;
+        let yahooSource = "Metadata";
+        
+        // Check Chart fallback
+        if (result.indicators && result.indicators.quote && result.indicators.quote[0].close) {
+          const quotes = result.indicators.quote[0].close;
+          for (let q = quotes.length - 1; q >= 0; q--) {
+            if (quotes[q] != null) {
+              if (Math.abs(yahooPrice - quotes[q]) > 0.0001) {
+                yahooPrice = quotes[q];
+                yahooSource = "Chart Candle";
+              }
+              break;
+            }
+          }
+        }
+        
+        console.log(`[VALIDATE] ${ticker}: Yahoo=${yahooPrice} (${yahooSource}) | MetaPrice=${meta.regularMarketPrice}`);
+      } else {
+        console.log(`[VALIDATE] ${ticker}: FAILED TO FETCH (${resp.getResponseCode()})`);
+      }
+    } catch (e) {
+      console.log(`[VALIDATE] ${ticker}: ERROR -> ${e.message}`);
+    }
+  });
+
+  console.log("\n--- TRIGGERING SYSTEM REPAIR ---");
+  repairSheet_('Dashboard');
+  repairSheet_('Prices');
+  console.log("Validation & Sync Complete.");
 }
 
