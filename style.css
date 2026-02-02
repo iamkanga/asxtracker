@@ -441,9 +441,9 @@ body.dark-theme .sidebar-title-svg {
     display: flex;
     align-items: center;
     justify-content: center;
-    position: relative;
+    position: static;
+    /* Let buttons position relative to .header-top-row */
     width: 100%;
-    gap: 12px;
 }
 
 .carousel-nav-btn {
@@ -458,11 +458,25 @@ body.dark-theme .sidebar-title-svg {
     align-items: center;
     justify-content: center;
     transition: opacity 0.2s, transform 0.2s;
-    z-index: 2001;
+    z-index: 2005;
+    /* Priority over title/hamburger */
     pointer-events: auto !important;
     min-width: 50px;
     height: 48px;
     flex-shrink: 0;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.carousel-nav-btn.prev {
+    left: 45px;
+    /* Offset from hamburger */
+}
+
+.carousel-nav-btn.next {
+    right: 45px;
+    /* Offset from view toggle */
 }
 
 
@@ -472,8 +486,8 @@ body.dark-theme .sidebar-title-svg {
 
 #dynamicWatchlistTitle {
     text-align: center;
-    margin: 0;
-    /* Removed auto to work with parent flex centering */
+    margin: 0 auto;
+    /* Center horizontally */
     pointer-events: auto;
     /* Required for bar tap modal */
     z-index: 10;
