@@ -255,8 +255,12 @@ export class ShareFormUI {
             isValid = false;
         }
 
-        // 4. DIRTY CHECK (Prevent Save if No Changes)
-        if (isValid && modal._initialFormJSON) {
+        // 4. DIRTY CHECK (Prevent Save if No Changes - EDIT MODE ONLY)
+        // If we are Adding a share (even if pre-filled), the act of saving IS the change.
+        // We only block "no-op" saves for existing records to prevent network spam.
+        const isEditMode = !!(currentData && currentData.id);
+
+        if (isValid && isEditMode && modal._initialFormJSON) {
             const currentFormState = this._extractShareData(modal);
             if (currentFormState) {
                 // We perform a simple JSON string comparison.

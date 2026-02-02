@@ -3079,6 +3079,13 @@ function repairSheet_(sheetName) {
     if (codeRaw && needsUpdate) {
         let ticker = String(codeRaw).replace(/\u00A0/g, ' ').trim().toUpperCase();
         
+        // --- EXCLUSION LIST: Do NOT repair these ---
+        const EXCLUDED_TICKERS = new Set(['XKO', 'YAP-F']); 
+        if (EXCLUDED_TICKERS.has(ticker)) {
+             // Logger.log(`[Skipped] ${ticker} is excluded from repair.`);
+             continue; 
+        }
+
         // --- TRANSLATION LAYER: Google -> Yahoo ---
         const mapper = {
           'XJO': '^AXJO',   // ASX 200
@@ -3086,7 +3093,12 @@ function repairSheet_(sheetName) {
           '.INX': '^GSPC',  // S&P 500
           'SPX': '^GSPC',
           'DJI': '^DJI',
-          'IXIC': '^IXIC'   // Nasdaq
+          'IXIC': '^IXIC',  // Nasdaq
+          '^FTSE': '^FTSE',
+          '^STOXX50E': '^STOXX50E',
+          '^N225': '^N225',
+          '^HSI': '^HSI',
+          '^VIX': '^VIX'
         };
 
         let cleanCode = ticker;
@@ -3095,7 +3107,9 @@ function repairSheet_(sheetName) {
         if (mapper[cleanCode]) {
           ticker = mapper[cleanCode];
         } else if (ticker.includes('CURRENCY:')) {
-          ticker = cleanCode.replace(/([A-Z]{3})([A-Z]{3})/, '$1-$2'); // BTCAUD -> BTC-AUD
+          ticker = cleanCode.replace(/([A-Z]{3})([A-Z]{3})/, '$1$2=X'); // BTCAUD -> BTCAUD=X (Yahoo format)
+        } else if (cleanCode.endsWith('=X') || cleanCode.endsWith('=F')) {
+          ticker = cleanCode; // Preserve Currency/Futures codes (e.g. AUDUSD=X, GC=F)
         } else if (!ticker.includes('^') && !ticker.includes('-') && !ticker.includes('.')) {
           ticker = cleanCode + '.AX'; // Default to ASX
         } else {
@@ -3131,10 +3145,16 @@ function repairSheet_(sheetName) {
     
     try {
       const results = {};
-      const requests = tickers.map(t => ({
-        url: 'https://query1.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(t) + '?interval=1m&range=5d',
-        muteHttpExceptions: true
-      }));
+      const requests = tickers.map(t => {
+        // OPTIMIZATION: Currencies/Futures trade 24/7. 1m candles for 5d = ~7200 points (Too Heavy).
+        // Use 15m candles for these assets to ensure successful fetch while keeping 5d checks.
+        const isDense = (t.endsWith('=X') || t.endsWith('=F') || t.includes('BTC'));
+        const interval = isDense ? '15m' : '1m';
+        return {
+          url: 'https://query1.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(t) + '?interval=' + interval + '&range=5d',
+          muteHttpExceptions: true
+        };
+      });
       
       const responses = UrlFetchApp.fetchAll(requests);
       responses.forEach((resp, idx) => {
