@@ -2416,11 +2416,12 @@ function sendCombinedDailyDigest_() {
   function fmtMoney(n){ const x = num(n); return x==null? '' : ('$' + x.toFixed(x<1?4:2)); }
   function fmtPct(n){ const x = num(n); return x==null? '' : ((x>=0?'+':'') + x.toFixed(2) + '%'); }
 
-  function createTable(title, rows, headersHtml, color) {
+  function createTable(title, rows, headersHtml, color, subtitle) {
     if (!rows || rows.length === 0) return '';
     const headerStyle = `margin:16px 0 0 0;padding:10px;font-family:Arial,Helvetica,sans-serif;color:#ffffff;background-color:${color || '#333'};font-size:14px;font-weight:bold;border-radius:4px 4px 0 0;`;
+    const subHtml = subtitle ? `<span style="font-weight:normal;font-size:11px;opacity:0.8;margin-left:8px;">${subtitle}</span>` : '';
     return (
-      `<h3 style="${headerStyle}">` + esc(title) + '</h3>' +
+      `<h3 style="${headerStyle}">` + esc(title) + subHtml + '</h3>' +
       '<table cellspacing="0" cellpadding="0" style="border-collapse:collapse;width:100%;font-family:Arial,Helvetica,sans-serif;font-size:13px;border:1px solid ' + (color || '#eee') + ';border-top:none;">' +
         '<thead><tr style="text-align:left;background:#f9f9f9;color:#555;">' + headersHtml + '</tr></thead>' +
         '<tbody>' + rows.join('') + '</tbody>' +
@@ -2558,10 +2559,10 @@ function sendCombinedDailyDigest_() {
 
       const sections = [
         createTable('Your Personal Alerts', userCustomHits, hdrCustom, '#1976d2'), 
-        createTable('52-Week Lows', [disclaimerRow52, ...userLows.map(o => '<tr>'+td(o.code)+td(o.name)+td(fmtMoney(o.live))+td(fmtMoney(o.low52))+td(fmtMoney(o.high52))+'</tr>')], hdrHiLo, '#d32f2f'), 
-        createTable('52-Week Highs', [disclaimerRow52, ...userHighs.map(o => '<tr>'+td(o.code)+td(o.name)+td(fmtMoney(o.live))+td(fmtMoney(o.low52))+td(fmtMoney(o.high52))+'</tr>')], hdrHiLo, '#388e3c'), 
-        createTable('Global Movers — Losers', [disclaimerRowMovers, ...userDown.map(o => '<tr>'+td(o.code)+td(o.name)+td(fmtMoney(o.live))+td(fmtPct(o.pct))+td(fmtMoney(o.change))+'</tr>')], hdrMovers, '#e53935'), 
-        createTable('Global Movers — Gainers', [disclaimerRowMovers, ...userUp.map(o => '<tr>'+td(o.code)+td(o.name)+td(fmtMoney(o.live))+td(fmtPct(o.pct))+td(fmtMoney(o.change))+'</tr>')], hdrMovers, '#43a047')  
+        createTable('52-Week Lows', [disclaimerRow52, ...userLows.map(o => '<tr>'+td(o.code)+td(o.name)+td(fmtMoney(o.live))+td(fmtMoney(o.low52))+td(fmtMoney(o.high52))+'</tr>')], hdrHiLo, '#d32f2f', 'Stocks ending the day at or within 1% of their yearly trough.'), 
+        createTable('52-Week Highs', [disclaimerRow52, ...userHighs.map(o => '<tr>'+td(o.code)+td(o.name)+td(fmtMoney(o.live))+td(fmtMoney(o.low52))+td(fmtMoney(o.high52))+'</tr>')], hdrHiLo, '#388e3c', 'Stocks ending the day at or within 1% of their yearly peak.'), 
+        createTable('Global Movers — Losers', [disclaimerRowMovers, ...userDown.map(o => '<tr>'+td(o.code)+td(o.name)+td(fmtMoney(o.live))+td(fmtPct(o.pct))+td(fmtMoney(o.change))+'</tr>')], hdrMovers, '#e53935', 'Stocks that closed at or below your personal %/$ loss thresholds.'), 
+        createTable('Global Movers — Gainers', [disclaimerRowMovers, ...userUp.map(o => '<tr>'+td(o.code)+td(o.name)+td(fmtMoney(o.live))+td(fmtPct(o.pct))+td(fmtMoney(o.change))+'</tr>')], hdrMovers, '#43a047', 'Stocks that closed at or above your personal %/$ growth thresholds.')  
       ].filter(s => !!s);
 
       if (sections.length === 0) {
@@ -2572,9 +2573,17 @@ function sendCombinedDailyDigest_() {
       // Final Assembly
       const counts = `Movers: ${userUp.length+userDown.length} | 52-Week: ${userHighs.length+userLows.length} | Personal: ${userCustomHits.length}`;
       const subject = `${GAS_CONFIG.EMAIL.SUBJECT_PREFIX} — ${sydneyDateStr} (${counts})`;
+      const logicBlockHtml = 
+        '<div style="margin:16px 0;padding:12px;background-color:#f5f5f5;border-radius:4px;border-left:4px solid #1a73e8;font-size:12px;color:#555;">' +
+        '<strong>REPORT LOGIC:</strong> This is a final "Market Close" snapshot as of 4:15 PM Sydney time. ' +
+        'These figures reflect Closing Prices and may differ from the live fluctuations seen in-app earlier today. ' +
+        'This list is strictly filtered to show only the high-priority hits that maintained your personal thresholds through the final bell.' +
+        '</div>';
+
       const htmlBody = (
         '<div style="font-family:Arial,Helvetica,sans-serif;color:#222;line-height:1.4;max-width:800px;margin:auto;">' +
         `<h2 style="margin:0 0 12px 0;color:#1a73e8;">${GAS_CONFIG.EMAIL.SUBJECT_PREFIX} — ${esc(sydneyDateStr)}</h2>` +
+        logicBlockHtml +
         sections.join('<div style="height:20px;"></div>') +
         '<div style="margin-top:24px;color:#888;font-size:11px;border-top:1px solid #eee;padding-top:12px;">' +
         GAS_CONFIG.EMAIL.FOOTER_TEXT +

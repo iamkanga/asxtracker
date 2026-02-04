@@ -421,6 +421,12 @@ export class NotificationUI {
                 <!-- 2. Dashboard Content (Scrolling) -->
                 <div class="${CSS_CLASSES.MODAL_BODY} ${CSS_CLASSES.SCROLLABLE_BODY}" id="${IDS.NOTIFICATION_LIST}" style="flex: 1; padding: 10px; padding-top: 0; position: relative; overflow-y: auto;">
                     <div id="${IDS.NOTIF_TIMESTAMP}" style="text-align: right; font-size: 0.65rem; color: var(--text-muted); padding: 5px 10px; font-style: italic;"></div>
+                    
+                    <!-- Live Timeline Logic Box (Distinguishes from Daily Email) -->
+                    <div style="margin: 0 10px 15px 10px; padding: 12px; background: var(--bg-secondary); border-radius: 8px; border-left: 4px solid var(--color-accent); font-size: 0.75rem; color: var(--text-muted); line-height: 1.4;">
+                        <strong style="color: var(--color-accent);">LIVE TIMELINE:</strong> This dashboard tracks alerts in real-time. Movements are verified against current prices to ensure hits remain valid as the session progresses.
+                    </div>
+
                     <!-- Accordion Sections -->
                 </div>
 
@@ -823,23 +829,28 @@ export class NotificationUI {
         const thresholdStr = (minPriceVal > 0) ? `Min $${minPriceVal}` : null;
         const thresholdStrColored = thresholdStr ? `<span style="color: var(--color-accent);">${thresholdStr}</span>` : '';
 
-        // Gainers
-        const upRuleStr = fmtRules(rules.up || {}, 0, 'up');
-        const upStr = (upRuleStr === UI_LABELS.NOT_SET && !thresholdStr)
-            ? UI_LABELS.NOT_SET
-            : (upRuleStr === 'Not set' ? thresholdStrColored : `${upRuleStr}${thresholdStr ? ` • ${thresholdStrColored}` : ''}`);
-
-        // Losers
-        const downRuleStr = fmtRules(rules.down || {}, 0, 'down');
-        const downStr = (downRuleStr === UI_LABELS.NOT_SET && !thresholdStr)
-            ? UI_LABELS.NOT_SET
-            : (downRuleStr === UI_LABELS.NOT_SET ? thresholdStrColored : `${downRuleStr}${thresholdStr ? ` • ${thresholdStrColored}` : ''}`);
-
         // 52 Week Highs/Lows Strings
         const hiloPriceVal = rules.hiloMinPrice ?? 0;
         const hiloStrBase = (hiloPriceVal > 0) ? `<span style="color: var(--color-accent);">${UI_LABELS.MIN_PRICE_LABEL}${hiloPriceVal}</span>` : UI_LABELS.NOT_SET;
-        const hiloStrHigh = hiloStrBase;
-        const hiloStrLow = hiloStrBase;
+
+        const explainerStyle = 'display:block; font-size: 0.65rem; opacity: 0.7; font-weight: normal; margin-top: 2px;';
+
+        const hiloStrHigh = `${hiloStrBase}<span style="${explainerStyle}">${UI_LABELS.HILO_HIGH_EXPLAINER}</span>`;
+        const hiloStrLow = `${hiloStrBase}<span style="${explainerStyle}">${UI_LABELS.HILO_LOW_EXPLAINER}</span>`;
+
+        // Gainers
+        const upRuleStr = fmtRules(rules.up || {}, 0, 'up');
+        let upStr = (upRuleStr === UI_LABELS.NOT_SET && !thresholdStr)
+            ? UI_LABELS.NOT_SET
+            : (upRuleStr === 'Not set' ? thresholdStrColored : `${upRuleStr}${thresholdStr ? ` • ${thresholdStrColored}` : ''}`);
+        upStr += `<span style="${explainerStyle}">${UI_LABELS.GAINERS_EXPLAINER}</span>`;
+
+        // Losers
+        const downRuleStr = fmtRules(rules.down || {}, 0, 'down');
+        let downStr = (downRuleStr === UI_LABELS.NOT_SET && !thresholdStr)
+            ? UI_LABELS.NOT_SET
+            : (downRuleStr === UI_LABELS.NOT_SET ? thresholdStrColored : `${downRuleStr}${thresholdStr ? ` • ${thresholdStrColored}` : ''}`);
+        downStr += `<span style="${explainerStyle}">${UI_LABELS.LOSERS_EXPLAINER}</span>`;
 
         const customTitleChip = UI_LABELS.CUSTOM_MOVERS;
         const customTitleHeader = UI_LABELS.CUSTOM_MOVERS;
@@ -1803,19 +1814,25 @@ export class NotificationUI {
             <div class="report-section">
                 <div class="report-section-title">Watchlist Override (${overrideOn ? 'ACTIVE' : 'OFF'})</div>
                 <div class="report-rule-item">
-                    <span class="report-rule-label">Override Rule</span>
-                    <span class="report-rule-value ${overrideOn ? 'active' : ''}">${overrideOn ? 'BYPASSING LIMITS' : 'ENFORCING LIMITS'}</span>
-                </div>
-                <div class="report-rule-item">
-                    <span class="report-rule-label">Bypassing Thresholds</span>
-                    <span class="report-rule-value ${overrideOn ? 'ignored' : ''}">${overrideOn ? 'YES' : 'NO'}</span>
+                    <span class="report-rule-label">Override Status</span>
+                    <span class="report-rule-value ${overrideOn ? 'active' : ''}">${overrideOn ? 'ON (Bypassing Filters)' : 'OFF (Enforcing Filters)'}</span>
                 </div>
                 <div class="report-rule-item" style="flex-direction: column; align-items: flex-start;">
-                    <span class="report-rule-label" style="margin-bottom: 8px;">Status Awareness</span>
-                    <span class="report-rule-label" style="font-size: 0.75rem; opacity: 0.8;">
+                    <span class="report-rule-label" style="font-size: 0.75rem; opacity: 0.8; line-height: 1.4;">
                         ${overrideOn
-                ? 'Your Custom Watchlist is ignoring the thresholds for the Market Movers Minimum Price and Sector selections to ensure you see your relevant stocks.'
-                : 'Standard market filters are currently applied to your Watchlist.'}
+                ? '<strong>Watchlist Override:</strong> Your personally tracked stocks currently ignore the global Sector Blocklist and Minimum Price filters to ensure you never miss a hit on shares you own or watch.'
+                : '<strong>Watchlist Override:</strong> Standard market filters (Sector/Price) are currently being applied to your watchlist stocks.'}
+                    </span>
+                </div>
+            </div>
+
+            <div class="report-section">
+                <div class="report-section-title">Live Timeline & Snapshots</div>
+                <div class="report-rule-item" style="flex-direction: column; align-items: flex-start;">
+                    <span class="report-rule-label" style="font-size: 0.75rem; opacity: 0.8; line-height: 1.4;">
+                        <strong>Live Tracking:</strong> This app verifies all hits against current prices in real-time. 
+                        <strong>Daily Snapshots:</strong> A final summary is archived at 4:15 PM Sydney time for the Daily Email. 
+                        If a morning alert disappears from the 4:15 PM summary, it means the stock did not maintain its threshold through the final bell.
                     </span>
                 </div>
             </div>
