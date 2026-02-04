@@ -1712,8 +1712,14 @@ export class NotificationUI {
         const overrideOn = rules.excludePortfolio !== false;
 
         titleRow.innerHTML = overrideOn
-            ? `<span class="status-override-on">WATCHLIST OVERRIDE ON • BYPASSING LIMITS</span>`
-            : `<span class="status-override-off">WATCHLIST OVERRIDE: OFF</span>`;
+            ? `<div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+            <span class="status-override-on">WATCHLIST OVERRIDE ON • BYPASSING LIMITS</span>
+            <i class="fas fa-chevron-right" style="font-size: 0.7rem; opacity: 0.6;"></i>
+           </div>`
+            : `<div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+            <span class="status-override-off">WATCHLIST OVERRIDE: OFF</span>
+            <i class="fas fa-chevron-right" style="font-size: 0.7rem; opacity: 0.6;"></i>
+           </div>`;
 
         // 2. BOTTOM ROW: Monitor Settings & Sector Awareness (146 total Industries)
         const allIndustries = Object.values(SECTOR_INDUSTRY_MAP).flat();
@@ -1855,55 +1861,79 @@ export class NotificationUI {
             </div>
 
             <!-- WATCHLIST STATUS EXPLAINER -->
-            <div class="report-section">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                    <div class="report-section-title" style="margin: 0; color: var(--color-accent);">Custom Watchlist Priority</div>
+        <div class="report-section" id="watchlist-priority-toggle" style="cursor: pointer;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div class="report-section-title" style="margin: 0; color: var(--color-accent);">Custom Watchlist Priority</div>
+                <div style="display: flex; align-items: center; gap: 8px;">
                     <span style="font-size: 0.75rem; font-weight: bold; color: ${overrideOn ? 'var(--color-positive)' : 'var(--text-muted)'};">
                         ${overrideOn ? 'ACTIVE' : 'OFF'}
                     </span>
+                    <i class="fas fa-chevron-down priority-chevron" style="font-size: 0.7rem; opacity: 0.5; transition: transform 0.2s;"></i>
                 </div>
-                <div style="font-size: 0.8rem; line-height: 1.4; color: var(--text-color);">
+            </div>
+            <div class="priority-explainer" style="font-size: 0.8rem; line-height: 1.4; color: var(--text-color); max-height: 0; overflow: hidden; transition: all 0.3s ease-out; margin-top: 0;">
+                <div style="padding-top: 10px;">
                     Stocks on your Custom Watchlist are treated as priorities. They jump the queue and bypass the Price Floor and Category mutes to ensure you never miss a move on your own holdings.
                 </div>
             </div>
+        </div>
 
-            <!-- ALERT MECHANICS & TIMING -->
-            <div class="report-section">
-                <div class="report-section-title">Alert Mechanics & Timing</div>
-                <div class="report-rule-item" style="flex-direction: column; align-items: flex-start; gap: 8px;">
-                    <div style="font-size: 0.8rem; line-height: 1.4;">
-                        <strong>52-Week Records:</strong> You are notified when a stock touches a 12-month price record or gets within 1% of it.
-                    </div>
-                    <div style="font-size: 0.8rem; line-height: 1.4;">
-                        <strong>App (The Live Feed):</strong> Shows every price alert recorded today. If it happened, it stays on this list.
-                    </div>
-                    <div style="font-size: 0.8rem; line-height: 1.4;">
-                        <strong>Email (The Final Verdict):</strong> A summary of where stocks stood at the 4:15 PM market close.
-                    </div>
+        <!-- ALERT MECHANICS & TIMING -->
+        <div class="report-section">
+            <div class="report-section-title">Alert Mechanics & Timing</div>
+            <div class="report-rule-item" style="flex-direction: column; align-items: flex-start; gap: 8px;">
+                <div style="font-size: 0.8rem; line-height: 1.4;">
+                    <strong>52-Week Records:</strong> You are notified when a stock touches a 12-month price record or gets within 1% of it.
+                </div>
+                <div style="font-size: 0.8rem; line-height: 1.4;">
+                    <strong>App (The Live Feed):</strong> Shows every price alert recorded today. If it happened, it stays on this list.
+                </div>
+                <div style="font-size: 0.8rem; line-height: 1.4;">
+                    <strong>Email (The Final Verdict):</strong> A summary of where stocks stood at the 4:15 PM market close.
                 </div>
             </div>
+        </div>
 
-            <!-- 6. GHOSTED FOOTER: SYSTEM HEALTH ("THE BOUNCER") -->
-            <div style="padding-top: 12px; margin-top: 20px; opacity: 0.4; font-size: 0.65rem; color: var(--text-muted); line-height: 1.4;">
-                <div style="text-align: center; margin-bottom: 5px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">
-                   🛡️ Background Integrity Checks (The Bouncer)
-                </div>
-                <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;">
-                    <span>[Unified Price Authority: <span style="color:#4caf50">VERIFIED</span>]</span>
-                    <span>[Ghost Filter: <span style="color:#4caf50">ON</span>]</span>
-                    <span>[Directional Locking: <span style="color:#4caf50">ENFORCED</span>]</span>
-                </div>
-                <div style="text-align: center; margin-top: 6px;">
-                    These automated checks filter out exchange glitches and stale data to ensure your alerts match live reality.
-                </div>
+        <!-- 6. GHOSTED FOOTER: SYSTEM HEALTH ("THE BOUNCER") -->
+        <div style="padding-top: 12px; margin-top: 20px; opacity: 0.4; font-size: 0.65rem; color: var(--text-muted); line-height: 1.4;">
+            <div style="text-align: center; margin-bottom: 5px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">
+               🛡️ Background Integrity Checks (The Bouncer)
             </div>
-
-            <div class="report-footer" style="margin-top: 15px; opacity: 0.8;">
-                Tapping the status bar toggles this awareness report.
+            <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;">
+                <span>[Unified Price Authority: <span style="color:#4caf50">VERIFIED</span>]</span>
+                <span>[Ghost Filter: <span style="color:#4caf50">ON</span>]</span>
+                <span>[Directional Locking: <span style="color:#4caf50">ENFORCED</span>]</span>
             </div>
-        `;
+            <div style="text-align: center; margin-top: 6px;">
+                These automated checks filter out exchange glitches and stale data to ensure your alerts match live reality.
+            </div>
+        </div>
 
+        <div class="report-footer" style="margin-top: 15px; opacity: 0.8;">
+            Tapping the status bar toggles this awareness report.
+        </div>
+    `;
+
+        // Bind Close Event
         const closeBtn = container.querySelector('.report-close-btn');
         if (closeBtn) closeBtn.onclick = () => container.classList.remove('visible');
+
+        // Bind Accordion Toggle
+        const toggleZone = container.querySelector('#watchlist-priority-toggle');
+        if (toggleZone) {
+            toggleZone.onclick = (e) => {
+                const explainer = toggleZone.querySelector('.priority-explainer');
+                const chevron = toggleZone.querySelector('.priority-chevron');
+                const isExpanded = explainer.style.maxHeight !== '0px' && explainer.style.maxHeight !== '';
+
+                if (isExpanded) {
+                    explainer.style.maxHeight = '0px';
+                    chevron.style.transform = 'rotate(0deg)';
+                } else {
+                    explainer.style.maxHeight = '200px'; // Arbitrary large value
+                    chevron.style.transform = 'rotate(180deg)';
+                }
+            };
+        }
     }
 }
