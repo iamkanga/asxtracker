@@ -1814,7 +1814,7 @@ export class NotificationUI {
                     <span class="report-rule-label" style="margin-bottom: 8px;">Status Awareness</span>
                     <span class="report-rule-label" style="font-size: 0.75rem; opacity: 0.8;">
                         ${overrideOn
-                ? 'Your Watchlist is ignoring the $ limits and Sector blocks above to ensure you see your relevant stocks regardless of market rules.'
+                ? 'Your Custom Watchlist is ignoring the thresholds for the Market Movers Minimum Price and Sector selections to ensure you see your relevant stocks.'
                 : 'Standard market filters are currently applied to your Watchlist.'}
                     </span>
                 </div>
