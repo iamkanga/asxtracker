@@ -300,7 +300,13 @@ export class DashboardFilterModal {
             const newOrder = rows.map(r => r.dataset.code);
             const newHidden = [];
             rows.forEach(r => {
-                if (!r.querySelector('.df-check').checked) newHidden.push(r.dataset.code);
+                const isChecked = r.querySelector('.df-check').checked;
+                if (!isChecked) {
+                    newHidden.push(r.dataset.code);
+                    r.classList.add('df-row-hidden');
+                } else {
+                    r.classList.remove('df-row-hidden');
+                }
             });
 
             // Persist
