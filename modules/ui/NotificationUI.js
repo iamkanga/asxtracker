@@ -1836,19 +1836,7 @@ export class NotificationUI {
                     <span class="report-rule-value active">ENFORCED</span>
                 </div>
                 
-                <div style="margin-top: 15px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 4px; border: 1px solid rgba(255,255,255,0.1);">
-                    <div style="font-size: 0.75rem; color: var(--text-muted); line-height: 1.4; margin-bottom: 10px;">
-                        If prices appear "stuck" or stale in the backend, you can force a server-side repair cycle. This updates the master spreadsheet via Yahoo Finance fallback.
-                    </div>
-                    <!-- 
-                        Kanga Roo asked to disable this button (2026-02-01). 
-                        It triggers a legacy Google Apps Script and could cause backend issues. 
-                        It is being investigated before being re-enabled.
-                    -->
-                    <button id="btn-force-repair" class="${CSS_CLASSES.BTN_SECONDARY}" disabled style="width: 100%; border: 1px solid var(--color-accent); padding: 8px; font-size: 0.8rem; border-radius: 4px; background: transparent; color: var(--text-muted); cursor: not-allowed; opacity: 0.5;">
-                        <i class="fas fa-sync-alt"></i> FORCE SERVER-SIDE REPAIR (Disabled)
-                    </button>
-                </div>
+
             </div>
 
             ${blockedSectors.length > 0 ? `
@@ -1868,39 +1856,6 @@ export class NotificationUI {
         const closeBtn = container.querySelector('.report-close-btn');
         if (closeBtn) closeBtn.onclick = () => container.classList.remove('visible');
 
-        const repairBtn = container.querySelector('#btn-force-repair');
-        /*
-        if (repairBtn) {
-            repairBtn.onclick = async (e) => {
-                e.stopPropagation();
-                repairBtn.disabled = true;
-                repairBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> REPAIRING...';
 
-                try {
-                    // Use the project's real API endpoint for the repair action
-                    const API_ENDPOINT = "https://script.google.com/macros/s/AKfycbwwwMEss5DIYblLNbjIbt_TAzWh54AwrfQlVwCrT_P0S9xkAoXhAUEUg7vSEPYUPOZp/exec";
-                    const response = await fetch(`${API_ENDPOINT}?action=repair&_ts=${Date.now()}`, { mode: 'no-cors' });
-
-                    console.log('[NotificationUI] Manual Repair Triggered');
-
-                    // Delay for effect
-                    await new Promise(r => setTimeout(r, 2000));
-
-                    repairBtn.innerHTML = '<i class="fas fa-check"></i> REPAIR SENT';
-                    setTimeout(() => {
-                        repairBtn.disabled = false;
-                        repairBtn.innerHTML = '<i class="fas fa-sync-alt"></i> FORCE SERVER-SIDE REPAIR';
-                    }, 3000);
-                } catch (err) {
-                    console.error('[NotificationUI] Repair trigger failed:', err);
-                    repairBtn.innerHTML = '<i class="fas fa-times"></i> FAILED';
-                    setTimeout(() => {
-                        repairBtn.disabled = false;
-                        repairBtn.innerHTML = '<i class="fas fa-sync-alt"></i> FORCE SERVER-SIDE REPAIR';
-                    }, 3000);
-                }
-            };
-        }
-        */
     }
 }
