@@ -389,7 +389,15 @@ export class DashboardViewRenderer {
             return utcTotal >= (14 * 60 + 30) && utcTotal < (21 * 60);
         }
 
-        // 6. FUTURES (23/5 Markets -> 23:00 Sun to 21:00 Fri UTC)
+        // 6. FOREX (24/5 -> Sunday 22:00 to Friday 22:00 UTC)
+        if (code.includes('=X')) {
+            if (utcDay === 6) return false; // Saturday (Closed)
+            if (utcDay === 0 && utcTotal < (22 * 60)) return false; // Sunday before open
+            if (utcDay === 5 && utcTotal > (22 * 60)) return false; // Friday after close
+            return true;
+        }
+
+        // 7. FUTURES (23/5 Markets -> 23:00 Sun to 21:00 Fri UTC)
         if (code.includes('=F') || code.includes('-F')) {
             if (utcDay === 6) return false; // Saturday (Closed)
             if (utcDay === 0 && utcTotal < (23 * 60)) return false; // Sun before open
