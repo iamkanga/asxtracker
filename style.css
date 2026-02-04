@@ -9918,8 +9918,8 @@ body.dashboard-active .sidebar {
 }
 
 .sentiment-tile.bullish .sentiment-trend {
-    color: #ffd700;
-    text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+    color: var(--color-positive);
+    text-shadow: 0 0 10px rgba(6, 255, 79, 0.3);
 }
 
 .sentiment-tile.bearish .sentiment-trend {

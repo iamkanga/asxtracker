@@ -1774,13 +1774,18 @@ export class NotificationUI {
 
     /**
      * Renders the deep-dive transparency report inside the overlay.
+     * Restructured for human-friendly hierarchy and "VIP" watchlist awareness.
      */
     static _renderIntelligenceReport(container, rules, prefs) {
         const overrideOn = rules.excludePortfolio !== false;
 
-        // Thresholds
-        const moversMinPrice = rules.minPrice || 0.10;
-        const hiloMinPrice = rules.hiloMinPrice || 0.50;
+        // Threshold extraction with fallbacks
+        const upPct = rules.up?.percentThreshold || 0;
+        const upDol = rules.up?.dollarThreshold || 0;
+        const downPct = rules.down?.percentThreshold || 0;
+        const downDol = rules.down?.dollarThreshold || 0;
+        const moversMinPrice = rules.minPrice || 0;
+        const hiloMinPrice = rules.hiloMinPrice || 0;
 
         // Sectors/Industries (Synchronized with Store)
         const allIndustries = Object.values(SECTOR_INDUSTRY_MAP).flat();
@@ -1791,88 +1796,114 @@ export class NotificationUI {
 
         container.innerHTML = `
             <div class="report-header">
-                <div class="report-title">Market Enforcement Report</div>
+                <div class="report-title">Market Intelligence Report</div>
                 <button class="report-close-btn"><i class="fas fa-times"></i></button>
             </div>
 
+            <!-- NOISE FILTERS & THRESHOLDS -->
             <div class="report-section">
-                <div class="report-section-title">General Market Rules (Enforced)</div>
-                <div class="report-rule-item">
-                    <span class="report-rule-label">Movers Min Price</span>
-                    <span class="report-rule-value">$${moversMinPrice.toFixed(2)}</span>
+                <div class="report-section-title">Active Filters & Thresholds</div>
+                
+                <div class="report-rule-item" style="border-bottom: none; padding-bottom: 0;">
+                    <span class="report-rule-label">Movers Price Floor</span>
+                    <span class="report-rule-value">Under $${moversMinPrice.toFixed(2)}</span>
                 </div>
-                <div class="report-rule-item">
-                    <span class="report-rule-label">52-Week Min Price</span>
-                    <span class="report-rule-value">$${hiloMinPrice.toFixed(2)}</span>
+                <div style="font-size: 0.65rem; color: var(--text-muted); opacity: 0.7; margin-bottom: 12px; font-style: italic;">
+                    Mutes mover alerts for stocks valued under $${moversMinPrice.toFixed(2)}.
                 </div>
-                <div class="report-rule-item">
-                    <span class="report-rule-label">Blocked Sectors</span>
-                    <span class="report-rule-value ${blockedSectors.length > 0 ? 'blocked' : ''}">${blockedSectors.length}</span>
-                </div>
-            </div>
 
-            <div class="report-section">
-                <div class="report-section-title">Watchlist Override (${overrideOn ? 'ACTIVE' : 'OFF'})</div>
-                <div class="report-rule-item">
-                    <span class="report-rule-label">Override Status</span>
-                    <span class="report-rule-value ${overrideOn ? 'active' : ''}">${overrideOn ? 'ON (Bypassing Filters)' : 'OFF (Enforcing Filters)'}</span>
+                <div class="report-rule-item" style="border-bottom: none; padding-bottom: 0;">
+                    <span class="report-rule-label">52-Week Price Floor</span>
+                    <span class="report-rule-value">Under $${hiloMinPrice.toFixed(2)}</span>
                 </div>
-                <div class="report-rule-item" style="flex-direction: column; align-items: flex-start;">
-                    <span class="report-rule-label" style="font-size: 0.75rem; opacity: 0.8; line-height: 1.4;">
-                        ${overrideOn
-                ? '<strong>Watchlist Override:</strong> Your personally tracked stocks currently ignore the global Sector Blocklist and Minimum Price filters to ensure you never miss a hit on shares you own or watch.'
-                : '<strong>Watchlist Override:</strong> Standard market filters (Sector/Price) are currently being applied to your watchlist stocks.'}
-                    </span>
+                <div style="font-size: 0.65rem; color: var(--text-muted); opacity: 0.7; margin-bottom: 12px; font-style: italic;">
+                    Mutes 52-week alerts for stocks valued under $${hiloMinPrice.toFixed(2)}.
                 </div>
-            </div>
 
-            <div class="report-section">
-                <div class="report-section-title">Live Timeline & Snapshots</div>
-                <div class="report-rule-item" style="flex-direction: column; align-items: flex-start;">
-                    <span class="report-rule-label" style="font-size: 0.75rem; opacity: 0.8; line-height: 1.4;">
-                        <strong>Live Tracking:</strong> This app verifies all hits against current prices in real-time. 
-                        <strong>Daily Snapshots:</strong> A final summary is archived at 4:15 PM Sydney time for the Daily Email. 
-                        If a morning alert disappears from the 4:15 PM summary, it means the stock did not maintain its threshold through the final bell.
-                    </span>
+                <div class="report-rule-item" style="border-bottom: none; padding-bottom: 0;">
+                    <span class="report-rule-label">Gainer Threshold</span>
+                    <span class="report-rule-value status-count-green">+${upPct}% or +$${upDol.toFixed(2)}</span>
                 </div>
-            </div>
-
-            <!-- DATA HEALTH CHECK (UNIFIED PRICE AUTHORITY) -->
-            <div class="report-section">
-                <div class="report-section-title">Data Integrity & Self-Check</div>
-                <div class="report-rule-item">
-                    <span class="report-rule-label">Unified Price Authority</span>
-                    <span class="report-rule-value active">VERIFIED</span>
-                </div>
-                <div class="report-rule-item">
-                    <span class="report-rule-label">Phantom Alert Filter</span>
-                    <span class="report-rule-value active">ON</span>
-                </div>
-                <div class="report-rule-item">
-                    <span class="report-rule-label">Directional Locking</span>
-                    <span class="report-rule-value active">ENFORCED</span>
+                <div style="font-size: 0.65rem; color: var(--text-muted); opacity: 0.7; margin-bottom: 12px; font-style: italic;">
+                    Minimum daily gain required to trigger an alert.
                 </div>
                 
+                <div class="report-rule-item" style="border-bottom: none; padding-bottom: 0;">
+                    <span class="report-rule-label">Loser Threshold</span>
+                    <span class="report-rule-value status-count-red">-${downPct}% or -$${downDol.toFixed(2)}</span>
+                </div>
+                <div style="font-size: 0.65rem; color: var(--text-muted); opacity: 0.7; margin-bottom: 12px; font-style: italic;">
+                    Minimum daily drop required to trigger an alert.
+                </div>
+
+                <!-- Hidden Categories -->
+                <div style="margin-top: 4px;">
+                    <span class="report-rule-label" style="display: block; margin-bottom: 4px;">Hidden Categories</span>
+                    ${blockedSectors.length > 0 ? `
+                        <div style="font-size: 0.75rem; line-height: 1.4; opacity: 0.8; background: var(--bg-primary); padding: 8px; border-radius: 4px; border: 1px solid var(--border-color);">
+                            ${blockedSectors.join(', ')}
+                        </div>
+                    ` : `
+                        <div style="font-size: 0.85rem; font-weight: 700;">NONE</div>
+                    `}
+                    <div style="font-size: 0.65rem; color: var(--text-muted); opacity: 0.7; margin-top: 4px; font-style: italic;">
+                        Mutes alerts for sectors you've chosen to ignore.
+                    </div>
+                </div>
+
 
             </div>
 
-            ${blockedSectors.length > 0 ? `
-                <div class="report-section">
-                    <div class="report-section-title">Currently Blocked Sectors</div>
-                    <div style="font-size: 0.8rem; line-height: 1.4; color: var(--text-color);">
-                        ${blockedSectors.join(', ')}
+            <!-- WATCHLIST STATUS EXPLAINER -->
+            <div class="report-section">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <div class="report-section-title" style="margin: 0; color: var(--color-accent);">Custom Watchlist Priority</div>
+                    <span style="font-size: 0.75rem; font-weight: bold; color: ${overrideOn ? 'var(--color-positive)' : 'var(--text-muted)'};">
+                        ${overrideOn ? 'ACTIVE' : 'OFF'}
+                    </span>
+                </div>
+                <div style="font-size: 0.8rem; line-height: 1.4; color: var(--text-color);">
+                    Stocks on your Custom Watchlist are treated as priorities. They jump the queue and bypass the Price Floor and Category mutes to ensure you never miss a move on your own holdings.
+                </div>
+            </div>
+
+            <!-- ALERT MECHANICS & TIMING -->
+            <div class="report-section">
+                <div class="report-section-title">Alert Mechanics & Timing</div>
+                <div class="report-rule-item" style="flex-direction: column; align-items: flex-start; gap: 8px;">
+                    <div style="font-size: 0.8rem; line-height: 1.4;">
+                        <strong>52-Week Records:</strong> You are notified when a stock touches a 12-month price record or gets within 1% of it.
+                    </div>
+                    <div style="font-size: 0.8rem; line-height: 1.4;">
+                        <strong>App (The Live Feed):</strong> Shows every price alert recorded today. If it happened, it stays on this list.
+                    </div>
+                    <div style="font-size: 0.8rem; line-height: 1.4;">
+                        <strong>Email (The Final Verdict):</strong> A summary of where stocks stood at the 4:15 PM market close.
                     </div>
                 </div>
-            ` : ''}
+            </div>
 
-            <div class="report-footer">
+            <!-- 6. GHOSTED FOOTER: SYSTEM HEALTH ("THE BOUNCER") -->
+            <div style="padding-top: 12px; margin-top: 20px; opacity: 0.4; font-size: 0.65rem; color: var(--text-muted); line-height: 1.4;">
+                <div style="text-align: center; margin-bottom: 5px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">
+                   🛡️ Background Integrity Checks (The Bouncer)
+                </div>
+                <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;">
+                    <span>[Unified Price Authority: <span style="color:#4caf50">VERIFIED</span>]</span>
+                    <span>[Ghost Filter: <span style="color:#4caf50">ON</span>]</span>
+                    <span>[Directional Locking: <span style="color:#4caf50">ENFORCED</span>]</span>
+                </div>
+                <div style="text-align: center; margin-top: 6px;">
+                    These automated checks filter out exchange glitches and stale data to ensure your alerts match live reality.
+                </div>
+            </div>
+
+            <div class="report-footer" style="margin-top: 15px; opacity: 0.8;">
                 Tapping the status bar toggles this awareness report.
             </div>
         `;
 
         const closeBtn = container.querySelector('.report-close-btn');
         if (closeBtn) closeBtn.onclick = () => container.classList.remove('visible');
-
-
     }
 }

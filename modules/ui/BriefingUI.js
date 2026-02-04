@@ -165,8 +165,8 @@ export class BriefingUI {
             const pct = item.pctChange || 0;
             const isUp = pct >= 0;
             // Force inline color with !important to override Hero Card white text
-            const colorHex = isUp ? '#4cd964' : '#ff3b30';
-            return `<span style="color: ${colorHex} !important;">${isUp ? '+' : ''}${pct.toFixed(2)}%</span>`;
+            const colorVar = isUp ? 'var(--color-positive)' : 'var(--color-negative)';
+            return `<span style="color: ${colorVar} !important;">${isUp ? '+' : ''}${pct.toFixed(2)}%</span>`;
         };
 
         // (Legacy Top Row Removed)

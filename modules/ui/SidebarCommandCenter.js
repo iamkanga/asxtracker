@@ -207,7 +207,7 @@ export class SidebarCommandCenter {
                     <div class="sentiment-header">
                         <span class="market-label">${metricsLabel.replace(' (NO DATA)', '')}</span>
                         <!-- Market Status: Text Only (Red/Green), No Background -->
-                        <span class="market-status" style="background: transparent !important; color: ${isMarketOpen ? '#2ecc71' : '#ff4d4d'} !important; padding: 0;">${marketStatusText}</span>
+                        <span class="market-status" style="background: transparent !important; color: ${isMarketOpen ? 'var(--color-positive)' : 'var(--color-negative)'} !important; padding: 0;">${marketStatusText}</span>
                     </div>
                     <div class="sentiment-body">
                         <div class="sentiment-trend">
