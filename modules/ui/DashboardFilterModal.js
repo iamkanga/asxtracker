@@ -34,7 +34,7 @@ export class DashboardFilterModal {
                 
                 <!-- HEADER: Left Aligned Title -->
                 <div class="${CSS_CLASSES.MODAL_HEADER}" style="justify-content: flex-start; position: relative; padding-left: 20px;">
-                    <h2 class="${CSS_CLASSES.MODAL_TITLE}" style="margin: 0; font-size: 1.1rem; text-align: left;">Dashboard Items</h2>
+                    <h2 class="${CSS_CLASSES.MODAL_TITLE}" style="margin: 0; font-size: 1.1rem; text-align: left;">Edit Dashboard</h2>
                     
                     <!-- Close Button (Absolute Right) -->
                     <button class="${CSS_CLASSES.MODAL_CLOSE_BTN}" title="Close" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%);">
