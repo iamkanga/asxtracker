@@ -94,6 +94,7 @@ export class SearchDiscoveryUI {
                 navManager.popStateSilently();
             }
         };
+        modal._close = close; // Store for external access
 
         // Register with NavigationManager
         modal._navActive = true;
@@ -390,6 +391,9 @@ export class SearchDiscoveryUI {
         const addBtn = container.querySelector('#discoveryAddBtn');
         if (addBtn) {
             addBtn.addEventListener('click', () => {
+                // Dismiss search modal first to prevent stacked modals
+                if (modal._close) modal._close();
+
                 // Delay opening ShareForm to ensure history settles (lock safety)
                 setTimeout(() => {
                     document.dispatchEvent(new CustomEvent(EVENTS.REQUEST_ADD_SHARE_PREFILL, { detail: { stock } }));

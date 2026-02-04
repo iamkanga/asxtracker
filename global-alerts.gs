@@ -2954,294 +2954,169 @@ function repairBrokenPrices() {
  * 1. 'Dashboard': Pure API-driven. Writes DIRECTLY to LivePrice/PrevClose/etc. (No formulas to protect).
  * 2. 'Prices' (or others): Formula-driven. Writes ONLY to API_* columns. (Protects GoogleFinance formulas).
  */
-function repairSheet_(sheetName) {
+/**
+ * Internal helper to repair a specific sheet.
+ * ARCHITECTURAL RULE:
+ * 1. 'Dashboard': Pure Yahoo API mode. Forces overwrite with latest Yahoo data.
+ * 2. 'Prices' (or others): Safety mode. Only updates if price is broken or formula is missing.
+ */
+function repairSheet_(sheetName, isForce = false) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = ss.getSheetByName(sheetName);
-  if (!sheet) { Logger.log('Skipping ' + sheetName + ': Sheet not found'); return; }
+  if (!sheet) return;
   
-  // Policy Determination
   const isDashboard = (sheetName === 'Dashboard');
   const policy = isDashboard ? 'DIRECT_OVERWRITE' : 'SAFE_FALLBACK';
   
-  const data = sheet.getDataRange().getValues();
+  const dataRange = sheet.getDataRange();
+  const data = dataRange.getValues();
   if (data.length < 2) return;
 
-  const rawHeaders = data[0];
-  const headers = rawHeaders.map(h => String(h).replace(/[^A-Z0-9]/gi, '').toUpperCase());
-  
-  const findIdx = (pattern) => headers.findIndex(h => pattern.test(String(h)));
+  const headers = data[0].map(h => String(h).replace(/[^A-Z0-9]/gi, '').toUpperCase());
   const codeIdx = headers.indexOf('ASXCODE') !== -1 ? headers.indexOf('ASXCODE') : headers.indexOf('CODE');
   
-  // Standard Columns
   const priceIdx = headers.findIndex(h => ['LIVEPRICE', 'LAST', 'LASTPRICE', 'LASTTRADE', 'PRICE', 'CURRENT'].includes(h));
   const prevIdx = headers.findIndex(h => ['PREVCLOSE','PREVDAYCLOSE','PREVIOUSCLOSE','LASTCLOSE'].includes(h));
-  const highIdx = headers.findIndex(h => ['HIGH52','52WEEKHIGH','HIGH52WEEK'].includes(h));
-  const lowIdx = headers.findIndex(h => ['LOW52','52WEEKLOW','LOW52WEEK'].includes(h));
-
-  // Fallback API Columns
-  const apiPriceIdx = findIdx(/api.*price/i) || findIdx(/price.*api/i) || findIdx(/pi.*price/i);
-  const apiPrevIdx = findIdx(/api.*prev/i) || findIdx(/prev.*api/i) || findIdx(/pi.*prev/i);
-  const apiHighIdx = findIdx(/api.*high/i) || findIdx(/high.*api/i) || findIdx(/api.*hi/i);
-  const apiLowIdx = findIdx(/api.*low/i) || findIdx(/low.*api/i) || findIdx(/api.*lo/i);
   
-  // Target Determination based on Policy
-  let targetPrice = -1, targetPrev = -1, targetHigh = -1, targetLow = -1;
-
-  if (policy === 'DIRECT_OVERWRITE') {
-    // Dashboard: Write to primary columns
-    targetPrice = priceIdx;
-    targetPrev = prevIdx;
-    targetHigh = highIdx;
-    targetLow = lowIdx;
-  } else {
-    // Safe Mode: Write to API columns only
-    targetPrice = apiPriceIdx;
-    targetPrev = apiPrevIdx;
-    targetHigh = apiHighIdx;
-    targetLow = apiLowIdx;
-    
-    // Safety Abort
-    if (targetPrice === -1) {
-      Logger.log('[' + sheetName + '] Skipped repair: No "API Price" fallback column found. Protecting formulas.');
-      return;
-    }
-  }
+  const apiPriceIdx = headers.findIndex(h => /API.*PRICE|PRICE.*API|PI.*PRICE/i.test(h));
+  const apiPrevIdx = headers.findIndex(h => /API.*PREV|PREV.*API|PI.*PREV/i.test(h));
+  const apiHighIdx = headers.findIndex(h => /API.*HIGH|HIGH.*API|PI.*HIGH/i.test(h));
+  const apiLowIdx = headers.findIndex(h => /API.*LOW|LOW.*API|PI.*LOW/i.test(h));
   
-  if (codeIdx === -1 || targetPrice === -1) {
-    Logger.log('[' + sheetName + '] Skipped: Missing target columns for ' + policy + ' mode.');
-    return;
-  }
+  const targetPrice = (policy === 'DIRECT_OVERWRITE') ? priceIdx : apiPriceIdx;
+  const targetPrev = (policy === 'DIRECT_OVERWRITE') ? prevIdx : apiPrevIdx;
+  const targetHigh = (policy === 'DIRECT_OVERWRITE') ? headers.findIndex(h => ['HIGH52','52WEEKHIGH'].includes(h)) : apiHighIdx;
+  const targetLow = (policy === 'DIRECT_OVERWRITE') ? headers.findIndex(h => ['LOW52','52WEEKLOW'].includes(h)) : apiLowIdx;
 
+  if (codeIdx === -1 || targetPrice === -1) return;
+
+  const formulas = dataRange.getFormulas();
   const problems = [];
   const redundantCells = []; // Columns to clear if Google has recovered
   
-  // Read formulas to protect them
-  const formulas = sheet.getDataRange().getFormulas();
-
-  // Skip header, start at row 2
   for (let i = 1; i < data.length; i++) {
     const codeRaw = data[i][codeIdx];
+    if (!codeRaw) continue;
+
     const priceVal = (priceIdx !== -1) ? data[i][priceIdx] : null;
+    let cleanVal = (typeof priceVal === 'string') ? Number(priceVal.replace(/[$, ]/g, '')) : priceVal;
+    const isExplicitError = (typeof priceVal === 'string' && /INVALID|ERROR|#N\/A/i.test(priceVal));
+    const isBroken = !isExplicitError && (cleanVal === 0 || cleanVal === '' || cleanVal == null || isNaN(cleanVal));
 
-    // PROTECTION: Check if target cells have formulas (to avoid overwriting user formulas)
-    let targetHasFormula = false;
-    if (targetPrice !== -1 && formulas[i] && formulas[i][targetPrice] && formulas[i][targetPrice].toString().startsWith('=')) targetHasFormula = true;
-    
-    // Check if current LivePrice is essentially "Broken" (0, #N/A, Error)
-    let cleanVal = priceVal;
-    if (typeof priceVal === 'string') {
-      const s = priceVal.replace(/[$, ]/g, '').trim();
-      const n = Number(s);
-      if (isFinite(n) && n > 0) cleanVal = n;
-    }
-    const isExplicitError = (typeof priceVal === 'string' && (priceVal.includes('INVALID') || priceVal.includes('DELISTED') || priceVal.includes('ERROR') || priceVal.includes('#N/A')));
-    const isPriceBroken = !isExplicitError && (cleanVal === 0 || cleanVal === '' || cleanVal === null || isNaN(cleanVal)); 
-
+    // ARCHITECTURAL RULE: We never force-update healthy shares to save bandwidth.
     let needsUpdate = false;
-    
-    if (policy === 'DIRECT_OVERWRITE') {
-       // Dashboard: Only update Price if it's not a formula
-       needsUpdate = (targetPrice !== -1 && !targetHasFormula); 
+    let isHealthy = !isBroken && !isExplicitError && cleanVal > 0;
+
+    if (isDashboard) {
+      needsUpdate = true; // Dashboard always stays fresh
     } else {
-       // --- HARDENED SMART LOGIC ---
-       const apiVal = (apiPriceIdx !== -1 && data[i][apiPriceIdx] !== '') ? parseFloat(data[i][apiPriceIdx]) : null;
-       const tickerLog = codeRaw ? String(codeRaw).toUpperCase().trim() : 'UNK';
-
-       // Detect if the LivePrice column is actually using our API Column as a fallback formula?
-       // OR if it's just a standard GOOGLEFINANCE formula.
-       const sourceFormula = (formulas[i] && formulas[i][priceIdx]) ? formulas[i][priceIdx].toString().toUpperCase() : '';
-       const isStandardFormula = sourceFormula.startsWith('=') && !sourceFormula.includes('API'); 
-       
-       // Rule: If Google Price and API Price match exactly, the API is currently "carrying" the price.
-       const isUsingFallback = (apiVal != null && !isNaN(apiVal) && Math.abs(cleanVal - apiVal) < 1e-9);
-       
-       // 1. CLEANUP: If Google is healthy (Formula is working) AND NOT using the fallback, clear clutter.
-       // We only clear if it's a standard formula that doesn't reference the API column.
-       const shouldCleanup = isStandardFormula && !isPriceBroken && !isExplicitError && apiVal != null && !isUsingFallback;
-
-       if (shouldCleanup) {
+      // Prices Sheet: Only update if broken OR if forcing AND it's currently broken
+      needsUpdate = isBroken || isExplicitError;
+      if (isForce && isBroken) needsUpdate = true;
+      
+      // JANITOR LOGIC: If healthy, mark API cells for cleanup
+      if (isHealthy) {
+        const apiVal = (apiPriceIdx !== -1) ? data[i][apiPriceIdx] : null;
+        if (apiVal != null && apiVal !== '') {
           const rowNum = i + 1;
-          [apiPriceIdx, apiPrevIdx, apiHighIdx, apiLowIdx].forEach(idx => {
-            if (idx !== -1) redundantCells.push(sheet.getRange(rowNum, idx + 1).getA1Notation());
+          [apiPriceIdx, targetPrev, targetHigh, targetLow].forEach(idx => {
+            if (idx !== -1 && idx != null) redundantCells.push(sheet.getRange(rowNum, idx + 1).getA1Notation());
           });
-          // Logger.log(`[Janitor] ${tickerLog} recovered. Cleaning redundant data.`);
-       }
-
-       // 2. REPAIR: If broken OR using a stale fallback, update it from Yahoo.
-       const isBroken = (isPriceBroken || isExplicitError) && !targetHasFormula;
-       needsUpdate = isBroken || isUsingFallback;
-       
-       if (needsUpdate && tickerLog === 'FBR') {
-          // Logger.log(`[Diagnostic] FBR: Broken=${isBroken}, isUsingFallback=${isUsingFallback}, cleanVal=${cleanVal}, apiVal=${apiVal}`);
-       }
+        }
+      }
+    }
+    
+    // Protect formulas in the target column
+    if (formulas[i] && formulas[i][targetPrice] && formulas[i][targetPrice].toString().startsWith('=')) {
+      needsUpdate = false;
     }
 
-    if (codeRaw && needsUpdate) {
-        let ticker = String(codeRaw).replace(/\u00A0/g, ' ').trim().toUpperCase();
-        
-        // --- EXCLUSION LIST: Do NOT repair these ---
-        const EXCLUDED_TICKERS = new Set(['XKO', 'YAP-F']); 
-        if (EXCLUDED_TICKERS.has(ticker)) {
-             // Logger.log(`[Skipped] ${ticker} is excluded from repair.`);
-             continue; 
-        }
+    if (needsUpdate) {
+      let cleanCode = String(codeRaw).toUpperCase().trim();
+      if (cleanCode.includes(':')) cleanCode = cleanCode.split(':')[1];
+      
+      let ticker = cleanCode;
+      const mapper = {
+        'XJO': '^AXJO', 'XALL': '^AORD', '.INX': '^GSPC', 'SPX': '^GSPC', 'DJI': '^DJI', 'IXIC': '^IXIC',
+        '^FTSE': '^FTSE', '^STOXX50E': '^STOXX50E', '^N225': '^N225', '^HSI': '^HSI', '^VIX': '^VIX'
+      };
 
-        // --- TRANSLATION LAYER: Google -> Yahoo ---
-        const mapper = {
-          'XJO': '^AXJO',   // ASX 200
-          'XALL': '^AORD',  // All Ords
-          '.INX': '^GSPC',  // S&P 500
-          'SPX': '^GSPC',
-          'DJI': '^DJI',
-          'IXIC': '^IXIC',  // Nasdaq
-          '^FTSE': '^FTSE',
-          '^STOXX50E': '^STOXX50E',
-          '^N225': '^N225',
-          '^HSI': '^HSI',
-          '^VIX': '^VIX'
-        };
+      if (mapper[ticker]) {
+        ticker = mapper[ticker];
+      } else if (String(codeRaw).toUpperCase().includes('CURRENCY:')) {
+        ticker = ticker.includes('BTC') ? cleanCode.replace(/([A-Z]{3})([A-Z]{3})/, '$1-$2') : cleanCode + '=X';
+      } else if (!ticker.includes('^') && !ticker.includes('=') && !ticker.includes('-') && !ticker.includes('.')) {
+        ticker += '.AX';
+      }
 
-        let cleanCode = ticker;
-        if (cleanCode.indexOf(':') !== -1) cleanCode = cleanCode.split(':')[1];
-        
-        if (mapper[cleanCode]) {
-          ticker = mapper[cleanCode];
-        } else if (ticker.includes('CURRENCY:')) {
-          ticker = cleanCode.replace(/([A-Z]{3})([A-Z]{3})/, '$1$2=X'); // BTCAUD -> BTCAUD=X (Yahoo format)
-        } else if (cleanCode.endsWith('=X') || cleanCode.endsWith('=F')) {
-          ticker = cleanCode; // Preserve Currency/Futures codes (e.g. AUDUSD=X, GC=F)
-        } else if (!ticker.includes('^') && !ticker.includes('-') && !ticker.includes('.')) {
-          ticker = cleanCode + '.AX'; // Default to ASX
-        } else {
-          ticker = cleanCode; // Preserve already mapped or global codes
-        }
-
-        problems.push({ 
-           row: i + 1, 
-           code: ticker, 
-           targetHasFormula: targetHasFormula
-        });
+      problems.push({ row: i + 1, code: ticker });
     }
   }
-  
-  // --- EXECUTE REDUNDANT CLEANUP ---
+
+  // --- EXECUTE JANITOR (CLEANUP) ---
   if (redundantCells.length > 0) {
-    // Process in smaller chunks to avoid RangeList limits if sheet is massive
-    for (let i = 0; i < redundantCells.length; i += 200) {
-      const batch = redundantCells.slice(i, i + 200);
+    for (let j = 0; j < redundantCells.length; j += 200) {
+      const batch = redundantCells.slice(j, j + 200);
       sheet.getRangeList(batch).clearContent();
     }
-    Logger.log('[' + sheetName + '] Cleared ' + redundantCells.length + ' redundant API cells.');
+    Logger.log('[' + sheetName + '] Janitor cleared ' + redundantCells.length + ' redundant API cells.');
   }
 
   if (problems.length === 0) return;
-  
-  Logger.log('[' + sheetName + '] Updating ' + problems.length + ' items (' + policy + ')...');
-  
+
   // Process in batches
-  for (let i = 0; i < problems.length; i += 50) {
-    const batch = problems.slice(i, i + 50);
-    const tickers = batch.map(p => p.code);
+  for (let i = 0; i < problems.length; i += 40) {
+    const batch = problems.slice(i, i + 40);
+    const ts = new Date().getTime();
+    const requests = batch.map(p => {
+      // Differentiate Range: Dashboard (High Detail) vs Prices (Low Bandwidth)
+      const range = isDashboard ? '5d' : '1d';
+      return {
+        url: `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(p.code)}?interval=15m&range=${range}&_ts=${ts}`,
+        muteHttpExceptions: true
+      };
+    });
     
-    try {
-      const results = {};
-      const requests = tickers.map(t => {
-        // OPTIMIZATION: Currencies/Futures trade 24/7. 1m candles for 5d = ~7200 points (Too Heavy).
-        // Use 15m candles for these assets to ensure successful fetch while keeping 5d checks.
-        const isDense = (t.endsWith('=X') || t.endsWith('=F') || t.includes('BTC'));
-        const interval = isDense ? '15m' : '1m';
-        return {
-          url: 'https://query1.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(t) + '?interval=' + interval + '&range=5d',
-          muteHttpExceptions: true
-        };
-      });
-      
-      const responses = UrlFetchApp.fetchAll(requests);
-      responses.forEach((resp, idx) => {
-        const ticker = tickers[idx];
-        const code = resp.getResponseCode();
-        if (code === 200) {
-          try {
-            const json = JSON.parse(resp.getContentText());
-            const result = json.chart.result[0];
-            const meta = result.meta;
-            
-            // 1. Primary Price Source
-            let safePrice = meta.regularMarketPrice;
-            
-            // 2. ENHANCED ACCURACY: For sub-penny stocks, if MarketPrice is stale, 
-            // check the latest Chart Candle (much more accurate).
-            let source = 'Metadata';
-            if (result.indicators && result.indicators.quote && result.indicators.quote[0].close) {
-              const quotes = result.indicators.quote[0].close;
-              for (let q = quotes.length - 1; q >= 0; q--) {
-                if (quotes[q] != null) {
-                  // If the chart candle is lower/different, it often reflects the website price
-                  if (Math.abs(safePrice - quotes[q]) > 0.0001) {
-                    safePrice = quotes[q]; 
-                    source = 'Chart Candle';
-                  }
-                  break;
-                }
+    const responses = UrlFetchApp.fetchAll(requests);
+    batch.forEach((p, idx) => {
+      const resp = responses[idx];
+      if (resp.getResponseCode() === 200) {
+        try {
+          const json = JSON.parse(resp.getContentText());
+          const meta = json.chart.result[0].meta;
+          const result = json.chart.result[0];
+          
+          let safePrice = meta.regularMarketPrice;
+          let safePrev = meta.chartPreviousClose || meta.previousClose;
+          
+          // Accuracy Check (Candle Scan): Now for ALL sheets
+          if (result.indicators && result.indicators.quote && result.indicators.quote[0].close) {
+            const candles = result.indicators.quote[0].close;
+            for (let c = candles.length - 1; c >= 0; c--) {
+              if (candles[c] != null) {
+                // If the candle is different, it's usually the real session close (fixes FBR.AX lag)
+                if (Math.abs(safePrice - candles[c]) > 0.00001) safePrice = candles[c];
+                break;
               }
             }
+          }
 
-            // 3. FALLBACK: Use regularMarketDayLow for sub-penny if still matching prevClose incorrectly
-            if (safePrice != null && safePrice < 0.05 && meta.regularMarketDayLow < safePrice && meta.regularMarketDayLow > 0) {
-               // If it's a penny stock and DayLow is fresher than the "Price" field
-               safePrice = meta.regularMarketDayLow;
+          if (safePrice) {
+            sheet.getRange(p.row, targetPrice + 1).setValue(safePrice).setBackground(null);
+            if (targetPrev !== -1 && safePrev) {
+               sheet.getRange(p.row, targetPrev + 1).setValue(safePrev);
             }
-
-            const safePrev = meta.chartPreviousClose || meta.previousClose;
-            if (safePrice == null && safePrev != null) safePrice = safePrev;
-            
-            let status = 'OK';
-            if (safePrice === 0 || safePrice == null) status = 'DELISTED';
-
-            results[ticker] = { 
-              status: 'OK', 
-              price: safePrice, 
-              prevClose: safePrev, 
-              high52: meta.fiftyTwoWeekHigh, 
-              low52: meta.fiftyTwoWeekLow
-            };
-            
-            if (ticker === 'FBR.AX' || ticker === '^AXJO') {
-              Logger.log(`[Diagnostic] ${ticker}: Price=${safePrice} (Source: ${source})`);
-            }
-          } catch(e) { 
-             results[ticker] = { status: 'ERROR' }; 
           }
-        } else { results[ticker] = { status: 'INVALID' }; }
-      });
-      
-      batch.forEach(p => {
-        const data = results[p.code];
-        if (data && data.status === 'OK' && data.price != null) {
-          sheet.getRange(p.row, targetPrice + 1).setValue(data.price).setBackground(null);
-          if (targetPrev !== -1 && data.prevClose != null) {
-            sheet.getRange(p.row, targetPrev + 1).setValue(data.prevClose).setBackground(null);
-          }
-          if (targetHigh !== -1 && data.high52 != null) {
-            sheet.getRange(p.row, targetHigh + 1).setValue(data.high52).setBackground(null);
-          }
-          if (targetLow !== -1 && data.low52 != null) {
-            sheet.getRange(p.row, targetLow + 1).setValue(data.low52).setBackground(null);
-          }
-        } else if (data && data.status !== 'OK') {
-           // For safe mode, we verify we are writing to API col before writing error status
-           sheet.getRange(p.row, targetPrice + 1).setValue(data.status).setBackground(null);
-        } else {
-           // Clear if no data
-           sheet.getRange(p.row, targetPrice + 1).clearContent();
-        }
-      });
-      Logger.log('[' + sheetName + '] Batch ' + (i/50 + 1) + ' processed.');
-    } catch (e) {
-      Logger.log('[' + sheetName + '] Batch failed: ' + e.message);
-    }
-    Utilities.sleep(500); 
+        } catch(e) {}
+      } else if (isDashboard) {
+        sheet.getRange(p.row, targetPrice + 1).setValue('INVALID').setBackground('#f4cccc');
+      }
+    });
+    
+    // Mandatory Throttle to respect Free Google & Yahoo Tier
+    if (i + 40 < problems.length) Utilities.sleep(1000);
   }
+  Logger.log('[' + sheetName + '] Repair cycle complete.');
 }
 
 // ===============================================================
@@ -3688,9 +3563,9 @@ function forceCleanupTest() {
     }
   });
 
-  console.log("\n--- TRIGGERING SYSTEM REPAIR ---");
-  repairSheet_('Dashboard');
-  repairSheet_('Prices');
+  console.log("\n--- TRIGGERING SYSTEM REPAIR (FORCE MODE) ---");
+  repairSheet_('Dashboard', true);
+  repairSheet_('Prices', true);
   console.log("Validation & Sync Complete.");
 }
 
