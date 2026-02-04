@@ -527,10 +527,10 @@ export class ShareFormUI {
             const rowClass = isChecked ? `${CSS_CLASSES.WATCHLIST_ROW} ${CSS_CLASSES.SELECTED}` : CSS_CLASSES.WATCHLIST_ROW;
             const checkState = isChecked ? 'checked' : '';
             return `
-                <div class="${rowClass}" onclick="this.classList.toggle('${CSS_CLASSES.SELECTED}'); this.querySelector('input').click(); event.stopPropagation();">
+                <div class="${rowClass}">
                     <span class="${CSS_CLASSES.WATCHLIST_NAME}">${wl.name}</span>
                     <div class="radio-check"></div>
-                    <input type="checkbox" name="watchlist" value="${wl.id}" ${checkState} onclick="event.stopPropagation()">
+                    <input type="checkbox" name="watchlist" value="${wl.id}" ${checkState}>
                 </div>
             `;
         }).join('');
@@ -826,7 +826,41 @@ export class ShareFormUI {
 
         modal.addEventListener('click', () => dropdown.classList.remove(CSS_CLASSES.SHOW));
 
+        // BIND ROW CLICKS (Confirmation Logic for Portfolio Deselection)
+        const rows = modal.querySelectorAll(`.${CSS_CLASSES.WATCHLIST_ROW}`);
+        rows.forEach(row => {
+            row.addEventListener('click', (e) => {
+                const cb = row.querySelector('input');
+                if (!cb) return;
+
+                // 1. CONFIRMATION GATE: If deselecting Portfolio while data exists
+                if (cb.value === PORTFOLIO_ID && cb.checked) {
+                    const units = modal.querySelector(`#${IDS.PORTFOLIO_SHARES}`)?.value;
+                    const price = modal.querySelector(`#${IDS.PORTFOLIO_AVG_PRICE}`)?.value;
+
+                    // If there's any data, warn the user
+                    if ((units && parseFloat(units) !== 0) || (price && parseFloat(price) !== 0)) {
+                        if (!confirm("Are you sure? Deselecting 'Portfolio' will permanently clear all Units and Price data for this share.")) {
+                            e.stopPropagation();
+                            return;
+                        }
+                    }
+                }
+
+                // 2. TOGGLE STATE
+                cb.checked = !cb.checked;
+                row.classList.toggle(CSS_CLASSES.SELECTED, cb.checked);
+
+                // 3. TRIGGER UPDATE
+                cb.dispatchEvent(new Event('change'));
+                e.stopPropagation();
+            });
+        });
+
         checkboxes.forEach(cb => {
+            // Prevent double-toggling when clicking the checkbox/label directly
+            cb.addEventListener('click', (e) => e.stopPropagation());
+
             cb.addEventListener('change', () => {
                 const selected = Array.from(checkboxes)
                     .filter(c => c.checked)

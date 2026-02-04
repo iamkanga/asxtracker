@@ -86,7 +86,19 @@ export class SearchDiscoveryUI {
         const overlay = modal.querySelector(`.${CSS_CLASSES.MODAL_OVERLAY}`);
 
         const close = () => {
-            modal.remove();
+            if (modal._isClosing) return;
+            modal._isClosing = true;
+
+            // Visual Dismissal (Immediate)
+            modal.classList.remove(CSS_CLASSES.SHOW);
+            modal.classList.add(CSS_CLASSES.HIDDEN);
+            modal.style.display = 'none';
+            modal.style.pointerEvents = 'none';
+
+            // DOM Cleanup
+            setTimeout(() => {
+                modal.remove();
+            }, 50);
 
             // Remove from history stack if closed manually
             if (modal._navActive) {
@@ -132,7 +144,7 @@ export class SearchDiscoveryUI {
         // Search Results Handler (Internal to Modal logic)
         // We need to listen to the specific event triggered by AppController
         const resultsHandler = (e) => {
-            if (!document.contains(modal)) {
+            if (!document.contains(modal) || modal._isClosing) {
                 document.removeEventListener(EVENTS.UPDATE_DISCOVERY_RESULTS, resultsHandler);
                 return;
             }
@@ -392,12 +404,18 @@ export class SearchDiscoveryUI {
         if (addBtn) {
             addBtn.addEventListener('click', () => {
                 // Dismiss search modal first to prevent stacked modals
-                if (modal._close) modal._close();
+                const modalEl = document.getElementById(IDS.DISCOVERY_MODAL);
+                if (modalEl && modalEl._close) {
+                    modalEl._close();
+                } else if (modalEl) {
+                    modalEl.remove();
+                }
 
                 // Delay opening ShareForm to ensure history settles (lock safety)
+                // Increased to 250ms for mobile stability
                 setTimeout(() => {
                     document.dispatchEvent(new CustomEvent(EVENTS.REQUEST_ADD_SHARE_PREFILL, { detail: { stock } }));
-                }, 150);
+                }, 250);
             });
         }
 

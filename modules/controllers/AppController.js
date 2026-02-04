@@ -2413,6 +2413,18 @@ export class AppController {
 
         // Handle Add Share Pre-fill (from Discovery Modal -> Add Share Modal handoff)
         document.addEventListener(EVENTS.REQUEST_ADD_SHARE_PREFILL, (e) => {
+            // GLOBAL DISMISSAL SAFETY: Forcefully remove any discovery modal immediately
+            const discoveryModals = document.querySelectorAll(`[id="${IDS.DISCOVERY_MODAL}"]`);
+            discoveryModals.forEach(m => {
+                m.style.display = 'none'; // Visual safety
+                m.style.pointerEvents = 'none'; // Interaction safety
+                if (m._close) {
+                    m._close();
+                } else {
+                    m.remove();
+                }
+            });
+
             const { stock } = e.detail || {};
             if (stock?.code) {
                 // DUPLICATE CHECK: Search -> Add Flow
@@ -2432,9 +2444,10 @@ export class AppController {
                     }
                 } else {
                     // Safety delay for transition from search to add
+                    // Use a shorter delay here as the Discovery Modal dismissal is already in progress
                     setTimeout(() => {
                         this.modalController.openAddShareModal({ shareName: stock.code, title: stock.name });
-                    }, 150);
+                    }, 100);
                 }
             }
         });
