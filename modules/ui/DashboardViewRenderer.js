@@ -378,36 +378,33 @@ export class DashboardViewRenderer {
             return totalMin >= (10 * 60) && totalMin < (16 * 60 + 15);
         }
 
-        // 3. US INDICES (Tue-Sat Morning in Sydney)
-        // Converting NY 9:30-16:00 -> Approx Sydney 01:30 - 08:00 (Next Day)
-        if (['INX', '.DJI', '.IXIC', '^GSPC', '^DJI', '^IXIC', '^VIX'].includes(code)) {
-            // Trading days are effectively Tue, Wed, Thu, Fri, Sat (Morning) in Sydney
-            if (['Sun', 'Mon'].includes(day)) return false;
+        // 4. UK & EUROPE INDICES (London 08:00-16:30, EU 09:00-17:30)
+        // London is 11h behind Sydney (Winter). Sydney 19:00 to 03:30 (Next Day).
+        if (code.includes('FTSE') || code.includes('STOXX') || code.includes('EU50')) {
+            if (['Sat', 'Sun'].includes(day)) return false;
+            // Monday-Friday Window: Open at 19:00 (7 PM), Close at 03:30 AM (Next Day)
+            return totalMin >= (19 * 60) || totalMin < (3 * 60 + 30);
+        }
 
-            // Simplified Window: 00:30 to 08:30 Sydney time to catch Pre/Post overlap
-            // Note: On Saturday, it closes around 8am. On T-F it opens around 1am.
-            // Logic: It's "Open" if early morning.
+        // 5. ASIAN INDICES (HK 09:30-16:00, Tokyo 09:00-15:00)
+        if (code.includes('HSI') || code.includes('N225')) {
+            if (['Sat', 'Sun'].includes(day)) return false;
+            if (code.includes('HSI')) return totalMin >= (12 * 60 + 30) && totalMin < (19 * 60);
+            if (code.includes('N225')) return totalMin >= (11 * 60) && totalMin < (17 * 60);
+        }
+
+        // 6. US INDICES (Tue-Sat Morning in Sydney)
+        if (['INX', '.DJI', '.IXIC', '^GSPC', '^DJI', '^IXIC', '^VIX'].includes(code)) {
+            if (['Sun', 'Mon'].includes(day)) return false;
             return totalMin < (9 * 60) || totalMin > (23 * 60);
         }
 
-        // 4. FUTURES (Gold, Oil, SPI)
-        // Usually Open 23h/day. Closed roughly 07:00 - 08:00 Sydney daily.
-        // Closed Weekends (Sat Morning -> Mon Morning).
+        // 7. FUTURES (Gold, Oil, SPI)
         if (['GCW00', 'SIW00', 'BZW00', 'GC=F', 'SI=F', 'CL=F', 'BZ=F', 'HG=F', 'YAP=F'].includes(code)) {
-            // Closed part of Saturday (after 9am) and most of Sunday.
-            if (day === 'Sat' && totalMin > (9 * 60)) return false; // Close Sat Morning
-            if (day === 'Sun') return false; // Closed Sunday
-
-            // Mondays: Market opens approx 08:00 AM Sydney (6pm Sunday NY)
+            if (day === 'Sat' && totalMin > (9 * 60)) return false;
+            if (day === 'Sun') return false;
             if (day === 'Mon' && totalMin < (8 * 60)) return false;
-
-            // Daily Break (approx 7am-9am Sydney, depending on DST)
-            // We'll mark "Closed" if between 7am and 9am just to be safe/clear?
-            // Actually, let's just use the 1-hour break logic.
-            // Break is usually NY Close -> Sydney Open mismatch.
-            // Let's say closed 07:00 - 09:00 to be safe.
             if (totalMin >= (7 * 60) && totalMin < (9 * 60)) return false;
-
             return true;
         }
 

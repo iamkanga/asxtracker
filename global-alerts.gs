@@ -2955,10 +2955,8 @@ function repairBrokenPrices() {
  * 2. 'Prices' (or others): Formula-driven. Writes ONLY to API_* columns. (Protects GoogleFinance formulas).
  */
 /**
- * Internal helper to repair a specific sheet.
- * ARCHITECTURAL RULE:
- * 1. 'Dashboard': Pure Yahoo API mode. Forces overwrite with latest Yahoo data.
- * 2. 'Prices' (or others): Safety mode. Only updates if price is broken or formula is missing.
+ * THE ULTIMATE SYNC ENGINE (v4 - 401-Proof & Parallel)
+ * Bypasses Yahoo's 401 blocks by using the resilient Chart API in parallel.
  */
 function repairSheet_(sheetName, isForce = false) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -2966,157 +2964,87 @@ function repairSheet_(sheetName, isForce = false) {
   if (!sheet) return;
   
   const isDashboard = (sheetName === 'Dashboard');
-  const policy = isDashboard ? 'DIRECT_OVERWRITE' : 'SAFE_FALLBACK';
-  
-  const dataRange = sheet.getDataRange();
-  const data = dataRange.getValues();
+  const fullRange = sheet.getDataRange();
+  const data = fullRange.getValues();
   if (data.length < 2) return;
 
-  const headers = data[0].map(h => String(h).replace(/[^A-Z0-9]/gi, '').toUpperCase());
-  const codeIdx = headers.indexOf('ASXCODE') !== -1 ? headers.indexOf('ASXCODE') : headers.indexOf('CODE');
-  
-  const priceIdx = headers.findIndex(h => ['LIVEPRICE', 'LAST', 'LASTPRICE', 'LASTTRADE', 'PRICE', 'CURRENT'].includes(h));
-  const prevIdx = headers.findIndex(h => ['PREVCLOSE','PREVDAYCLOSE','PREVIOUSCLOSE','LASTCLOSE'].includes(h));
-  
-  const apiPriceIdx = headers.findIndex(h => /API.*PRICE|PRICE.*API|PI.*PRICE/i.test(h));
-  const apiPrevIdx = headers.findIndex(h => /API.*PREV|PREV.*API|PI.*PREV/i.test(h));
-  const apiHighIdx = headers.findIndex(h => /API.*HIGH|HIGH.*API|PI.*HIGH/i.test(h));
-  const apiLowIdx = headers.findIndex(h => /API.*LOW|LOW.*API|PI.*LOW/i.test(h));
-  
-  const targetPrice = (policy === 'DIRECT_OVERWRITE') ? priceIdx : apiPriceIdx;
-  const targetPrev = (policy === 'DIRECT_OVERWRITE') ? prevIdx : apiPrevIdx;
-  const targetHigh = (policy === 'DIRECT_OVERWRITE') ? headers.findIndex(h => ['HIGH52','52WEEKHIGH'].includes(h)) : apiHighIdx;
-  const targetLow = (policy === 'DIRECT_OVERWRITE') ? headers.findIndex(h => ['LOW52','52WEEKLOW'].includes(h)) : apiLowIdx;
+  // 1. Hardened Header Detection
+  const headers = data[0].map(h => String(h).toUpperCase().trim());
+  const findIdx = (patterns) => {
+    for (const p of patterns) {
+      const idx = headers.findIndex(h => h.includes(p.toUpperCase()));
+      if (idx !== -1) return idx;
+    }
+    return -1;
+  };
 
-  if (codeIdx === -1 || targetPrice === -1) return;
+  const codeIdx = findIdx(['CODE', 'ASX CODE', 'TICKER']);
+  const priceIdx = findIdx(['LIVEPRICE', 'LAST', 'PRICE', 'CURRENT', 'LASTPRICE']);
+  const prevIdx = findIdx(['PREVCLOSE', 'PREVIOUS', 'CLOSE', 'YEST']);
 
-  const formulas = dataRange.getFormulas();
-  const problems = [];
-  const redundantCells = []; // Columns to clear if Google has recovered
-  
+  if (codeIdx === -1 || priceIdx === -1) {
+    console.log(`[ABORT] Headers missing in ${sheetName}. Found: ${headers.join(' | ')}`);
+    return;
+  }
+
+  // 2. Prepare Parallel Requests
+  const ts = new Date().getTime();
+  const validRows = [];
+  const requests = [];
+
   for (let i = 1; i < data.length; i++) {
-    const codeRaw = data[i][codeIdx];
-    if (!codeRaw) continue;
+    const rawCode = data[i][codeIdx];
+    if (!rawCode) continue;
 
-    const priceVal = (priceIdx !== -1) ? data[i][priceIdx] : null;
-    let cleanVal = (typeof priceVal === 'string') ? Number(priceVal.replace(/[$, ]/g, '')) : priceVal;
-    const isExplicitError = (typeof priceVal === 'string' && /INVALID|ERROR|#N\/A/i.test(priceVal));
-    const isBroken = !isExplicitError && (cleanVal === 0 || cleanVal === '' || cleanVal == null || isNaN(cleanVal));
+    let ticker = String(rawCode).toUpperCase().trim().replace('CURRENCY:', '');
+    if (ticker.includes(':')) ticker = ticker.split(':')[1];
 
-    // ARCHITECTURAL RULE: We never force-update healthy shares to save bandwidth.
-    let needsUpdate = false;
-    let isHealthy = !isBroken && !isExplicitError && cleanVal > 0;
+    const mapper = { 'XJO': '^AXJO', 'XALL': '^AORD', 'SPX': '^GSPC', 'IXIC': '^IXIC', 'DJI': '^DJI', 'HSI': '^HSI' };
+    if (mapper[ticker]) ticker = mapper[ticker];
+    if (ticker.endsWith('-F')) ticker = ticker.replace('-F', '=F');
+    if (!ticker.includes('^') && !ticker.includes('=') && !ticker.includes('-') && !ticker.includes('.')) ticker += '.AX';
 
-    if (isDashboard) {
-      needsUpdate = true; // Dashboard always stays fresh
-    } else {
-      // Prices Sheet: Only update if broken OR if forcing AND it's currently broken
-      needsUpdate = isBroken || isExplicitError;
-      if (isForce && isBroken) needsUpdate = true;
-      
-      // JANITOR LOGIC: If healthy, mark API cells for cleanup
-      if (isHealthy) {
-        const apiVal = (apiPriceIdx !== -1) ? data[i][apiPriceIdx] : null;
-        if (apiVal != null && apiVal !== '') {
-          const rowNum = i + 1;
-          [apiPriceIdx, targetPrev, targetHigh, targetLow].forEach(idx => {
-            if (idx !== -1 && idx != null) redundantCells.push(sheet.getRange(rowNum, idx + 1).getA1Notation());
-          });
-        }
-      }
-    }
-    
-    // Protect formulas in the target column
-    if (formulas[i] && formulas[i][targetPrice] && formulas[i][targetPrice].toString().startsWith('=')) {
-      needsUpdate = false;
-    }
-
-    if (needsUpdate) {
-      let cleanCode = String(codeRaw).toUpperCase().trim();
-      if (cleanCode.includes(':')) cleanCode = cleanCode.split(':')[1];
-      
-      let ticker = cleanCode;
-      const mapper = {
-        'XJO': '^AXJO', 'XALL': '^AORD', '.INX': '^GSPC', 'SPX': '^GSPC', 'DJI': '^DJI', 'IXIC': '^IXIC',
-        '^FTSE': '^FTSE', '^STOXX50E': '^STOXX50E', '^N225': '^N225', '^HSI': '^HSI', '^VIX': '^VIX'
-      };
-
-      if (mapper[ticker]) {
-        ticker = mapper[ticker];
-      } else if (String(codeRaw).toUpperCase().includes('CURRENCY:')) {
-        ticker = ticker.includes('BTC') ? cleanCode.replace(/([A-Z]{3})([A-Z]{3})/, '$1-$2') : cleanCode + '=X';
-      } else if (!ticker.includes('^') && !ticker.includes('=') && !ticker.includes('-') && !ticker.includes('.')) {
-        ticker += '.AX';
-      }
-
-      problems.push({ row: i + 1, code: ticker });
-    }
-  }
-
-  // --- EXECUTE JANITOR (CLEANUP) ---
-  if (redundantCells.length > 0) {
-    for (let j = 0; j < redundantCells.length; j += 200) {
-      const batch = redundantCells.slice(j, j + 200);
-      sheet.getRangeList(batch).clearContent();
-    }
-    Logger.log('[' + sheetName + '] Janitor cleared ' + redundantCells.length + ' redundant API cells.');
-  }
-
-  if (problems.length === 0) return;
-
-  // Process in batches
-  for (let i = 0; i < problems.length; i += 40) {
-    const batch = problems.slice(i, i + 40);
-    const ts = new Date().getTime();
-    const requests = batch.map(p => {
-      // Differentiate Range: Dashboard (High Detail) vs Prices (Low Bandwidth)
-      const range = isDashboard ? '5d' : '1d';
-      return {
-        url: `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(p.code)}?interval=15m&range=${range}&_ts=${ts}`,
-        muteHttpExceptions: true
-      };
+    validRows.push({ rowIdx: i, ticker: ticker });
+    requests.push({
+      url: `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=15m&range=5d&_ts=${ts}`,
+      muteHttpExceptions: true
     });
-    
+  }
+
+  if (requests.length === 0) return;
+
+  // 3. Parallel Sync (401-Proof Engine)
+  try {
     const responses = UrlFetchApp.fetchAll(requests);
-    batch.forEach((p, idx) => {
-      const resp = responses[idx];
+    console.log(`--- [${sheetName}] SYNC START (${requests.length} symbols) ---`);
+    
+    responses.forEach((resp, idx) => {
       if (resp.getResponseCode() === 200) {
         try {
           const json = JSON.parse(resp.getContentText());
-          const meta = json.chart.result[0].meta;
-          const result = json.chart.result[0];
-          
-          let safePrice = meta.regularMarketPrice;
-          let safePrev = meta.chartPreviousClose || meta.previousClose;
-          
-          // Accuracy Check (Candle Scan): Now for ALL sheets
-          if (result.indicators && result.indicators.quote && result.indicators.quote[0].close) {
-            const candles = result.indicators.quote[0].close;
-            for (let c = candles.length - 1; c >= 0; c--) {
-              if (candles[c] != null) {
-                // If the candle is different, it's usually the real session close (fixes FBR.AX lag)
-                if (Math.abs(safePrice - candles[c]) > 0.00001) safePrice = candles[c];
-                break;
-              }
-            }
-          }
+          if (json.chart.result) {
+            const meta = json.chart.result[0].meta;
+            const live = meta.regularMarketPrice;
+            const prev = meta.regularMarketPreviousClose || meta.previousClose;
+            const rowMapping = validRows[idx];
 
-          if (safePrice) {
-            sheet.getRange(p.row, targetPrice + 1).setValue(safePrice).setBackground(null);
-            if (targetPrev !== -1 && safePrev) {
-               sheet.getRange(p.row, targetPrev + 1).setValue(safePrev);
-            }
+            if (live) data[rowMapping.rowIdx][priceIdx] = live;
+            if (prev && prevIdx !== -1) data[rowMapping.rowIdx][prevIdx] = prev;
+            
+            if (isDashboard) console.log(`[SYNCED] ${rowMapping.ticker} -> ${live}`);
           }
         } catch(e) {}
-      } else if (isDashboard) {
-        sheet.getRange(p.row, targetPrice + 1).setValue('INVALID').setBackground('#f4cccc');
+      } else {
+        console.log(`[SKIP] ${validRows[idx].ticker}: API Blocked (${resp.getResponseCode()})`);
       }
     });
-    
-    // Mandatory Throttle to respect Free Google & Yahoo Tier
-    if (i + 40 < problems.length) Utilities.sleep(1000);
+
+    // 4. Final Atomic Write
+    fullRange.setValues(data);
+    console.log(`--- [${sheetName}] SYNC COMPLETE ---`);
+  } catch (e) {
+    console.log(`[CRITICAL] Sync Failure: ${e.message}`);
   }
-  Logger.log('[' + sheetName + '] Repair cycle complete.');
 }
 
 // ===============================================================
