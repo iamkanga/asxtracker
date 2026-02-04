@@ -354,63 +354,56 @@ export class DashboardViewRenderer {
         const day = getPart('weekday'); // Mon, Tue, Wed, Thu, Fri, Sat, Sun
         const hour = parseInt(getPart('hour'));
         const minute = parseInt(getPart('minute'));
-        const totalMin = (hour * 60) + minute;
-
-        // --- ASSET CLASSES ---
+        // Use UTC to ensure it works regardless of User's local timezone
+        const utcDay = now.getUTCDay(); // 0-6 (Sun-Sat)
+        const utcHours = now.getUTCHours();
+        const utcMins = now.getUTCMinutes();
+        const utcTotal = utcHours * 60 + utcMins;
 
         // 1. CRYPTO (Always Open)
-        if (['BTCUSD', 'BTC-USD', 'BTC-AUD'].includes(code)) {
-            return true;
+        if (code.includes('BTC') || code.includes('ETH')) return true;
+
+        // 2. ASX (Sydney 10:00-16:00 AEDT -> UTC 23:00-05:00)
+        if (code.includes('.AX') || code.includes('^AXJO') || code.includes('^AORD')) {
+            // ASX is active roughly 23:00 UTC (day before) to 05:00 UTC (today)
+            // Saturday/Sunday in Sydney (Fri/Sat 23:00 UTC to Sun/Mon 05:00 UTC)
+            if (utcDay === 6 || utcDay === 0) return false;
+            return utcTotal >= (23 * 60) || utcTotal < (5 * 60 + 30);
         }
 
-        // 2. FOREX (24/5 - Opens Mon Morning Syd, Closes Sat Morning Syd)
-        if (['AUDUSD', 'AUDTHB', 'USDTHB', 'AUDUSD=X', 'AUDGBP=X', 'AUDEUR=X', 'AUDJPY=X', 'AUDTHB=X', 'XAUUSD=X', 'XAGUSD=X'].includes(code)) {
-            // Closed from Saturday ~07:00am until Monday ~05:00am (Sydney Time)
-            if (day === 'Sun') return false;
-            if (day === 'Sat' && totalMin > (7 * 60)) return false; // Close Sat Morning
-            if (day === 'Mon' && totalMin < (5 * 60)) return false; // Open Mon Morning (early)
-            return true;
-        }
-
-        // 3. ASX INDICES (Mon-Fri, 10:00 - 16:15 Sydney)
-        if (['XJO', 'XKO', 'XAO', '^AXJO'].includes(code)) {
-            if (['Sat', 'Sun'].includes(day)) return false;
-            return totalMin >= (10 * 60) && totalMin < (16 * 60 + 15);
-        }
-
-        // 4. UK & EUROPE INDICES (London 08:00-16:30, EU 09:00-17:30)
-        // London is 11h behind Sydney (Winter). Sydney 19:00 to 03:30 (Next Day).
+        // 3. UK & EUROPE (London/EU 08:00-16:30 UTC)
         if (code.includes('FTSE') || code.includes('STOXX') || code.includes('EU50')) {
-            if (['Sat', 'Sun'].includes(day)) return false;
-            // Monday-Friday Window: Open at 19:00 (7 PM), Close at 03:30 AM (Next Day)
-            return totalMin >= (19 * 60) || totalMin < (3 * 60 + 30);
+            if (utcDay === 0 || utcDay === 6) return false; // Weekend
+            return utcTotal >= (8 * 60) && utcTotal < (16 * 60 + 30);
         }
 
-        // 5. ASIAN INDICES (HK 09:30-16:00, Tokyo 09:00-15:00)
+        // 4. ASIAN INDICES (HK/Japan Open roughly 00:30-08:00 UTC)
         if (code.includes('HSI') || code.includes('N225')) {
-            if (['Sat', 'Sun'].includes(day)) return false;
-            if (code.includes('HSI')) return totalMin >= (12 * 60 + 30) && totalMin < (19 * 60);
-            if (code.includes('N225')) return totalMin >= (11 * 60) && totalMin < (17 * 60);
+            if (utcDay === 0 || utcDay === 6) return false;
+            return utcTotal >= (0 * 60 + 30) && utcTotal < (8 * 60);
         }
 
-        // 6. US INDICES (Tue-Sat Morning in Sydney)
+        // 5. US INDICES (NY 09:30-16:00 EST -> UTC 14:30-21:00)
         if (['INX', '.DJI', '.IXIC', '^GSPC', '^DJI', '^IXIC', '^VIX'].includes(code)) {
-            if (['Sun', 'Mon'].includes(day)) return false;
-            return totalMin < (9 * 60) || totalMin > (23 * 60);
+            if (utcDay === 0 || utcDay === 6) return false;
+            return utcTotal >= (14 * 60 + 30) && utcTotal < (21 * 60);
         }
 
-        // 7. FUTURES (Gold, Oil, SPI)
-        if (['GCW00', 'SIW00', 'BZW00', 'GC=F', 'SI=F', 'CL=F', 'BZ=F', 'HG=F', 'YAP=F'].includes(code)) {
-            if (day === 'Sat' && totalMin > (9 * 60)) return false;
-            if (day === 'Sun') return false;
-            if (day === 'Mon' && totalMin < (8 * 60)) return false;
-            if (totalMin >= (7 * 60) && totalMin < (9 * 60)) return false;
+        // 6. FUTURES (23/5 Markets -> 23:00 Sun to 21:00 Fri UTC)
+        if (code.includes('=F') || code.includes('-F')) {
+            if (utcDay === 6) return false; // Saturday (Closed)
+            if (utcDay === 0 && utcTotal < (23 * 60)) return false; // Sun before open
+            if (utcDay === 5 && utcTotal > (21 * 60)) return false; // Fri after close
+            // Daily maintenance break (NY 16:00-17:00 -> UTC 21:00-22:00)
+            if (utcTotal >= (21 * 60) && utcTotal < (22 * 60)) return false;
             return true;
         }
 
-        // Default Fallback: Assume Mon-Fri Business Hours
-        if (['Sat', 'Sun'].includes(day)) return false;
-        return totalMin >= (9 * 60) && totalMin < (17 * 60);
+        // Default: Mon-Fri Business Hours (Local User Perspective)
+        const localDay = now.getDay();
+        const localHours = now.getHours();
+        if (localDay === 0 || localDay === 6) return false;
+        return localHours >= 9 && localHours < 17;
     }
 
     /**
