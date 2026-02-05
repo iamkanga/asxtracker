@@ -250,20 +250,12 @@ export class ModalController {
                         }
 
                         if (targetDocId && targetDocId !== 'OPTIMISTIC_LOCK' && !targetDocId.startsWith('temp_')) {
-                            // PATH A: LINK EXISTING
+                            // PATH A: LINK EXISTING (Updated to include full formData)
                             try {
+                                const dataToUpdate = { ...formData, watchlistId: persistenceId, watchlistIds: newWatchlists };
+                                delete dataToUpdate.watchlists;
 
-                                const resultId = await appService.addStock(lookupKey, persistenceId, null, null, targetDocId);
-
-                                // Ghost Recovery check (if UserStore created a new ID)
-                                if (resultId && resultId !== targetDocId) {
-
-                                    targetDocId = resultId; // Update local var for next iteration
-
-                                    // Update AppState
-                                    const inState = AppState.data.shares.find(s => s.id === targetDocId); // old ID might be gone
-                                    if (inState) inState.id = resultId;
-                                }
+                                await appService.updateShareRecord(targetDocId, dataToUpdate);
                                 successCount++;
                             } catch (err) {
                                 console.error(`Failed to link ${wid}:`, err);
@@ -438,12 +430,11 @@ export class ModalController {
                                 const newPersistenceId = (newMasterWl === PORTFOLIO_ID || newMasterWl === 'main') ? PORTFOLIO_ID : newMasterWl;
 
                                 try {
+                                    // MIGRATION: Preserve the document by moving it to another active watchlist.
+                                    const dataToUpdate = { ...formData, watchlistId: newPersistenceId, watchlistIds: newWatchlists };
+                                    delete dataToUpdate.watchlists;
 
-                                    // FIX: Update watchlistIds array during migration too
-                                    await appService.updateShareRecord(docId, { watchlistId: newPersistenceId, watchlistIds: newWatchlists });
-                                    // Note: We don't need to "add" it to newMasterWl because the 'toAdd' loop 
-                                    // might have already tried (and linked it). But updating the Master Doc 
-                                    // ensures it now "lives" there.
+                                    await appService.updateShareRecord(docId, dataToUpdate);
                                 } catch (err) {
                                     console.error(`Failed to migrate share ${docId}:`, err);
                                     errors.push(wid);
@@ -452,8 +443,8 @@ export class ModalController {
                                 // DELETION: The user removed it from ALL watchlists.
                                 // Now it is safe to delete the document.
                                 try {
-
                                     await appService.deleteShareRecord(null, docId);
+                                    break; // Scrubbing delete handles all references; stop processing removals
                                 } catch (err) {
                                     console.error(`Failed to delete share ${docId}:`, err);
                                     errors.push(wid);

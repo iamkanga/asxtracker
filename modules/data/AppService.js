@@ -362,12 +362,15 @@ export class AppService {
 
         // 3. SCRUB References (Prevent Zombie Resurrection)
         // If the share code remains in a watchlist array, "Ghost Recovery" will resurrect it.
-        // We must remove the code from ALL watchlists.
+        // We must remove the code from ALL watchlists, including system ones.
         if (shareCode) {
-            const watchlists = AppState.data.watchlists || [];
-            console.log(`[AppService] Scrubbing references for ${shareCode}...`);
-            const scrubPromises = watchlists.map(w =>
-                userStore.removeStock(user.uid, w.id, shareCode).catch(e => console.warn(`Scrub failed for ${w.id}:`, e))
+            const customWatchlists = (AppState.data.watchlists || []).map(w => w.id);
+            const systemWatchlists = ['portfolio', 'ALL'];
+            const allWatchlistIds = [...new Set([...customWatchlists, ...systemWatchlists])];
+
+            console.log(`[AppService] Scrubbing references for ${shareCode} across ${allWatchlistIds.length} lists...`);
+            const scrubPromises = allWatchlistIds.map(wId =>
+                userStore.removeStock(user.uid, wId, shareCode).catch(e => console.warn(`Scrub failed for ${wId}:`, e))
             );
             await Promise.all(scrubPromises);
         }

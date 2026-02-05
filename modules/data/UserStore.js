@@ -33,7 +33,6 @@ export class UserStore {
         this.unsubscribeCash = null;
         this.unsubscribeWatchlists = null;
         this.unsubscribeDashboard = null;
-        this.unsubscribeDashboard = null;
         this._lastPrefsJson = null; // Cache for deep equality checks
     }
 
@@ -118,8 +117,10 @@ export class UserStore {
 
         // Return cleanup function
         return () => {
+            if (this.unsubscribeShares) this.unsubscribeShares();
             if (this.unsubscribeCash) this.unsubscribeCash();
             if (this.unsubscribeWatchlists) this.unsubscribeWatchlists();
+            if (this.unsubscribeDashboard) this.unsubscribeDashboard();
 
             // ARCHITECTURAL REFINEMENT:
             // Do NOT aggressively clear AppState.data on unsubscribe.
@@ -320,6 +321,10 @@ export class UserStore {
     async updateWatchlistSort(userId, watchlistId, sortConfig) {
         if (!userId || !watchlistId || !sortConfig) return;
 
+        // SYSTEM GUARD: Never attempt to save sort to virtual system watchlists (No doc exists)
+        const systemIds = [ALL_SHARES_ID, PORTFOLIO_ID, 'search', 'ALL', 'portfolio'];
+        if (systemIds.includes(watchlistId)) return;
+
         try {
             const ref = doc(db, `artifacts/${APP_ID}/users/${userId}/watchlists`, watchlistId);
             await updateDoc(ref, {
@@ -392,15 +397,57 @@ export class UserStore {
      */
     async removeStock(userId, watchlistId, code) {
         if (!userId || !watchlistId || !code) return;
-        // In local architecture, we find documents in 'shares' matching code and watchlistId
-        const ref = collection(db, `artifacts/${APP_ID}/users/${userId}/shares`);
-        const q = query(ref, where("watchlistId", "==", watchlistId), where("shareName", "==", code.toUpperCase()));
+        const codeUpper = code.toUpperCase();
 
         try {
+            // 1. Scrub Master Share Documents (Most common)
+            const ref = collection(db, `artifacts/${APP_ID}/users/${userId}/shares`);
+
+            // We look for any documents where the code matches
+            // We can't query array-contains and equality on another field easily without composite indexes
+            // but we can query by name and filter locally or just use multiple queries for backwards compatibility
+            const q = query(ref, where("shareName", "==", codeUpper));
             const snap = await getDocs(q);
-            snap.forEach(async (d) => {
-                await deleteDoc(d.ref);
-            });
+
+            for (const d of snap.docs) {
+                const data = d.data();
+                const watchlistIds = data.watchlistIds || [];
+                const legacyId = data.watchlistId;
+
+                // Case A: Legacy match (Exact match on singular property)
+                if (legacyId === watchlistId) {
+                    await deleteDoc(d.ref);
+                    continue;
+                }
+
+                // Case B: Array match
+                if (watchlistIds.includes(watchlistId)) {
+                    if (watchlistIds.length <= 1 && !data.portfolioShares) {
+                        // Last home and no holdings? Delete it.
+                        await deleteDoc(d.ref);
+                    } else {
+                        // Just unlink it
+                        await updateDoc(d.ref, {
+                            watchlistIds: arrayRemove(watchlistId),
+                            updatedAt: serverTimestamp()
+                        });
+                    }
+                }
+            }
+
+            // 2. Scrub Watchlist "stocks" arrays (New Architecture Support)
+            // Some watchlists store their stock codes in a 'stocks' array on the watchlist doc itself.
+            const wlRef = doc(db, `artifacts/${APP_ID}/users/${userId}/watchlists`, watchlistId);
+            try {
+                // We use arrayRemove on both the code AND the id in case both are used
+                await updateDoc(wlRef, {
+                    stocks: arrayRemove(codeUpper),
+                    updatedAt: serverTimestamp()
+                });
+            } catch (wlErr) {
+                // Might fail if system watchlist (no doc) or array doesn't exist; safe to ignore.
+            }
+
         } catch (e) {
             console.error("UserStore: Error removing stock from watchlist:", e);
         }

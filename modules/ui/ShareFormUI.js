@@ -42,6 +42,7 @@ export class ShareFormUI {
         const modal = this._renderCleanAddShareModal(watchlists, currentMemberships, shareData);
         // ATTACH DATA FOR EVENTS (Fixes Double-Up on Edit bug)
         modal._shareData = shareData;
+        modal._onSave = onSave;
 
         // 2. Bind Internal UI Events
         this._bindAccordion(modal);
@@ -851,8 +852,24 @@ export class ShareFormUI {
                 cb.checked = !cb.checked;
                 row.classList.toggle(CSS_CLASSES.SELECTED, cb.checked);
 
-                // 3. TRIGGER UPDATE
+                // 3. TRIGGER UPDATE / TERMINAL ACTION
                 cb.dispatchEvent(new Event('change'));
+
+                // NEW: TERMINAL ACTION SUPPORT
+                // If unchecking Portfolio was confirmed, trigger save immediately
+                // to satisfy "that should be the end of it" and avoid redundant Save clicks.
+                if (!cb.checked && cb.value === PORTFOLIO_ID) {
+                    // Extract data (allowing empty watchlists via suppressToasts=true)
+                    const data = ShareFormUI._extractShareData(modal, true);
+                    if (data && modal._onSave) {
+                        // TERMINATE: Auto-Save
+                        modal._onSave(data);
+                        // Close modal immediately for UX
+                        modal.querySelector(`.${CSS_CLASSES.MODAL_CLOSE_BTN}`)?.click();
+                        return; // Stop further processing after terminal action
+                    }
+                }
+
                 e.stopPropagation();
             });
         });
@@ -899,9 +916,11 @@ export class ShareFormUI {
                     }
                 }
 
-                // Run Validation
+                // Run Validation: This correctly handles enabling/disabling the Save button
+                // if they didn't trigger the terminal auto-save above.
                 ShareFormUI._validateForm(modal);
             });
+
         });
     }
 
@@ -1216,8 +1235,8 @@ export class ShareFormUI {
         }
 
         const selectedWatchlists = [...modal.querySelectorAll('input[name="watchlist"]:checked')].map(cb => cb.value);
-        if (selectedWatchlists.length === 0) {
-            if (!suppressToasts) ToastManager.error("Please select at least one watchlist.");
+        if (selectedWatchlists.length === 0 && !suppressToasts) {
+            ToastManager.error("Please select at least one watchlist.");
             return null;
         }
 
