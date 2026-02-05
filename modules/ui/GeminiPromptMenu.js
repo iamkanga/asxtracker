@@ -5,147 +5,152 @@ import { ToastManager } from './ToastManager.js';
 /**
  * GeminiPromptMenu.js
  * Shows a context menu with predefined Gemini prompts.
+ * Optimized for Android App Launch and Localhost reliability.
  */
 export class GeminiPromptMenu {
 
-    /**
-     * Shows the prompt menu at the specified coordinates.
-     * @param {MouseEvent|PointerEvent} event - The triggering event (for coordinates).
-     * @param {Array<{label: string, text: string, icon?: string}>} prompts - List of prompts.
-     * @param {Function} [onSelect] - Optional callback when a prompt is selected (e.g. to open Gemini). 
-     *                                If not provided, it defaults to: copy to clipboard -> show toast -> close.
-     */
-    static show(event, prompts, onSelect) {
-        this.close(); // Close any existing instance
+    static show(event, prompts, onSelect, targetUrl = 'https://gemini.google.com/app') {
+        this.close();
 
-        // Create Menu Element
+        // 1. Create Overlays
+        const overlay = document.createElement('div');
+        overlay.id = 'gemini-prompt-overlay';
+        Object.assign(overlay.style, {
+            position: 'fixed',
+            top: 0, left: 0, right: 0, bottom: 0,
+            zIndex: '39999',
+            backgroundColor: 'transparent'
+        });
+
+        setTimeout(() => {
+            overlay.onclick = () => this.close();
+        }, 150);
+        document.body.appendChild(overlay);
+
+        // 2. Create MENU
         const menu = document.createElement('div');
         menu.id = 'gemini-prompt-menu';
         menu.className = 'gemini-menu';
 
-        // Inline Styles for the menu container to ensure it looks good immediately
         Object.assign(menu.style, {
             position: 'fixed',
-            zIndex: '9999',
+            zIndex: '40000',
             backgroundColor: '#1a1a1a',
-            border: '1px solid #333',
-            borderRadius: '8px',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
-            padding: '4px',
+            border: '1px solid #444',
+            borderRadius: '12px',
+            boxShadow: '0 12px 40px rgba(0,0,0,0.6)',
+            padding: '8px',
             display: 'flex',
             flexDirection: 'column',
-            minWidth: '220px',
-            opacity: '0',
-            transition: 'opacity 0.1s ease-in-out',
+            minWidth: '260px',
+            opacity: '1',
             fontFamily: 'Inter, sans-serif'
         });
 
         const header = document.createElement('div');
         Object.assign(header.style, {
-            padding: '8px 12px',
+            padding: '10px 14px',
             fontSize: '11px',
-            fontWeight: '600',
+            fontWeight: '700',
             color: '#888',
             textTransform: 'uppercase',
-            letterSpacing: '0.5px',
             borderBottom: '1px solid #333',
-            marginBottom: '4px'
+            marginBottom: '6px'
         });
-        header.textContent = 'Ask Gemini...';
+        header.textContent = 'Ask Gemini AI';
         menu.appendChild(header);
+
+        const ua = navigator.userAgent;
+        const plat = navigator.platform;
+        const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+        // Real Android devices won't report as Win32 or MacIntel
+        const isAndroid = /Android/i.test(ua) && isTouch && !/Win32|Win64|MacIntel/i.test(plat);
+        const isMobile = isAndroid || /iPhone|iPad|iPod/i.test(ua);
 
         prompts.forEach(p => {
             const item = document.createElement('div');
             item.className = 'gemini-menu-item';
             Object.assign(item.style, {
-                padding: '10px 12px',
+                padding: '14px 16px',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '10px',
-                color: '#eee',
-                fontSize: '13px',
-                borderRadius: '4px',
-                transition: 'background 0.2s'
+                gap: '12px',
+                color: '#fff',
+                fontSize: '15px',
+                borderRadius: '8px',
+                marginBottom: '2px',
+                webkitTapHighlightColor: 'transparent'
             });
-
-            // Hover effect via JS since we're using inline styles for speed/isolation
-            item.onmouseenter = () => item.style.backgroundColor = 'rgba(255,255,255,0.08)';
-            item.onmouseleave = () => item.style.backgroundColor = 'transparent';
 
             const iconClass = p.icon || 'fa-comment-alt';
             item.innerHTML = `
-                <i class="fas ${iconClass}" style="width: 16px; text-align: center; color: var(--color-accent, #cda45e);"></i>
-                <div style="display:flex; flex-direction:column;">
-                    <span style="font-weight: 500;">${p.label}</span>
-                </div>
+                <i class="fas ${iconClass}" style="width: 20px; text-align: center; color: var(--color-accent, #cda45e);"></i>
+                <span style="font-weight: 500;">${p.label}</span>
             `;
 
-            item.addEventListener('click', async (e) => {
+            item.onclick = (e) => {
+                e.preventDefault();
                 e.stopPropagation();
 
-                // Copy to clipboard
+                // 1. Copy (Localhost & Mobile Compatible)
                 try {
-                    await navigator.clipboard.writeText(p.text);
-                    ToastManager.info('Prompt copied to clipboard', 'Ready to Paste');
+                    const textArea = document.createElement("textarea");
+                    textArea.value = p.text;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand("copy");
+                    document.body.removeChild(textArea);
+                    ToastManager.info('COPIED: Paste into Gemini');
                 } catch (err) {
-                    console.error('Clipboard failed', err);
-                    ToastManager.error('Failed to copy to clipboard');
+                    console.warn('[GeminiMenu] Clipboard fail:', err);
                 }
 
-                // Call optional callback (e.g. to open Gemini URL)
-                if (onSelect) {
-                    onSelect(p);
+                if (onSelect) onSelect(p);
+
+                // 2. NAVIGATION (Trigger App Launch on Android via Intent)
+                if (isAndroid) {
+                    // FORCE Android to launch the Gemini App using the Intent system
+                    const intentUrl = `intent://gemini.google.com/app#Intent;scheme=https;package=com.google.android.apps.bard;S.browser_fallback_url=${encodeURIComponent(targetUrl)};end`;
+                    window.location.href = intentUrl;
+                } else if (isMobile) {
+                    window.location.href = targetUrl;
+                } else {
+                    window.open(targetUrl, '_blank');
                 }
 
-                this.close();
-            });
+                setTimeout(() => this.close(), 300);
+            };
 
             menu.appendChild(item);
         });
 
         document.body.appendChild(menu);
 
-        // Positioning Logic
-        const { clientX: x, clientY: y } = event;
+        // Positioning
+        let x = event.clientX;
+        let y = event.clientY;
+        if (x === undefined && event.changedTouches?.length > 0) {
+            x = event.changedTouches[0].clientX;
+            y = event.changedTouches[0].clientY;
+        }
+
         const rect = menu.getBoundingClientRect();
         const winWidth = window.innerWidth;
         const winHeight = window.innerHeight;
 
-        let left = x;
-        let top = y;
-
-        // Keep within bounds
-        if (left + rect.width > winWidth) left = winWidth - rect.width - 10;
-        if (top + rect.height > winHeight) top = winHeight - rect.height - 10;
-
-        // Basic bounce (if too low, go up)
-        if (top + rect.height > winHeight) {
-            top = y - rect.height;
-        }
+        let left = Math.max(10, Math.min(x || 0, winWidth - rect.width - 10));
+        let top = (y + rect.height > winHeight) ? ((y || 0) - rect.height - 10) : ((y || 0) + 10);
+        if (top < 10) top = 10;
 
         menu.style.left = `${left}px`;
         menu.style.top = `${top}px`;
-
-        // Fade In
-        requestAnimationFrame(() => {
-            menu.style.opacity = '1';
-        });
-
-        // Close on outside click
-        setTimeout(() => {
-            const closeHandler = (e) => {
-                if (!menu.contains(e.target)) {
-                    this.close();
-                    window.removeEventListener('pointerdown', closeHandler);
-                }
-            };
-            window.addEventListener('pointerdown', closeHandler);
-        }, 50);
     }
 
     static close() {
         const menu = document.getElementById('gemini-prompt-menu');
+        const overlay = document.getElementById('gemini-prompt-overlay');
         if (menu) menu.remove();
+        if (overlay) overlay.remove();
     }
 }
