@@ -13,6 +13,8 @@ import { BriefingUI } from './BriefingUI.js?v=327';
 import { SnapshotUI } from './SnapshotUI.js';
 import { ToastManager } from './ToastManager.js';
 import { LinkHelper } from '../utils/LinkHelper.js';
+import { getBestShareMatch } from '../data/DataProcessor.js';
+import { SettingsUI } from './SettingsUI.js';
 
 export class NotificationUI {
 
@@ -406,28 +408,20 @@ export class NotificationUI {
 
                 <!-- Unified Control Surface (Command Bar) -->
                 <div class="${CSS_CLASSES.NOTIF_HEADER_SURFACE}">
-                    <!-- 1. Filter Chips Header -->
-                    <div class="${CSS_CLASSES.FILTER_CHIPS_CONTAINER}" id="${IDS.FILTER_CHIPS_CONTAINER}">
-                        <!-- Dynamic Chips -->
+                    <!-- 1. Discreet Status Ribbon (V4 Consolidated) -->
+                    <div id="notif-status-ribbon" class="notif-status-ribbon">
+                        <!-- Dynamic Ribbon Content -->
                     </div>
 
-                    <!-- System Status Bar (Unified Reference V2 - Stacked) -->
-                    <div id="${IDS.SYSTEM_STATUS_BAR}" class="${CSS_CLASSES.SYSTEM_STATUS_BAR}" title="Tap to open settings">
-                        <div id="${CSS_CLASSES.STATUS_TITLE_ROW}" class="${CSS_CLASSES.STATUS_TITLE_ROW}"></div>
-                        <div id="${CSS_CLASSES.STATUS_MONITORS_ROW}" class="${CSS_CLASSES.STATUS_MONITORS_ROW}"></div>
+                    <!-- 2. Filter Chips Header -->
+                    <div class="${CSS_CLASSES.FILTER_CHIPS_CONTAINER}" id="${IDS.FILTER_CHIPS_CONTAINER}">
+                        <!-- Dynamic Chips -->
                     </div>
                 </div>
 
                 <!-- 2. Dashboard Content (Scrolling) -->
-                <div class="${CSS_CLASSES.MODAL_BODY} ${CSS_CLASSES.SCROLLABLE_BODY}" id="${IDS.NOTIFICATION_LIST}" style="flex: 1; padding: 10px; padding-top: 0; position: relative; overflow-y: auto;">
-                    <div id="${IDS.NOTIF_TIMESTAMP}" style="text-align: right; font-size: 0.65rem; color: var(--text-muted); padding: 5px 10px; font-style: italic;"></div>
-                    
-                    <!-- Live Timeline Logic Box (Distinguishes from Daily Email) -->
-                    <div style="margin: 0 10px 15px 10px; padding: 12px; background: var(--bg-secondary); border-radius: 8px; border-left: 4px solid var(--color-accent); font-size: 0.75rem; color: var(--text-muted); line-height: 1.4;">
-                        <strong style="color: var(--color-accent);">LIVE TIMELINE:</strong> This dashboard tracks alerts in real-time. Movements are verified against current prices to ensure hits remain valid as the session progresses.
-                    </div>
-
-                    <!-- Accordion Sections -->
+                <div class="${CSS_CLASSES.MODAL_BODY} ${CSS_CLASSES.SCROLLABLE_BODY}" id="${IDS.NOTIFICATION_LIST}" style="flex: 1; padding: 0; position: relative; overflow-y: auto; scroll-behavior: smooth;">
+                    <!-- Accordion Sections (Injected Here) -->
                 </div>
 
                 <!-- Intelligence Report Overlay (Deep Dive) -->
@@ -633,14 +627,7 @@ export class NotificationUI {
 
 
 
-        // Subtitle Settings Navigation
-        modal.addEventListener('click', (e) => {
-            if (e.target.closest('.settings-link')) {
 
-                document.dispatchEvent(new CustomEvent(EVENTS.OPEN_SETTINGS));
-                // this._close(modal); // Removed to persist in stack
-            }
-        });
     }
 
     static _updateList(modal) {
@@ -660,6 +647,13 @@ export class NotificationUI {
         if (notificationStore) {
             NotificationUI._updateDismissState(modal);
         }
+
+        // --- DIAGNOSTIC LOG FOR NIC ---
+        const nicShare = AppState.data.shares.find(s => (s.code || s.shareName || '').toUpperCase() === 'NIC');
+        console.log('[Diagnostic] NIC Share Data in AppState:', nicShare);
+        const nicHits = (notificationStore.getLocalAlerts()?.pinned || []).concat(notificationStore.getLocalAlerts()?.fresh || [])
+            .filter(h => (h.code || h.shareName || '').toUpperCase() === 'NIC');
+        console.log('[Diagnostic] NIC Alert Hits in Store:', nicHits);
 
         // 1. Fetch Data
         // Local Alerts: Returns { pinned: [], fresh: [] }
@@ -852,60 +846,59 @@ export class NotificationUI {
             : (downRuleStr === UI_LABELS.NOT_SET ? thresholdStrColored : `${downRuleStr}${thresholdStr ? ` • ${thresholdStrColored}` : ''}`);
         downStr += `<span style="${explainerStyle}">${UI_LABELS.LOSERS_EXPLAINER}</span>`;
 
-        const customTitleChip = UI_LABELS.CUSTOM_MOVERS;
-        const customTitleHeader = UI_LABELS.CUSTOM_MOVERS;
+        // Split local alerts into Target hits and movement hits for section separation
+        const wlTargets = sortedLocal.filter(h => h.intent === 'target' || h.intent === 'target-hit');
+        const wlOthers = sortedLocal.filter(h => h.intent !== 'target' && h.intent !== 'target-hit');
 
         // Structure Definitions
+        // 1. Calculate Total Alerts for Status Bar (Global + Local)
+        // Assuming targetHits, moversHits, highHits, lowHits, gainerHits, loserHits are defined elsewhere
+        // For now, using the existing final arrays and wlTargets/wlOthers
+        const targetHits = wlTargets;
+        const moversHits = { list: wlOthers, count: wlOthers.length }; // Adapting to the instruction's structure
+        const highHits = finalHiloHigh;
+        const lowHits = finalHiloLow;
+        const gainerHits = finalMoversUp;
+        const loserHits = finalMoversDown;
+
+        const totalAlertsCount = targetHits.length + moversHits.count + highHits.length + lowHits.length + gainerHits.length + loserHits.length;
+        this._updateStatusBar(modal);
+
         const sections = [
-            { id: 'custom', title: 'Custom', chipLabel: 'Custom', headerTitle: customTitleHeader, subtitle: `<span style="color: var(--color-accent);">${UI_LABELS.WATCHLIST_FILTER_SUBTITLE}</span>`, items: sortedLocal, type: 'custom', color: 'neutral' },
-            { id: 'hilo-high', title: `${UI_LABELS.FIFTY_TWO_WEEK} <span style="color: var(--color-positive)">${UI_LABELS.HIGH}</span>`, chipLabel: `${UI_LABELS.FIFTY_TWO_WEEK} ${UI_LABELS.HIGH}`, subtitle: hiloStrHigh, items: finalHiloHigh, type: 'hilo-up', color: 'green' },
-            { id: 'hilo-low', title: `${UI_LABELS.FIFTY_TWO_WEEK} <span style="color: var(--color-negative)">${UI_LABELS.LOW}</span>`, chipLabel: `${UI_LABELS.FIFTY_TWO_WEEK} ${UI_LABELS.LOW}`, subtitle: hiloStrLow, items: finalHiloLow, type: 'hilo-down', color: 'red' },
-            { id: 'gainers', title: `${UI_LABELS.MARKET} <span style="color: var(--color-positive)">${UI_LABELS.GAINERS}</span>`, chipLabel: UI_LABELS.GAINERS, subtitle: upStr, items: finalMoversUp, type: 'gainers', color: 'green' },
-            { id: 'losers', title: `${UI_LABELS.MARKET} <span style="color: var(--color-negative)">${UI_LABELS.LOSERS}</span>`, chipLabel: UI_LABELS.LOSERS, subtitle: downStr, items: finalMoversDown, type: 'losers', color: 'red' }
+            { id: 'target-alerts', title: 'Target Alerts', chipLabel: 'Targets', headerTitle: `<i class="fas fa-crosshairs" style="color: var(--color-accent); margin-right: 8px;"></i><span style="color: var(--text-color);">Target Alerts</span>`, subtitle: `<span style="color: var(--color-accent);">Your targets hit</span>`, hits: targetHits, type: 'custom', color: 'neutral' },
+            { id: 'custom-movers', title: 'Watchlist Movers', chipLabel: 'Watchlist', headerTitle: `<i class="fas fa-binoculars" style="color: var(--color-accent); margin-right: 8px;"></i><span style="color: var(--text-color);">Watchlist Movers</span>`, subtitle: `<span style="color: var(--color-accent);">Your watchlist hits</span>`, hits: moversHits.list, type: 'custom', color: 'neutral' },
+            { id: 'hilo-high', title: `${UI_LABELS.FIFTY_TWO_WEEK} <span style="color: var(--color-positive)">${UI_LABELS.HIGH}</span>`, chipLabel: `${UI_LABELS.FIFTY_TWO_WEEK} ${UI_LABELS.HIGH}`, subtitle: hiloStrHigh, hits: highHits, type: 'hilo-up', color: 'green' },
+            { id: 'hilo-low', title: `${UI_LABELS.FIFTY_TWO_WEEK} <span style="color: var(--color-negative)">${UI_LABELS.LOW}</span>`, chipLabel: `${UI_LABELS.FIFTY_TWO_WEEK} ${UI_LABELS.LOW}`, subtitle: hiloStrLow, hits: lowHits, type: 'hilo-down', color: 'red' },
+            { id: 'gainers', title: `${UI_LABELS.MARKET} <span style="color: var(--color-positive)">${UI_LABELS.GAINERS}</span>`, chipLabel: UI_LABELS.GAINERS, subtitle: upStr, hits: gainerHits, type: 'gainers', color: 'green' },
+            { id: 'losers', title: `${UI_LABELS.MARKET} <span style="color: var(--color-negative)">${UI_LABELS.LOSERS}</span>`, chipLabel: UI_LABELS.LOSERS, subtitle: downStr, hits: loserHits, type: 'losers', color: 'red' }
         ];
 
         // --- DEBUG LOGGING: RENDER COUNT ---
         let totalRendered = 0;
-        sections.forEach(s => totalRendered += s.items.length);
+        sections.forEach(s => totalRendered += s.hits.length); // Changed from s.items.length to s.hits.length
         // console.log(`[NotificationUI] Rendered Item Count: ${totalRendered}`);
 
-        // Render Summary Dashboard (V3 Grid)
-        // 1. "Dashboard" Tile (Master View) - First in Row 1
-        const openAllChip = document.createElement('div');
-        openAllChip.className = `${CSS_CLASSES.FILTER_CHIP} ${CSS_CLASSES.CHIP_NEUTRAL}`; // Default to closed (inactive)
-        openAllChip.dataset.target = 'open-all';
-        openAllChip.innerHTML = `
-            <span class="${CSS_CLASSES.CHIP_BADGE}">${totalRendered}</span>
-            <span class="${CSS_CLASSES.CHIP_LABEL}">${UI_LABELS.DASHBOARD_OPEN}</span>
-        `;
-        chips.appendChild(openAllChip);
+        // Render Filter Chips
+        chips.innerHTML = '';
 
-        // Define Specific Chip Order (Row 1 then Row 2)
-        // User Order: Targets -> 52W Lows -> 52W Highs -> Movers Losers -> Movers Gainers
-        // Standard Notification Categories
-        const chipOrder = ['hilo-high', 'gainers', 'custom', 'hilo-low', 'losers'];
+        // Define Specific Chip Order (Row 1 then Row 2 - matches the vertical list order)
+        const chipOrder = [
+            'target-alerts', 'custom-movers', 'hilo-high',
+            'hilo-low', 'losers', 'gainers'
+        ];
 
         chipOrder.forEach(targetId => {
             const section = sections.find(s => s.id === targetId);
-            // Render Standard Chip
             if (section) {
-                const itemCount = section.items.length;
+                const itemCount = section.hits.length; // Changed from section.items.length to section.hits.length
                 const chip = document.createElement('div');
                 chip.className = `${CSS_CLASSES.FILTER_CHIP} chip-${section.color}`;
                 chip.dataset.target = section.id;
-
-                // Active State Check
-                // (Logic to set active class if this section is currently filtered/expanded)
-                // For V3 Summary Grid, chips are 'jump links' or 'toggles'? 
-                // Currently they act as anchors.
 
                 chip.innerHTML = `
                     <span class="${CSS_CLASSES.CHIP_BADGE}">${itemCount}</span>
                     <span class="${CSS_CLASSES.CHIP_LABEL}">${section.chipLabel}</span>
                 `;
-
-                // Quick Filter / Scroll logic
-
 
                 chips.appendChild(chip);
             }
@@ -915,9 +908,6 @@ export class NotificationUI {
         // 2. Render Accordions
 
         sections.forEach(sec => {
-            // Render ALL sections (Removed HiLo hiding logic)
-
-
             const accordion = this._renderAccordion(sec, rules);
             list.appendChild(accordion);
         });
@@ -931,7 +921,7 @@ export class NotificationUI {
             if (targetChip) {
                 setTimeout(() => {
                     targetChip.click();
-                    console.log(`[NotificationUI] Auto-switched to Section: ${this._targetSection}`);
+                    console.log(`[NotificationUI] Auto-switched to Section: ${this._targetSection} `);
                 }, 50);
             }
         }
@@ -961,22 +951,20 @@ export class NotificationUI {
             if (isExpanded) {
                 sec.classList.add(CSS_CLASSES.EXPANDED);
                 sec.style.display = 'block';
+                // Highlight the corresponding chip
+                const chip = modal.querySelector(`.filter-chip[data-target="${id}"]`);
+                if (chip) chip.classList.add(CSS_CLASSES.ACTIVE);
             } else {
                 sec.classList.remove(CSS_CLASSES.EXPANDED);
-                // We keep it 'block' but the CSS height/overflow handles the collapse
+                const chip = modal.querySelector(`.filter-chip[data-target="${id}"]`);
+                if (chip) chip.classList.remove(CSS_CLASSES.ACTIVE);
             }
             syncDashboardLabel();
         };
 
         // HELPER: Sync the Dashboard chip label
         const syncDashboardLabel = () => {
-            const dashboardChip = modal.querySelector('.filter-chip[data-target="open-all"]');
-            if (!dashboardChip) return;
-            const labelEl = dashboardChip.querySelector('.chip-label');
-            if (!labelEl) return;
-
-            const allExpanded = Array.from(sections).every(s => s.classList.contains(CSS_CLASSES.EXPANDED));
-            labelEl.textContent = allExpanded ? 'Dashboard Close' : 'Dashboard Open';
+            // Dashboard chip removed, no need to sync label
         };
 
         // HELPER: Close all sections
@@ -984,6 +972,8 @@ export class NotificationUI {
             sections.forEach(s => {
                 s.classList.remove(CSS_CLASSES.EXPANDED);
             });
+            // Also Clear all Dashboard chip highlights
+            chips.forEach(c => c.classList.remove(CSS_CLASSES.ACTIVE));
             syncDashboardLabel();
         };
 
@@ -996,15 +986,29 @@ export class NotificationUI {
             syncDashboardLabel();
         };
 
-        // INITIAL STATE: Collapse All by Default (Cleaner View)
+        // INITIAL STATE: Open Target Alerts by Default
         closeAll();
+
+        // Force instant layout to get the correct height/position
+        listBody.classList.add('instant-layout');
+        toggleSection('target-alerts', true);
+
+        const firstSec = modal.querySelector('#section-target-alerts');
+        if (firstSec && listBody) {
+            listBody.scrollTop = firstSec.offsetTop;
+        }
+        listBody.classList.remove('instant-layout');
 
         // Navigation Sync: Update Active Tile based on scroll position
         if (listBody) {
             listBody.addEventListener('scroll', () => {
+                // If the user clicked a chip, don't let the scroll listener override the highlight
+                // until the smooth scroll completes.
+                if (this._isManuallyNavigating) return;
+
                 const anyExpanded = Array.from(sections).some(s => s.classList.contains(CSS_CLASSES.EXPANDED));
-                let currentId = anyExpanded ? 'open-all' : null;
-                const scrollPos = listBody.scrollTop + 50;
+                let currentId = null;
+                const scrollPos = listBody.scrollTop + 80; // Slightly higher threshold for better "sticky" feeling
 
                 if (anyExpanded) {
                     sections.forEach(sec => {
@@ -1051,40 +1055,46 @@ export class NotificationUI {
                     // CHECK: Is this chip ALREADY active?
                     const isAlreadyActive = chip.classList.contains(CSS_CLASSES.ACTIVE);
 
-                    // 1. Close All (Collapse everything)
+                    // 1. Force Instant Layout to calculate FINAL position
+                    listBody.classList.add('instant-layout');
+
                     closeAll();
 
-                    // 2. Only Open if it wasn't already active (Toggle)
+                    // 2. Set manual navigation flag to prevent scroll listener interference
+                    this._isManuallyNavigating = true;
+
+                    // 3. Only Open if it wasn't already active (Toggle)
                     if (!isAlreadyActive) {
                         toggleSection(targetId, true); // Ensure target is open
                         chip.classList.add(CSS_CLASSES.ACTIVE);
 
                         const sec = modal.querySelector(`#section-${targetId}`);
                         if (sec) {
-                            // 1. Immediate Attempt (Best Effort)
-                            sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            const finalTop = sec.offsetTop;
 
-                            // 2. Delayed Attempt (After 0.3s CSS Transition completes)
-                            setTimeout(() => {
-                                sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                            }, 350);
+                            // 4. Restore normal layout for smooth movement
+                            listBody.classList.remove('instant-layout');
+
+                            listBody.scrollTo({
+                                top: finalTop,
+                                behavior: 'smooth'
+                            });
                         }
                     } else {
-                        // Was active, now closed via closeAll(). 
-                        // Remove highlight (already done by closeAll -> actually we need to ensure chips are cleared).
-                        // closeAll() does NOT clear chip highlights in existing code? 
-                        // Let's check helper. 
-                        // closeAll helper (Line 837) only removes EXPANDED class from sections.
-
-                        // We must clear chip highlights here too.
+                        listBody.classList.remove('instant-layout');
                         chips.forEach(c => c.classList.remove(CSS_CLASSES.ACTIVE));
                     }
+
+                    // Clear flag after smooth scroll duration
+                    setTimeout(() => {
+                        this._isManuallyNavigating = false;
+                    }, 800);
                 }
             });
         });
 
         // Accordion Header Events
-        const headers = modal.querySelectorAll(`.${CSS_CLASSES.ACCORDION_HEADER}`);
+        const headers = modal.querySelectorAll(`.${CSS_CLASSES.ACCORDION_HEADER} `);
         headers.forEach(header => {
             header.addEventListener('click', (e) => {
                 if (e.target.closest('.settings-link')) return; // Ignore subtitle link clicks
@@ -1095,7 +1105,36 @@ export class NotificationUI {
 
                 // Toggle this section
                 const isCurrentlyExpanded = section.classList.contains(CSS_CLASSES.EXPANDED);
-                toggleSection(targetId, !isCurrentlyExpanded);
+
+                // USER REQUIREMENT: Mutual Exclusion & Auto-Scroll (Match Chip Behavior)
+                if (!isCurrentlyExpanded) {
+                    // 1. Force Instant Layout to calculate positions correctly after closeAll
+                    listBody.classList.add('instant-layout');
+
+                    closeAll(); // Close others first
+                    toggleSection(targetId, true);
+
+                    // 2. Scroll to Section
+                    const sec = modal.querySelector(`#section-${targetId}`);
+                    if (sec) {
+                        this._isManuallyNavigating = true; // Prevent scroll spy interference
+
+                        // Small timeout to allow layout repaint if needed, though instant-layout helps
+                        setTimeout(() => {
+                            listBody.classList.remove('instant-layout');
+                            listBody.scrollTo({
+                                top: sec.offsetTop,
+                                behavior: 'smooth'
+                            });
+                            // Clear flag after scroll
+                            setTimeout(() => { this._isManuallyNavigating = false; }, 800);
+                        }, 10);
+                    } else {
+                        listBody.classList.remove('instant-layout');
+                    }
+                } else {
+                    toggleSection(targetId, false);
+                }
             });
         });
 
@@ -1104,7 +1143,7 @@ export class NotificationUI {
         modal.addEventListener('click', (e) => {
             const card = e.target.closest(`.${CSS_CLASSES.NOTIFICATION_CARD_GRID}`);
             if (card && card.dataset.code) {
-                console.log(`[NotificationUI] Card Clicked: ${card.dataset.code}`);
+                console.log(`[NotificationUI] Card Clicked: ${card.dataset.code} `);
                 // Close modal first? Or let AppController handle it?
                 // For native "Click Through" feel, we should prevent standard specific closing unless the app navigates.
                 // AppController typically handles navigation.
@@ -1123,53 +1162,56 @@ export class NotificationUI {
     }
 
     static _renderAccordion(section, rules = {}) {
+        const { id, title, subtitle, hits, isSystem, headerTitle, type, color } = section; // Destructure new properties
+        const count = hits.length;
+
         const wrap = document.createElement('div');
         // All sections expanded by default for V3 Dashboard Transparency
         const isExpanded = true;
-        wrap.className = `${CSS_CLASSES.ACCORDION_SECTION} ${isExpanded ? CSS_CLASSES.EXPANDED : ''}`;
-        wrap.id = `section-${section.id}`;
+        wrap.className = `${CSS_CLASSES.ACCORDION_SECTION} ${isExpanded ? CSS_CLASSES.EXPANDED : ''} ${isSystem ? 'system-section' : ''}`; // Add system-section class
+        wrap.id = `section-${id}`;
 
         const header = document.createElement('div');
         header.className = CSS_CLASSES.ACCORDION_HEADER;
 
         // Determine Subtitle Color Class
         let colorStyle = '';
-        if (section.color === 'green') colorStyle = 'color: var(--color-positive);';
-        if (section.color === 'red') colorStyle = 'color: var(--color-negative);';
+        if (color === 'green') colorStyle = 'color: var(--color-positive);';
+        if (color === 'red') colorStyle = 'color: var(--color-negative);';
 
         // Header Content with Subtitle
-        const isGlobal = (section.id !== 'custom');
-        const subtitleHTML = isGlobal
-            ? `<div class="${CSS_CLASSES.ACCORDION_SUBTITLE} settings-link" style="${colorStyle}; cursor: pointer;" title="Adjust Thresholds">${section.subtitle}</div>`
-            : `<div class="${CSS_CLASSES.ACCORDION_SUBTITLE}" style="${colorStyle}">${section.subtitle}</div>`;
+        const subtitleHTML = `<div class="${CSS_CLASSES.ACCORDION_SUBTITLE}" style="${colorStyle}">${subtitle}</div>`;
 
         header.innerHTML = `
             <div class="accordion-title-row">
-                <div class="accordion-title">${section.headerTitle || section.title}</div>
+                <div class="accordion-title">${headerTitle || title}</div>
                 ${subtitleHTML}
             </div>
             <div class="accordion-meta">
-                 <span class="${CSS_CLASSES.BADGE_PILL}">${section.items.length}</span>
-                 <i class="fas fa-chevron-down accordion-icon"></i>
+                <span class="${CSS_CLASSES.BADGE_PILL}">${count}</span>
+                <i class="fas fa-chevron-down accordion-icon"></i>
             </div>
         `;
 
         const body = document.createElement('div');
         body.className = CSS_CLASSES.ACCORDION_BODY;
 
-        if (section.items.length === 0) {
+        // Handle system sections differently
+        if (isSystem && id === 'sector-monitoring') {
+            body.innerHTML = this._renderSectorSection();
+        } else if (count === 0) {
             let hint = 'No alerts found.';
-            if (section.id === 'custom') hint = 'No custom hits. Add targets in "Add Share".';
-            if (section.id === 'gainers' || section.id === 'losers') hint = 'Filtered by your Threshold settings.';
-            if (section.id === 'hilo-high' || section.id === 'hilo-low') hint = 'Filtered by your Min Price setting.';
+            if (id === 'custom-movers') hint = 'No custom hits. Add targets in "Add Share".';
+            if (id === 'gainers' || id === 'losers') hint = 'Filtered by your Threshold settings.';
+            if (id === 'hilo-high' || id === 'hilo-low') hint = 'Filtered by your Min Price setting.';
 
             body.innerHTML = `
-                <div style="text-align:center; color:var(--text-muted); padding:0.5rem 1rem; font-size:0.75rem;">
-                    ${hint}
-                </div>`;
+            <div style="text-align:center; color:var(--text-muted); padding:0.5rem 1rem; font-size:0.75rem;">
+                ${hint}
+            </div>`;
         } else {
-            section.items.forEach(item => {
-                body.innerHTML += this._renderCard(item, section.type, rules);
+            hits.forEach(item => { // Changed from section.items.forEach to hits.forEach
+                body.innerHTML += this._renderCard(item, type, rules);
             });
         }
 
@@ -1284,39 +1326,32 @@ export class NotificationUI {
             if (isTarget) {
                 iconClass = 'fa-crosshairs'; // Target Icon
 
-                // Direction Logic for Target
-                let shareConfig = alertItem;
-                if (!shareConfig.buySell) {
-                    const cleanC = (code || '').replace(/\.AX$/i, '').trim().toUpperCase();
-                    const foundShare = AppState.data.shares.find(s => {
-                        const sCode = String(s.code || s.shareName || '').toUpperCase();
-                        return sCode === cleanC;
-                    });
-                    if (foundShare) shareConfig = foundShare;
-                }
+                // --- DYNAMIC DATA ENRICHMENT (User Request) ---
+                // If we have the share in AppState, prioritize its CURRENT target config
+                // over the one captured in the alertItem (which might be stale).
+                const cleanC = (code || '').replace(/\.AX$/i, '').trim().toUpperCase();
+                const freshShare = getBestShareMatch(AppState.data.shares, cleanC);
 
-                let tDirection = 'up';
-                let sbPrefix = '';
+                const shareConfig = freshShare || alertItem;
+                const currentTarget = freshShare ? freshShare.targetPrice : (alertItem.target || alertItem.targetPrice || 0);
+                const currentDirection = freshShare ? freshShare.targetDirection : (alertItem.direction || alertItem.condition || 'below');
 
+                let sbPrefix = 'S'; // Default Sell
                 if (shareConfig.buySell === 'buy') {
-                    tDirection = 'down';
                     sbPrefix = 'B';
                 } else if (shareConfig.buySell === 'sell') {
-                    tDirection = 'up';
                     sbPrefix = 'S';
-                } else if (alertItem.direction === 'below' || alertItem.condition === 'below') {
-                    tDirection = 'down';
+                } else if (currentDirection === 'below') {
                     sbPrefix = 'B'; // Infer Buy for 'below'
-                } else {
-                    sbPrefix = 'S'; // Default Sell
                 }
 
-                const targetCaret = tDirection === 'up'
+                // Caret reflects the actual TRIGGER direction (Above/Below)
+                const targetCaret = currentDirection === 'above'
                     ? '<i class="fas fa-caret-up" style="margin-left: 2px;"></i>'
                     : '<i class="fas fa-caret-down" style="margin-left: 2px;"></i>';
 
-                // Display: "S $Target ▲"
-                text = `<span style="font-weight: 700; margin-right: 2px;">${sbPrefix}</span>${formatCurrency(alertItem.target || alertItem.targetPrice || 0)} ${targetCaret}`;
+                // Display: "B $Target ▲"
+                text = `<span style="font-weight: 700; margin-right: 2px;">${sbPrefix}</span> ${formatCurrency(currentTarget)} ${targetCaret} `;
 
                 // Keep Target coffee/netural as usually it's a specific trigger type,
                 // but user said "Chevron arrow use assist... should display first".
@@ -1331,7 +1366,7 @@ export class NotificationUI {
 
                 const low = (alertItem.low52 || alertItem.low || 0).toFixed(2);
                 const high = (alertItem.high52 || alertItem.high || 0).toFixed(2);
-                range = `52w Range ${low}-${high}`;
+                range = `52w Range ${low} -${high} `;
 
                 // Color Logic
                 const intentLower = (alertItem.intent || '').toLowerCase();
@@ -1368,16 +1403,16 @@ export class NotificationUI {
 
                 if (hasPct || hasDol) {
                     let textParts = [];
-                    if (hasPct) textParts.push(`${ruleSet.percentThreshold}% ${chevronIcon}`);
-                    if (hasDol) textParts.push(`$${ruleSet.dollarThreshold}`);
+                    if (hasPct) textParts.push(`${ruleSet.percentThreshold}% ${chevronIcon} `);
+                    if (hasDol) textParts.push(`$${ruleSet.dollarThreshold} `);
                     text = `${textParts.join(' or ')} min`;
                 } else {
-                    text = `${Math.abs(enrichedPct).toFixed(2)}% ${chevronIcon}`;
+                    text = `${Math.abs(enrichedPct).toFixed(2)}% ${chevronIcon} `;
                 }
 
                 const low = (alertItem.low52 || alertItem.low || 0).toFixed(2);
                 const high = (alertItem.high52 || alertItem.high || 0).toFixed(2);
-                if (low > 0 && high > 0) range = `52w Range ${low}-${high}`;
+                if (low > 0 && high > 0) range = `52w Range ${low} -${high} `;
             }
 
             return { text, range, iconClass, colorVar };
@@ -1451,7 +1486,7 @@ export class NotificationUI {
         } else if (changePct < 0) {
             cardClass = CSS_CLASSES.CARD_DOWN;
         }
-        if (item._isPinned) cardClass += ` ${CSS_CLASSES.CARD_PINNED}`;
+        if (item._isPinned) cardClass += ` ${CSS_CLASSES.CARD_PINNED} `;
 
         // --- SECTOR / INDUSTRY ENRICHMENT ---
         let sector = item.Sector || item.Industry || item.industry || item.sector;
@@ -1479,34 +1514,35 @@ export class NotificationUI {
         // ALWAYS SHOW if we have a code (Relaxed threshold from 2.0%)
         if (code) {
             smartAlertBtn = `<a href="https://gemini.google.com/app" target="_blank" class="btn-smart-alert" role="link" aria-label="Ask AI Deep Dive" title="Ask AI Why" data-symbol="${code}" data-change="${(changePct || 0).toFixed(2)}" data-sector="${sector || ''}" style="border:none; background:none; cursor:pointer; font-size:1.1rem; color: #9c27b0; position: absolute; bottom: 6px; right: 6px; z-index: 10; text-decoration: none; -webkit-touch-callout: default !important; user-select: auto !important;">
-                                <img src="gemini-icon.png" style="width: 20px; height: 20px; vertical-align: middle; pointer-events: none;">
-                             </a>`;
+            <img src="gemini-icon.png" style="width: 20px; height: 20px; vertical-align: middle; pointer-events: none;">
+            </a>`;
         }
 
         //GRID LAYOUT IMPLEMENTATION
         return `
-            <div class="${CSS_CLASSES.NOTIFICATION_CARD_GRID} ${cardClass}" data-code="${code}" style="position: relative;">
-                <!-- R1: CODE | PRICE -->
+                <div class="${CSS_CLASSES.NOTIFICATION_CARD_GRID} ${cardClass}" data-code="${code}" style="position: relative;">
+                    ${code === 'NIC' ? `<script>console.log('[Diagnostic] Rendering NIC Card:', ${JSON.stringify({ item, type, rawPrice, changePct, cardClass })});</script>` : ''}
+                <!--R1: CODE | PRICE-->
                 <div class="${CSS_CLASSES.NOTIF_CELL_CODE}">${code}</div>
                 <div class="${CSS_CLASSES.NOTIF_CELL_PRICE}">${price}</div>
 
-                <!-- R2: NAME | CHANGE -->
+                <!--R2: NAME | CHANGE-->
                 <div class="${CSS_CLASSES.NOTIF_CELL_NAME}">${name}</div>
                 <div class="${CSS_CLASSES.NOTIF_CELL_CHANGE} ${changeClass}">${changeFormatted}</div>
 
-                <!-- R3: EXPLAINER | RANGE (Optional) -->
+                <!--R3: EXPLAINER | RANGE(Optional)-->
                 <div class="${CSS_CLASSES.NOTIF_CELL_EXPLAINER}">
                     ${explainerText}
                 </div>
                 <div class="${CSS_CLASSES.NOTIF_CELL_RANGE}">${explainerRange}</div>
                 
-                <!-- R4: SECTOR (Full Width) -->
-                ${sectorHtml}
+                <!--R4: SECTOR(Full Width)-->
+            ${sectorHtml}
 
-                <!-- AI Button (Floating Bottom Right) -->
-                ${smartAlertBtn}
+                <!--AI Button(Floating Bottom Right)-->
+            ${smartAlertBtn}
             </div>
-        `;
+            `;
     }
 
     static async renderFloatingBell() {
@@ -1560,7 +1596,7 @@ export class NotificationUI {
                 const currentPref = AppState.preferences.showBadges !== false;
                 const newPref = !currentPref;
 
-                console.log(`[NotificationUI] Long Press -> Toggling Badges: ${currentPref} -> ${newPref}`);
+                console.log(`[NotificationUI] Long Press -> Toggling Badges: ${currentPref} -> ${newPref} `);
 
                 // 1. Update State First
                 if (AppState.preferences) {
@@ -1654,6 +1690,47 @@ export class NotificationUI {
     }
 
     /**
+     * Renders a dashboard item for Sector Monitoring status
+     */
+    static _renderSectorSection() {
+        const rules = (notificationStore && typeof notificationStore.getScannerRules === 'function')
+            ? notificationStore.getScannerRules()
+            : (AppState.preferences?.scannerRules || {});
+
+        const allIndustries = Object.values(SECTOR_INDUSTRY_MAP).flat();
+        const totalIndustries = allIndustries.length;
+        const activeFilters = rules.activeFilters;
+        const isAll = (activeFilters === null || activeFilters === undefined);
+        const activeCount = isAll ? totalIndustries : (Array.isArray(activeFilters) ? activeFilters.length : 0);
+        const inactiveCount = Math.max(0, totalIndustries - activeCount);
+
+        return `
+            <div style="padding: 12px; background: var(--bg-secondary); border-left: 3px solid var(--color-accent); margin: 0 10px 10px 10px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <div style="font-size: 0.85rem; font-weight: 700; color: var(--text-primary);">SCANNER COVERAGE</div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted);">${activeCount} of ${totalIndustries} Industries Active</div>
+                </div>
+                
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <div style="flex: 1; min-width: 100px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 4px; text-align: center;">
+                        <div style="font-size: 1.1rem; font-weight: 800; color: var(--color-positive);">${activeCount}</div>
+                        <div style="font-size: 0.6rem; text-transform: uppercase; color: var(--text-muted); margin-top: 4px;">Monitored</div>
+                    </div>
+                    <div style="flex: 1; min-width: 100px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 4px; text-align: center;">
+                        <div style="font-size: 1.1rem; font-weight: 800; color: var(--color-negative);">${inactiveCount}</div>
+                        <div style="font-size: 0.6rem; text-transform: uppercase; color: var(--text-muted); margin-top: 4px;">Blocked</div>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 15px; font-size: 0.75rem; line-height: 1.4; color: var(--text-muted);">
+                    <i class="fas fa-info-circle" style="margin-right: 6px; color: var(--color-accent);"></i>
+                    Your scanner is currently filtering alerts based on your industry preferences.
+                </div>
+            </div>
+            `;
+    }
+
+    /**
      * Updates the Dismiss Button state (Toggle).
      * Slashed if Kangaroo is Visible (Click to cut).
      * No Slash if Kangaroo is Hidden (Click to show).
@@ -1694,64 +1771,47 @@ export class NotificationUI {
      * Row 2: Monitor Settings.
      */
     static _updateStatusBar(modal) {
-        const statusBar = modal.querySelector('#system-status-bar');
-        const titleRow = modal.querySelector('#status-title-row');
-        const monitorsRow = modal.querySelector('#status-monitors-row');
+        const ribbon = modal.querySelector('#notif-status-ribbon');
+        if (!ribbon) return;
 
-        if (!statusBar || !titleRow || !monitorsRow) return;
-
-        // Get current settings via Store (Handles Fallbacks)
         const rules = (notificationStore && typeof notificationStore.getScannerRules === 'function')
             ? notificationStore.getScannerRules()
             : (AppState.preferences?.scannerRules || {});
 
-        const prefs = AppState.preferences || {};
-
-        // 1. TOP ROW: Override Status & Threshold Awareness
-        // Logic: ExcludePortfolio = true means Override is ON (Bypassing filters)
         const overrideOn = rules.excludePortfolio !== false;
 
-        titleRow.innerHTML = overrideOn
-            ? `<div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-            <span class="status-override-on">WATCHLIST OVERRIDE ON • BYPASSING LIMITS</span>
-            <i class="fas fa-chevron-right" style="font-size: 0.7rem; opacity: 0.6;"></i>
-           </div>`
-            : `<div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-            <span class="status-override-off">WATCHLIST OVERRIDE: OFF</span>
-            <i class="fas fa-chevron-right" style="font-size: 0.7rem; opacity: 0.6;"></i>
-           </div>`;
-
-        // 2. BOTTOM ROW: Monitor Settings & Sector Awareness (146 total Industries)
+        // Sector Counts
         const allIndustries = Object.values(SECTOR_INDUSTRY_MAP).flat();
         const totalIndustries = allIndustries.length;
-
-        // SYNC FIX: Use synchronized filters from Store
         const activeFilters = rules.activeFilters;
         const isAll = (activeFilters === null || activeFilters === undefined);
-
         const activeCount = isAll ? totalIndustries : (Array.isArray(activeFilters) ? activeFilters.length : 0);
-        const inactiveCount = Math.max(0, totalIndustries - activeCount);
 
-        const monitors = [
-            { label: 'Movers', active: rules.moversEnabled !== false },
-            { label: '52w', active: rules.hiloEnabled !== false },
-            { label: 'Personal', active: rules.personalEnabled !== false },
-            { label: 'Email', active: prefs.dailyEmail === true },
-            {
-                label: `Sectors: <span class="status-count-green">${activeCount}</span> / <span class="status-count-red">${inactiveCount}</span>`,
-                active: true
-            }
-        ];
+        // SMART UI: Prominence through typography and spacing, no borders/backgrounds
+        // User Request: "More relevant... under evaluated quality... click through"
+        ribbon.style.cursor = 'pointer';
 
-        const monitorsHtml = monitors.map(m => {
-            const cls = m.active ? 'status-item active' : 'status-item disabled';
-            return `<span class="${cls}">${m.label}</span>`;
-        }).join('');
+        ribbon.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                <div class="ribbon-left" style="display: flex; align-items: center; gap: 12px; font-size: 0.7rem;">
+                    <span class="status-override-discreet" style="display: flex; align-items: center; gap: 6px;">
+                        <span style="color: var(--text-dominant); font-weight: 700; letter-spacing: 0.5px; opacity: 0.9;">TARGET PRIORITY</span>
+                        <span class="${overrideOn ? 'status-override-on-txt' : 'status-override-off-txt'}" style="font-weight: 700; font-size: 0.7rem;">${overrideOn ? 'ACTIVE' : 'OFF'}</span>
+                    </span>
+                    <span style="color: var(--text-muted); opacity: 0.3;">|</span>
+                    <span style="display: flex; align-items: center; gap: 6px;">
+                        <span style="color: var(--text-dominant); font-weight: 700; letter-spacing: 0.5px; opacity: 0.9;">SECTORS</span>
+                        <span><span style="color: var(--color-positive); font-weight: 700;">${activeCount}</span> <span style="color: var(--text-muted); opacity: 0.7;">/ ${totalIndustries}</span></span>
+                    </span>
+                </div>
+                <div class="ribbon-right" style="padding-left: 10px;">
+                    <i class="fas fa-chevron-right" style="font-size: 0.75rem; opacity: 0.5; color: var(--color-accent);"></i>
+                </div>
+            </div>
+        `;
 
-        monitorsRow.innerHTML = monitorsHtml;
-
-        // Add click handler to toggle Intelligence Report overlay instead of settings
-        statusBar.onclick = (e) => {
+        // Make entire ribbon clickable
+        ribbon.onclick = (e) => {
             e.stopPropagation();
             this._toggleIntelligenceReport(modal);
         };
@@ -1761,7 +1821,7 @@ export class NotificationUI {
      * Toggles the detailed "Enforcement Report" overlay.
      */
     static _toggleIntelligenceReport(modal) {
-        const report = modal.querySelector(`#${IDS.INTELLIGENCE_REPORT_OVERLAY}`);
+        const report = modal.querySelector(`#${IDS.INTELLIGENCE_REPORT_OVERLAY} `);
         if (!report) return;
 
         if (report.classList.contains('visible')) {
@@ -1806,16 +1866,67 @@ export class NotificationUI {
                 <button class="report-close-btn"><i class="fas fa-times"></i></button>
             </div>
 
-            <!-- NOISE FILTERS & THRESHOLDS -->
+            <!--NOISE FILTERS & THRESHOLDS-->
             <div class="report-section">
-                <div class="report-section-title">Active Filters & Thresholds</div>
+                <div class="report-section-title">Active Monitors & Oversight</div>
                 
+                <!-- Structured Monitors Oversight Grid (3x2) - Mirrored from Settings -->
+                <div class="summary-grid-compact" style="margin-bottom: 25px;">
+                    <!-- 1. Badge Scope -->
+                    <div class="summary-tile intel-nav-tile" data-target="settings">
+                        <div class="summary-tile-label">Badge ${(prefs.badgeScope || 'Custom').toUpperCase()}</div>
+                        <div class="summary-status-indicator kangaroo large always-on"></div>
+                    </div>
+                     <!-- 2. Alert Icon -->
+                    <div class="summary-tile intel-nav-tile" data-target="settings">
+                        <div class="summary-tile-label">Alert Icon</div>
+                        <div class="summary-status-indicator kangaroo large ${prefs.showBadges !== false ? 'status-on' : 'status-off'}"></div>
+                    </div>
+                    <!-- 3. 52-Week -->
+                     <div class="summary-tile intel-nav-tile" data-target="settings">
+                        <div class="summary-tile-label">52-Week</div>
+                        <div class="summary-status-indicator kangaroo large ${rules.hiloEnabled !== false ? 'status-on' : 'status-off'}"></div>
+                    </div>
+                    <!-- 4. Movers -->
+                     <div class="summary-tile intel-nav-tile" data-target="settings">
+                        <div class="summary-tile-label">Movers</div>
+                        <div class="summary-status-indicator kangaroo large ${rules.moversEnabled !== false ? 'status-on' : 'status-off'}"></div>
+                    </div>
+                    <!-- 5. Personal -->
+                     <div class="summary-tile intel-nav-tile" data-target="settings">
+                        <div class="summary-tile-label">Personal</div>
+                        <div class="summary-status-indicator kangaroo large ${rules.personalEnabled !== false ? 'status-on' : 'status-off'}"></div>
+                    </div>
+                    <!-- 6. Email -->
+                     <div class="summary-tile intel-nav-tile" data-target="settings">
+                        <div class="summary-tile-label">Email</div>
+                        <div class="summary-status-indicator kangaroo large ${prefs.dailyEmail === true ? 'status-on' : 'status-off'}"></div>
+                    </div>
+                </div>
+
+            <!-- WATCHLIST STATUS EXPLAINER -->
+            <!-- TARGET ALERTS PRIORITY (Clickable) -->
+            <div class="report-section intel-nav-tile" id="watchlist-priority-btn" style="cursor: pointer; margin-bottom: 25px; padding: 12px; background: rgba(0,0,0,0.15); border-radius: 4px; opacity: 0.8;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div class="report-section-title" style="margin: 0; color: var(--color-accent); font-size: 0.7rem;">Target Alerts Override</div>
+                    <div id="priority-toggle-action" style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 4px;">
+                        <span style="font-size: 0.7rem; font-weight: bold; color: ${overrideOn ? 'var(--color-positive)' : 'var(--text-muted)'};">
+                            ${overrideOn ? 'ACTIVE' : 'OFF'}
+                        </span>
+                        <i class="fas fa-chevron-right priority-chevron" style="font-size: 0.65rem; opacity: 0.5; transition: transform 0.2s;"></i>
+                    </div>
+                </div>
+                <div class="priority-explainer" style="display: none; font-size: 0.7rem; line-height: 1.35; color: var(--text-muted); margin-top: 8px;">
+                    Stocks in your watchlists are treated as priority. They jump the queue and bypass thresholds and sector muting to ensure you never miss a move on your own holdings.
+                </div>
+            </div>
+
                 <div class="report-rule-item" style="border-bottom: none; padding-bottom: 0;">
                     <span class="report-rule-label">Movers Price Floor</span>
                     <span class="report-rule-value">Under $${moversMinPrice.toFixed(2)}</span>
                 </div>
                 <div style="font-size: 0.65rem; color: var(--text-muted); opacity: 0.7; margin-bottom: 12px; font-style: italic;">
-                    Mutes mover alerts for stocks valued under $${moversMinPrice.toFixed(2)}.
+                    Market filters gainers and losers. Mutes mover alerts for stocks valued under $${moversMinPrice.toFixed(2)}.
                 </div>
 
                 <div class="report-rule-item" style="border-bottom: none; padding-bottom: 0;">
@@ -1823,7 +1934,7 @@ export class NotificationUI {
                     <span class="report-rule-value">Under $${hiloMinPrice.toFixed(2)}</span>
                 </div>
                 <div style="font-size: 0.65rem; color: var(--text-muted); opacity: 0.7; margin-bottom: 12px; font-style: italic;">
-                    Mutes 52-week alerts for stocks valued under $${hiloMinPrice.toFixed(2)}.
+                    Market filters 52w high low. Mutes alerts for stocks valued under $${hiloMinPrice.toFixed(2)}.
                 </div>
 
                 <div class="report-rule-item" style="border-bottom: none; padding-bottom: 0;">
@@ -1842,11 +1953,13 @@ export class NotificationUI {
                     Minimum daily drop required to trigger an alert.
                 </div>
 
-                <!-- Hidden Categories -->
+
+
+                <!-- Hidden Sectors -->
                 <div style="margin-top: 4px;">
-                    <span class="report-rule-label" style="display: block; margin-bottom: 4px;">Hidden Categories</span>
+                    <span class="report-rule-label" style="display: block; margin-bottom: 4px;">Hidden Sectors</span>
                     ${blockedSectors.length > 0 ? `
-                        <div style="font-size: 0.75rem; line-height: 1.4; opacity: 0.8; background: var(--bg-primary); padding: 8px; border-radius: 4px; border: 1px solid var(--border-color);">
+                        <div style="font-size: 0.75rem; line-height: 1.4; opacity: 0.8; padding: 0;">
                             ${blockedSectors.join(', ')}
                         </div>
                     ` : `
@@ -1860,78 +1973,98 @@ export class NotificationUI {
 
             </div>
 
-            <!-- WATCHLIST STATUS EXPLAINER -->
-        <div class="report-section" id="watchlist-priority-toggle" style="cursor: pointer;">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div class="report-section-title" style="margin: 0; color: var(--color-accent);">Custom Watchlist Priority</div>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <span style="font-size: 0.75rem; font-weight: bold; color: ${overrideOn ? 'var(--color-positive)' : 'var(--text-muted)'};">
-                        ${overrideOn ? 'ACTIVE' : 'OFF'}
-                    </span>
-                    <i class="fas fa-chevron-down priority-chevron" style="font-size: 0.7rem; opacity: 0.5; transition: transform 0.2s;"></i>
+
+
+        <!--ALERT MECHANICS & TIMING-->
+            <div class="report-section">
+                <div class="report-section-title">Alert Mechanics & Timing</div>
+                <div class="report-rule-item" style="border-bottom: none; padding-bottom: 0;">
+                    <span class="report-rule-label">52-Week Price Records</span>
                 </div>
-            </div>
-            <div class="priority-explainer" style="font-size: 0.8rem; line-height: 1.4; color: var(--text-color); max-height: 0; overflow: hidden; transition: all 0.3s ease-out; margin-top: 0;">
-                <div style="padding-top: 10px;">
-                    Stocks on your Custom Watchlist are treated as priorities. They jump the queue and bypass the Price Floor and Category mutes to ensure you never miss a move on your own holdings.
+                <div style="font-size: 0.65rem; color: var(--text-muted); opacity: 0.7; margin-bottom: 12px; font-style: italic;">
+                    You are notified when a stock touches a 12-month price record or gets within 1% of it.
+                </div>
+
+                <div class="report-rule-item" style="border-bottom: none; padding-bottom: 0;">
+                    <span class="report-rule-label">App (The Live Feed)</span>
+                </div>
+                <div style="font-size: 0.65rem; color: var(--text-muted); opacity: 0.7; margin-bottom: 12px; font-style: italic;">
+                    Shows every price alert recorded today. If it happened, it stays on this list.
+                </div>
+
+                <div class="report-rule-item" style="border-bottom: none; padding-bottom: 0;">
+                    <span class="report-rule-label">Email (The Final Verdict)</span>
+                </div>
+                <div style="font-size: 0.65rem; color: var(--text-muted); opacity: 0.7; margin-bottom: 12px; font-style: italic;">
+                    A summary of where stocks stood at the 4:15 PM market close.
+                </div>
+                
+                <!-- SUBTLE SYSTEM HEALTH FOOTER -->
+                <div style="margin-top: 25px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1);">
+                    <div style="font-size: 0.7rem; font-weight: 700; color: var(--text-muted); margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
+                        <i class="fas fa-shield-alt" style="font-size: 0.8em; opacity: 0.7;"></i> SYSTEM INTEGRITY
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
+                        <!-- 1. The Bouncer -->
+                        <div style="background: rgba(255,255,255,0.03); padding: 8px; border-radius: 4px;">
+                            <div style="font-size: 0.65rem; color: var(--text-muted); margin-bottom: 2px;">The Bouncer</div>
+                            <div style="font-size: 0.6rem; color: var(--color-positive); font-weight: bold;">ACTIVE</div>
+                        </div>
+
+                        <!-- 2. Anti-Spam -->
+                        <div style="background: rgba(255,255,255,0.03); padding: 8px; border-radius: 4px;">
+                            <div style="font-size: 0.65rem; color: var(--text-muted); margin-bottom: 2px;">Anti-Spam</div>
+                            <div style="font-size: 0.6rem; color: var(--color-positive); font-weight: bold;">ACTIVE</div>
+                        </div>
+
+                        <!-- 3. Auto-Purge -->
+                        <div style="background: rgba(255,255,255,0.03); padding: 8px; border-radius: 4px;">
+                            <div style="font-size: 0.65rem; color: var(--text-muted); margin-bottom: 2px;">Auto-Purge</div>
+                            <div style="font-size: 0.6rem; color: var(--color-positive); font-weight: bold;">ACTIVE</div>
+                        </div>
+                    </div>
+                    
+                    <div style="font-size: 0.6rem; color: var(--text-muted); opacity: 0.5; margin-top: 8px; font-style: italic; text-align: center;">
+                        Continuous background verification, duplicate protection, and stale data removal are running.
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- ALERT MECHANICS & TIMING -->
-        <div class="report-section">
-            <div class="report-section-title">Alert Mechanics & Timing</div>
-            <div class="report-rule-item" style="flex-direction: column; align-items: flex-start; gap: 8px;">
-                <div style="font-size: 0.8rem; line-height: 1.4;">
-                    <strong>52-Week Records:</strong> You are notified when a stock touches a 12-month price record or gets within 1% of it.
-                </div>
-                <div style="font-size: 0.8rem; line-height: 1.4;">
-                    <strong>App (The Live Feed):</strong> Shows every price alert recorded today. If it happened, it stays on this list.
-                </div>
-                <div style="font-size: 0.8rem; line-height: 1.4;">
-                    <strong>Email (The Final Verdict):</strong> A summary of where stocks stood at the 4:15 PM market close.
-                </div>
-            </div>
-        </div>
 
-        <!-- 6. GHOSTED FOOTER: SYSTEM HEALTH ("THE BOUNCER") -->
-        <div style="padding-top: 12px; margin-top: 20px; opacity: 0.4; font-size: 0.65rem; color: var(--text-muted); line-height: 1.4;">
-            <div style="text-align: center; margin-bottom: 5px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">
-               🛡️ Background Integrity Checks (The Bouncer)
-            </div>
-            <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;">
-                <span>[Unified Price Authority: <span style="color:#4caf50">VERIFIED</span>]</span>
-                <span>[Ghost Filter: <span style="color:#4caf50">ON</span>]</span>
-                <span>[Directional Locking: <span style="color:#4caf50">ENFORCED</span>]</span>
-            </div>
-            <div style="text-align: center; margin-top: 6px;">
-                These automated checks filter out exchange glitches and stale data to ensure your alerts match live reality.
-            </div>
-        </div>
-
-        <div class="report-footer" style="margin-top: 15px; opacity: 0.8;">
-            Tapping the status bar toggles this awareness report.
-        </div>
-    `;
+            `;
 
         // Bind Close Event
         const closeBtn = container.querySelector('.report-close-btn');
         if (closeBtn) closeBtn.onclick = () => container.classList.remove('visible');
 
-        // Bind Accordion Toggle
-        const toggleZone = container.querySelector('#watchlist-priority-toggle');
-        if (toggleZone) {
-            toggleZone.onclick = (e) => {
-                const explainer = toggleZone.querySelector('.priority-explainer');
-                const chevron = toggleZone.querySelector('.priority-chevron');
-                const isExpanded = explainer.style.maxHeight !== '0px' && explainer.style.maxHeight !== '';
+        // Bind Nav Events (Tiles + Priority)
+        container.querySelectorAll('.intel-nav-tile').forEach(item => {
+            item.onclick = (e) => {
+                e.stopPropagation();
+                container.classList.remove('visible');
+                const userId = AppState.user?.uid || AppState.userId;
+                SettingsUI.showModal(userId);
+            };
+        });
 
-                if (isExpanded) {
-                    explainer.style.maxHeight = '0px';
-                    chevron.style.transform = 'rotate(0deg)';
+        // Bind Dedicated Toggle for Priority Explainer
+        const toggleBtn = container.querySelector('#priority-toggle-action');
+        if (toggleBtn) {
+            toggleBtn.onclick = (e) => {
+                e.stopPropagation(); // Prevent navigating to Settings
+                const parent = container.querySelector('#watchlist-priority-btn');
+                const explainer = parent.querySelector('.priority-explainer');
+                const chevron = parent.querySelector('.priority-chevron');
+
+                const isHidden = explainer.style.display === 'none';
+                if (isHidden) {
+                    explainer.style.display = 'block';
+                    chevron.style.transform = 'rotate(90deg)'; // Point down
                 } else {
-                    explainer.style.maxHeight = '200px'; // Arbitrary large value
-                    chevron.style.transform = 'rotate(180deg)';
+                    explainer.style.display = 'none';
+                    chevron.style.transform = 'rotate(0deg)'; // Point right
                 }
             };
         }

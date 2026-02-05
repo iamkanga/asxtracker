@@ -11,6 +11,7 @@ import { AppState } from './AppState.js';
 import { userStore } from '../data/DataService.js';
 import { EVENTS, STORAGE_KEYS, DASHBOARD_SYMBOLS, SECTOR_INDUSTRY_MAP } from '../utils/AppConstants.js';
 import { doc, getDoc, updateDoc, arrayUnion, arrayRemove, onSnapshot, setDoc, getDocFromServer } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getBestShareMatch } from '../data/DataProcessor.js';
 
 const APP_ID = "asx-watchlist-app";
 
@@ -669,9 +670,33 @@ export class NotificationStore {
             const match = String(hit.userId) === String(this.userId);
             if (!match) return false;
 
+            // --- TARGET HIT GUARD ---
+            // If it's a target alert, re-validate against CURRENT price to ensure it's still a hit.
+            // This prevents "Displacement" where a mover is hidden by a target card that is no longer valid.
+            if (hit.intent === 'target' || hit.intent === 'target-hit' || (hit.intent || '').toLowerCase() === 'target') {
+                const cleanC = (hit.code || '').toUpperCase();
+                const share = getBestShareMatch(AppState.data.shares, cleanC);
+                if (share) {
+                    const target = Number(share.targetPrice || 0);
+                    const direction = share.targetDirection || 'below';
+                    const liveRef = AppState.livePrices?.get(cleanC);
+                    const currentPrice = liveRef ? Number(liveRef.live || liveRef.price || 0) : hit.live;
+
+                    if (target > 0 && currentPrice > 0) {
+                        const isCurrentlyHit = (direction === 'above' && currentPrice >= (target - 0.0001)) ||
+                            (direction === 'below' && currentPrice <= (target + 0.0001));
+
+                        if (!isCurrentlyHit) {
+                            // NOT a hit anymore - Drop this specific target alert.
+                            // If there's an underlying mover alert, it will survive and become master.
+                            return false;
+                        }
+                    }
+                }
+            }
+
             // --- ZOMBIE CHECK (FINAL GATEKEEPER) ---
             // Re-verify against AppState.livePrices to ensure we don't show static/stale server hits.
-            // This fixes issues where 'client generation' blocks a hit (GAP) but 'server hits' let it through.
             if (hit.code) {
                 let checkPct = Number(hit.pct || hit.changeInPercent || 0);
                 let checkAmt = Number(hit.change || 0);
@@ -917,22 +942,36 @@ export class NotificationStore {
         //    });
         // }
 
-        // Helper to merge or add - UPDATED WITH MUTE FILTER
+        // Helper to merge or add - UPDATED WITH INTENT PRIORITY
         const addOrMerge = (hit) => {
             const code = hit.code || hit.shareName;
             if (!code) return;
 
-            // MUTE FILTER (Redundant - already filtered in step 1)
-            // if (mutedCodes.has(code)) return;
+            const getPriority = (h) => {
+                const i = (h.intent || '').toLowerCase();
+                // 1. TARGET (Highest priority when HIT - per user request to take precedence)
+                if (i === 'target' || i === 'target-hit') return 200;
+                // 2. MOVERS (Second priority)
+                if (i === 'mover' || i === 'up' || i === 'down' || i === 'gainers' || i === 'losers') return 100;
+                // 3. HI/LO (52W)
+                if (i.includes('hilo') || i.includes('52')) return 50;
+                return 0;
+            };
 
             if (!consolidated.has(code)) {
-                // First entry: Clone it and init matches
                 const master = { ...hit, matches: [hit] };
                 consolidated.set(code, master);
             } else {
-                // Existing entry: Merge
                 const master = consolidated.get(code);
                 master.matches.push(hit);
+
+                // UPGRADE MASTER: If this new hit has higher priority than current master
+                if (getPriority(hit) > getPriority(master)) {
+                    // Update master fields while preserving matches
+                    const matches = master.matches;
+                    Object.assign(master, hit);
+                    master.matches = matches;
+                }
             }
         };
 
@@ -1754,14 +1793,10 @@ export class NotificationStore {
         if (!this.userId || !AppState.data.shares || !AppState.livePrices) return [];
 
         const alerts = [];
-        const processedCodes = new Set(); // DEDUPLICATION GUARD
-
-        AppState.data.shares.forEach(share => {
-            const code = share.shareName;
-
-            // DEDUPLICATION: If user has same stock in 2 watchlists, ignore second.
-            if (processedCodes.has(code)) return;
-            processedCodes.add(code);
+        const uniqueCodes = [...new Set(AppState.data.shares.map(s => (s.shareName || '').toUpperCase()).filter(c => c))];
+        uniqueCodes.forEach(code => {
+            const share = getBestShareMatch(AppState.data.shares, code);
+            if (!share) return;
 
             // Exclude Dashboard Symbols from alerts
             if (this._isDashboardCode(code)) return;
@@ -1814,28 +1849,63 @@ export class NotificationStore {
                     // --- LOAD RULES EARLY ---
                     const rules = this.getScannerRules() || {};
 
-                    // 1. PRICE TARGETS
-                    // TARGETS ARE EXEMPT from Global Locks. They are explicit user intents.
-                    const targetPrice = Number(share.targetPrice || 0);
-                    if (targetPrice > 0) {
-                        const direction = share.targetDirection || 'below';
-                        let hit = false;
+                    // 1. MOVERS (Implicit Watchlist Alerts)
+                    // PRIORITY: Movers are processed first so they can become the "Master" in grouping,
+                    // preventing "Target Displacement" where a movement is hidden by a coffee background.
+                    const overrideOn = rules.excludePortfolio !== false;
 
-                        // FIX: Do NOT use liveData.high/low here as they map to 52-week data in DataService.
-                        // Until API provides explicit 'highDay'/'lowDay', we must fallback to PRICE.
-                        // This prevents 52-week lows from triggering "Day Low" alerts.
-                        const dayHigh = Number(liveData.highDay || price);
-                        const dayLow = Number(liveData.lowDay || price);
+                    if (rules.moversEnabled !== false && !isPhantom) {
+                        const upRules = rules.up || {};
+                        const downRules = rules.down || {};
+                        const r = pctChange >= 0 ? upRules : downRules;
 
-                        // CHECK DAY HIGH/LOW to catch intraday spikes
-                        // FIX: Block Static/Phantom stocks from triggering TARGET hits (prevents GAP Phantom Alert)
-                        if (!isStatic && !isPhantom) {
-                            if (direction === 'above' && dayHigh >= targetPrice) hit = true;
-                            if (direction === 'below' && (dayLow > 0 && dayLow <= targetPrice)) hit = true;
+                        const thresholdPct = Number(r.percentThreshold);
+                        const thresholdDol = Number(r.dollarThreshold);
+
+                        let isHit = false;
+
+                        const hasPct = (thresholdPct !== null && thresholdPct !== undefined && thresholdPct !== 0);
+                        const hasDol = (thresholdDol !== null && thresholdDol !== undefined && thresholdDol !== 0);
+
+                        if (hasPct || hasDol) {
+                            if (hasPct && absPct >= thresholdPct) isHit = true;
+                            if (hasDol && absChange >= thresholdDol) isHit = true;
                         }
 
+                        if (absPct === 0 && absChange === 0) isHit = false;
+
+                        if (isHit) {
+                            const moverType = pctChange >= 0 ? 'up' : 'down';
+                            const key = `${code}-mover-${moverType}`;
+
+                            alerts.push({
+                                userId: this.userId,
+                                code: code,
+                                intent: 'mover',
+                                isImplicit: true,
+                                type: moverType,
+                                price: price,
+                                pct: pctChange,
+                                change: dolChange,
+                                t: this._getStableTimestamp(key)
+                            });
+                        }
+                    }
+
+                    // 2. PRICE TARGETS
+                    const targetPrice = Number(share.targetPrice || 0);
+                    if (targetPrice > 0 && !isStatic && !isPhantom) {
+                        const direction = share.targetDirection || 'below';
+                        let hit = false;
+                        const prev = Number(liveData.prevClose || 0);
+
+                        // STRICTOR CHECK: Only trigger if price REACHES/CROSSES the target today.
+                        // If it was already below/above target yesterday, it's a persistent state, not a "new hit".
+                        if (direction === 'above' && price >= (targetPrice - 0.0001) && (prev < targetPrice || prev === 0)) hit = true;
+                        if (direction === 'below' && price <= (targetPrice + 0.0001) && (prev > targetPrice || prev === 0)) hit = true;
+
                         if (hit) {
-                            const key = `${code} -target - ${direction} `;
+                            const key = `${code}-target-${direction}`;
                             alerts.push({
                                 userId: this.userId,
                                 code: code,
@@ -1850,30 +1920,21 @@ export class NotificationStore {
                         }
                     }
 
-                    // 2. 52-WEEK HIGH/LOW (Implicit Watchlist Alerts)
-                    // FIX: Respect Global Toggle AND Min Price.
+                    // 3. 52-WEEK HIGH/LOW (Implicit Watchlist Alerts)
                     const hiloLimit = rules.hiloMinPrice ?? 0;
-
-                    // OVERRIDE LOGIC: If Override is ON, we bypass the Min Price check (`hiloLimit`).
-                    // We still respect the Global Feature Toggle (`hiloEnabled`).
-                    // User Request: "It also needs to ignore the 52 week high low threshold" (Min Price).
                     const overrideActive = rules.excludePortfolio !== false;
                     const featureEnabled = rules.hiloEnabled !== false;
 
-                    // Condition: Feature ON AND (Price >= Limit OR Override ON)
-                    // New Logic: If hiloLimit is 0 (None), we allow all.
                     const passesThreshold = (hiloLimit === 0 || price >= hiloLimit);
                     const shouldProcess = featureEnabled && (passesThreshold || overrideActive);
 
-                    if (shouldProcess) {
-                        const high52 = Number(liveData.high || liveData.high52 || liveData.high_52 || 0);
-                        const low52 = Number(liveData.low || liveData.low52 || liveData.low_52 || 0);
-                        const tolerance = 0.001; // FP tolerance
+                    if (shouldProcess && !isStatic && !isPhantom) {
+                        const high52 = Number(liveData.high || liveData.high52 || 0);
+                        const low52 = Number(liveData.low || liveData.low52 || 0);
+                        const tolerance = 0.001;
 
-                        // Check High
-                        if (high52 > 0 && price >= (high52 - tolerance) && !isStatic && !isPhantom) {
-                            if (code === 'GAP') console.warn("âš ï¸ GAP PUSHED HIGH ALERT");
-                            const key = `${code} -hilo - high`;
+                        if (high52 > 0 && price >= (high52 - tolerance)) {
+                            const key = `${code}-hilo-high`;
                             alerts.push({
                                 userId: this.userId,
                                 code: code,
@@ -1882,17 +1943,15 @@ export class NotificationStore {
                                 price: price,
                                 prevClose: Number(liveData.prevClose || 0),
                                 high52: high52,
-                                low52: low52, // ADDED: Ensure Range is visible
+                                low52: low52,
                                 pct: pctChange,
                                 change: dolChange,
                                 t: this._getStableTimestamp(key)
                             });
                         }
 
-                        // Check Low
-                        if (low52 > 0 && price <= (low52 + tolerance) && !isStatic && !isPhantom) {
-                            if (code === 'GAP') console.warn("âš ï¸ GAP PUSHED LOW ALERT");
-                            const key = `${code} -hilo - low`;
+                        if (low52 > 0 && price <= (low52 + tolerance)) {
+                            const key = `${code}-hilo-low`;
                             alerts.push({
                                 userId: this.userId,
                                 code: code,
@@ -1901,69 +1960,7 @@ export class NotificationStore {
                                 price: price,
                                 prevClose: Number(liveData.prevClose || 0),
                                 low52: low52,
-                                high52: high52, // ADDED: Ensure Range is visible
-                                pct: pctChange,
-                                change: dolChange,
-                                t: this._getStableTimestamp(key)
-                            });
-                        }
-                    }
-
-                    if (code === 'GAP') console.groupEnd();
-
-                    // 3. MOVERS (Implicit Watchlist Alerts)
-                    // If Override is ON, we generate movers regardless of Thresholds, BUT MUST respect Global Toggle.
-                    const overrideOn = rules.excludePortfolio !== false;
-
-                    if (rules.moversEnabled !== false) {
-                        // Variables pctChange, dolChange, absPct, absChange inherited from parent scope.
-
-                        // ZOMBIE CHECK (Math):
-                        // Inherited 'isPhantom' from parent scope.
-                        if (isPhantom) {
-                            return;
-                        }
-
-                        const upRules = rules.up || {};
-                        const downRules = rules.down || {};
-
-                        const r = pctChange >= 0 ? upRules : downRules;
-
-                        const thresholdPct = Number(r.percentThreshold);
-                        const thresholdDol = Number(r.dollarThreshold);
-
-                        let isHit = false;
-
-                        // FIX: Treat 0 as "Disabled" (None).
-                        const hasPct = (thresholdPct !== null && thresholdPct !== undefined && thresholdPct !== 0);
-                        const hasDol = (thresholdDol !== null && thresholdDol !== undefined && thresholdDol !== 0);
-
-                        if (!hasPct && !hasDol) {
-                            // Both blank = Disabled (Respect "Off" setting even if Override is ON).
-                            isHit = false;
-                        } else {
-                            // STRICT MOVEMENT CHECK:
-                            // User Requirement: "Movers ... should apply to both (Watchlist ON and OFF)"
-                            // We do NOT bypass this check even if Override is ON.
-                            if (hasPct && absPct >= thresholdPct) isHit = true;
-                            if (hasDol && absChange >= thresholdDol) isHit = true;
-                        }
-
-                        // ZOMBIE CHECK (Mover specific): Must have actual movement.
-                        if (absPct === 0 && absChange === 0) isHit = false;
-
-                        if (isHit) {
-                            const moverType = pctChange >= 0 ? 'up' : 'down';
-                            const key = `${code} -mover - ${moverType} `;
-
-                            // --- TRACE LOG REMOVED ---
-                            alerts.push({
-                                userId: this.userId,
-                                code: code,
-                                intent: 'mover',
-                                isImplicit: true,
-                                type: moverType,
-                                price: price,
+                                high52: high52,
                                 pct: pctChange,
                                 change: dolChange,
                                 t: this._getStableTimestamp(key)
@@ -2129,18 +2126,32 @@ export class NotificationStore {
             const isFresh = (now - ms) < limit;
 
             // PERSISTENCE GUARD: Manual target hits have strict RULES:
-            // 1. MUST have a timestamp (checked above).
-            // 2. MUST currently meet the target (Price Condition).
-            // 3. If condition met, IGNORE AGE (Persistence allowed).
-            if (item.intent === 'target-hit') {
-                const live = Number(item.live || 0);
-                const target = Number(item.target || 0);
-                // Condition Guard: If target not met, hide it (it's stale/invalid).
-                if (target > 0) {
-                    if (item.direction === 'above' && live < target) return false;
-                    if (item.direction === 'below' && live > target) return false;
+            // 1. MUST currently meet the target (Condition Check).
+            // 2. We prioritize the CURRENT target from AppState (User may have changed it).
+            if (item.intent === 'target' || item.intent === 'target-hit') {
+                const code = (item.code || '').toUpperCase();
+                const share = getBestShareMatch(AppState.data.shares, code);
+
+                // CROSS-CHECK: Always validate against ACTUAL live price from AppState
+                let live = Number(item.live || 0);
+                const liveSnapshot = (AppState.livePrices && AppState.livePrices.has(code)) ? AppState.livePrices.get(code) : null;
+                if (liveSnapshot) {
+                    const currentLive = Number(liveSnapshot.live || liveSnapshot.price || liveSnapshot.last || 0);
+                    if (currentLive > 0) live = currentLive;
                 }
-                // If we survive the guard, we keep it regardless of age (Persistence)
+
+                if (!share) return false;
+
+                const target = Number(share.targetPrice || item.target || 0);
+                const direction = share.targetDirection || item.direction || 'below';
+
+                // Condition Guard: If target not met at CURRENT live price, hide it (it's stale/invalid).
+                if (target > 0 && live > 0) {
+                    if (direction === 'above' && live < (target - 0.0001)) return false;
+                    if (direction === 'below' && live > (target + 0.0001)) return false;
+                }
+
+                // If it meets current conditions, it persists even if old
                 return true;
             }
 
@@ -2249,19 +2260,21 @@ function normalizeHits(list, fallbackTime = null) {
         // --- ENRICHMENT I: Global Live Price Cache (Primary Source for Global Alerts) ---
         if (hit.code && AppState.livePrices instanceof Map && AppState.livePrices.has(hit.code)) {
             const live = AppState.livePrices.get(hit.code);
-            // Polyfill Missing Data
-            const hasOwnChange = (Math.abs(hit.change || hit.c || 0) > 0) || (Math.abs(hit.pct || hit.cp || 0) > 0);
 
-            if (!hasOwnChange && live) {
-                hit.live = Number(live.live || live.price || live.last || hit.live);
-                hit.change = Number(live.change || live.c || 0);
-                // NotificationUI checks 'pct', 'pctChange', 'changePercent', etc.
-                // DataService provides 'pctChange'. Live prices from AppController have 'changeInPercent'.
-                // We map to 'pct' (primary) and 'dayChangePercent' (fallback for UI).
-                hit.pct = Number(live.changeInPercent || live.pct || live.pctChange || 0);
-                hit.dayChangePercent = hit.pct;
+            // ALWAYS use the absolute latest price for validation and display
+            if (live) {
+                const currentPrice = Number(live.live || live.price || live.last || 0);
+                if (currentPrice > 0) hit.live = currentPrice;
 
-                // FIX: Enrich 52-Week Data for UI Range Display (if available)
+                // Polyfill Missing Change Data
+                const hasOwnChange = (Math.abs(hit.change || hit.c || 0) > 0) || (Math.abs(hit.pct || hit.cp || 0) > 0);
+                if (!hasOwnChange) {
+                    hit.change = Number(live.change || live.c || 0);
+                    hit.pct = Number(live.changeInPercent || live.pct || live.pctChange || 0);
+                    hit.dayChangePercent = hit.pct;
+                }
+
+                // FIX: Enrich 52-Week Data for UI Range Display
                 if (live.high52 || live.high_52 || live.high) hit.high52 = Number(live.high52 || live.high_52 || live.high);
                 if (live.low52 || live.low_52 || live.low) hit.low52 = Number(live.low52 || live.low_52 || live.low);
             }

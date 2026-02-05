@@ -116,12 +116,21 @@ export class ModalController {
 
             // 1. Find explicit share documents (Legacy & Mixed Schema)
             AppState.data.shares.filter(s => (s.shareName || '').toUpperCase() === (stockCode || '').toUpperCase()).forEach(s => {
-                const wId = s.watchlistId || 'portfolio';
-                existingMemberships.set(String(wId), s.id);
+                const wId = String(s.watchlistId || 'portfolio');
+                if (!existingMemberships.has(wId)) {
+                    existingMemberships.set(wId, new Set());
+                }
+                existingMemberships.get(wId).add(s.id);
 
                 // FIX: Check Array memberships too
                 if (Array.isArray(s.watchlistIds)) {
-                    s.watchlistIds.forEach(id => existingMemberships.set(String(id), s.id));
+                    s.watchlistIds.forEach(id => {
+                        const sId = String(id);
+                        if (!existingMemberships.has(sId)) {
+                            existingMemberships.set(sId, new Set());
+                        }
+                        existingMemberships.get(sId).add(s.id);
+                    });
                 }
             });
 
@@ -129,9 +138,10 @@ export class ModalController {
             (AppState.data.watchlists || []).forEach(wl => {
                 if (wl.stocks && Array.isArray(wl.stocks)) {
                     if (wl.stocks.some(code => code.toUpperCase() === stockCode.toUpperCase())) {
-                        if (!existingMemberships.has(String(wl.id))) {
-                            // Mark as present (id null means no specific share doc found for this watchlist yet)
-                            existingMemberships.set(String(wl.id), null);
+                        const wId = String(wl.id);
+                        if (!existingMemberships.has(wId)) {
+                            // Mark as present with empty set (means no doc ID found yet)
+                            existingMemberships.set(wId, new Set());
                         }
                     }
                 }
@@ -152,10 +162,19 @@ export class ModalController {
 
 
                 matchingShares.forEach(s => {
-                    const wId = s.watchlistId || 'portfolio';
-                    existingMemberships.set(String(wId), s.id);
+                    const wId = String(s.watchlistId || 'portfolio');
+                    if (!existingMemberships.has(wId)) {
+                        existingMemberships.set(wId, new Set());
+                    }
+                    existingMemberships.get(wId).add(s.id);
                     if (Array.isArray(s.watchlistIds)) {
-                        s.watchlistIds.forEach(id => existingMemberships.set(String(id), s.id));
+                        s.watchlistIds.forEach(id => {
+                            const sId = String(id);
+                            if (!existingMemberships.has(sId)) {
+                                existingMemberships.set(sId, new Set());
+                            }
+                            existingMemberships.get(sId).add(s.id);
+                        });
                     }
                 });
 
@@ -163,9 +182,9 @@ export class ModalController {
                 (AppState.data.watchlists || []).forEach(wl => {
                     if (wl.stocks && Array.isArray(wl.stocks)) {
                         if (wl.stocks.some(code => code.toUpperCase() === stockCode.toUpperCase())) {
-                            // console.log('[ModalController] Scan: Found in Watchlist (Array):', wl.name, wl.id);
-                            if (!existingMemberships.has(String(wl.id))) {
-                                existingMemberships.set(String(wl.id), null);
+                            const wId = String(wl.id);
+                            if (!existingMemberships.has(wId)) {
+                                existingMemberships.set(wId, new Set());
                             }
                         }
                     }
@@ -328,16 +347,15 @@ export class ModalController {
                     // 2. UPDATE: Watchlists that were already there
                     const toUpdate = newWatchlists.filter(w => existingMemberships.has(w));
                     for (const wid of toUpdate) {
-                        const docId = existingMemberships.get(wid);
-                        if (!docId) {
+                        const docIds = existingMemberships.get(wid);
+                        if (!docIds || docIds.size === 0) {
                             // GHOST RECOVERY IN UPDATE LOOP
                             // The user "kept" this share in the watchlist, but it has no ID (Ghost).
                             // We must Resurrect it (Create/Link).
-                            // console.log(`[ModalController] Resurrecting Ghost Share ${formData.shareName} in ${wid}`);
                             try {
                                 const lookupKey = String(formData.shareName).trim().toUpperCase();
                                 // Reuse the "Link/Create" logic from addStock
-                                const persistenceId = (wid === PORTFOLIO_ID || wid === 'main') ? PORTFOLIO_ID : wid;
+                                const persistenceId = (wid === PORTFOLIO_ID || wid === "main") ? PORTFOLIO_ID : wid;
 
                                 // We use price from formData if available
                                 const entryPrice = formData.enteredPrice || 0;
@@ -360,17 +378,12 @@ export class ModalController {
                                 successCount++;
 
                                 // Update Injection
-                                // RE-CHECK: Snapshot might have arrived during await
                                 const shareNowInState = AppState.data.shares.find(s => s.id === newId || (s.shareName || '').toUpperCase() === lookupKey);
 
                                 if (shareNowInState) {
-                                    // Snapshot beat us to it, or we found the ghost.
-                                    // Just ensure ID is correct if it was a ghost.
                                     if (!shareNowInState.id) shareNowInState.id = newId;
                                     shareExists = true;
                                 } else {
-
-                                    // Truly missing, safe to inject
                                     AppState.data.shares.push({
                                         shareName: lookupKey,
                                         id: newId,
@@ -386,33 +399,32 @@ export class ModalController {
                             continue;
                         }
 
-                        // FIX: Use explicit PORTFOLIO_ID
-                        const persistenceId = (wid === PORTFOLIO_ID || wid === 'main') ? PORTFOLIO_ID : wid;
-                        // FIX: Persist the full array of memberships (Sync UI -> DB)
-                        const dataToUpdate = { ...formData, watchlistId: persistenceId, watchlistIds: newWatchlists };
-                        delete dataToUpdate.watchlists;
+                        // FIX (Duplicates): Update ALL documents found for this code in this watchlist
+                        for (const docId of docIds) {
+                            const persistenceId = (wid === PORTFOLIO_ID || wid === 'main') ? PORTFOLIO_ID : wid;
+                            const dataToUpdate = { ...formData, watchlistId: persistenceId, watchlistIds: newWatchlists };
+                            delete dataToUpdate.watchlists;
 
-                        try {
-                            await appService.updateShareRecord(docId, dataToUpdate);
-                            successCount++;
-                        } catch (err) {
-                            console.error(`Failed to update in ${wid}:`, err);
-                            errors.push(wid);
+                            try {
+                                await appService.updateShareRecord(docId, dataToUpdate);
+                                successCount++;
+                            } catch (err) {
+                                console.error(`Failed to update doc ${docId} in ${wid}:`, err);
+                                errors.push(wid);
+                            }
                         }
                     }
 
                     // 3. REMOVE: Watchlists deselected
                     const toRemove = previousWatchlists.filter(w => !newWatchlists.includes(w));
                     for (const wid of toRemove) {
-                        const docId = existingMemberships.get(wid);
+                        const docIds = existingMemberships.get(wid);
                         // FIX: Use Original Name for removal if renamed
                         const code = formData.originalShareName || formData.shareName;
 
-                        if (!docId) {
+                        if (!docIds || docIds.size === 0) {
                             // CASE A: Removing a LINK (Array Entry)
-                            // The share is just an item in the 'stocks' array of this watchlist.
                             try {
-
                                 await appService.removeStock(code, wid);
                             } catch (err) {
                                 console.error(`Failed to remove link from ${wid}:`, err);
@@ -420,34 +432,29 @@ export class ModalController {
                             }
                         } else {
                             // CASE B: Removing the MASTER RECORD (Document)
-                            // We must be careful!
+                            // Loop through all associated Doc IDs to clear potential duplicates
+                            for (const docId of docIds) {
+                                if (newWatchlists.length > 0) {
+                                    // MIGRATION: The user kept the share in other watchlists.
+                                    const newMasterWl = newWatchlists[0];
+                                    const newPersistenceId = (newMasterWl === PORTFOLIO_ID || newMasterWl === 'main') ? PORTFOLIO_ID : newMasterWl;
 
-                            if (newWatchlists.length > 0) {
-                                // MIGRATION: The user kept the share in other watchlists.
-                                // We must Transfer Ownership of the Master Document to one of the remaining watchlists
-                                // instead of deleting it.
-                                const newMasterWl = newWatchlists[0];
-                                const newPersistenceId = (newMasterWl === PORTFOLIO_ID || newMasterWl === 'main') ? PORTFOLIO_ID : newMasterWl;
-
-                                try {
-                                    // MIGRATION: Preserve the document by moving it to another active watchlist.
-                                    const dataToUpdate = { ...formData, watchlistId: newPersistenceId, watchlistIds: newWatchlists };
-                                    delete dataToUpdate.watchlists;
-
-                                    await appService.updateShareRecord(docId, dataToUpdate);
-                                } catch (err) {
-                                    console.error(`Failed to migrate share ${docId}:`, err);
-                                    errors.push(wid);
-                                }
-                            } else {
-                                // DELETION: The user removed it from ALL watchlists.
-                                // Now it is safe to delete the document.
-                                try {
-                                    await appService.deleteShareRecord(null, docId);
-                                    break; // Scrubbing delete handles all references; stop processing removals
-                                } catch (err) {
-                                    console.error(`Failed to delete share ${docId}:`, err);
-                                    errors.push(wid);
+                                    try {
+                                        const dataToUpdate = { ...formData, watchlistId: newPersistenceId, watchlistIds: newWatchlists };
+                                        delete dataToUpdate.watchlists;
+                                        await appService.updateShareRecord(docId, dataToUpdate);
+                                    } catch (err) {
+                                        console.error(`Failed to migrate share ${docId}:`, err);
+                                        errors.push(wid);
+                                    }
+                                } else {
+                                    // DELETION: The user removed it from ALL watchlists.
+                                    try {
+                                        await appService.deleteShareRecord(null, docId);
+                                    } catch (err) {
+                                        console.error(`Failed to delete share ${docId}:`, err);
+                                        errors.push(wid);
+                                    }
                                 }
                             }
                         }

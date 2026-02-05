@@ -95,19 +95,25 @@ export function processShares(allShares, watchlistId, livePrices, sortConfig, hi
         if (processedMap.has(lookupKey)) {
             const existing = processedMap.get(lookupKey);
 
-            // Helper to rank ID quality: 2 = Real, 1 = Temp, 0 = Ghost
-            const getRank = (s) => {
-                if (!s.id) return 0;
-                if (String(s.id).startsWith('temp_')) return 1;
-                return 2;
+            const score = (s) => {
+                let points = 0;
+                // ID Quality
+                if (s.id && !String(s.id).startsWith('temp_')) points += 100;
+                else if (s.id) points += 50;
+
+                // Target Presence (User said this is critical)
+                if (Number(s.targetPrice || 0) > 0) points += 200;
+
+                // Portfolio Presence
+                if (Number(s.portfolioShares || 0) > 0) points += 10;
+
+                return points;
             };
 
             // If the EXISTING one is better or equal, skip this one.
-            // Otherwise, overwrite with the better version.
-            if (getRank(existing) >= getRank(share)) {
+            if (score(existing) >= score(share)) {
                 return;
             }
-
         }
 
         let priceData = livePrices.get(lookupKey);
@@ -378,20 +384,8 @@ export function getSingleShareData(code, allShares, livePrices, userWatchlists =
     const normalizedCode = String(code || '').trim().toUpperCase();
 
     // 1. Find Primary Share (for base fields) - CASE-INSENSITIVE
-    const primaryShare = allShares.find(s =>
-        String(s.shareName || '').trim().toUpperCase() === normalizedCode
-    );
+    const primaryShare = getBestShareMatch(allShares, normalizedCode);
     if (!primaryShare) return null;
-
-    // AUTOREPAIR: If ID is missing (Ghost), try to find it in the master list
-    if (!primaryShare.id) {
-        const masterRecord = allShares.find(s =>
-            String(s.shareName || '').trim().toUpperCase() === normalizedCode && s.id
-        );
-        if (masterRecord) {
-            primaryShare.id = masterRecord.id;
-        }
-    }
 
     // OPTIMISTIC ID PROTECTION: Check guarded IDs registry
     if (AppState.data.optimisticIds && AppState.data.optimisticIds.has(normalizedCode)) {
@@ -545,4 +539,44 @@ export function getASXCodesStatus(codes, livePrices) {
 
         return { code, status };
     });
+}
+
+/**
+ * Finds the "best" share document for a given code from a list of shares.
+ * Ranking:
+ * 1. Has Target Price over No Target Price (Prioritize alert configuration)
+ * 2. Real ID over Temp/Ghost
+ * 3. Has Portfolio Units over No Units
+ * @param {Array} shares 
+ * @param {string} code 
+ * @returns {Object|null}
+ */
+export function getBestShareMatch(shares, code) {
+    if (!shares || !code) return null;
+    const cleanC = code.toUpperCase().replace(/\.AX$/i, '').trim();
+
+    const matches = shares.filter(s => {
+        const sCode = (s.shareName || s.code || '').toUpperCase().replace(/\.AX$/i, '').trim();
+        return sCode === cleanC;
+    });
+
+    if (matches.length === 0) return null;
+    if (matches.length === 1) return matches[0];
+
+    const score = (s) => {
+        let points = 0;
+        // Target Presence (CRITICAL for alerts)
+        if (Number(s.targetPrice || 0) > 0) points += 200;
+
+        // ID Quality
+        if (s.id && !String(s.id).startsWith('temp_')) points += 100;
+        else if (s.id) points += 50;
+
+        // Portfolio Presence
+        if (Number(s.portfolioShares || 0) > 0) points += 10;
+
+        return points;
+    };
+
+    return matches.sort((a, b) => score(b) - score(a))[0];
 }

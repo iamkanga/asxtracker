@@ -1606,7 +1606,7 @@ export const UI_LABELS = {
     LOADING_NOTIFICATIONS: 'Loading notifications...',
     LAST_SYNCED: 'Last synced:',
     CUSTOM_MOVERS: 'Custom Movers',
-    WATCHLIST_FILTER_SUBTITLE: 'Watchlist hits (Bypassing global threshold filters)',
+    WATCHLIST_FILTER_SUBTITLE: 'Your watchlist hits',
     WATCHLIST_OVERRIDE_ON: 'Watchlist Override: ON',
     WATCHLIST_OVERRIDE_OFF: 'Watchlist Override: OFF',
     FIFTY_TWO_WEEK: '52 Week',

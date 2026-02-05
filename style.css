@@ -4476,15 +4476,16 @@ button#watchlist-selector.dashboard-grade-neutral,
     background: url('favicon.svg') no-repeat center center;
     background-size: contain;
     opacity: 1;
-    filter: sepia(1) saturate(3) hue-rotate(-10deg) brightness(0.9);
-    /* Coffee-colored filter */
+    /* Precise Coffee Filter for #a49393 */
+    filter: invert(61%) sepia(6%) saturate(696%) hue-rotate(314deg) brightness(97%) contrast(90%);
     box-shadow: none;
 }
 
 /* Always-on state for Badge Count kangaroo */
 .summary-status-indicator.kangaroo.always-on {
     opacity: 1;
-    filter: sepia(1) saturate(3) hue-rotate(-10deg) brightness(0.9);
+    /* Precise Coffee Filter for #a49393 */
+    filter: invert(61%) sepia(6%) saturate(696%) hue-rotate(314deg) brightness(97%) contrast(90%);
 }
 
 .summary-tile-body {
@@ -4528,7 +4529,7 @@ button#watchlist-selector.dashboard-grade-neutral,
 /* Specific Grid Pairings */
 .summary-grid-compact {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: 6px;
 }
 

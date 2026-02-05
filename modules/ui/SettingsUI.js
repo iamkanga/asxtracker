@@ -182,6 +182,8 @@ export class SettingsUI {
                         opacity: 0.2;
                         margin-top: auto;
                         margin-bottom: 2px;
+                        position: relative;
+                        transition: all 0.2s ease;
                     }
                     .summary-status-indicator.kangaroo.large.status-on {
                         opacity: 1;
@@ -189,6 +191,22 @@ export class SettingsUI {
                     .summary-status-indicator.kangaroo.large.always-on {
                         opacity: 1;
                         filter: drop-shadow(0 0 2px var(--color-accent));
+                    }
+                    /* Red Muted + Line Through - Upgrade */
+                    .summary-status-indicator.kangaroo.status-off {
+                        opacity: 0.5;
+                        /* Removed grayscale for visibility */
+                    }
+                    .summary-status-indicator.kangaroo.status-off::after {
+                        content: '';
+                        position: absolute;
+                        top: 50%;
+                        left: -10%;
+                        width: 120%;
+                        height: 2px;
+                        background: var(--color-accent);
+                        transform: rotate(-45deg);
+                        opacity: 0.8;
                     }
 
                     .summary-tile.thin {
@@ -386,7 +404,7 @@ export class SettingsUI {
                     <div class="summary-grid-paired" style="margin-top: 8px; grid-template-columns: 1fr 1fr;">
                         <!-- Watchlist Override (New) - Toggleable directly -->
                         <div class="${CSS_CLASSES.SUMMARY_TILE} summary-tile-clickable" data-toggle-target="${IDS.PREF_EXCLUDE_PORTFOLIO}" style="align-items: center;">
-                            <div class="${CSS_CLASSES.SUMMARY_TILE_HEADER}" style="justify-content: center;"><span class="${CSS_CLASSES.SUMMARY_TILE_LABEL}">Watchlist Override</span></div>
+                            <div class="${CSS_CLASSES.SUMMARY_TILE_HEADER}" style="justify-content: center;"><span class="${CSS_CLASSES.SUMMARY_TILE_LABEL}">Target Alerts Override</span></div>
                             <div class="${CSS_CLASSES.SUMMARY_TILE_BODY}" style="justify-content: center; position: relative;">
                                 <span class="${CSS_CLASSES.SUMMARY_TILE_VALUE}" id="sum-val-override">...</span>
                                 <div id="ind-override" class="${CSS_CLASSES.SUMMARY_STATUS_INDICATOR} kangaroo" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); width: 8px; height: 8px;"></div>
@@ -524,7 +542,7 @@ export class SettingsUI {
             <!-- "Watchlist Override" Option (Direct child, like Alerts rows) -->
             <div class="${CSS_CLASSES.DETAIL_ROW}" style="justify-content: space-between; align-items: center; margin-top: 20px; margin-bottom: 0;">
                 <div style="display: flex; flex-direction: column; gap: 0;">
-                   <span class="${CSS_CLASSES.DETAIL_LABEL}" style="font-size: 0.82rem; font-weight: 700; color: white; line-height: 1.1;">Watchlist Override</span>
+                   <span class="${CSS_CLASSES.DETAIL_LABEL}" style="font-size: 0.82rem; font-weight: 700; color: white; line-height: 1.1;">Target Alerts Override</span>
                    <div style="font-size: 0.65rem; opacity: 0.5; color: var(--text-muted); margin-bottom: 2px; margin-top: -1px;">Ignore active filters sector and threshold</div>
                 </div>
                 <div class="pill-container large-pill portfolio-pill-selector" style="width: 100px;">

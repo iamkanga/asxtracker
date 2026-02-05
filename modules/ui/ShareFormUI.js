@@ -1226,7 +1226,12 @@ export class ShareFormUI {
 
     static _extractShareData(modal, suppressToasts = false) {
         const getVal = (id) => modal.querySelector(`#${id}`)?.value.trim();
-        const getNum = (id) => parseFloat(modal.querySelector(`#${id}`)?.value) || 0;
+        const getNum = (id) => {
+            const val = modal.querySelector(`#${id}`)?.value || '';
+            // Strip any currency symbols or commas just in case
+            const cleaned = String(val).replace(/[$,]/g, '').trim();
+            return parseFloat(cleaned) || 0;
+        };
 
         const code = getVal(IDS.SHARE_NAME).toUpperCase();
         if (!code) {
@@ -1272,7 +1277,7 @@ export class ShareFormUI {
         const resolvedId = rawId || dataId || null;
         console.log(`[ShareFormUI] Extracting Share Data.InputID = "${rawId}", DataID = "${dataId}" -> ResolvedID="${resolvedId}"`);
 
-        return {
+        const payload = {
             id: resolvedId, // CRITICAL: Preserve ID for Updates vs Creates
             shareName: code,
             originalShareName: getVal('originalShareName') || currentData?.shareName || null,
@@ -1292,5 +1297,8 @@ export class ShareFormUI {
             comments: comments,
             watchlists: selectedWatchlists
         };
+
+        console.log('[Diagnostic] Extracted Share Data for Save:', payload);
+        return payload;
     }
 }
