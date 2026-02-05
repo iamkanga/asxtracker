@@ -1,4 +1,4 @@
-import { CSS_CLASSES, EVENTS, UI_ICONS, IDS } from '../utils/AppConstants.js';
+import { CSS_CLASSES, EVENTS, UI_ICONS, IDS, STORAGE_KEYS } from '../utils/AppConstants.js';
 import { AppState } from '../state/AppState.js';
 import { ThemeStudio } from './ThemeStudio.js';
 
