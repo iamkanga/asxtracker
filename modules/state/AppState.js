@@ -20,6 +20,14 @@ export const AppState = {
     // Portfolio Visibility
     isPortfolioVisible: false,
 
+    // App Health & Freshness Tracking
+    health: {
+        sessionStartTime: Date.now(),
+        lastInteractionTime: Date.now(),
+        dataUpdateTally: 0,
+        status: 'healthy' // 'healthy' | 'stale' | 'critical'
+    },
+
     // Watchlist Navigation State
     watchlist: {
         type: 'stock', // 'stock' | 'cash'

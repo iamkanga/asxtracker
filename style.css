@@ -9783,6 +9783,18 @@ body.dashboard-active .sidebar {
     box-shadow: 0 0 5px #4CAF50;
 }
 
+.connection-dot.health-stale {
+    background-color: #FF9800;
+    /* Stale (Orange) */
+    box-shadow: 0 0 8px #FF9800;
+}
+
+.connection-dot.health-critical {
+    background-color: #F44336;
+    /* Critical (Bright Red) */
+    box-shadow: 0 0 10px #F44336;
+}
+
 /* Pulse animation for disconnected state */
 @keyframes pulse-red {
     0% {
@@ -9798,7 +9810,7 @@ body.dashboard-active .sidebar {
     }
 }
 
-.connection-dot:not(.connected) {
+.connection-dot:not(.connected):not(.health-stale):not(.health-critical) {
     animation: pulse-red 2s infinite;
 }
 

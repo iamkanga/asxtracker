@@ -40,6 +40,8 @@ export class AppController {
 
     constructor() {
         AppController.instance = this;
+        window.AppController = AppController; // Expose Class
+        window.app = this; // Expose Instance for easy testing
         AppState.controller = this; // Register global controller for UI modules
         // Services
         this.dataService = new DataService();
@@ -113,6 +115,9 @@ export class AppController {
 
         // Notification System Bindings (Unified)
         NotificationUI.init(); // Initialize Floating Bell
+
+        // Start Health fresh monitor
+        this.startHealthMonitor();
 
         // Initialize Global CSS Variables from Prefs (USER REQUEST - Standardized)
         const accentHex = AppState.preferences.accentColor || '#a49393';
@@ -198,7 +203,7 @@ export class AppController {
                             if (this.headerLayout) this.headerLayout.updateConnectionStatus(false);
                         } else {
                             // Recovered! Ensure we show connected.
-                            if (this.headerLayout) this.headerLayout.updateConnectionStatus(true);
+                            if (this.headerLayout) this.headerLayout.updateConnectionStatus(true, AppState.health.status);
                             // Optional: Silent refresh to ensure token is fresh
                             AuthService.refreshSession();
                         }
@@ -729,7 +734,7 @@ export class AppController {
 
             // Update Status Indicator (Universal)
             if (this.headerLayout) {
-                this.headerLayout.updateConnectionStatus(!!user);
+                this.headerLayout.updateConnectionStatus(!!user, AppState.health.status);
             }
 
 
@@ -1311,6 +1316,12 @@ export class AppController {
                 const timeDiff = this._lastBackgroundTime ? (now - this._lastBackgroundTime) : 0;
 
                 if (this._lastBackgroundTime && (timeDiff > STALE_THRESHOLD)) {
+                    // Detect if we should mark as stale after long sleep
+                    if (timeDiff > (6 * 60 * 60 * 1000)) { // 6 hours
+                        AppState.health.status = 'stale';
+                        if (this.headerLayout) this.headerLayout.updateConnectionStatus(true, 'stale');
+                    }
+
                     // User Feedback: Confirm data is fresh
                     ToastManager.show('Welcome Back - Refreshing Data...', 'refresh');
 
@@ -1320,6 +1331,58 @@ export class AppController {
                 }
             }
         });
+    }
+
+    /**
+     * HEALTH MONITOR: Detects stale sessions and potential logic rot.
+     */
+    startHealthMonitor() {
+        if (this._healthMonitorInterval) clearInterval(this._healthMonitorInterval);
+
+        this._lastHealthTick = Date.now();
+
+        // Run check every 30 seconds
+        this._healthMonitorInterval = setInterval(() => {
+            this.checkAppHealth();
+        }, 30000);
+    }
+
+    /**
+     * Checks multiple factors to determine if the running app instance is fresh.
+     */
+    checkAppHealth() {
+        const now = Date.now();
+        const health = AppState.health;
+        let newStatus = 'healthy';
+
+        // 1. AGE CHECK (12 Hours)
+        const TWELVE_HOURS = 12 * 60 * 60 * 1000;
+        if (now - health.sessionStartTime > TWELVE_HOURS) {
+            newStatus = 'stale';
+        }
+
+        // 2. DRIFT/WAKE DETECTION
+        // If the gap since last check is significantly more than 30s, browser was likely sleeping
+        const tickGap = now - this._lastHealthTick;
+        if (tickGap > 45000) { // 15s leeway over the 30s interval
+            newStatus = 'stale';
+        }
+        this._lastHealthTick = now;
+
+        // 3. TALLY CHECK (High volume of updates increases risk of cumulative state drift)
+        if (health.dataUpdateTally > 5000) {
+            newStatus = 'stale';
+        }
+
+        // Update Global State
+        if (health.status !== newStatus) {
+            health.status = newStatus;
+
+            // Only update UI if we are connected (disconnected state handles its own UI)
+            if (AppState.user && this.headerLayout) {
+                this.headerLayout.updateConnectionStatus(true, newStatus);
+            }
+        }
     }
 
 
@@ -1333,6 +1396,9 @@ export class AppController {
 
 
         }
+
+        // Increment Data Update Tally for Health Monitoring
+        AppState.health.dataUpdateTally++;
 
 
 
@@ -3366,3 +3432,6 @@ export class AppController {
         }
     }
 }
+
+// Global Exposure for Console Debugging
+window.AppController = AppController;

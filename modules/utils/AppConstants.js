@@ -1098,6 +1098,8 @@ export const CSS_CLASSES = {
     LOGGED_IN: 'logged-in',
     TOAST_SUCCESS: 'toast-success',
     TOAST_ERROR: 'toast-error',
+    HEALTH_STALE: 'health-stale',
+    HEALTH_CRITICAL: 'health-critical',
     TOAST_INFO: 'toast-info',
     TOAST_BODY: 'toast-body',
     TOAST_TITLE: 'toast-title',

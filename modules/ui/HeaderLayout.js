@@ -832,17 +832,29 @@ export class HeaderLayout {
     }
 
     /**
-     * Updates the connection status indicator.
+     * Updates the connection status indicator and app health.
      * @param {boolean} isConnected - True if authenticated
+     * @param {string} healthStatus - 'healthy', 'stale', or 'critical'
      */
-    updateConnectionStatus(isConnected) {
+    updateConnectionStatus(isConnected, healthStatus = 'healthy') {
         const dot = document.getElementById('connection-dot');
         if (dot) {
+            // Remove all health classes first
+            dot.classList.remove(CSS_CLASSES.CONNECTED, CSS_CLASSES.HEALTH_STALE, CSS_CLASSES.HEALTH_CRITICAL);
+
             if (isConnected) {
                 dot.classList.add(CSS_CLASSES.CONNECTED);
-                dot.title = 'Connected to Live Updates';
+
+                if (healthStatus === 'stale') {
+                    dot.classList.add(CSS_CLASSES.HEALTH_STALE);
+                    dot.title = 'Connected - Application is stale (refresh recommended for stability)';
+                } else if (healthStatus === 'critical') {
+                    dot.classList.add(CSS_CLASSES.HEALTH_CRITICAL);
+                    dot.title = 'Connected - Sync issues detected. Refresh required to ensure data integrity.';
+                } else {
+                    dot.title = 'Connected - Logic is fresh';
+                }
             } else {
-                dot.classList.remove(CSS_CLASSES.CONNECTED);
                 dot.title = 'Disconnected - Click to Reconnect';
             }
         }
