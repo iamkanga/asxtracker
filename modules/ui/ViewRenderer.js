@@ -929,21 +929,22 @@ export class ViewRenderer {
                                 <div class="${CSS_CLASSES.DETAIL_ROW}">
                                     <span class="${CSS_CLASSES.DETAIL_LABEL}">Unit Margin</span>
                                         <span class="${CSS_CLASSES.DETAIL_VALUE} ${((stock.live || currentPrice) - avgPrice) > 0 ? CSS_CLASSES.POSITIVE : (((stock.live || currentPrice) - avgPrice) < 0 ? CSS_CLASSES.NEGATIVE : CSS_CLASSES.NEUTRAL)}">
-                                            ${formatCurrency((stock.live || currentPrice) - avgPrice)} 
+                                            ${formatCurrency(Math.abs((stock.live || currentPrice) - avgPrice))} 
                                             (${formatPercent((((stock.live || currentPrice) - avgPrice) / (avgPrice || 1)) * 100)})
+                                        </span>
+                                </div>
+
+                                <div class="${CSS_CLASSES.DETAIL_ROW}">
+                                    <span class="${CSS_CLASSES.DETAIL_LABEL}">Net Return</span>
+                                        <span class="${CSS_CLASSES.DETAIL_VALUE} ${capitalGain > 0 ? CSS_CLASSES.POSITIVE : (capitalGain < 0 ? CSS_CLASSES.NEGATIVE : CSS_CLASSES.NEUTRAL)}">
+                                            ${formatCurrency(Math.abs(capitalGain))} 
+                                            (${formatPercent((capitalGain / (costBasis || 1)) * 100)})
                                         </span>
                                 </div>
 
                                 <div class="${CSS_CLASSES.DETAIL_ROW}">
                                     <span class="${CSS_CLASSES.DETAIL_LABEL}">Net Cost</span>
                                     <span class="${CSS_CLASSES.DETAIL_VALUE}">${formatCurrency(costBasis)}</span>
-                                </div>
-
-                                <div class="${CSS_CLASSES.DETAIL_ROW}">
-                                    <span class="${CSS_CLASSES.DETAIL_LABEL}">Net Return</span>
-                                        <span class="${CSS_CLASSES.DETAIL_VALUE} ${capitalGain > 0 ? CSS_CLASSES.POSITIVE : (capitalGain < 0 ? CSS_CLASSES.NEGATIVE : CSS_CLASSES.NEUTRAL)}">
-                                            ${formatCurrency(capitalGain)}
-                                        </span>
                                 </div>
 
                                 <div class="${CSS_CLASSES.DETAIL_ROW}">
