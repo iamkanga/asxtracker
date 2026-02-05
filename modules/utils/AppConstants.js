@@ -471,6 +471,23 @@ export const RESEARCH_LINKS_TEMPLATE = [
     { displayName: 'Motley Fool', url: 'https://www.fool.com.au/tickers/asx-${code}/', description: 'Investing news and stock analysis.' }
 ];
 
+export const GEMINI_PROMPTS = {
+    STOCK: [
+        { label: 'Deep Dive Analysis', icon: 'fa-search', text: 'Summarize the latest technical and fundamental developments for ${code} on the ASX. Focus on recent price action, volume, and any relevant news or upcoming announcements. Provide a comprehensive outlook.' },
+        { label: 'Key Risks', icon: 'fa-exclamation-triangle', text: 'What are the primary bearish risks and headwinds facing ${code} right now? Consider both macro and company-specific factors.' },
+        { label: 'Future Outlook', icon: 'fa-binoculars', text: 'What are the analyst consensus targets and growth forecasts for ${code} over the next 12 months? Highlight key catalysts.' },
+        { label: 'Dividend Health', icon: 'fa-hand-holding-usd', text: 'Analyze the dividend stability and payout history of ${code} over the last 5 years. Is the yield sustainable?' },
+        { label: 'Competitor Comparison', icon: 'fa-balance-scale', text: 'Compare ${code} with its top 3 ASX competitors in terms of P/E ratio, yield, and recent price performance.' }
+    ],
+    MARKET: [
+        { label: 'Portfolio Review', icon: 'fa-briefcase', text: 'Review my portfolio performance today in the context of the broader market. Highlight the biggest winners and losers and explain the likely drivers.' },
+        { label: 'Market Sentiment', icon: 'fa-heartbeat', text: 'What is the dominant market sentiment driving the ASX today? Is it macro-driven or sector-specific?' },
+        { label: 'Top Opportunities', icon: 'fa-lightbulb', text: 'Identify potential opportunities in the ASX 200 based on today\'s price action and volume anomalies.' },
+        { label: 'Global Correlation', icon: 'fa-globe-americas', text: 'Explain any divergence or correlation between the US S&P 500 performance last night and the ASX 200 today.' },
+        { label: 'Roast My Portfolio', icon: 'fa-fire', text: 'Roast my portfolio based on today\'s performance. Be savage about the underperformers.' }
+    ]
+};
+
 
 export const CASH_CATEGORIES = [
     { id: 'other', label: 'Add New Category' },

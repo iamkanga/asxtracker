@@ -530,19 +530,44 @@ export class BriefingUI {
             const data = AppState.controller.calculateBriefingDigest();
             const port = data.portfolio;
             const sentiment = data.marketSentiment.sentiment;
+            const winners = data.highlights.portfolio.filter(h => h.pctChange > 0).slice(0, 3).map(h => h.code).join(', ');
+            const losers = data.highlights.portfolio.filter(h => h.pctChange < 0).slice(0, 3).map(h => h.code).join(', ');
 
-            let prompt = `Provide a deep-dive analysis of the ASX market and my portfolio context.
+            // Context Block (Shared)
+            const contextBlock = `
 Market Sentiment: ${sentiment}
 Portfolio Performance: ${port.totalPctChange.toFixed(2)}% Today.
-Key Winners: ${data.highlights.portfolio.filter(h => h.pctChange > 0).slice(0, 3).map(h => h.code).join(', ')}
-Key Losers: ${data.highlights.portfolio.filter(h => h.pctChange < 0).slice(0, 3).map(h => h.code).join(', ')}
+Key Winners: ${winners}
+Key Losers: ${losers}`;
 
-Please summarize the current trends and what I should be watching.`;
-
+            // If user typed something, that's the primary prompt (Single String return for legacy handling if needed, or Array with one item)
             if (query) {
-                prompt = `Regarding the ASX market and my question "${query}": Please provide a comprehensive analysis including technical trends and relevant news.`;
+                return `Regarding the ASX market and my question "${query}": Please provide a comprehensive analysis including technical trends. ${contextBlock}`;
             }
-            return prompt;
+
+            // Menu of Options
+            return [
+                {
+                    label: 'Deep Dive Analysis',
+                    icon: 'fa-search',
+                    text: `Provide a deep-dive analysis of the ASX market and my portfolio context. ${contextBlock}\n\nPlease summarize the current trends and what I should be watching.`
+                },
+                {
+                    label: 'Roast My Portfolio',
+                    icon: 'fa-fire',
+                    text: `Roast my portfolio based on today's performance. Be savage about the underperformers. ${contextBlock}`
+                },
+                {
+                    label: 'Market Sentiment',
+                    icon: 'fa-heartbeat',
+                    text: `What is the dominant market sentiment driving the ASX today? Is it macro-driven or sector-specific? ${contextBlock}`
+                },
+                {
+                    label: 'Investment Opportunities',
+                    icon: 'fa-lightbulb',
+                    text: `Given my current holdings and performance, where are the potential opportunities or rotation risks in the ASX 200 today? ${contextBlock}`
+                }
+            ];
         };
 
         const handleAsk = async (e) => {

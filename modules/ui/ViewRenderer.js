@@ -7,7 +7,7 @@
 
 import { formatCurrency, formatPercent, formatFriendlyDate } from '../utils/formatters.js';
 import { AppState } from '../state/AppState.js';
-import { SORT_OPTIONS, UI_ICONS, UI_LABELS, USER_MESSAGES, RESEARCH_LINKS_TEMPLATE, CSS_CLASSES, IDS, EVENTS, SUMMARY_TYPES, STORAGE_KEYS, PORTFOLIO_ID, KANGAROO_ICON_SRC, KANGAROO_ICON_SVG, VIEW_MODES, FALLBACK_SECTOR_MAP } from '../utils/AppConstants.js?v=1029';
+import { SORT_OPTIONS, UI_ICONS, UI_LABELS, USER_MESSAGES, RESEARCH_LINKS_TEMPLATE, CSS_CLASSES, IDS, EVENTS, SUMMARY_TYPES, STORAGE_KEYS, PORTFOLIO_ID, KANGAROO_ICON_SRC, KANGAROO_ICON_SVG, VIEW_MODES, FALLBACK_SECTOR_MAP, GEMINI_PROMPTS } from '../utils/AppConstants.js?v=1030';
 import { SnapshotUI } from './SnapshotUI.js';
 import { LinkHelper } from '../utils/LinkHelper.js';
 import { ToastManager } from './ToastManager.js';
@@ -1105,7 +1105,10 @@ export class ViewRenderer {
         if (geminiLink) {
             LinkHelper.bindGeminiInteraction(
                 geminiLink,
-                () => `Summarize the latest technical and fundamental developments for ${stock.code} on the ASX. Focus on recent price action, volume, and any relevant news or upcoming announcements. Provide a comprehensive outlook.`,
+                () => GEMINI_PROMPTS.STOCK.map(p => ({
+                    ...p,
+                    text: LinkHelper.replacePlaceholders(p.text, stock)
+                })),
                 () => {
                     const symbol = stock.code;
                     const change = stock.change || stock.dayChangeValue || 0;
@@ -1403,7 +1406,7 @@ export class ViewRenderer {
             <div class="${CSS_CLASSES.MODAL_OVERLAY}"></div>
                 <div class="${CSS_CLASSES.MODAL_CONTENT} ${CSS_CLASSES.MODAL_CONTENT_MEDIUM} ${CSS_CLASSES.RESEARCH_MODAL_CONTENT}">
                     <div class="${CSS_CLASSES.MODAL_HEADER}">
-                        <a href="https://gemini.google.com/app" target="_blank" id="gemini-research-link" role="link" aria-label="Ask AI Deep Dive" style="text-decoration: none; color: inherit; display: block; -webkit-touch-callout: default !important; user-select: auto !important;">
+                        <a href="https://gemini.google.com/app" target="_blank" id="gemini-research-link" role="link" aria-label="Ask AI Deep Dive" style="text-decoration: none; color: inherit; display: block; -webkit-touch-callout: default !important; user-select: text !important; position: relative; z-index: 10;">
                             <div>
                                 <div class="${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.ALIGN_CENTER} ${CSS_CLASSES.JUSTIFY_START} ${CSS_CLASSES.GAP_0}">
                                     <h2 class="${CSS_CLASSES.MODAL_TITLE}" style="margin-bottom: 0;">${stock.code}</h2>
@@ -1509,7 +1512,10 @@ export class ViewRenderer {
         if (geminiLink) {
             LinkHelper.bindGeminiInteraction(
                 geminiLink,
-                () => `Summarize the latest technical and fundamental developments for ${stock.code} on the ASX. Focus on recent price action, volume, and any relevant news or upcoming announcements. Provide a comprehensive outlook.`,
+                () => GEMINI_PROMPTS.STOCK.map(p => ({
+                    ...p,
+                    text: LinkHelper.replacePlaceholders(p.text, stock)
+                })),
                 () => {
                     const symbol = stock.code;
                     const change = stock.change || stock.dayChangeValue || 0;

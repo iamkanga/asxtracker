@@ -4,13 +4,48 @@
  * Supports Google Finance and Yahoo Finance.
  */
 
+import { ToastManager } from '../ui/ToastManager.js';
+import { GeminiPromptMenu } from '../ui/GeminiPromptMenu.js';
+
 export class LinkHelper {
+    // ... (rest of class)
+
     /**
-     * Generates a Google Finance URL for a given symbol.
-     * @param {string} symbol - The asset symbol (e.g., 'BHP', 'XJO', 'AUDUSD').
-     * @returns {string} - Google Finance URL.
+     * Binds Gemini dual-interaction to an element.
+     * Tapping triggers an internal summary.
+     * Long-holding (or right-clicking) pre-pops the clipboard with a prompt and shows the native menu.
+     * @param {HTMLElement} el - The element to bind.
+     * @param {Function} getPrompt - Callback returning the deep-dive prompt string.
+     * @param {Function} onShortPress - Callback for the internal AI analysis.
      */
-    static getGoogleFinanceUrl(symbol) {
+    static bindGeminiInteraction(el, getPrompt, onShortPress) {
+        if (!el) return;
+        let holdTimer;
+
+        const triggerLongAction = async (e) => {
+            console.log('[LinkHelper] Triggering Long Action');
+            try {
+                // Prevent default menu/click immediately
+                e.preventDefault();
+                e.stopPropagation();
+
+                const result = getPrompt();
+                console.log('[LinkHelper] Prompt Result:', Array.isArray(result) ? 'Array' : result);
+
+                if (Array.isArray(result)) {
+                    // ARRAY: Show Menu
+                    GeminiPromptMenu.show(e, result);
+                    if (navigator.vibrate) navigator.vibrate(50);
+                } else {
+                    // STRING: Legacy behavior (Copy & Allow Native Menu)
+                    await navigator.clipboard.writeText(result);
+                    ToastManager.info('Prompt Copied', 'Ready to Paste');
+                }
+            } catch (err) {
+                console.warn('[LinkHelper] Interaction Warning:', err);
+                ToastManager.error(`Menu Error: ${err.message || 'Unknown'}`);
+            }
+        };
         if (!symbol) return '';
         const s = symbol.toUpperCase().trim();
 
@@ -134,25 +169,57 @@ export class LinkHelper {
 
     /**
      * Binds Gemini dual-interaction to an element.
-     * Tapping triggers an internal summary.
-     * Long-holding (or right-clicking) pre-pops the clipboard with a prompt and shows the native menu.
+     * TAPPING triggers the prompt menu/clipboard preparation.
+     * LONG-HOLDING (or Right-Click) triggers the internal AI analysis.
      * @param {HTMLElement} el - The element to bind.
-     * @param {Function} getPrompt - Callback returning the deep-dive prompt string.
-     * @param {Function} onShortPress - Callback for the internal AI analysis.
+     * @param {Function} getPrompt - Callback returning the prompt(s) (String or Array).
+     * @param {Function} onInternalAI - Callback for the internal AI analysis (1.5).
      */
-    static bindGeminiInteraction(el, getPrompt, onShortPress) {
+    static bindGeminiInteraction(el, getPrompt, onInternalAI) {
         if (!el) return;
         let holdTimer;
+        let isLongPress = false;
 
-        const startHold = () => {
-            holdTimer = setTimeout(async () => {
-                try {
-                    const prompt = getPrompt();
-                    await navigator.clipboard.writeText(prompt);
-                } catch (err) {
-                    console.warn('Gemini clipboard prep failed', err);
+        const triggerMenuAction = async (e) => {
+            console.log('[LinkHelper] Triggering Prompt Menu (Tap)');
+            try {
+                // Prevent default specifically if it's a link to allow our logic
+                if (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
                 }
-            }, 400); // Prime clipboard just before context menu (usually 500ms+)
+
+                const result = getPrompt();
+                if (Array.isArray(result)) {
+                    GeminiPromptMenu.show(e, result);
+                    if (navigator.vibrate) navigator.vibrate(50);
+                } else {
+                    await navigator.clipboard.writeText(result);
+                    ToastManager.info('Prompt Copied', 'Ready to Paste');
+                }
+            } catch (err) {
+                console.warn('[LinkHelper] Menu Error:', err);
+                ToastManager.error(`Menu Error: ${err.message || 'Unknown'}`);
+            }
+        };
+
+        const triggerInternalAI = (e) => {
+            console.log('[LinkHelper] Triggering Internal AI (Hold)');
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            if (navigator.vibrate) navigator.vibrate(100);
+            onInternalAI(e);
+        };
+
+        const startHold = (e) => {
+            if (e.button !== 0) return; // Only left click
+            isLongPress = false;
+            holdTimer = setTimeout(() => {
+                isLongPress = true;
+                triggerInternalAI(e);
+            }, 600);
         };
 
         const cancelHold = () => {
@@ -162,27 +229,24 @@ export class LinkHelper {
             }
         };
 
-        // Pointer events for robust multi-device support
         el.addEventListener('pointerdown', startHold);
-        ['pointerup', 'pointerleave', 'pointercancel', 'pointermove'].forEach(evt => {
+        ['pointerup', 'pointerleave', 'pointercancel'].forEach(evt => {
             el.addEventListener(evt, cancelHold);
         });
 
-        // Native menu fallback (Right click / Long press)
+        // Right Click/Context Menu triggers Internal AI
         el.addEventListener('contextmenu', (e) => {
-            // We do NOT preventDefault to allow native browser menus
-            // But we ensure clipboard is ready even if timer was tight
-            try {
-                const prompt = getPrompt();
-                navigator.clipboard.writeText(prompt).catch(() => { });
-            } catch (err) { }
+            cancelHold();
+            triggerInternalAI(e);
         });
 
-        // Short press interception
         el.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            onShortPress();
+            if (isLongPress) {
+                e.preventDefault();
+                e.stopPropagation();
+                return;
+            }
+            triggerMenuAction(e);
         });
     }
 
