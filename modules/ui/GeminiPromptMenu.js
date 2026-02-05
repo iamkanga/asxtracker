@@ -110,12 +110,14 @@ export class GeminiPromptMenu {
 
                 // 2. NAVIGATION (Trigger App Launch on Android via Intent)
                 if (isAndroid) {
-                    // FORCE Android to launch the Gemini App using the Intent system
+                    // Use window.open with Intent to avoid navigating the current tab away
                     const intentUrl = `intent://gemini.google.com/app#Intent;scheme=https;package=com.google.android.apps.bard;S.browser_fallback_url=${encodeURIComponent(targetUrl)};end`;
-                    window.location.href = intentUrl;
+                    window.open(intentUrl, '_blank');
                 } else if (isMobile) {
-                    window.location.href = targetUrl;
+                    // Standard mobile: Use open to keep tracker in background
+                    window.open(targetUrl, '_blank');
                 } else {
+                    // Desktop: Standard new tab
                     window.open(targetUrl, '_blank');
                 }
 

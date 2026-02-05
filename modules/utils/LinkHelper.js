@@ -121,13 +121,12 @@ export class LinkHelper {
             const baseUrl = el.getAttribute('href') || 'https://gemini.google.com/app';
 
             if (isAndroid) {
-                // FORCE Android to launch the Gemini App using the Intent system
-                // Package: com.google.android.apps.bard
+                // Use window.open with Intent to avoid navigating the current tab away
                 const intentUrl = `intent://gemini.google.com/app#Intent;scheme=https;package=com.google.android.apps.bard;S.browser_fallback_url=${encodeURIComponent(baseUrl)};end`;
-                window.location.href = intentUrl;
+                window.open(intentUrl, '_blank');
             } else if (isMobile) {
-                // iOS / Other Mobile: Standard location change
-                window.location.href = baseUrl;
+                // Standard mobile: Use open to keep tracker in background
+                window.open(baseUrl, '_blank');
             } else {
                 // Desktop: Standard new tab
                 window.open(baseUrl, '_blank');
