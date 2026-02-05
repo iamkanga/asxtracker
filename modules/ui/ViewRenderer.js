@@ -56,12 +56,12 @@ export class ViewRenderer {
             const finalLink = typeof link === 'string' ? { name: link, url: link } : link;
             let hostname = '';
             try {
-                hostname = new URL(finalLink.url.replace(/\${code}/gi, 'ASX')).hostname;
+                hostname = new URL(LinkHelper.replacePlaceholders(finalLink.url, { code: 'ASX', name: 'ASX' })).hostname;
             } catch (e) {
                 hostname = 'research';
             }
             const faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
-            const substitutedUrl = (finalLink.url || '').replace(/\${code}/gi, stock.code);
+            const substitutedUrl = LinkHelper.replacePlaceholders(finalLink.url, stock);
 
             return `
                 <a href="${substitutedUrl}" target="_blank" class="research-link-btn">
@@ -779,7 +779,7 @@ export class ViewRenderer {
 
         const links = rawLinks.map(link => ({
             displayName: link.displayName || link.name,
-            url: (link.url || '').replace(/\${code}/gi, stock.code),
+            url: LinkHelper.replacePlaceholders(link.url, stock),
             description: link.description || ''
         }));
 

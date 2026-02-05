@@ -2,6 +2,8 @@ import { AppState } from '../state/AppState.js';
 import { IDS, CSS_CLASSES, UI_ICONS, RESEARCH_LINKS_TEMPLATE, EVENTS } from '../utils/AppConstants.js';
 import { ToastManager } from './ToastManager.js';
 import { navManager } from '../utils/NavigationManager.js';
+import { LinkHelper } from '../utils/LinkHelper.js';
+import { getSingleShareData } from '../data/DataProcessor.js';
 
 /**
  * Handles the custom research links management UI.
@@ -119,7 +121,7 @@ export default class ResearchLinksUI {
         container.innerHTML = links.map((link, index) => {
             let hostname = '';
             try {
-                const testUrl = (link.url || '').replace(/\$(?:\{code\}|\(code\)|code)/gi, 'ASX');
+                const testUrl = LinkHelper.replacePlaceholders(link.url, { code: 'ASX', name: 'ASX' });
                 hostname = new URL(testUrl).hostname;
             } catch (e) { hostname = 'research'; }
 
@@ -232,16 +234,43 @@ export default class ResearchLinksUI {
         if (url === null) return;
 
         // SMART UPDATE LOGIC
-        // Detect and generalize both URL and potentially Name if it contains the ticker
-        if (!url.includes('$(code)') && !url.includes('${code}')) {
+        // Detect and generalize URL and Name components (code, lowercase code, and name slug)
+        if (!url.includes('${code}') && !url.includes('$(code)') && !url.includes('${name_slug}') && !url.includes('$(name_slug)')) {
             let detectedCode = null;
+            let detectedSlug = null;
+            let detectedLowerCode = null;
 
-            // Priority 1: Container Context (Highest accuracy)
-            if (this._activeCode && url.toUpperCase().includes(this._activeCode.toUpperCase())) {
-                detectedCode = this._activeCode;
-            } else {
-                // Priority 2: Exhaustive Pattern Match (Scanning all occurrences)
-                // Expanded pattern to catch tickers followed by colon (e.g., ARB:AU)
+            // 1. Resolve exact context info for the active stock
+            if (this._activeCode) {
+                const stock = getSingleShareData(this._activeCode, AppState.data.shares, AppState.livePrices, AppState.data.watchlists);
+                if (stock) {
+                    const codeUpper = stock.code.toUpperCase();
+                    const codeLower = stock.code.toLowerCase();
+                    const nameSlug = LinkHelper.slugify(stock.name);
+
+                    // Check for Name Slug
+                    const urlLower = url.toLowerCase();
+                    if (nameSlug && nameSlug.length > 3 && urlLower.includes(nameSlug)) {
+                        detectedSlug = nameSlug;
+                    } else {
+                        // GREEDY SLUG DETECTION: 
+                        // If we see /asx/code/something-here, then 'something-here' is almost certainly the slug
+                        const slugRegex = new RegExp(`\/asx\/${codeLower}\/([a-z0-9-]+)`, 'i');
+                        const slugMatch = url.match(slugRegex);
+                        if (slugMatch) detectedSlug = slugMatch[1];
+                    }
+
+                    // Check for Code (Lowercase/Uppercase)
+                    if (url.includes(codeUpper)) {
+                        detectedCode = codeUpper;
+                    } else if (url.includes(codeLower)) {
+                        detectedLowerCode = codeLower;
+                    }
+                }
+            }
+
+            // 2. Generic Code Detection (Fallback)
+            if (!detectedSlug && !detectedCode && !detectedLowerCode) {
                 const pattern = /([\/.:=\-?&]|^)([A-Z]{3,4})(?=[\/.:=\-?&]|$)/gi;
                 const exclusions = ['COM', 'NET', 'ORG', 'WWW', 'ASX', 'INFO', 'BIZ', 'CO', 'AU', 'STOCK', 'SHARE', 'URL', 'HTTP', 'HTTPS', 'FINANCE', 'YAHOO', 'GOOGLE', 'TRADING', 'ECONOMICS'];
 
@@ -250,34 +279,53 @@ export default class ResearchLinksUI {
                     const candidate = (match[2] || match[1]).toUpperCase();
                     if (!exclusions.includes(candidate)) {
                         detectedCode = candidate;
-                        break; // Found a valid candidate that isn't a TLD/reserved term
+                        break;
                     }
-                }
-
-                // Priority 3: Market-specific suffix match (e.g. CBA.AX)
-                if (!detectedCode) {
-                    const pattern2 = /([A-Z]{3,4})(?=\.(?:AX|ASX))/i;
-                    const match2 = url.match(pattern2);
-                    if (match2) detectedCode = match2[1].toUpperCase();
                 }
             }
 
+            // 3. Apply Generalization
+            let generalized = false;
+
+            // SPECIAL CASE: Investing.com Search Force
+            // This site is too inconsistent for slugs, so we force the search relay.
+            if (url.includes('investing.com')) {
+                url = 'https://au.investing.com/search?q=${code}';
+                generalized = true;
+            }
+            // SPECIAL CASE: Listcorp Redundancy Stripping
+            // If it's Listcorp and we have /asx/code/name, just strip the name entirely as /asx/code is superior
+            else if (url.includes('listcorp.com') && (detectedCode || detectedLowerCode)) {
+                const code = (detectedCode || detectedLowerCode).toLowerCase();
+                url = url.replace(new RegExp(`\/asx\/${code}\/([a-z0-9-]+)`, 'i'), `/asx/\${code_lower}`);
+                url = url.replace(new RegExp(`\/asx\/${code}`, 'i'), `/asx/\${code_lower}`);
+                generalized = true;
+            } else {
+                if (detectedSlug) {
+                    url = url.replace(new RegExp(detectedSlug, 'gi'), '${name_slug}');
+                    name = name.replace(new RegExp(detectedSlug, 'gi'), '${name_slug}');
+                    generalized = true;
+                }
+            }
+
+            // Standard placeholders
             if (detectedCode) {
                 const escapedCode = detectedCode.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
                 const replaceRegex = new RegExp(`([\\/.:=\\-?&]|^)${escapedCode}(?=[\\/.:=\\-?&]|$)`, 'gi');
-
-                // Replace in URL
                 if (replaceRegex.test(url)) {
-                    url = url.replace(replaceRegex, (match, p1) => p1 ? `${p1}$(code)` : `$(code)`);
+                    url = url.replace(replaceRegex, (match, p1) => p1 ? `${p1}\${code}` : `\${code}`);
                 } else {
-                    url = url.replace(new RegExp(escapedCode, 'gi'), '$(code)');
+                    url = url.replace(new RegExp(escapedCode, 'gi'), '${code}');
                 }
+                name = name.replace(new RegExp(escapedCode, 'gi'), '${code}');
+                generalized = true;
+            } else if (detectedLowerCode && !generalized) {
+                url = url.replace(new RegExp(detectedLowerCode, 'g'), '${code_lower}');
+                name = name.replace(new RegExp(detectedLowerCode, 'g'), '${code_lower}');
+                generalized = true;
+            }
 
-                // Also attempt to generalize the manual name if the user entered the code there
-                if (name.toUpperCase().includes(detectedCode.toUpperCase())) {
-                    name = name.replace(new RegExp(escapedCode, 'gi'), '$(code)');
-                }
-
+            if (generalized) {
                 ToastManager.show(`Smart Link: Generalized for all stocks`, 'info');
             }
         }

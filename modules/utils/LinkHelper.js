@@ -185,4 +185,51 @@ export class LinkHelper {
             onShortPress();
         });
     }
+
+    /**
+     * URL-safe slugify helper.
+     * @param {string} text 
+     * @returns {string} slugified text
+     */
+    static slugify(text) {
+        if (!text) return '';
+        return text.toString().toLowerCase()
+            .replace(/\s+/g, '-')           // Replace spaces with -
+            .replace(/[^\w\-]+/g, '')       // Remove all non-word chars
+            .replace(/\-\-+/g, '-')         // Replace multiple - with single -
+            .replace(/^-+/, '')             // Trim - from start of text
+            .replace(/-+$/, '');            // Trim - from end of text
+    }
+
+    /**
+     * Replaces placeholders in a URL template.
+     * Supported: ${code}, ${code_lower}, ${name_slug} (and $ versions)
+     * @param {string} template 
+     * @param {Object} stock { code, name }
+     * @returns {string} substituted URL
+     */
+    static replacePlaceholders(template, stock) {
+        if (!template) return '';
+        if (!stock) return template;
+
+        const code = (stock.code || '').toString();
+        const name = (stock.name || '').toString();
+        const slug = this.slugify(name);
+
+        let result = template;
+
+        // Use a standard approach: Replace all variations of placeholders
+        // We support both ${tag} and $(tag) and $tag
+        const patterns = {
+            code_lower: /\$(?:\{code_lower\}|\(code_lower\)|code_lower)/gi,
+            name_slug: /\$(?:\{name_slug\}|\(name_slug\)|name_slug)/gi,
+            code: /\$(?:\{code\}|\(code\)|code)/gi
+        };
+
+        result = result.replace(patterns.code_lower, code.toLowerCase());
+        result = result.replace(patterns.name_slug, slug);
+        result = result.replace(patterns.code, code.toUpperCase());
+
+        return result;
+    }
 }

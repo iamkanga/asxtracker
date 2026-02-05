@@ -286,9 +286,8 @@ export class SearchDiscoveryUI {
         const linksHtml = rawLinks.map(link => {
             const finalLink = typeof link === 'string' ? { displayName: 'Link', url: link } : link;
 
-            const codeRegex = /\$(?:\{code\}|\(code\)|code)/gi;
-            const substitutedUrl = (finalLink.url || '').replace(codeRegex, stock.code);
-            const substitutedName = (finalLink.displayName || finalLink.name || 'Link').replace(codeRegex, stock.code);
+            const substitutedUrl = LinkHelper.replacePlaceholders(finalLink.url, stock);
+            const substitutedName = LinkHelper.replacePlaceholders(finalLink.displayName || finalLink.name || 'Link', stock);
 
             let hostname = '';
             try { hostname = new URL(substitutedUrl).hostname; } catch (e) { }
