@@ -325,8 +325,12 @@ export class ChartComponent {
         const UP_COLOR = '#06FF4F';
         const DOWN_COLOR = '#FF3131';
         const ACCENT_COLOR = '#a49393'; // Coffee
-        const ACCENT_TRANSPARENT = 'rgba(164, 147, 147, 0.4)';
-        const ACCENT_ZERO = 'rgba(164, 147, 147, 0)';
+
+        // Initial / Default Colors for Area/Line (Coffee)
+        // These will be overridden by _updateSeriesColor based on data direction
+        const DEFAULT_LINE_COLOR = ACCENT_COLOR;
+        const DEFAULT_TOP_COLOR = 'rgba(164, 147, 147, 0.4)';
+        const DEFAULT_BOTTOM_COLOR = 'rgba(164, 147, 147, 0)';
 
         switch (type) {
             case 'bar':
@@ -337,17 +341,13 @@ export class ChartComponent {
                 });
                 break;
             case 'line':
-                this.series = this.chart.addLineSeries({
-                    color: ACCENT_COLOR, lineWidth: 2,
-                    lastValueVisible: false,
-                    priceLineVisible: false,
-                });
-                break;
             case 'area':
+                // User Request: "Line" should now be a filled area with gradient
+                // We use AreaSeries for both 'line' and 'area' to support the gradient fill.
                 this.series = this.chart.addAreaSeries({
-                    topColor: ACCENT_TRANSPARENT,
-                    bottomColor: ACCENT_ZERO,
-                    lineColor: ACCENT_COLOR,
+                    topColor: DEFAULT_TOP_COLOR,
+                    bottomColor: DEFAULT_BOTTOM_COLOR,
+                    lineColor: DEFAULT_LINE_COLOR,
                     lineWidth: 2,
                     lastValueVisible: false,
                     priceLineVisible: false,
@@ -409,6 +409,10 @@ export class ChartComponent {
 
             this.series.setData(dataToSet);
             this._updateLastPriceLine(dataToSet);
+            // Apply Dynamic Color for Area/Line
+            if (newStyle === 'line' || newStyle === 'area') {
+                this._updateSeriesColor(this.cachedData);
+            }
         }
     }
 
@@ -441,6 +445,12 @@ export class ChartComponent {
                         this.series.setData(dataToSet);
                         this._updateLastPriceLine(dataToSet);
                         this._updatePeriodStats(this.cachedData);
+
+                        // Apply Dynamic Colors if Line/Area
+                        if (this.currentStyle === 'line' || this.currentStyle === 'area') {
+                            this._updateSeriesColor(this.cachedData);
+                        }
+
                         if (this.chart) this.chart.timeScale().fitContent();
                     } catch (err) {
                         console.warn('Error updating chart data:', err);
@@ -459,6 +469,40 @@ export class ChartComponent {
     setRange(range) {
         // Just wrapper for load
         this.load(range);
+    }
+
+    /**
+     * Updates the Series color (for Line/Area) based on data trend (Start vs End).
+     * @param {Array} data - Full OHLC data array
+     */
+    _updateSeriesColor(data) {
+        if (!data || data.length < 2 || !this.series) return;
+
+        // Ensure we are in a mode that supports these options
+        if (this.currentStyle !== 'line' && this.currentStyle !== 'area') return;
+
+        const first = data[0].close;
+        const last = data[data.length - 1].close;
+        const isPositive = last >= first;
+
+        // Constants
+        const COLOR_UP = '#06FF4F';
+        const COLOR_DOWN = '#FF3131';
+        const COLOR_COFFEE = '#a49393';
+
+        // Choose base color
+        const baseColor = isPositive ? COLOR_UP : COLOR_DOWN;
+
+        // Apply visual settings
+        // Gradient: 0.4 opacity at top -> 0 opacity at bottom
+        const rgb = isPositive ? '6, 255, 79' : '255, 49, 49';
+
+        this.series.applyOptions({
+            lineColor: baseColor,
+            topColor: `rgba(${rgb}, 0.5)`,
+            bottomColor: `rgba(${rgb}, 0.0)`,
+            // Optional: You could update price line color too if desired, keeping it Coffee or matching
+        });
     }
 
     _updateButtons() {
@@ -826,10 +870,13 @@ export class MiniChartPreview {
             handleScale: false,
         });
 
-        // Create line series with standard Coffee color (overridable via customColor)
+        // Create Area series (instead of Line) to support gradient fill
+        // Default to Coffee, updated to Red/Green on load
         const lineColor = this.customColor || '#a49393';
-        this.series = this.chart.addLineSeries({
-            color: lineColor,
+        this.series = this.chart.addAreaSeries({
+            topColor: 'rgba(164, 147, 147, 0.4)',
+            bottomColor: 'rgba(164, 147, 147, 0)',
+            lineColor: lineColor,
             lineWidth: 2,
             lastValueVisible: false,
             priceLineVisible: false,
@@ -867,6 +914,23 @@ export class MiniChartPreview {
 
                 this.series.setData(lineData);
                 this._updateStats(res.data);
+
+                // --- DYNAMIC COLOR UPDATE ---
+                // Calculate trend from loaded data
+                const first = res.data[0].close;
+                const last = res.data[res.data.length - 1].close;
+                const isPositive = last >= first;
+
+                const rgb = isPositive ? '6, 255, 79' : '255, 49, 49';
+                const baseColor = isPositive ? '#06FF4F' : '#FF3131';
+
+                this.series.applyOptions({
+                    lineColor: baseColor,
+                    topColor: `rgba(${rgb}, 0.5)`,
+                    bottomColor: `rgba(${rgb}, 0.0)`
+                });
+                // -----------------------------
+
                 this.chart.timeScale().fitContent();
 
                 // Hide loader only on success
