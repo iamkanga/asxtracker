@@ -202,8 +202,8 @@ export class ChartComponent {
                         <i class="fas fa-spinner fa-spin fa-2x"></i>
                     </div>
                     <div class="chart-period-overlay" id="chartPeriodStats_${this.code}">
-                        <span class="chart-period-low" style="color:#FF3131;">L: --</span>
-                        <span class="chart-period-high" style="color:#06FF4F; margin-left:8px;">H: --</span>
+                        <span class="chart-period-low" style="color:#ffffff;">L: --</span>
+                        <span class="chart-period-high" style="color:#ffffff; margin-left:8px;">H: --</span>
                     </div>
                 </div>
                 <div class="${CSS_CLASSES.CHART_CONTROLS}">
@@ -541,8 +541,7 @@ export class ChartComponent {
 
         // Format with appropriate decimal places
         const formatPrice = (val) => {
-            if (val >= 10) return '$' + val.toFixed(2);
-            if (val >= 1) return '$' + val.toFixed(3);
+            if (val >= 1) return '$' + val.toFixed(2);
             return '$' + val.toFixed(4);
         };
 
@@ -813,8 +812,8 @@ export class MiniChartPreview {
         this.container.innerHTML = `
             <div class="mini-chart-container" title="Tap to expand chart">
                 <div class="mini-chart-stats">
-                    <span class="mini-chart-low" style="color:#FF3131;">L: --</span>
-                    <span class="mini-chart-high" style="color:#06FF4F;">H: --</span>
+                    <span class="mini-chart-low" style="color:#ffffff;">L: --</span>
+                    <span class="mini-chart-high" style="color:#ffffff;">H: --</span>
                 </div>
                 <div class="mini-chart-loader"><i class="fas ${UI_ICONS.SPINNER} fa-spin"></i></div>
             </div>
@@ -971,8 +970,7 @@ export class MiniChartPreview {
         }
 
         const formatPrice = (val) => {
-            if (val >= 10) return '$' + val.toFixed(2);
-            if (val >= 1) return '$' + val.toFixed(3);
+            if (val >= 1) return '$' + val.toFixed(2);
             return '$' + val.toFixed(4);
         };
 

@@ -276,7 +276,8 @@ export class DataManagementUI {
             const code = s.code || s.shareName;
             const live = AppState.livePrices.get(code);
             const price = live ? live.live : (s.currentPrice || s.enteredPrice || 0);
-            rows += `<tr><td>${code}</td><td>$${price.toFixed(3)}</td><td>${s.portfolioShares || 0}</td></tr>`;
+            const priceStr = price >= 1 ? price.toFixed(2) : price.toFixed(4);
+            rows += `<tr><td>${code}</td><td>$${priceStr}</td><td>${s.portfolioShares || 0}</td></tr>`;
         });
 
         printContainer.innerHTML = `
