@@ -121,10 +121,10 @@ export class LinkHelper {
             const baseUrl = el.getAttribute('href') || 'https://gemini.google.com/app';
 
             if (isAndroid) {
-                // Reverting to location.href for Android to ensure the OS Intent Resolver 
-                // triggers the Native App instead of a Chrome Custom Tab.
+                // Reverting to window.open to prevent the main app from navigating away.
+                // This restores the stability that prevents the 're-signing' reload.
                 const intentUrl = `intent://gemini.google.com/app#Intent;scheme=https;package=com.google.android.apps.bard;S.browser_fallback_url=${encodeURIComponent(baseUrl)};end`;
-                window.location.href = intentUrl;
+                window.open(intentUrl, '_blank');
             } else if (isMobile) {
                 // Standard mobile: Use open to keep tracker in background
                 window.open(baseUrl, '_blank');
