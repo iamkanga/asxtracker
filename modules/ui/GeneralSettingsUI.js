@@ -39,31 +39,19 @@ export class GeneralSettingsUI {
                 <!-- Single Scrollable Content Body -->
                 <div class="${CSS_CLASSES.MODAL_BODY}" style="flex: 1; overflow-y: auto; padding: 20px;">
                     
-                    <!-- 1. SECURITY SECTION -->
+                    <!-- 1. AI INTELLIGENCE SECTION (Promoted to Top) -->
                     <div class="${CSS_CLASSES.SETTINGS_SECTION}" style="margin-bottom: 30px;">
-                        <h3 class="${CSS_CLASSES.DETAIL_LABEL}" style="margin-bottom: 15px; color: var(--text-color); font-size: 1rem; display: flex; align-items: center; gap: 8px; text-transform: none; font-weight: 700;">
-                            <i class="fas ${UI_ICONS.SHIELD}" style="color: var(--color-accent);"></i> Security
-                        </h3>
-                        
-                        <!-- Biometric Toggle -->
-                        <div id="gen-bio-row"></div>
-
-                        <!-- PIN Toggle -->
-                        <div id="gen-pin-row"></div>
-                    </div>
-
-                    <!-- 3. AI INTELLIGENCE SECTION -->
-                    <div class="${CSS_CLASSES.SETTINGS_SECTION}" style="margin-bottom: 30px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 20px;">
-                        <div id="ai-settings-accordion-header" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-                            <h3 class="${CSS_CLASSES.DETAIL_LABEL}" style="margin: 0; color: var(--text-color); font-size: 1rem; display: flex; align-items: center; gap: 8px; text-transform: none; font-weight: 700;">
-                                <i class="fas fa-brain" style="color: var(--color-accent);"></i> AI Intelligence
-                            </h3>
-                            <i class="fas fa-chevron-down" id="ai-accordion-chevron" style="transition: transform 0.3s; opacity: 0.5;"></i>
+                        <div id="ai-settings-accordion-header" class="${CSS_CLASSES.SETTING_ROW}" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between; padding: 12px 0;">
+                            <div>
+                                <div class="${CSS_CLASSES.FONT_BOLD}" style="font-size: 0.95rem;">AI Intelligence</div>
+                                <div class="${CSS_CLASSES.TEXT_SM} ${CSS_CLASSES.TEXT_MUTED}">When writing prompts, use <strong>\${code}.ax</strong> to automate the replacement with the ASX code</div>
+                            </div>
+                            <i class="fas fa-chevron-right" id="ai-accordion-chevron" style="transition: transform 0.3s; opacity: 0.5;"></i>
                         </div>
                         
-                        <div id="ai-settings-content" style="display: none; padding-top: 10px;">
-                            <!-- Quick Summary Mode Toggle -->
-                            <label class="${CSS_CLASSES.SETTING_ROW}" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 0; cursor: pointer;">
+                        <div id="ai-settings-content" style="display: none; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.05); margin-top: 5px;">
+                            <!-- Quick Summary Mode Toggle (Promoted to Top of Section) -->
+                            <label class="${CSS_CLASSES.SETTING_ROW}" style="display: flex; align-items: center; justify-content: space-between; padding: 0 0 20px 0; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.03); margin-bottom: 20px;">
                                 <div>
                                     <div class="${CSS_CLASSES.FONT_BOLD}" style="font-size: 0.95rem;">${UI_LABELS.AI_QUICK_SUMMARY_TOGGLE}</div>
                                     <div class="${CSS_CLASSES.TEXT_SM} ${CSS_CLASSES.TEXT_MUTED}">Single tap to trigger in-app AI research</div>
@@ -75,7 +63,7 @@ export class GeneralSettingsUI {
                             </label>
 
                             <!-- Prompt Templates Editor -->
-                            <div id="ai-prompt-editor-container" style="display: flex; flex-direction: column; gap: 20px; margin-top: 15px;">
+                            <div id="ai-prompt-editor-container" style="display: flex; flex-direction: column; gap: 20px;">
                                 ${this._renderAiPromptTemplates()}
                             </div>
 
@@ -88,8 +76,21 @@ export class GeneralSettingsUI {
                         </div>
                     </div>
 
-                    <!-- 4. DATA SECTION -->
-                    <div class="${CSS_CLASSES.SETTINGS_SECTION}">
+                    <!-- 2. SECURITY SECTION -->
+                    <div class="${CSS_CLASSES.SETTINGS_SECTION}" style="margin-bottom: 30px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 20px;">
+                        <h3 class="${CSS_CLASSES.DETAIL_LABEL}" style="margin-bottom: 15px; color: var(--text-color); font-size: 1rem; display: flex; align-items: center; gap: 8px; text-transform: none; font-weight: 700;">
+                            <i class="fas ${UI_ICONS.SHIELD}" style="color: var(--color-accent);"></i> Security
+                        </h3>
+                        
+                        <!-- Biometric Toggle -->
+                        <div id="gen-bio-row"></div>
+
+                        <!-- PIN Toggle -->
+                        <div id="gen-pin-row"></div>
+                    </div>
+
+                    <!-- 3. DATA SECTION -->
+                    <div class="${CSS_CLASSES.SETTINGS_SECTION}" style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 20px;">
                         <h3 class="${CSS_CLASSES.DETAIL_LABEL}" style="margin-bottom: 15px; color: var(--text-color); font-size: 1rem; display: flex; align-items: center; gap: 8px; text-transform: none; font-weight: 700;">
                             <i class="fas fa-database" style="color: var(--color-accent);"></i> Data Management
                         </h3>
@@ -154,7 +155,7 @@ export class GeneralSettingsUI {
         aiHeader?.addEventListener('click', () => {
             const isHidden = aiContent.style.display === 'none';
             aiContent.style.display = isHidden ? 'block' : 'none';
-            aiChevron.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+            aiChevron.style.transform = isHidden ? 'rotate(90deg)' : 'rotate(0deg)';
         });
 
         // AI One-Tap Toggle Bindings
@@ -165,18 +166,14 @@ export class GeneralSettingsUI {
         });
 
         // AI Prompt Textarea Persistence
-        let aiSaveTimer = null;
         modal.querySelectorAll('.ai-textarea').forEach(tx => {
-            tx.addEventListener('input', (e) => {
-                clearTimeout(aiSaveTimer);
-                aiSaveTimer = setTimeout(() => {
-                    const id = e.target.dataset.templateId;
-                    const val = e.target.value.trim();
-                    if (id) {
-                        AppState.saveAiPromptTemplate(id, val);
-                        ToastManager.show('Prompt template saved', 'info');
-                    }
-                }, 800);
+            tx.addEventListener('change', (e) => {
+                const id = e.target.dataset.templateId;
+                const val = e.target.value.trim();
+                if (id) {
+                    AppState.saveAiPromptTemplate(id, val);
+                    ToastManager.info('Prompt template saved');
+                }
             });
         });
 
@@ -201,7 +198,6 @@ export class GeneralSettingsUI {
                         <span style="font-size: 0.75rem; font-weight: 700; color: var(--color-accent); opacity: 0.8;">
                             <i class="fas ${t.icon}"></i> ${t.label}
                         </span>
-                        <span style="font-size: 0.6rem; color: var(--text-muted); opacity: 0.6;">\${code} supported</span>
                     </div>
                     <textarea 
                         class="ai-textarea" 

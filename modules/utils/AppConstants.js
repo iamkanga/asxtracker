@@ -1709,5 +1709,11 @@ export const AI_DEFAULT_TEMPLATES = [
         label: 'Sentiment',
         icon: 'fa-heartbeat',
         text: 'What is the current market sentiment for ${code} today? Is it macro-driven or specific to the company?'
+    },
+    {
+        id: 'user_question',
+        label: 'User Question',
+        icon: 'fa-question-circle',
+        text: '${code}.ax'
     }
 ];
