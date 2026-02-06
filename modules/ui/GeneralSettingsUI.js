@@ -41,20 +41,20 @@ export class GeneralSettingsUI {
                     
                     <!-- 1. AI INTELLIGENCE SECTION (Promoted to Top) -->
                     <div class="${CSS_CLASSES.SETTINGS_SECTION}" style="margin-bottom: 30px;">
-                        <div id="ai-settings-accordion-header" class="${CSS_CLASSES.SETTING_ROW}" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between; padding: 12px 0;">
-                            <div>
+                        <div id="ai-settings-accordion-header" class="${CSS_CLASSES.SETTING_ROW}" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border: none !important;">
+                            <div style="flex: 1; padding-right: 25px;">
                                 <div class="${CSS_CLASSES.FONT_BOLD}" style="font-size: 0.95rem;">AI Intelligence</div>
-                                <div class="${CSS_CLASSES.TEXT_SM} ${CSS_CLASSES.TEXT_MUTED}">When writing prompts, use <strong>\${code}.ax</strong> to automate the replacement with the ASX code</div>
+                                <div class="${CSS_CLASSES.TEXT_MUTED}" style="font-size: 0.75rem; line-height: 1.3;">When writing prompts, use <strong>\${code}.ax</strong> to automate the replacement with the ASX code</div>
                             </div>
                             <i class="fas fa-chevron-right" id="ai-accordion-chevron" style="transition: transform 0.3s; opacity: 0.5;"></i>
                         </div>
                         
-                        <div id="ai-settings-content" style="display: none; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.05); margin-top: 5px;">
+                        <div id="ai-settings-content" style="display: none; padding-top: 20px; margin-top: 5px;">
                             <!-- Quick Summary Mode Toggle (Promoted to Top of Section) -->
-                            <label class="${CSS_CLASSES.SETTING_ROW}" style="display: flex; align-items: center; justify-content: space-between; padding: 0 0 20px 0; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.03); margin-bottom: 20px;">
-                                <div>
+                            <label class="${CSS_CLASSES.SETTING_ROW}" style="display: flex; align-items: center; justify-content: space-between; padding: 0 0 20px 0; cursor: pointer; border: none !important;">
+                                <div style="flex: 1; padding-right: 25px;">
                                     <div class="${CSS_CLASSES.FONT_BOLD}" style="font-size: 0.95rem;">${UI_LABELS.AI_QUICK_SUMMARY_TOGGLE}</div>
-                                    <div class="${CSS_CLASSES.TEXT_SM} ${CSS_CLASSES.TEXT_MUTED}">Single tap to trigger in-app AI research</div>
+                                    <div class="${CSS_CLASSES.TEXT_MUTED}" style="font-size: 0.75rem; line-height: 1.3;">Single tap to trigger in-app AI research</div>
                                 </div>
                                 <div class="square-radio-wrapper">
                                     <input type="checkbox" id="gen-ai-one-tap-toggle" ${AppState.preferences.oneTapResearch ? 'checked' : ''}>
@@ -68,7 +68,7 @@ export class GeneralSettingsUI {
                             </div>
 
                             <!-- Danger Zone: Reset -->
-                            <div style="margin-top: 25px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.03); text-align: center;">
+                            <div style="margin-top: 25px; padding-top: 20px; text-align: center;">
                                 <button id="gen-btn-reset-ai-prompts" class="${CSS_CLASSES.BTN_TEXT_SMALL}" style="color: var(--color-negative); font-weight: 600;">
                                     <i class="fas fa-undo"></i> ${UI_LABELS.RESET_AI_TOOLS}
                                 </button>
@@ -77,7 +77,7 @@ export class GeneralSettingsUI {
                     </div>
 
                     <!-- 2. SECURITY SECTION -->
-                    <div class="${CSS_CLASSES.SETTINGS_SECTION}" style="margin-bottom: 30px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 20px;">
+                    <div class="${CSS_CLASSES.SETTINGS_SECTION}" style="margin-bottom: 30px; padding-top: 20px;">
                         <h3 class="${CSS_CLASSES.DETAIL_LABEL}" style="margin-bottom: 15px; color: var(--text-color); font-size: 1rem; display: flex; align-items: center; gap: 8px; text-transform: none; font-weight: 700;">
                             <i class="fas ${UI_ICONS.SHIELD}" style="color: var(--color-accent);"></i> Security
                         </h3>
@@ -90,25 +90,25 @@ export class GeneralSettingsUI {
                     </div>
 
                     <!-- 3. DATA SECTION -->
-                    <div class="${CSS_CLASSES.SETTINGS_SECTION}" style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 20px;">
+                    <div class="${CSS_CLASSES.SETTINGS_SECTION}" style="padding-top: 20px;">
                         <h3 class="${CSS_CLASSES.DETAIL_LABEL}" style="margin-bottom: 15px; color: var(--text-color); font-size: 1rem; display: flex; align-items: center; gap: 8px; text-transform: none; font-weight: 700;">
                             <i class="fas fa-database" style="color: var(--color-accent);"></i> Data Management
                         </h3>
 
                         <!-- Data Tools -->
-                        <div class="${CSS_CLASSES.SETTING_ROW}" id="${IDS.GEN_DATA_MGMT_ROW}" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
-                            <div>
+                        <div class="${CSS_CLASSES.SETTING_ROW}" id="${IDS.GEN_DATA_MGMT_ROW}" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border: none !important;">
+                            <div style="flex: 1; padding-right: 25px;">
                                 <div class="${CSS_CLASSES.FONT_BOLD}" style="font-size: 0.95rem;">Data Tools</div>
-                                <div class="${CSS_CLASSES.TEXT_SM} ${CSS_CLASSES.TEXT_MUTED}">Export, Import & Sync</div>
+                                <div class="${CSS_CLASSES.TEXT_MUTED}" style="font-size: 0.75rem; line-height: 1.3;">Export, Import & Sync</div>
                             </div>
                             <i class="fas fa-chevron-right ${CSS_CLASSES.TEXT_MUTED}"></i>
                         </div>
 
                         <!-- Delete Data -->
-                        <div class="${CSS_CLASSES.SETTING_ROW}" id="${IDS.GEN_DELETE_ROW}" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between; padding: 12px 0; margin-top: 10px;">
-                            <div>
+                        <div class="${CSS_CLASSES.SETTING_ROW}" id="${IDS.GEN_DELETE_ROW}" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between; padding: 12px 0; margin-top: 10px; border: none !important;">
+                            <div style="flex: 1; padding-right: 25px;">
                                 <div class="${CSS_CLASSES.FONT_BOLD}" style="color: var(--color-negative); font-size: 0.95rem;">Delete Data</div>
-                                <div class="${CSS_CLASSES.TEXT_SM} ${CSS_CLASSES.TEXT_MUTED}">Reset app and clear cache</div>
+                                <div class="${CSS_CLASSES.TEXT_MUTED}" style="font-size: 0.75rem; line-height: 1.3;">Reset app and clear cache</div>
                             </div>
                             <i class="fas fa-trash-alt" style="color: var(--color-negative); font-size: 1.1rem;"></i>
                         </div>
@@ -229,10 +229,10 @@ export class GeneralSettingsUI {
         // Biometric Row
         const bioRow = modal.querySelector('#gen-bio-row');
         bioRow.innerHTML = `
-            <label class="${CSS_CLASSES.SETTING_ROW}" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; ${bioEnabled ? '' : 'opacity: 0.6; cursor: not-allowed;'}">
-                <div>
+            <label class="${CSS_CLASSES.SETTING_ROW}" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 0; cursor: pointer; border: none !important; ${bioEnabled ? '' : 'opacity: 0.6; cursor: not-allowed;'}">
+                <div style="flex: 1; padding-right: 25px;">
                     <div class="${CSS_CLASSES.FONT_BOLD}" style="font-size: 0.95rem;">Biometric Access</div>
-                    <div class="${CSS_CLASSES.TEXT_SM} ${CSS_CLASSES.TEXT_MUTED}">Unlock using Face ID</div>
+                    <div class="${CSS_CLASSES.TEXT_MUTED}" style="font-size: 0.75rem; line-height: 1.3;">Unlock using Face ID</div>
                     ${biometricHint}
                 </div>
                 <div class="square-radio-wrapper">
@@ -245,10 +245,10 @@ export class GeneralSettingsUI {
         // PIN Row
         const pinRow = modal.querySelector('#gen-pin-row');
         pinRow.innerHTML = `
-            <label class="${CSS_CLASSES.SETTING_ROW}" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer;">
-                <div>
+            <label class="${CSS_CLASSES.SETTING_ROW}" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 0; cursor: pointer; border: none !important;">
+                <div style="flex: 1; padding-right: 25px;">
                     <div class="${CSS_CLASSES.FONT_BOLD}" style="font-size: 0.95rem;">PIN Access</div>
-                    <div class="${CSS_CLASSES.TEXT_SM} ${CSS_CLASSES.TEXT_MUTED}">Require 4-digit PIN</div>
+                    <div class="${CSS_CLASSES.TEXT_MUTED}" style="font-size: 0.75rem; line-height: 1.3;">Require 4-digit PIN</div>
                 </div>
                 <div class="square-radio-wrapper">
                     <input type="checkbox" id="${IDS.GEN_PIN_TOGGLE}" ${prefs.isPinEnabled ? 'checked' : ''}>

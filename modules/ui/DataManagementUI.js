@@ -33,7 +33,7 @@ export class DataManagementUI {
                 </div>
                 
                 <!-- TABS HEADER -->
-                <div style="display: flex; border-bottom: 1px solid var(--border-color); margin-bottom: 0;">
+                <div style="display: flex; margin-bottom: 0;">
                     <div id="tab-btn-export" class="tab-btn active" style="flex: 1; padding: 15px; text-align: center; cursor: pointer; font-weight: 600; color: var(--text-muted); border-bottom: 2px solid transparent; transition: all 0.2s;">
                         <i class="fas fa-file-export" style="margin-right: 8px;"></i> Export Data
                     </div>
@@ -393,7 +393,7 @@ export class DataManagementUI {
             <div class="${CSS_CLASSES.MODAL_OVERLAY}" style="background: rgba(0,0,0,0.85); backdrop-filter: blur(5px);"></div>
             <div class="${CSS_CLASSES.MODAL_CONTENT}" style="max-width: 500px; padding: 0; background: var(--bg-primary); border: 1px solid var(--border-color); overflow: hidden;">
                 
-                <div style="padding: 24px; border-bottom: 1px solid var(--border-color); background: rgba(255,255,255,0.02);">
+                <div style="padding: 24px; background: rgba(255,255,255,0.02);">
                     <h3 style="color: white; margin: 0; font-size: 1.4rem; font-weight: 800;">Portfolio Sync Preview</h3>
                     <p style="color: var(--text-muted); font-size: 0.9rem; margin: 8px 0 0 0;">
                         Applying ${totalItems} updates to your active holdings.
@@ -408,7 +408,7 @@ export class DataManagementUI {
                     ${newShares.map((m, i) => `<div style="animation-delay: ${(matches.length + i) * 0.05}s">${renderItemCard(m, 'new')}</div>`).join('')}
 
                     ${ignored.length > 0 ? `
-                        <div style="margin-top: 24px; border-top: 1px solid var(--border-color); padding-top: 16px;">
+                        <div style="margin-top: 24px; padding-top: 16px;">
                             <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 12px; margin-left: 4px; display: flex; justify-content: space-between;">
                                 <span>Skipped Items (${ignored.length})</span>
                                 <i class="fas fa-info-circle"></i>
@@ -430,7 +430,7 @@ export class DataManagementUI {
                     ${totalItems === 0 && ignored.length === 0 ? '<div style="text-align: center; padding: 40px; color: var(--text-muted);"><i class="fas fa-search" style="font-size: 2rem; margin-bottom: 16px; opacity: 0.3;"></i><br>No valid data found in this file.</div>' : ''}
                 </div>
 
-                <div style="padding: 20px; display: flex; gap: 12px; background: rgba(255,255,255,0.02); border-top: 1px solid var(--border-color);">
+                <div style="padding: 20px; display: flex; gap: 12px; background: rgba(255,255,255,0.02);">
                     <button id="res-cancel" class="standard-btn" style="flex: 1; background: rgba(255,255,255,0.05); color: white; border: 1px solid var(--border-color); padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer;">Cancel</button>
                     ${totalItems > 0 ? `<button id="res-commit" class="standard-btn" style="flex: 2; background: var(--color-accent); color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 15px rgba(var(--color-accent-rgb), 0.3);">Apply ${totalItems} Changes</button>` : ''}
                 </div>

@@ -1674,8 +1674,8 @@ export const UI_LABELS = {
     CAROUSEL: 'CAROUSEL',
     REORDER: 'REORDER',
     HIDE: 'HIDE',
-    RESET_AI_TOOLS: 'Reset AI Tools',
-    CONFIRM_RESET_AI: 'Are you sure you want to delete your custom instructions and return to factory defaults?',
+    RESET_AI_TOOLS: 'Reset Prompts to Default',
+    CONFIRM_RESET_AI: 'Are you sure you want to delete your custom instructions and return to the factory default prompts?',
     AI_QUICK_SUMMARY_TOGGLE: 'Quick Summary Mode'
 };
 
