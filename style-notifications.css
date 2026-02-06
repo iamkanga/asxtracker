@@ -1585,10 +1585,15 @@ input:checked+.slider:before {
 }
 
 .report-title {
-    font-size: 1.1rem;
+    font-size: 1rem;
     font-weight: 800;
     color: var(--color-accent);
     text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 80%;
+    /* Ensure it doesn't crowd the close button */
 }
 
 .report-close-btn {

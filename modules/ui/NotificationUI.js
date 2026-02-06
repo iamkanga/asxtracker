@@ -408,18 +408,18 @@ export class NotificationUI {
 
                 <!-- Unified Control Surface (Command Bar) -->
                 <div class="${CSS_CLASSES.NOTIF_HEADER_SURFACE}">
-                    <!-- 1. Discreet Status Ribbon (V4 Consolidated) -->
-                    <div id="notif-status-ribbon" class="notif-status-ribbon">
-                        <!-- Dynamic Ribbon Content -->
-                    </div>
-
-                    <!-- 2. Filter Chips Header -->
+                    <!-- 1. Filter Chips Header (Row 1) -->
                     <div class="${CSS_CLASSES.FILTER_CHIPS_CONTAINER}" id="${IDS.FILTER_CHIPS_CONTAINER}">
                         <!-- Dynamic Chips -->
                     </div>
+
+                    <!-- 2. Discreet Status Ribbon (Row 2 - Total / Override / Sectors) -->
+                    <div id="notif-status-ribbon" class="notif-status-ribbon">
+                        <!-- Dynamic Ribbon Content -->
+                    </div>
                 </div>
 
-                <!-- 2. Dashboard Content (Scrolling) -->
+                <!-- Dashboard Content (Scrolling) -->
                 <div class="${CSS_CLASSES.MODAL_BODY} ${CSS_CLASSES.SCROLLABLE_BODY}" id="${IDS.NOTIFICATION_LIST}" style="flex: 1; padding: 0; position: relative; overflow-y: auto; scroll-behavior: smooth;">
                     <!-- Accordion Sections (Injected Here) -->
                 </div>
@@ -648,12 +648,6 @@ export class NotificationUI {
             NotificationUI._updateDismissState(modal);
         }
 
-        // --- DIAGNOSTIC LOG FOR NIC ---
-        const nicShare = AppState.data.shares.find(s => (s.code || s.shareName || '').toUpperCase() === 'NIC');
-        console.log('[Diagnostic] NIC Share Data in AppState:', nicShare);
-        const nicHits = (notificationStore.getLocalAlerts()?.pinned || []).concat(notificationStore.getLocalAlerts()?.fresh || [])
-            .filter(h => (h.code || h.shareName || '').toUpperCase() === 'NIC');
-        console.log('[Diagnostic] NIC Alert Hits in Store:', nicHits);
 
         // 1. Fetch Data
         // Local Alerts: Returns { pinned: [], fresh: [] }
@@ -667,62 +661,16 @@ export class NotificationUI {
 
         const rules = notificationStore.getScannerRules() || { up: {}, down: {} };
 
-        // SORTING (Custom Section Only):
-        // Order: Targets -> 52W Lows -> 52W Highs -> Movers Losers -> Movers Gainers
-        // Sub-sort: Alphabetical
+        // SORTING HELPERS
+
+        // 1. Alphabetical Sort
         const indexSort = (a, b) => {
             const codeA = String(a.code || a.shareName || '').toUpperCase();
             const codeB = String(b.code || b.shareName || '').toUpperCase();
             return codeA.localeCompare(codeB);
         };
 
-        const sortedLocal = [...localAlerts].sort((a, b) => {
-            const getRank = (item) => {
-                const intent = (item.intent || '').toLowerCase();
-                const type = (item.type || '').toLowerCase();
-                // Check Down/Loser
-                const pct = Number(item.pct || item.changeInPercent || 0);
-                const isDown = (item.direction || '').toLowerCase() === 'down' || pct < 0;
-
-                // Rank 1: Targets ("Target Alerts remain in their current position" - Top)
-                if (intent === 'target' || intent === 'target-hit') return 1;
-
-                // Rank 2: 52W Low (User: "Losers first... then 52 highs")
-                // Logic: If it's a Hilo/52W alert AND it's Down (or explicitly 'low')
-                const isHilo = (intent.includes('hilo') || intent.includes('52') || type.includes('hilo'));
-                if (isHilo && isDown) return 2;
-                if (intent.includes('low') && isHilo) return 2; // Safety for explicit 'low' intent
-
-                // Rank 3: 52W High
-                // Logic: If it's a Hilo/52W alert AND it's Up (or explicitly 'high')
-                if (isHilo && !isDown) return 3;
-                if (intent.includes('high') && isHilo) return 3; // Safety
-
-                // Rank 4: Movers Losers
-                if (isDown) return 4;
-
-                // Rank 5: Movers Gainers
-                return 5;
-            };
-
-            const rankA = getRank(a);
-            const rankB = getRank(b);
-
-            if (rankA !== rankB) return rankA - rankB;
-
-            // Tie-breaker: Alphabetical
-            return indexSort(a, b);
-        });
-
-        // Global Scans Extraction
-        const finalMoversUp = globalData.movers?.up || [];
-        const finalMoversDown = globalData.movers?.down || [];
-        const finalHiloHigh = globalData.hilo?.high || [];
-        const finalHiloLow = globalData.hilo?.low || [];
-
-        // SORTING HELPERS
-
-        // Robust Parser: Handles "-$1.27", "4.06%", etc.
+        // 2. Robust Parser: Handles "-$1.27", "4.06%", etc.
         const parseVal = (v) => {
             if (typeof v === 'number') return v;
             if (!v) return 0;
@@ -730,9 +678,8 @@ export class NotificationUI {
             return parseFloat(clean) || 0;
         };
 
-        // 1. Percentage Magnitude Sort (Desc Pct -> Tiebreak Dollar)
+        // 3. Percentage Magnitude Sort (Desc Pct -> Tiebreak Dollar)
         const pctSort = (a, b) => {
-            // Check ALL aliases: pct, changeInPercent, pctChange
             const rawPctA = Math.abs(parseVal(a.pct || a.changeInPercent || a.pctChange));
             const rawPctB = Math.abs(parseVal(b.pct || b.changeInPercent || b.pctChange));
 
@@ -740,13 +687,12 @@ export class NotificationUI {
             const roundB = Number(rawPctB.toFixed(2));
             if (roundA !== roundB) return roundB - roundA;
 
-            // Check aliases: change, valueChange
             const dolA = Math.abs(parseVal(a.change || a.valueChange));
             const dolB = Math.abs(parseVal(b.change || b.valueChange));
             return dolB - dolA;
         };
 
-        // 2. Dollar Magnitude Sort (Desc Dollar -> Tiebreak Pct)
+        // 4. Dollar Magnitude Sort (Desc Dollar -> Tiebreak Pct)
         const dolSort = (a, b) => {
             const dolA = Math.abs(parseVal(a.change || a.valueChange));
             const dolB = Math.abs(parseVal(b.change || b.valueChange));
@@ -758,7 +704,71 @@ export class NotificationUI {
             return rawPctB - rawPctA;
         };
 
-        // 3. Alphabetical Sort (Already defined as indexSort above, reused here if needed)
+        // SORTING HELPERS (Mover Magnitude Sort)
+        const moverSort = (a, b, ruleSet) => {
+            const pctA = Math.abs(parseVal(a.pct || a.changeInPercent || a.pctChange));
+            const pctB = Math.abs(parseVal(b.pct || b.changeInPercent || b.pctChange));
+            const threshVal = parseVal(ruleSet?.percentThreshold || 0);
+
+            const hitA = pctA >= threshVal && threshVal > 0;
+            const hitB = pctB >= threshVal && threshVal > 0;
+
+            if (hitA && !hitB) return -1;
+            if (!hitA && hitB) return 1;
+
+            if (hitA) return pctSort(a, b); // Magnitude % then Magnitude $
+            return dolSort(a, b); // Magnitude $ then Magnitude %
+        };
+
+        // SORTING (Custom Section Only):
+        // Order: Targets -> Losers -> 52W Lows -> 52W Highs -> Gainers
+        // Sorting Logic: Targets A-Z, Losers/Gainers Magnitude (% then $), 52W A-Z
+        const sortedLocal = [...localAlerts].sort((a, b) => {
+            const getRank = (item) => {
+                const intent = (item.intent || '').toLowerCase();
+                const type = (item.type || '').toLowerCase();
+                const pct = Number(item.pct || item.changeInPercent || 0);
+                const isDown = (item.direction || '').toLowerCase() === 'down' || pct < 0;
+                const isHilo = (intent.includes('hilo') || intent.includes('52') || type.includes('hilo'));
+
+                // Rank 1: Targets ("standard a to z sort")
+                if (intent === 'target' || intent === 'target-hit') return 1;
+
+                // Rank 2: Losers (User: "what should be displayed first is the highest percentage losers")
+                if (!isHilo && isDown) return 2;
+
+                // Rank 3: 52W Low (User requested order: "52-week low 52-week high")
+                const HiloLow = (isHilo && isDown) || (intent.includes('low') && isHilo);
+                if (HiloLow) return 3;
+
+                // Rank 4: 52W High
+                const HiloHigh = (isHilo && !isDown) || (intent.includes('high') && isHilo);
+                if (HiloHigh) return 4;
+
+                // Rank 5: Gainers
+                return 5;
+            };
+
+            const rankA = getRank(a);
+            const rankB = getRank(b);
+
+            if (rankA !== rankB) return rankA - rankB;
+
+            // Tie-breakers
+            if (rankA === 1) return indexSort(a, b);
+            if (rankA === 2) return moverSort(a, b, rules.down);
+            if (rankA === 3 || rankA === 4) return indexSort(a, b);
+            if (rankA === 5) return moverSort(a, b, rules.up);
+
+            return indexSort(a, b);
+        });
+
+        // Global Scans Extraction
+        const finalMoversUp = globalData.movers?.up || [];
+        const finalMoversDown = globalData.movers?.down || [];
+        const finalHiloHigh = globalData.hilo?.high || [];
+        const finalHiloLow = globalData.hilo?.low || [];
+
 
         // SPLIT SORT LOGIC: Top Tier (>= Threshold) by Pct, Bottom Tier (< Threshold) by Dollar
         const splitSort = (items, threshold) => {
@@ -865,12 +875,12 @@ export class NotificationUI {
         this._updateStatusBar(modal);
 
         const sections = [
+            { id: 'losers', title: `${UI_LABELS.MARKET} <span style="color: var(--color-negative)">${UI_LABELS.LOSERS}</span>`, chipLabel: UI_LABELS.LOSERS, subtitle: downStr, hits: loserHits, type: 'losers', color: 'red' },
             { id: 'target-alerts', title: 'Target Alerts', chipLabel: 'Targets', headerTitle: `<i class="fas fa-crosshairs" style="color: var(--color-accent); margin-right: 8px;"></i><span style="color: var(--text-color);">Target Alerts</span>`, subtitle: `<span style="color: var(--color-accent);">Your targets hit</span>`, hits: targetHits, type: 'custom', color: 'neutral' },
-            { id: 'custom-movers', title: 'Watchlist Movers', chipLabel: 'Watchlist', headerTitle: `<i class="fas fa-binoculars" style="color: var(--color-accent); margin-right: 8px;"></i><span style="color: var(--text-color);">Watchlist Movers</span>`, subtitle: `<span style="color: var(--color-accent);">Your watchlist hits</span>`, hits: moversHits.list, type: 'custom', color: 'neutral' },
-            { id: 'hilo-high', title: `${UI_LABELS.FIFTY_TWO_WEEK} <span style="color: var(--color-positive)">${UI_LABELS.HIGH}</span>`, chipLabel: `${UI_LABELS.FIFTY_TWO_WEEK} ${UI_LABELS.HIGH}`, subtitle: hiloStrHigh, hits: highHits, type: 'hilo-up', color: 'green' },
             { id: 'hilo-low', title: `${UI_LABELS.FIFTY_TWO_WEEK} <span style="color: var(--color-negative)">${UI_LABELS.LOW}</span>`, chipLabel: `${UI_LABELS.FIFTY_TWO_WEEK} ${UI_LABELS.LOW}`, subtitle: hiloStrLow, hits: lowHits, type: 'hilo-down', color: 'red' },
+            { id: 'hilo-high', title: `${UI_LABELS.FIFTY_TWO_WEEK} <span style="color: var(--color-positive)">${UI_LABELS.HIGH}</span>`, chipLabel: `${UI_LABELS.FIFTY_TWO_WEEK} ${UI_LABELS.HIGH}`, subtitle: hiloStrHigh, hits: highHits, type: 'hilo-up', color: 'green' },
             { id: 'gainers', title: `${UI_LABELS.MARKET} <span style="color: var(--color-positive)">${UI_LABELS.GAINERS}</span>`, chipLabel: UI_LABELS.GAINERS, subtitle: upStr, hits: gainerHits, type: 'gainers', color: 'green' },
-            { id: 'losers', title: `${UI_LABELS.MARKET} <span style="color: var(--color-negative)">${UI_LABELS.LOSERS}</span>`, chipLabel: UI_LABELS.LOSERS, subtitle: downStr, hits: loserHits, type: 'losers', color: 'red' }
+            { id: 'custom-movers', title: 'Watchlist Movers', chipLabel: 'Watchlist', headerTitle: `<i class="fas fa-binoculars" style="color: var(--color-accent); margin-right: 8px;"></i><span style="color: var(--text-color);">Watchlist Movers</span>`, subtitle: `<span style="color: var(--color-accent);">Your watchlist hits</span>`, hits: moversHits.list, type: 'custom', color: 'neutral' }
         ];
 
         // --- DEBUG LOGGING: RENDER COUNT ---
@@ -883,8 +893,8 @@ export class NotificationUI {
 
         // Define Specific Chip Order (Row 1 then Row 2 - matches the vertical list order)
         const chipOrder = [
-            'target-alerts', 'custom-movers', 'hilo-high',
-            'hilo-low', 'losers', 'gainers'
+            'losers', 'target-alerts', 'hilo-low',
+            'hilo-high', 'gainers', 'custom-movers'
         ];
 
         chipOrder.forEach(targetId => {
@@ -1813,7 +1823,7 @@ export class NotificationUI {
             <div class="ribbon-left" style="display: flex; align-items: center; gap: 12px; font-size: 0.7rem;">
                 <span style="display: flex; align-items: center; gap: 6px;">
                     <span style="color: var(--text-dominant); font-weight: 700; letter-spacing: 0.5px; opacity: 0.9;">TOTAL</span>
-                    <span style="color: var(--color-accent); font-weight: 700; font-size: 0.7rem;">${totalAlertsCount}</span>
+                    <span style="color: var(--color-positive); font-weight: 700; font-size: 0.7rem;">${totalAlertsCount}</span>
                 </span>
                 <span style="color: var(--text-muted); opacity: 0.3;">|</span>
                 <span class="status-override-discreet" style="display: flex; align-items: center; gap: 6px;">
@@ -1843,7 +1853,7 @@ export class NotificationUI {
      * Toggles the detailed "Enforcement Report" overlay.
      */
     static _toggleIntelligenceReport(modal) {
-        const report = modal.querySelector(`#${IDS.INTELLIGENCE_REPORT_OVERLAY} `);
+        const report = modal.querySelector(`#${IDS.INTELLIGENCE_REPORT_OVERLAY}`);
         if (!report) return;
 
         if (report.classList.contains('visible')) {
@@ -1888,43 +1898,6 @@ export class NotificationUI {
                 <button class="report-close-btn"><i class="fas fa-times"></i></button>
             </div>
 
-            <!--NOISE FILTERS & THRESHOLDS-->
-            <div class="report-section">
-                <div class="report-section-title">Active Monitors & Oversight</div>
-                
-                <!-- Structured Monitors Oversight Grid (3x2) - Mirrored from Settings -->
-                <div class="summary-grid-compact" style="margin-bottom: 25px;">
-                    <!-- 1. Badge Scope -->
-                    <div class="summary-tile intel-nav-tile" data-target="settings">
-                        <div class="summary-tile-label">Badge ${(prefs.badgeScope || 'Custom').toUpperCase()}</div>
-                        <div class="summary-status-indicator kangaroo large always-on"></div>
-                    </div>
-                     <!-- 2. Alert Icon -->
-                    <div class="summary-tile intel-nav-tile" data-target="settings">
-                        <div class="summary-tile-label">Alert Icon</div>
-                        <div class="summary-status-indicator kangaroo large ${prefs.showBadges !== false ? 'status-on' : 'status-off'}"></div>
-                    </div>
-                    <!-- 3. 52-Week -->
-                     <div class="summary-tile intel-nav-tile" data-target="settings">
-                        <div class="summary-tile-label">52-Week</div>
-                        <div class="summary-status-indicator kangaroo large ${rules.hiloEnabled !== false ? 'status-on' : 'status-off'}"></div>
-                    </div>
-                    <!-- 4. Movers -->
-                     <div class="summary-tile intel-nav-tile" data-target="settings">
-                        <div class="summary-tile-label">Movers</div>
-                        <div class="summary-status-indicator kangaroo large ${rules.moversEnabled !== false ? 'status-on' : 'status-off'}"></div>
-                    </div>
-                    <!-- 5. Personal -->
-                     <div class="summary-tile intel-nav-tile" data-target="settings">
-                        <div class="summary-tile-label">Personal</div>
-                        <div class="summary-status-indicator kangaroo large ${rules.personalEnabled !== false ? 'status-on' : 'status-off'}"></div>
-                    </div>
-                    <!-- 6. Email -->
-                     <div class="summary-tile intel-nav-tile" data-target="settings">
-                        <div class="summary-tile-label">Email</div>
-                        <div class="summary-status-indicator kangaroo large ${prefs.dailyEmail === true ? 'status-on' : 'status-off'}"></div>
-                    </div>
-                </div>
 
             <!-- WATCHLIST STATUS EXPLAINER -->
             <!-- TARGET ALERTS PRIORITY (Clickable) -->
@@ -1943,6 +1916,9 @@ export class NotificationUI {
                 </div>
             </div>
 
+            <div class="report-section">
+                <div class="report-section-title">Thresholds & Noise Filters</div>
+                
                 <div class="report-rule-item" style="border-bottom: none; padding-bottom: 0;">
                     <span class="report-rule-label">Movers Price Floor</span>
                     <span class="report-rule-value">Under $${moversMinPrice.toFixed(2)}</span>
@@ -1975,8 +1951,6 @@ export class NotificationUI {
                     Minimum daily drop required to trigger an alert.
                 </div>
 
-
-
                 <!-- Hidden Sectors -->
                 <div style="margin-top: 4px;">
                     <span class="report-rule-label" style="display: block; margin-bottom: 4px;">Hidden Sectors</span>
@@ -1991,8 +1965,6 @@ export class NotificationUI {
                         Mutes alerts for sectors you've chosen to ignore.
                     </div>
                 </div>
-
-
             </div>
 
 
@@ -2052,9 +2024,6 @@ export class NotificationUI {
                     </div>
                 </div>
             </div>
-        </div>
-
-
             `;
 
         // Bind Close Event
