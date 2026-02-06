@@ -216,9 +216,20 @@ export class UserStore {
      * @returns {Object}
      */
     _sanitizeData(data) {
-        if (!data || typeof data !== 'object') return data;
-        const sanitized = { ...data };
-        Object.keys(sanitized).forEach(k => sanitized[k] === undefined && delete sanitized[k]);
+        if (data === undefined) return null; // Convert top-level undefined to null
+        if (data === null || typeof data !== 'object') return data;
+
+        if (Array.isArray(data)) {
+            return data.map(item => this._sanitizeData(item));
+        }
+
+        const sanitized = {};
+        Object.keys(data).forEach(key => {
+            const value = data[key];
+            if (value !== undefined) {
+                sanitized[key] = this._sanitizeData(value);
+            }
+        });
         return sanitized;
     }
 
@@ -659,22 +670,13 @@ export class UserStore {
         }
         const docRef = doc(db, `artifacts/${APP_ID}/users/${userId}/preferences/config`);
         try {
-            // DEEP EQUALITY CHECK REMOVED FOR RELIABILITY
-            // const currentJson = JSON.stringify(data);
-            // if (this._lastPrefsJson === currentJson) {
-            //     return;
-            // }
-
-            // Debug check for the specific failure point
-            if (data.userCategories) {
-            }
+            // Sanitize data to remove undefined values which Firestore does not support
+            const sanitizedData = this._sanitizeData(data);
 
             await setDoc(docRef, {
-                ...data,
+                ...sanitizedData,
                 updatedAt: serverTimestamp()
             }, { merge: true });
-
-            // this._lastPrefsJson = currentJson; // Update cache
 
         } catch (e) {
             this._handleWriteError(e, 'savePreferences');

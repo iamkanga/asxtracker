@@ -171,7 +171,8 @@ export const AppState = {
         cardChartOpacity: (() => {
             const stored = localStorage.getItem(STORAGE_KEYS.CARD_CHART_OPACITY) || localStorage.getItem('asx_card_chart_opacity');
             return stored !== null ? parseFloat(stored) : 1.0;
-        })()
+        })(),
+        showBadges: localStorage.getItem('ASX_NEXT_showBadges') !== 'false'
     },
 
     // Security Runtime State
