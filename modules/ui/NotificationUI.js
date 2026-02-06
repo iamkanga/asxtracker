@@ -875,32 +875,31 @@ export class NotificationUI {
         this._updateStatusBar(modal);
 
         const sections = [
-            { id: 'losers', title: `${UI_LABELS.MARKET} <span style="color: var(--color-negative)">${UI_LABELS.LOSERS}</span>`, chipLabel: UI_LABELS.LOSERS, subtitle: downStr, hits: loserHits, type: 'losers', color: 'red' },
             { id: 'target-alerts', title: 'Target Alerts', chipLabel: 'Targets', headerTitle: `<i class="fas fa-crosshairs" style="color: var(--color-accent); margin-right: 8px;"></i><span style="color: var(--text-color);">Target Alerts</span>`, subtitle: `<span style="color: var(--color-accent);">Your targets hit</span>`, hits: targetHits, type: 'custom', color: 'neutral' },
-            { id: 'hilo-low', title: `${UI_LABELS.FIFTY_TWO_WEEK} <span style="color: var(--color-negative)">${UI_LABELS.LOW}</span>`, chipLabel: `${UI_LABELS.FIFTY_TWO_WEEK} ${UI_LABELS.LOW}`, subtitle: hiloStrLow, hits: lowHits, type: 'hilo-down', color: 'red' },
+            { id: 'custom-movers', title: 'Watchlist Movers', chipLabel: 'Watchlist', headerTitle: `<i class="fas fa-binoculars" style="color: var(--color-accent); margin-right: 8px;"></i><span style="color: var(--text-color);">Watchlist Movers</span>`, subtitle: `<span style="color: var(--color-accent);">Your watchlist hits</span>`, hits: moversHits.list, type: 'custom', color: 'neutral' },
             { id: 'hilo-high', title: `${UI_LABELS.FIFTY_TWO_WEEK} <span style="color: var(--color-positive)">${UI_LABELS.HIGH}</span>`, chipLabel: `${UI_LABELS.FIFTY_TWO_WEEK} ${UI_LABELS.HIGH}`, subtitle: hiloStrHigh, hits: highHits, type: 'hilo-up', color: 'green' },
+            { id: 'hilo-low', title: `${UI_LABELS.FIFTY_TWO_WEEK} <span style="color: var(--color-negative)">${UI_LABELS.LOW}</span>`, chipLabel: `${UI_LABELS.FIFTY_TWO_WEEK} ${UI_LABELS.LOW}`, subtitle: hiloStrLow, hits: lowHits, type: 'hilo-down', color: 'red' },
             { id: 'gainers', title: `${UI_LABELS.MARKET} <span style="color: var(--color-positive)">${UI_LABELS.GAINERS}</span>`, chipLabel: UI_LABELS.GAINERS, subtitle: upStr, hits: gainerHits, type: 'gainers', color: 'green' },
-            { id: 'custom-movers', title: 'Watchlist Movers', chipLabel: 'Watchlist', headerTitle: `<i class="fas fa-binoculars" style="color: var(--color-accent); margin-right: 8px;"></i><span style="color: var(--text-color);">Watchlist Movers</span>`, subtitle: `<span style="color: var(--color-accent);">Your watchlist hits</span>`, hits: moversHits.list, type: 'custom', color: 'neutral' }
+            { id: 'losers', title: `${UI_LABELS.MARKET} <span style="color: var(--color-negative)">${UI_LABELS.LOSERS}</span>`, chipLabel: UI_LABELS.LOSERS, subtitle: downStr, hits: loserHits, type: 'losers', color: 'red' }
         ];
 
         // --- DEBUG LOGGING: RENDER COUNT ---
         let totalRendered = 0;
-        sections.forEach(s => totalRendered += s.hits.length); // Changed from s.items.length to s.hits.length
-        // console.log(`[NotificationUI] Rendered Item Count: ${totalRendered}`);
+        sections.forEach(s => totalRendered += s.hits.length);
 
         // Render Filter Chips
         chips.innerHTML = '';
 
-        // Define Specific Chip Order (Row 1 then Row 2 - matches the vertical list order)
+        // 3x2 GRID ORDER (Row 1: Targets, 52W High, Gainers | Row 2: Watchlist, 52W Low, Losers)
         const chipOrder = [
-            'losers', 'target-alerts', 'hilo-low',
-            'hilo-high', 'gainers', 'custom-movers'
+            'target-alerts', 'hilo-high', 'gainers',
+            'custom-movers', 'hilo-low', 'losers'
         ];
 
         chipOrder.forEach(targetId => {
             const section = sections.find(s => s.id === targetId);
             if (section) {
-                const itemCount = section.hits.length; // Changed from section.items.length to section.hits.length
+                const itemCount = section.hits.length;
                 const chip = document.createElement('div');
                 chip.className = `${CSS_CLASSES.FILTER_CHIP} chip-${section.color}`;
                 chip.dataset.target = section.id;
@@ -909,14 +908,12 @@ export class NotificationUI {
                     <span class="${CSS_CLASSES.CHIP_BADGE}">${itemCount}</span>
                     <span class="${CSS_CLASSES.CHIP_LABEL}">${section.chipLabel}</span>
                 `;
-
                 chips.appendChild(chip);
             }
         });
 
-
-        // 2. Render Accordions
-
+        // VIRTUAL LIST ORDER (Vertical Scroll Sequence): Targets, Watchlist, 52W High, 52W Low, Gainers, Losers
+        // We iterate through the sections array directly to honor its defined order
         sections.forEach(sec => {
             const accordion = this._renderAccordion(sec, rules);
             list.appendChild(accordion);
@@ -1080,11 +1077,15 @@ export class NotificationUI {
 
                         const sec = modal.querySelector(`#section-${targetId}`);
                         if (sec) {
+                            // FORCE REFLOW to ensure offsetTop is accurate after toggle
+                            void listBody.offsetHeight;
+
                             const finalTop = sec.offsetTop;
 
-                            // 4. Restore normal layout for smooth movement
+                            // 4. Restore normal layout
                             listBody.classList.remove('instant-layout');
 
+                            // 5. Smooth Scroll to Target
                             listBody.scrollTo({
                                 top: finalTop,
                                 behavior: 'smooth'

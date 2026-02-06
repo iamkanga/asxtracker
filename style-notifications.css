@@ -619,12 +619,23 @@
 }
 
 
+/* Dashboard Content (Scrolling) */
+#notificationList {
+    flex: 1;
+    overflow-y: auto;
+    scroll-behavior: smooth;
+    padding-bottom: 85vh !important;
+    /* Huge buffer to allow bottom sections to reach top */
+}
+
 /* --- Accordion (Notification Groups) --- */
 .accordion-section {
     background-color: #000000 !important;
     border: none !important;
     margin-bottom: 12px;
     overflow: hidden;
+    scroll-margin-top: 5px;
+    /* Subtle breathing room */
 }
 
 /* Section Headers */
