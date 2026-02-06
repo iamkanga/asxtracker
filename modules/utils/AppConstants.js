@@ -95,7 +95,10 @@ export const STORAGE_KEYS = {
     QUICK_NAV: 'ASX_NEXT_quickNav',
     ACCENT_COLOR: 'ASX_NEXT_accentColor',
     ACCENT_OPACITY: 'ASX_NEXT_accentOpacity',
-    CARD_CHART_OPACITY: 'ASX_NEXT_cardChartOpacity'
+    CARD_CHART_OPACITY: 'ASX_NEXT_cardChartOpacity',
+    AI_PROMPT_TEMPLATES: 'ASX_NEXT_aiPromptTemplates',
+    ONE_TAP_RESEARCH: 'ASX_NEXT_oneTapResearch',
+    GEMINI_SUMMARIES: 'ASX_NEXT_geminiSummaries'
 };
 
 export const EVENTS = {
@@ -164,7 +167,8 @@ export const EVENTS = {
     RESEARCH_LINKS_UPDATED: 'research-links-updated',
     TOGGLE_SORT_DIRECTION: 'toggle-sort-direction',
     SAVE_BORDER_PREFS: 'save-border-prefs',
-    OPEN_PORTFOLIO_CHART: 'open-portfolio-chart'
+    OPEN_PORTFOLIO_CHART: 'open-portfolio-chart',
+    SHOW_AI_SUMMARY: 'show-ai-summary'
 };
 
 export const SORT_OPTIONS = {
@@ -1609,8 +1613,9 @@ export const IDS = {
     NOTIFICATION_LIST: 'notificationList',
     NOTIF_TIMESTAMP: 'notif-timestamp',
     NOTIF_SETTINGS_BTN: 'notif-settings-btn',
-    BTN_MARKET_PULSE: 'btn-market-pulse',
-    BTN_DAILY_BRIEFING: 'btn-daily-briefing'
+    BTN_DAILY_BRIEFING: 'btn-daily-briefing',
+    AI_SUMMARY_MODAL: 'ai-summary-modal',
+    AI_PROMPT_EDITOR: 'ai-prompt-editor-container'
 };
 
 export const UI_LABELS = {
@@ -1668,5 +1673,41 @@ export const UI_LABELS = {
     A_TO_Z: 'A to Z',
     CAROUSEL: 'CAROUSEL',
     REORDER: 'REORDER',
-    HIDE: 'HIDE'
+    HIDE: 'HIDE',
+    RESET_AI_TOOLS: 'Reset AI Tools',
+    CONFIRM_RESET_AI: 'Are you sure you want to delete your custom instructions and return to factory defaults?',
+    AI_QUICK_SUMMARY_TOGGLE: 'Quick Summary Mode'
 };
+
+export const AI_DEFAULT_TEMPLATES = [
+    {
+        id: 'key_risks',
+        label: 'Key Risks',
+        icon: 'fa-exclamation-triangle',
+        text: 'Analyze the top 3 bearish risks for ${code} on the ASX. Focus on recent news, debt levels, or sector headwinds. Be concise.'
+    },
+    {
+        id: 'future_outlook',
+        label: 'Future Outlook',
+        icon: 'fa-chart-line',
+        text: 'What is the 12-month outlook for ${code}? Include analyst sentiment and key growth drivers. Stay brief.'
+    },
+    {
+        id: 'dividend_health',
+        label: 'Dividend Health',
+        icon: 'fa-hand-holding-usd',
+        text: 'Analyze the dividend stability and yield for ${code}. Mention payout ratio and recent history.'
+    },
+    {
+        id: 'technical_summary',
+        label: 'Technical Check',
+        icon: 'fa-microscope',
+        text: 'Provide a quick technical analysis for ${code}. Mentions support/resistance levels and RSI trend if possible.'
+    },
+    {
+        id: 'market_sentiment',
+        label: 'Sentiment',
+        icon: 'fa-heartbeat',
+        text: 'What is the current market sentiment for ${code} today? Is it macro-driven or specific to the company?'
+    }
+];

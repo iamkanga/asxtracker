@@ -12,21 +12,15 @@ import { formatCurrency, formatPercent } from '../utils/formatters.js';
 import { SnapshotUI } from './SnapshotUI.js';
 import { NotificationUI } from './NotificationUI.js';
 import { LinkHelper } from '../utils/LinkHelper.js';
+import { ToastManager } from './ToastManager.js';
 
 
 export class BriefingUI {
 
     static show() {
-        const existingInfo = document.getElementById(IDS.DAILY_BRIEFING_MODAL);
-        if (existingInfo) {
-            if (existingInfo.classList.contains(CSS_CLASSES.HIDDEN)) {
-                existingInfo.classList.remove(CSS_CLASSES.HIDDEN);
-                existingInfo.style.zIndex = '1001';
-                // Bring to front
-                document.body.appendChild(existingInfo);
-            }
-            return;
-        }
+        // ALWAYS remove existing to ensure fresh UI logic & listeners apply
+        const existing = document.getElementById(IDS.DAILY_BRIEFING_MODAL);
+        if (existing) existing.remove();
 
         const modal = this._renderModal();
         document.body.appendChild(modal);
@@ -87,12 +81,12 @@ export class BriefingUI {
                     <!-- Feature 4: Ask the Market -->
                     <div style="margin: 0 0 16px 0; padding: 12px 16px; background: rgba(255,255,255,0.02); border-bottom: 1px solid rgba(255,255,255,0.05);">
                        <div style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 8px;">${UI_LABELS.ASK_THE_MARKET}</div>
-                       <div style="position:relative;">
-                          <input type="text" id="gemini-chat-input" placeholder="${UI_LABELS.GEMINI_PLACEHOLDER}" style="width:100%; padding: 10px 40px 10px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.3); color: #eee; font-family: inherit; font-size: 0.9em;">
-                          <a id="btn-gemini-ask" href="https://gemini.google.com/app" target="_blank" role="link" aria-label="Ask AI Deep Dive" style="position:absolute; right:2px; top:2px; bottom:2px; padding:0 12px; background: transparent; border:none; color:var(--color-accent); cursor:pointer; display: flex; align-items: center; text-decoration: none; -webkit-touch-callout: default !important; user-select: auto !important;">
-                             <img src="gemini-icon.png" style="width: 20px; height: 20px; vertical-align: middle; opacity: 0.8; transition: opacity 0.2s; pointer-events: none;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.8'">
-                          </a>
-                       </div>
+                        <div style="position:relative;">
+                           <input type="text" id="gemini-chat-input" placeholder="${UI_LABELS.GEMINI_PLACEHOLDER}" style="width:100%; padding: 10px 48px 10px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.3); color: #eee; font-family: inherit; font-size: 0.9em;">
+                           <button type="button" id="btn-ask-market-direct" aria-label="Send Message" style="position:absolute; right:2px; top:2px; bottom:2px; width:44px; background: transparent; border:none; color:var(--color-accent); cursor:pointer; display: flex; align-items: center; justify-content: center; outline: none; z-index: 10;">
+                              <img src="gemini-icon.png" style="width: 20px; height: 20px; opacity: 0.9; pointer-events: none;">
+                           </button>
+                        </div>
                     </div>
 
                     <!-- NEW: Consolidated Smart Hero (Portfolio + Market Context) -->
@@ -223,55 +217,38 @@ export class BriefingUI {
                     </div>
                 </div>
                 
-                <!-- 2. Main Content Grid -->
-                <!-- Equal Width Columns (1fr 1fr) to prevent wrapping | 50% split -->
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 12px;">
-                    
+                <!-- 2. Main Content Row -->
+                <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px;">
                     <!-- LEFT: Portfolio Stats -->
-                    <div style="display: flex; flex-direction: column; justify-content: flex-start;">
-                        <!-- Title (Reference for alignment) -->
-                        <div style="font-size: 0.75rem; text-transform: uppercase; opacity: 0.7; margin-bottom: 6px;">My Portfolio</div>
-                        
-                        <!-- Big Number -->
-                        <div class="${CSS_CLASSES.HERO_MAIN_STAT} ${colorClass}" style="line-height: 1; font-size: 2.2rem; margin-bottom: 4px;">
-                            ${Math.abs(portfolio.totalPctChange).toFixed(2)}% <span class="hero-arrow" style="font-size: 0.6em; vertical-align: middle;">${arrow}</span>
+                    <div style="display: flex; flex-direction: column;">
+                        <div class="${CSS_CLASSES.HERO_LABEL}" style="font-size: 0.75rem; text-transform: uppercase; opacity: 0.7; margin-bottom: 4px;">My Portfolio</div>
+                        <div class="${CSS_CLASSES.HERO_MAIN_STAT} ${colorClass}" style="line-height: 1; font-size: 2.8rem; font-weight: 800; letter-spacing: -1px;">
+                            ${Math.abs(portfolio.totalPctChange).toFixed(2)}% <span class="hero-arrow" style="font-size: 0.5em; vertical-align: middle;">${arrow}</span>
                         </div>
-                        <div class="${CSS_CLASSES.HERO_SUB_STAT} ${colorClass}" style="font-size: 0.95rem; font-weight: 500;">
+                        <div class="${CSS_CLASSES.HERO_SUB_STAT} ${colorClass}" style="font-size: 0.95rem; font-weight: 600; margin-top: 4px; opacity: 0.9;">
                             ${formatCurrency(portfolio.totalDayChangeVal)} Today
-                        </div>
-                        
-                        <!-- Total moved slightly down -->
-                        <div style="margin-top: 16px;">
-                             <span class="${CSS_CLASSES.HERO_TOTAL_LABEL}" style="font-size: 0.75rem;">Total Balance</span><br>
-                             <span class="${CSS_CLASSES.HERO_TOTAL_VALUE}" style="font-size: 1.1rem;">${formatCurrency(portfolio.totalValue)}</span>
                         </div>
                     </div>
 
-                    <!-- RIGHT: Market Comparators (Grid Table) -->
-                    <div style="display: flex; flex-direction: column;">
-                        <!-- SPACER: Mimics 'My Portfolio' Title height so ASX 200 aligns with the Big Percentage Number -->
-                        <div style="font-size: 0.75rem; text-transform: uppercase; opacity: 0; margin-bottom: 6px; visibility: hidden;">My Portfolio</div>
-                        
-                        <!-- Comparisons Box: CSS Grid for alignment -->
-                        <!-- grid-template-columns: min-content min-content -> tight fit -->
-                        <!-- justify-content: end -> pushes entire block to right -->
-                        <div style="display: grid; grid-template-columns: min-content min-content; justify-content: end; align-items: center; column-gap: 12px; row-gap: 8px;">
-                            <!-- ASX 200 -->
-                            <span style="font-size: 0.7rem; font-weight: 600; color: rgba(255,255,255,0.7); white-space: nowrap; text-align: left;">ASX&nbsp;200</span>
-                            <span style="font-size: 0.9rem; font-weight: 700; text-align: right;">${asxHtml}</span>
-                            
-                            <!-- S&P 500 -->
-                            <span style="font-size: 0.7rem; font-weight: 600; color: rgba(255,255,255,0.7); white-space: nowrap; text-align: left;">S&P&nbsp;500</span>
-                            <span style="font-size: 0.9rem; font-weight: 700; text-align: right;">${spxHtml}</span>
+                    <!-- RIGHT: Market Indices (Compact) -->
+                    <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 6px; padding-bottom: 4px;">
+                        <div style="display: flex; gap: 12px; align-items: center; padding: 6px 0;">
+                            <div style="display: flex; flex-direction: column; align-items: center;">
+                                <span style="font-size: 0.65rem; color: rgba(255,255,255,0.5); font-weight: 700;">ASX 200</span>
+                                <span style="font-size: 0.85rem; font-weight: 700;">${asxHtml}</span>
+                            </div>
+                            <div style="width: 1px; height: 16px; background: rgba(255,255,255,0.1);"></div>
+                            <div style="display: flex; flex-direction: column; align-items: center;">
+                                <span style="font-size: 0.65rem; color: rgba(255,255,255,0.5); font-weight: 700;">S&P 500</span>
+                                <span style="font-size: 0.85rem; font-weight: 700;">${spxHtml}</span>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- 3. AI Summary (Integrated, No Border) -->
-                <div style="margin-top: 16px; padding-top: 0px;">
-                    <div id="briefing-ai-summary" style="font-size: 0.95em; line-height: 1.5; color: rgba(255,255,255,0.9); font-weight: 400; min-height: 20px;">
-                        <span style="opacity: 0.7;"><i class="fas fa-circle-notch fa-spin"></i> ${UI_LABELS.ANALYZING_PORTFOLIO}</span>
-                    </div>
+                <!-- 3. AI Summary (Integrated, Minimal) -->
+                <div id="briefing-ai-summary" style="font-size: 0.9rem; line-height: 1.5; color: rgba(255,255,255,0.85); font-weight: 400; min-height: 20px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 12px; margin-top: 4px;">
+                    <span style="opacity: 0.6;"><i class="fas fa-circle-notch fa-spin"></i> ${UI_LABELS.ANALYZING_PORTFOLIO}</span>
                 </div>
             `;
 
@@ -280,8 +257,6 @@ export class BriefingUI {
             if (pulseBtn) {
                 pulseBtn.onclick = (e) => {
                     e.stopPropagation();
-                    const { SnapshotUI } = require('./SnapshotUI.js'); // Ensure scope? No, use global import or reference
-                    // Actually SnapshotUI is imported at top of module.
                     SnapshotUI.show();
                 };
             }
@@ -330,7 +305,14 @@ export class BriefingUI {
                     const el = document.getElementById('briefing-ai-summary');
                     if (el) {
                         if (result && result.ok && result.text) {
-                            el.innerHTML = result.text;
+                            const modelName = result.model || 'Gemini 3 Flash';
+                            console.log(`%c [${modelName}] Daily Briefing Recieved`, 'color: #00ff00; font-weight: bold;');
+                            // Process markdown-ish bolding and fix remaining asterisks
+                            const formatted = result.text
+                                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                                .replace(/(^|[^\*])\*([^\*]+)\*([^\*]|$)/g, '$1<em>$2</em>$3')
+                                .replace(/\*/g, ''); // Sweep remaining asterisks
+                            el.innerHTML = formatted;
                             el.style.animation = 'fadeIn 0.5s ease-in';
                         } else {
                             // Debugging Mode: Show detailed error
@@ -506,6 +488,8 @@ export class BriefingUI {
 
                     if (heroCard) {
                         if (result && result.ok && result.text) {
+                            const modelName = result.model || 'Gemini 3 Flash';
+                            console.log(`%c [${modelName}] Portfolio Roast Recieved`, 'color: #00ff00; font-weight: bold;');
                             heroCard.innerHTML = `<div style="padding: 12px; font-size: 0.85em; line-height: 1.5; color: #fff; text-align: left;">${result.text.replace(/\n/g, '<br>')}</div>`;
                             heroCard.style.background = 'linear-gradient(135deg, #1a0505 0%, #4a0d0d 100%)';
                         } else {
@@ -522,73 +506,17 @@ export class BriefingUI {
 
 
         // Feature 4: Gemini Chat
-        const askBtn = modal.querySelector('#btn-gemini-ask');
+        const askBtn = modal.querySelector('#btn-ask-market-direct');
         const askInput = modal.querySelector('#gemini-chat-input');
 
-        const getDeepDivePrompt = () => {
-            const query = askInput.value.trim();
-            const data = AppState.controller.calculateBriefingDigest();
-            const port = data.portfolio;
-            const sentiment = data.marketSentiment.sentiment;
-            const winners = data.highlights.portfolio.filter(h => h.pctChange > 0).slice(0, 3).map(h => h.code).join(', ');
-            const losers = data.highlights.portfolio.filter(h => h.pctChange < 0).slice(0, 3).map(h => h.code).join(', ');
-
-            // Context Block (Shared)
-            const contextBlock = `
-Market Sentiment: ${sentiment}
-Portfolio Performance: ${port.totalPctChange.toFixed(2)}% Today.
-Key Winners: ${winners}
-Key Losers: ${losers}`;
-
-            // If user typed something, that's the primary prompt (Single String return for legacy handling if needed, or Array with one item)
-            if (query) {
-                return `Regarding the ASX market and my question "${query}": Please provide a comprehensive analysis including technical trends. ${contextBlock}`;
-            }
-
-            // Menu of Options
-            return [
-                {
-                    label: 'Deep Dive Analysis',
-                    icon: 'fa-search',
-                    text: `Provide a deep-dive analysis of the ASX market and my portfolio context. ${contextBlock}\n\nPlease summarize the current trends and what I should be watching.`
-                },
-                {
-                    label: 'Roast My Portfolio',
-                    icon: 'fa-fire',
-                    text: `Roast my portfolio based on today's performance. Be savage about the underperformers. ${contextBlock}`
-                },
-                {
-                    label: 'Market Sentiment',
-                    icon: 'fa-heartbeat',
-                    text: `What is the dominant market sentiment driving the ASX today? Is it macro-driven or sector-specific? ${contextBlock}`
-                },
-                {
-                    label: 'Investment Opportunities',
-                    icon: 'fa-lightbulb',
-                    text: `Given my current holdings and performance, where are the potential opportunities or rotation risks in the ASX 200 today? ${contextBlock}`
-                }
-            ];
-        };
-
         const handleAsk = async (e) => {
+            if (e) e.preventDefault();
             const query = askInput.value.trim();
             if (!query) return;
 
-            const heroCard = modal.querySelector(`#${IDS.BRIEFING_PORTFOLIO_HERO}`);
-            const summaryEl = document.getElementById('briefing-ai-summary');
-
-            // Feedback State
-            if (summaryEl) {
-                summaryEl.innerHTML = '<span style="color:var(--color-accent)"><i class="fas fa-satellite-dish fa-spin"></i> Asking the market...</span>';
-                const body = modal.querySelector('.briefing-scroll-body');
-                if (body) body.scrollTop = 0;
-            } else if (heroCard) {
-                // Restore if Roasted
-                heroCard.style.background = '';
-                heroCard.innerHTML = `<div id="briefing-ai-summary" style="padding: 12px; font-size: 0.9em; height:100%; display:flex; align-items:center;"><span style="color:var(--color-accent)"><i class="fas fa-satellite-dish fa-spin"></i> Asking the market...</span></div>`;
-                const body = modal.querySelector('.briefing-scroll-body');
-                if (body) body.scrollTop = 0;
-            }
+            console.log('[BriefingUI] %c ASKING GEMINI DIRECTLY: ' + query, 'color: #00ff00; font-weight: bold;');
+            ToastManager.info('Asking AI...');
+            askInput.value = '';
 
             try {
                 const data = AppState.controller.calculateBriefingDigest();
@@ -602,38 +530,28 @@ Key Losers: ${losers}`;
                 const ds = new DataService();
                 const result = await ds.askGemini('chat', query, context);
 
-                const finalEl = document.getElementById('briefing-ai-summary');
-
                 if (result && result.ok && result.text) {
-                    if (finalEl) {
-                        finalEl.innerHTML = `<div style="color:#fff; font-weight:700; margin-bottom:8px; border-bottom:1px solid #333; padding-bottom:4px;">Q: ${query}</div><div style="font-size:0.95em; opacity:0.9; line-height:1.5;">${result.text.replace(/\n/g, '<br>')}</div>`;
-                        // Ensure text alignment is left for reading
-                        finalEl.style.textAlign = 'left';
-                    }
-                    askInput.value = '';
+                    const { AiSummaryUI } = await import('./AiSummaryUI.js');
+                    AiSummaryUI.showResult('AI Market Assistant', 'ASX', result.text, result.model);
                 } else {
-                    // If result.ok is true but text is missing, it's likely hitting the old backend code (Sync Settings).
                     const err = (result && result.error) ? result.error : 'Backend Error';
-
-                    if (finalEl) finalEl.innerHTML = `<span style="color:red; font-size:0.9em;">Error: ${err}</span>`;
+                    ToastManager.error(`AI Error: ${err}`);
                 }
-
-            } catch (e) {
-                console.error(e);
+            } catch (ex) {
+                console.error('[BriefingUI] Chat Error:', ex);
+                ToastManager.error('Failed to reach AI');
             }
         };
 
         if (askBtn) {
-            LinkHelper.bindGeminiInteraction(
-                askBtn,
-                () => getDeepDivePrompt(),
-                (e) => handleAsk(e)
-            );
+            askBtn.addEventListener('click', handleAsk);
         }
 
-        if (askInput) askInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') handleAsk(e);
-        });
+        if (askInput) {
+            askInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') handleAsk();
+            });
+        }
     }
 
     static _getGreeting() {

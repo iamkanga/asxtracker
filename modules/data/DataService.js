@@ -114,8 +114,12 @@ export class DataService {
             const url = new URL(API_ENDPOINT);
             // Append a specific parameter so we could route via GET if needed, but we use POST.
 
+            const user = AuthService.getCurrentUser();
+            const userId = user ? user.uid : null;
+
             const payload = {
                 action: 'generateBriefing',
+                userId: userId,
                 context: context
             };
 
@@ -163,16 +167,16 @@ export class DataService {
 
             const response = await fetch(this.API_ENDPOINT, {
                 method: 'POST',
-                mode: 'cors',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                 body: JSON.stringify(payload)
             });
 
             if (!response.ok) {
+                console.error('[DataService] Roast Portfolio HTTP Error:', response.status);
                 return { ok: false, error: `HTTP ${response.status}` };
             }
 
             const json = await response.json();
+            console.log('[DataService] Roast Portfolio Response:', json);
             return json;
         } catch (err) {
             console.error('DataService: Roast Gen Exception:', err);
@@ -201,24 +205,76 @@ export class DataService {
                 context: context
             };
 
-            // console.log('[DataService] Asking Gemini:', mode, query);
-            const response = await fetch(this.API_ENDPOINT, {
+            console.log('[DataService] Asking Gemini:', mode, query);
+            const response = await fetch(API_ENDPOINT, {
                 method: 'POST',
-                mode: 'cors',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                 body: JSON.stringify(payload)
             });
 
             if (!response.ok) {
+                console.error('[DataService] Ask Gemini HTTP Error:', response.status);
                 return { ok: false, error: `HTTP ${response.status}` };
             }
 
             const json = await response.json();
+            console.log('[DataService] Ask Gemini Response:', json);
             if (!json.ok && json.error) console.warn('[DataService] Gemini Error:', json.error);
             return json;
 
         } catch (err) {
             console.error('DataService: Gemini Query Exception:', err);
+            return { ok: false, error: err.message };
+        }
+    }
+
+    /**
+     * Universal Gemini 3 AI Research Fetch
+     * @param {string} symbol - Ticker (e.g. CBA)
+     * @param {string} questionId - ID (e.g. key_risks)
+     * @param {string} promptTemplate - The template text
+     */
+    async fetchAiSummary(symbol, questionId, promptTemplate) {
+        try {
+            // 1. Variable Replacement
+            const prompt = promptTemplate.replace(/\$\{code\}/g, symbol)
+                .replace(/\{\{STOCK\}\}/g, symbol);
+
+            const user = AuthService.getCurrentUser();
+            const userId = user ? user.uid : null;
+
+            if (!userId) {
+                return { ok: false, error: 'User not logged in' };
+            }
+
+            const payload = {
+                action: 'gemini3Research',
+                userId: userId,
+                symbol: symbol,
+                questionId: questionId,
+                prompt: prompt,
+                thinking: true // Critical for dividend/technical analysis
+            };
+
+            console.log(`[DataService] Requesting AI Analysis for ${symbol} (${questionId})`);
+
+            const response = await fetch(API_ENDPOINT, {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            });
+
+            console.log('[DataService] AI Summary HTTP Status:', response.status);
+
+            if (!response.ok) {
+                if (response.status === 429) return { ok: false, error: 'RATE_LIMIT', retryAfter: 60 };
+                return { ok: false, error: `HTTP ${response.status}` };
+            }
+
+            const json = await response.json();
+            console.log('[DataService] AI Summary Response:', json);
+            return json;
+
+        } catch (err) {
+            console.error('DataService: AI Research Exception:', err);
             return { ok: false, error: err.message };
         }
     }

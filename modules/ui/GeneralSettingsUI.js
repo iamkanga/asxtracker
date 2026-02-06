@@ -4,7 +4,7 @@
  * Restored to single-view vertical list (No Tabs).
  */
 
-import { CSS_CLASSES, UI_ICONS, IDS, EVENTS } from '../utils/AppConstants.js';
+import { CSS_CLASSES, UI_ICONS, IDS, EVENTS, AI_DEFAULT_TEMPLATES, UI_LABELS, STORAGE_KEYS } from '../utils/AppConstants.js';
 import { AppState } from '../state/AppState.js';
 import { ToastManager } from './ToastManager.js';
 import { navManager } from '../utils/NavigationManager.js';
@@ -52,7 +52,43 @@ export class GeneralSettingsUI {
                         <div id="gen-pin-row"></div>
                     </div>
 
-                    <!-- 2. DATA SECTION -->
+                    <!-- 3. AI INTELLIGENCE SECTION -->
+                    <div class="${CSS_CLASSES.SETTINGS_SECTION}" style="margin-bottom: 30px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 20px;">
+                        <div id="ai-settings-accordion-header" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                            <h3 class="${CSS_CLASSES.DETAIL_LABEL}" style="margin: 0; color: var(--text-color); font-size: 1rem; display: flex; align-items: center; gap: 8px; text-transform: none; font-weight: 700;">
+                                <i class="fas fa-brain" style="color: var(--color-accent);"></i> AI Intelligence
+                            </h3>
+                            <i class="fas fa-chevron-down" id="ai-accordion-chevron" style="transition: transform 0.3s; opacity: 0.5;"></i>
+                        </div>
+                        
+                        <div id="ai-settings-content" style="display: none; padding-top: 10px;">
+                            <!-- Quick Summary Mode Toggle -->
+                            <label class="${CSS_CLASSES.SETTING_ROW}" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 0; cursor: pointer;">
+                                <div>
+                                    <div class="${CSS_CLASSES.FONT_BOLD}" style="font-size: 0.95rem;">${UI_LABELS.AI_QUICK_SUMMARY_TOGGLE}</div>
+                                    <div class="${CSS_CLASSES.TEXT_SM} ${CSS_CLASSES.TEXT_MUTED}">Single tap to trigger in-app AI research</div>
+                                </div>
+                                <div class="square-radio-wrapper">
+                                    <input type="checkbox" id="gen-ai-one-tap-toggle" ${AppState.preferences.oneTapResearch ? 'checked' : ''}>
+                                    <div class="square-radio-visual"></div>
+                                </div>
+                            </label>
+
+                            <!-- Prompt Templates Editor -->
+                            <div id="ai-prompt-editor-container" style="display: flex; flex-direction: column; gap: 20px; margin-top: 15px;">
+                                ${this._renderAiPromptTemplates()}
+                            </div>
+
+                            <!-- Danger Zone: Reset -->
+                            <div style="margin-top: 25px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.03); text-align: center;">
+                                <button id="gen-btn-reset-ai-prompts" class="${CSS_CLASSES.BTN_TEXT_SMALL}" style="color: var(--color-negative); font-weight: 600;">
+                                    <i class="fas fa-undo"></i> ${UI_LABELS.RESET_AI_TOOLS}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 4. DATA SECTION -->
                     <div class="${CSS_CLASSES.SETTINGS_SECTION}">
                         <h3 class="${CSS_CLASSES.DETAIL_LABEL}" style="margin-bottom: 15px; color: var(--text-color); font-size: 1rem; display: flex; align-items: center; gap: 8px; text-transform: none; font-weight: 700;">
                             <i class="fas fa-database" style="color: var(--color-accent);"></i> Data Management
@@ -109,6 +145,73 @@ export class GeneralSettingsUI {
             navManager.popStateSilently();
             document.dispatchEvent(new CustomEvent(EVENTS.REQUEST_DELETE_DATA));
         });
+
+        // AI Accordion Control
+        const aiHeader = modal.querySelector('#ai-settings-accordion-header');
+        const aiContent = modal.querySelector('#ai-settings-content');
+        const aiChevron = modal.querySelector('#ai-accordion-chevron');
+
+        aiHeader?.addEventListener('click', () => {
+            const isHidden = aiContent.style.display === 'none';
+            aiContent.style.display = isHidden ? 'block' : 'none';
+            aiChevron.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+        });
+
+        // AI One-Tap Toggle Bindings
+        const aiToggle = modal.querySelector('#gen-ai-one-tap-toggle');
+        aiToggle?.addEventListener('change', (e) => {
+            AppState.saveOneTapResearch(e.target.checked);
+            ToastManager.success(e.target.checked ? "One-Tap Research Enabled" : "One-Tap Research Disabled");
+        });
+
+        // AI Prompt Textarea Persistence
+        let aiSaveTimer = null;
+        modal.querySelectorAll('.ai-textarea').forEach(tx => {
+            tx.addEventListener('input', (e) => {
+                clearTimeout(aiSaveTimer);
+                aiSaveTimer = setTimeout(() => {
+                    const id = e.target.dataset.templateId;
+                    const val = e.target.value.trim();
+                    if (id) {
+                        AppState.saveAiPromptTemplate(id, val);
+                        ToastManager.show('Prompt template saved', 'info');
+                    }
+                }, 800);
+            });
+        });
+
+        // AI Reset Button
+        modal.querySelector('#gen-btn-reset-ai-prompts')?.addEventListener('click', () => {
+            if (confirm(UI_LABELS.CONFIRM_RESET_AI)) {
+                AppState.resetAiPromptTemplates();
+                // Refresh Editor UI
+                modal.querySelector('#ai-prompt-editor-container').innerHTML = this._renderAiPromptTemplates();
+                ToastManager.success("AI Prompts Reset to Defaults");
+            }
+        });
+    }
+
+    static _renderAiPromptTemplates() {
+        const userTemplates = AppState.preferences.aiPromptTemplates || {};
+        return AI_DEFAULT_TEMPLATES.map(t => {
+            const currentText = userTemplates[t.id] || t.text;
+            return `
+                <div class="ai-template-group" style="display: flex; flex-direction: column; gap: 8px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                        <span style="font-size: 0.75rem; font-weight: 700; color: var(--color-accent); opacity: 0.8;">
+                            <i class="fas ${t.icon}"></i> ${t.label}
+                        </span>
+                        <span style="font-size: 0.6rem; color: var(--text-muted); opacity: 0.6;">\${code} supported</span>
+                    </div>
+                    <textarea 
+                        class="ai-textarea" 
+                        data-template-id="${t.id}"
+                        style="width: 100%; min-height: 80px; font-size: 0.8rem; border-radius: 8px; padding: 12px; line-height: 1.4; resize: vertical; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: #fff; outline: none;"
+                        placeholder="Enter custom prompt..."
+                    >${currentText}</textarea>
+                </div>
+            `;
+        }).join('');
     }
 
     static _injectSecurityControls(modal, controller) {

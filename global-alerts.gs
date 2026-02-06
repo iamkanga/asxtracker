@@ -431,12 +431,13 @@ Tone & Instructions:
     - If WEEKEND (Sat/Sun): Refer to "Friday" or "The last session". Do NOT say "Today".
     - If CLOSED (Weeknight): Speak in PAST tense.
     - If OPEN: Speak in PRESENT tense.
+- Use bold text for key figures or stock names (e.g. **+1.2%** or **BHP**).
 - If up > 1%: Enthusiastic, congratulatory.
 - If down > 1%: Empathetic, "hang in there".
 - If flat: Calm, "steady as she goes".
 - Use emojis sparingly.
 - Focus on the "Why" if possible (e.g. "BHP dragged you down" or "Tech sector rally helped").
-- Do NOT output markdown or bold text, just plain text.
+- Output clean text with markdown bolding.
     `;
 
     // 2. Call Gemini
@@ -454,7 +455,7 @@ Tone & Instructions:
   }
 }
 
-function callGeminiAPI_(promptText) {
+function callGeminiAPI_(promptText, options = {}) {
   const key = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
   if (!key) throw new Error('GEMINI_API_KEY not set');
 
@@ -464,7 +465,11 @@ function callGeminiAPI_(promptText) {
     return { success: false, reason: modelResult.error };
   }
   
-  const modelName = modelResult.name; // e.g. "models/gemini-1.5-flash"
+  const modelName = modelResult.name; 
+  
+  // VERIFICATION: Debug line for Active Brain
+  Logger.log('[Gemini] Active Brain: ' + modelName);
+
   // API URL construction: modelName already includes "models/" prefix from the List API
   const API_URL = `https://generativelanguage.googleapis.com/v1beta/${modelName}:generateContent?key=${key}`;
 
@@ -473,12 +478,22 @@ function callGeminiAPI_(promptText) {
       parts: [{ text: promptText }]
     }],
     generationConfig: {
-      maxOutputTokens: 2048, // Increased significantly to avoid early cutoffs
-      temperature: 0.9 // Increased for more creative/roasty output
+      maxOutputTokens: 4096, // Increased for deep research
+      temperature: options.thinking ? 0.7 : 0.9 
     }
   };
 
-  const options = {
+  // THINKING MODE INTEGRATION: Apply if requested or if model is thinking-capable
+  if (options.thinking || modelName.toLowerCase().includes('thinking')) {
+     // Apply thinking_config if model supports it (Gemini 2.0+)
+     if (modelName.includes('2.0') || modelName.includes('3.0')) {
+       requestBody.generationConfig.thinking_config = {
+         include_thoughts: true
+       };
+     }
+  }
+
+  const fetchOptions = {
     method: 'post',
     contentType: 'application/json',
     payload: JSON.stringify(requestBody),
@@ -486,38 +501,24 @@ function callGeminiAPI_(promptText) {
   };
 
   try {
-    const response = UrlFetchApp.fetch(API_URL, options);
+    const response = UrlFetchApp.fetch(API_URL, fetchOptions);
     const responseCode = response.getResponseCode();
     const responseText = response.getContentText();
 
     if (responseCode === 200) {
       const json = JSON.parse(responseText);
-      
       const candidates = json.candidates;
-      // Robust Extraction: Even if MAX_TOKENS, take what we have
-      if (candidates && candidates.length > 0 && candidates[0].content && candidates[0].content.parts && candidates[0].content.parts.length > 0) {
-         const part = candidates[0].content.parts[0];
-         if (part.text) {
-           return { success: true, data: part.text };
+      
+      if (candidates && candidates.length > 0 && candidates[0].content && candidates[0].content.parts) {
+         // Find the actual text part (Thinking models may return multiple parts)
+         const textPart = candidates[0].content.parts.find(p => p.text);
+         if (textPart) {
+           return { success: true, data: textPart.text, model: modelName };
          }
       }
       
-      // FAILURE: Analyze why
       let reason = 'AI returned no text.';
-      
-      // 1. Check Prompt Feedback (Global Block)
-      if (json.promptFeedback) {
-           reason += ` [PromptFeedback: ${JSON.stringify(json.promptFeedback)}]`;
-      }
-      
-      // 2. Check Candidate Details (Finish Reason)
-      if (candidates && candidates.length > 0) {
-          // Log the raw candidate structure to debug missing 'parts'
-          reason += ` [Candidate 0 Raw: ${JSON.stringify(candidates[0])}]`;
-      } else {
-          reason += ' [No Candidates returned]';
-      }
-      
+      if (json.promptFeedback) reason += ` [Feedback: ${JSON.stringify(json.promptFeedback)}]`;
       return { success: false, reason: reason };
       
     } else {
@@ -528,7 +529,7 @@ function callGeminiAPI_(promptText) {
       return { success: false, reason: `API Error ${responseCode}: ${responseText}` };
     }
   } catch (e) {
-    return { success: false, reason: 'Exception: ' + e.toString() };
+    return { success: false, reason: 'Fetch Exception: ' + e.toString() };
   }
 }
 
@@ -537,7 +538,7 @@ function callGeminiAPI_(promptText) {
  * Prevents 404s by using only valid, listed models.
  */
 function discoverBestModel_(key) {
-  // Cache the discovery to avoid 2 calls every time (Script Properties cache)
+  // Cache the discovery to avoid metadata calls every time (Script Properties cache)
   const CACHE_KEY = 'GEMINI_WORKING_MODEL_NAME';
   const cached = PropertiesService.getScriptProperties().getProperty(CACHE_KEY);
   if (cached) return { success: true, name: cached };
@@ -560,20 +561,35 @@ function discoverBestModel_(key) {
     
     if (viable.length === 0) return { success: false, error: 'No generateContent models available' };
 
-    // Priority Sort: Flash 1.5 > Pro 1.5 > Flash 1.0 > Pro 1.0
-    // The 'name' field comes like "models/gemini-pro"
+    // PRIORITY SCORING: Gemini 3 > Gemini 2 > Gemini 1.5
     viable.sort((a, b) => {
       const score = (m) => {
+        const name = m.name.toLowerCase();
         let s = 0;
-        if (m.name.includes('1.5')) s += 10;
-        if (m.name.includes('flash')) s += 5;
-        if (m.name.includes('pro')) s += 2;
+        
+        // Target: Gemini 3 (Highest Priority)
+        if (name.includes('gemini-3') || name.includes('3.0')) s += 100;
+        
+        // Target: Gemini 2
+        if (name.includes('gemini-2') || name.includes('2.0')) s += 50;
+        
+        // Target: Flash vs Pro
+        if (name.includes('flash')) s += 20;
+        if (name.includes('pro')) s += 10;
+        
+        // Target: Preview/Thinking
+        if (name.includes('preview')) s += 5;
+        if (name.includes('thinking')) s += 5;
+        
+        // Legacy: 1.5
+        if (name.includes('1.5')) s += 5;
+        
         return s;
       };
       return score(b) - score(a);
     });
 
-    const best = viable[0].name; // e.g. "models/gemini-1.5-flash"
+    const best = viable[0].name; // e.g. "models/gemini-3-flash-preview"
     Logger.log(`[Gemini] Discovered best model: ${best}`);
     
     // Cache it
@@ -2007,6 +2023,8 @@ function doPost(e) {
       result = handleGenerateBriefing_(payload);
     } else if (payload.action === 'roastPortfolio') {
       result = handlePortfolioRoast_(payload);
+    } else if (payload.action === 'gemini3Research') {
+      result = handleGemini3Research_(payload);
     } else if (payload.action === 'geminiQuery') {
       result = handleGeminiQuery_(payload);
     } else if (payload.action === 'fetchHistory') {
@@ -2098,17 +2116,18 @@ Task: Provide a concise but detailed analysis of WHY this stock might be moving 
     } else if (mode === 'chat') {
        // ASK THE MARKET PROMPT
        prompt = `
-You are a helpful ASX financial assistant.
+You are a helpful and witty personal AI assistant.
 User Question: "${query}"
 
-User's Portfolio Context:
+User's Portfolio Context (for reference):
 ${JSON.stringify(context || {})}
 
 Instructions:
-1. Answer the user's question concisely (under 100 words).
-2. If they ask about their portfolio, use the provided context.
-3. If they ask generic market questions, answer based on your training.
-4. Use bullet points for lists.
+1. Answer the user's question directly. 
+2. You are NOT limited to just the share market; provide information on any topic requested.
+3. If the question relates to their portfolio, use the provided context.
+4. Use bold text (**word**) for emphasis.
+5. Provide a professional, high-end commentary tone.
        `;
     } else {
        return { ok: false, error: 'Invalid mode' };
@@ -2124,6 +2143,29 @@ Instructions:
 
   } catch (e) {
     Logger.log('[Gemini] Query Error: ' + e);
+    return { ok: false, error: String(e) };
+  }
+}
+
+/**
+ * Handles 'gemini3Research' for Universal Deep Research.
+ */
+function handleGemini3Research_(payload) {
+  try {
+    const { symbol, prompt, questionId, thinking } = payload;
+    if (!prompt) return { ok: false, error: 'Missing prompt' };
+
+    // Standard research call
+    // Passing the thinking flag from the payload to the API caller
+    const result = callGeminiAPI_(prompt, { thinking: !!thinking });
+    
+    if (result.success) {
+      return { ok: true, text: result.data, model: result.model };
+    } else {
+      return { ok: false, error: result.reason }; 
+    }
+  } catch (e) {
+    Logger.log('[Gemini3] Research Error: ' + e);
     return { ok: false, error: String(e) };
   }
 }

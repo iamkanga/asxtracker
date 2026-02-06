@@ -1,6 +1,8 @@
 
 import { ToastManager } from '../ui/ToastManager.js';
 import { GeminiPromptMenu } from '../ui/GeminiPromptMenu.js';
+import { AppState } from '../state/AppState.js';
+import { AI_DEFAULT_TEMPLATES, EVENTS } from './AppConstants.js';
 
 /**
  * LinkHelper.js
@@ -28,48 +30,30 @@ export class LinkHelper {
             }
             if (base.startsWith('XAU')) return `https://www.google.com/finance/quote/XAU-USD`;
             if (base.startsWith('XAG')) return `https://www.google.com/finance/quote/XAG-USD`;
+            return `https://www.google.com/finance/quote/${base}-USD`;
         }
 
         // 2. CRYPTO
-        if (s.startsWith('BTC')) {
-            if (s.includes('AUD')) return `https://www.google.com/finance/quote/BTC-AUD`;
-            return `https://www.google.com/finance/quote/BTC-USD`;
+        if (s === 'BTC' || s === 'ETH' || s === 'SOL') {
+            return `https://www.google.com/finance/quote/${s}-USD`;
         }
 
-        // 3. INDICES
-        const indexMap = {
-            'XJO': 'XJO:INDEXASX',
-            '^AXJO': 'XJO:INDEXASX',
-            'XKO': 'XKO:INDEXASX',
-            'XAO': 'XAO:INDEXASX',
-            'INX': '.INX:INDEXSP',
-            '^GSPC': '.INX:INDEXSP',
-            '.DJI': '.DJI:INDEXDJX',
-            '.IXIC': '.IXIC:INDEXNASDAQ',
-            '^VIX': 'VIX:INDEXCBOE',
-            '^FTSE': 'UKX:INDEXFTSE',
-            '^N225': 'NI225:INDEXNIKKEI',
-            '^HSI': 'HSI:INDEXHANGSENG',
-            '^STOXX50E': 'SX5E:INDEXEURO'
-        };
-        if (indexMap[s]) return `https://www.google.com/finance/quote/${indexMap[s]}`;
-
-        // 4. COMMODITIES
-        const commodityMap = {
-            'GCW00': 'Gold', 'GC=F': 'Gold',
-            'SIW00': 'Silver', 'SI=F': 'Silver',
-            'BZW00': 'Brent+Crude+Oil', 'BZ=F': 'Brent+Crude+Oil',
-            'CL=F': 'Crude+Oil', 'TIO=F': 'Iron+Ore+Futures'
-        };
-        if (commodityMap[s]) return `https://www.google.com/search?q=${commodityMap[s]}+finance`;
-
-        // 5. SHARES (Default to ASX)
-        let cleanCode = s.split('.')[0];
-        if (cleanCode.length >= 1 && cleanCode.length <= 6 && !cleanCode.includes('^') && !cleanCode.includes('=')) {
-            return `https://www.google.com/finance/quote/${cleanCode}:ASX`;
+        // 3. INDEX
+        if (s.startsWith('^') || s === 'XJO' || s === 'AXJO') {
+            const indexBase = s.replace('^', '');
+            if (indexBase === 'AXJO' || indexBase === 'XJO') return `https://www.google.com/finance/quote/XJO:INDEXASX`;
+            if (indexBase === 'GSPC' || indexBase === 'INX') return `https://www.google.com/finance/quote/.INX:INDEXSP`;
+            if (indexBase === 'IXIC') return `https://www.google.com/finance/quote/.IXIC:INDEXNASDAQ`;
+            if (indexBase === 'DJI') return `https://www.google.com/finance/quote/.DJI:INDEXDJI`;
+            return `https://www.google.com/finance/quote/${indexBase}`;
         }
 
-        return `https://www.google.com/search?q=${encodeURIComponent(s)}+finance`;
+        // 4. EQUITIES (Default to ASX)
+        if (!s.includes('.')) {
+            return `https://www.google.com/finance/quote/${s}:ASX`;
+        }
+
+        return `https://www.google.com/finance/quote/${s}`;
     }
 
     /**
@@ -99,43 +83,57 @@ export class LinkHelper {
     }
 
     /**
-     * Binds Gemini dual-interaction to an element.
-     * TAPPING triggers Choice Menu -> Selection -> Copy + Open Gemini.
-     * LONG-HOLDING (or Right Click) triggers Internal AI (1.5).
+     * Internal helper to show the intelligence menu.
      */
-    static bindGeminiInteraction(el, getPrompt, onInternalAI) {
-        if (!el) return;
-        let pressStartTime = 0;
-        let isHoldTriggered = false;
-        let holdTimer;
+    static onShowIntelligence(e, getPrompt) {
+        const result = getPrompt();
+        let symbol = 'ASX';
+        let checkText = '';
 
-        // Visual fix: ensure standard OS features don't block our custom hold
-        const ua = navigator.userAgent;
-        const plat = navigator.platform;
-        const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-        // Real Android devices won't report as Win32 or MacIntel
-        const isAndroid = /Android/i.test(ua) && isTouch && !/Win32|Win64|MacIntel/i.test(plat);
-        const isMobile = isAndroid || /iPhone|iPad|iPod/i.test(ua);
+        if (typeof result === 'string') {
+            checkText = result;
+        } else if (Array.isArray(result) && result.length > 0) {
+            checkText = typeof result[0] === 'string' ? result[0] : (result[0].text || '');
+        }
 
-        const openGemini = () => {
-            const baseUrl = el.getAttribute('href') || 'https://gemini.google.com/app';
-
-            if (isAndroid) {
-                // Reverting to window.open to prevent the main app from navigating away.
-                // This restores the stability that prevents the 're-signing' reload.
-                const intentUrl = `intent://gemini.google.com/app#Intent;scheme=https;package=com.google.android.apps.bard;S.browser_fallback_url=${encodeURIComponent(baseUrl)};end`;
-                window.open(intentUrl, '_blank');
-            } else if (isMobile) {
-                // Standard mobile: Use open to keep tracker in background
-                window.open(baseUrl, '_blank');
-            } else {
-                // Desktop: Standard new tab
-                window.open(baseUrl, '_blank');
+        if (checkText) {
+            const matches = checkText.match(/\b([A-Z0-9]{3,4})\b/g);
+            if (matches) {
+                symbol = matches.find(m => m !== 'ASX' && m !== 'HTML') || matches[0];
             }
-        };
+        }
 
-        const triggerTap = (e) => {
-            if (e && e.preventDefault) e.preventDefault();
+        const intelligencePrompts = AI_DEFAULT_TEMPLATES.map(t => ({
+            label: t.label,
+            icon: t.icon,
+            internal: true,
+            questionId: t.id
+        }));
+
+        GeminiPromptMenu.show(e, intelligencePrompts, (selected) => {
+            if (selected.internal) {
+                document.dispatchEvent(new CustomEvent(EVENTS.SHOW_AI_SUMMARY, {
+                    detail: { symbol, questionId: selected.questionId }
+                }));
+            }
+        });
+    }
+
+    /**
+     * Binds Gemini interaction to an element.
+     */
+    static bindGeminiInteraction(el, getPrompt) {
+        if (!el) return;
+
+        el.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+
+            if (AppState.preferences.oneTapResearch) {
+                this.onShowIntelligence(e, getPrompt);
+                return;
+            }
+
             try {
                 const result = getPrompt();
                 if (!result) throw new Error('Prompts missing');
@@ -144,7 +142,6 @@ export class LinkHelper {
                 if (Array.isArray(result)) {
                     GeminiPromptMenu.show(e, result, null, targetUrl);
                 } else {
-                    // Single prompt logic: Copy and then Launch
                     const textArea = document.createElement("textarea");
                     textArea.value = result;
                     document.body.appendChild(textArea);
@@ -152,61 +149,11 @@ export class LinkHelper {
                     document.execCommand("copy");
                     document.body.removeChild(textArea);
                     ToastManager.info('COPIED: Paste into Gemini');
-
-                    openGemini();
+                    window.open(targetUrl, '_blank');
                 }
             } catch (err) {
-                console.warn('[LinkHelper] Tap Failed:', err);
+                console.warn('[LinkHelper] Click Failed:', err);
             }
-        };
-
-        const triggerHold = (e) => {
-            console.log('[LinkHelper] Executing Hold Action (1.5)');
-            isHoldTriggered = true;
-            if (e && e.preventDefault) e.preventDefault();
-            if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
-            onInternalAI(e);
-        };
-
-        el.addEventListener('pointerdown', (e) => {
-            if (e.pointerType === 'mouse' && e.button !== 0) return;
-            pressStartTime = performance.now();
-            isHoldTriggered = false;
-
-            holdTimer = setTimeout(() => {
-                triggerHold(e);
-            }, 600);
-        });
-
-        el.addEventListener('pointerup', (e) => {
-            if (holdTimer) {
-                clearTimeout(holdTimer);
-                holdTimer = null;
-            }
-
-            const duration = performance.now() - pressStartTime;
-            console.log('[LinkHelper] PointerUp. Duration:', duration, 'Hold Triggered:', isHoldTriggered);
-
-            if (!isHoldTriggered && duration < 600) {
-                // This was a SHORT TAP
-                triggerTap(e);
-            }
-        });
-
-        el.addEventListener('pointerleave', () => {
-            if (holdTimer) clearTimeout(holdTimer);
-        });
-
-        el.addEventListener('contextmenu', (e) => {
-            e.preventDefault();
-            if (holdTimer) clearTimeout(holdTimer);
-            triggerHold(e);
-        });
-
-        // Block standard click to prevent interference with our custom logic
-        el.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
         });
     }
 
@@ -226,7 +173,6 @@ export class LinkHelper {
         const code = (stock.code || '').toString();
         const name = (stock.name || '').toString();
         const slug = this.slugify(name);
-
         return template
             .replace(/\$(?:\{code_lower\}|\(code_lower\)|code_lower)/gi, code.toLowerCase())
             .replace(/\$(?:\{name_slug\}|\(name_slug\)|name_slug)/gi, slug)

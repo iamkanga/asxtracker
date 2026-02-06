@@ -6,7 +6,7 @@
 
 import { CSS_CLASSES, IDS, UI_ICONS, EVENTS, SECTORS_LIST, SECTOR_INDUSTRY_MAP, STORAGE_KEYS, KANGAROO_ICON_SVG } from '../utils/AppConstants.js';
 import { navManager } from '../utils/NavigationManager.js';
-import { userStore } from '../data/DataService.js';
+import { userStore, DataService } from '../data/DataService.js';
 import { AppState } from '../state/AppState.js';
 import { ToastManager } from './ToastManager.js';
 import { notificationStore } from '../state/NotificationStore.js';

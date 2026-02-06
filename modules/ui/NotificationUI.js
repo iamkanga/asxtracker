@@ -1780,6 +1780,23 @@ export class NotificationUI {
 
         const overrideOn = rules.excludePortfolio !== false;
 
+        // Total Alerts Count (Deduplicated logic from _updateList)
+        const local = (notificationStore && typeof notificationStore.getLocalAlerts === 'function')
+            ? notificationStore.getLocalAlerts()
+            : { pinned: [], fresh: [] };
+        const allLocal = [...(local.pinned || []), ...(local.fresh || [])];
+        const targetCount = allLocal.filter(h => h.intent === 'target' || h.intent === 'target-hit').length;
+        const moversCount = allLocal.filter(h => h.intent !== 'target' && h.intent !== 'target-hit').length;
+
+        const globalData = (notificationStore && typeof notificationStore.getGlobalAlerts === 'function')
+            ? notificationStore.getGlobalAlerts(false)
+            : { movers: { up: [], down: [] }, hilo: { high: [], low: [] } };
+
+        const totalGlobal = (globalData.movers?.up?.length || 0) + (globalData.movers?.down?.length || 0) +
+            (globalData.hilo?.high?.length || 0) + (globalData.hilo?.low?.length || 0);
+
+        const totalAlertsCount = targetCount + moversCount + totalGlobal;
+
         // Sector Counts
         const allIndustries = Object.values(SECTOR_INDUSTRY_MAP).flat();
         const totalIndustries = allIndustries.length;
@@ -1792,18 +1809,23 @@ export class NotificationUI {
         ribbon.style.cursor = 'pointer';
 
         ribbon.innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                <div class="ribbon-left" style="display: flex; align-items: center; gap: 12px; font-size: 0.7rem;">
-                    <span class="status-override-discreet" style="display: flex; align-items: center; gap: 6px;">
-                        <span style="color: var(--text-dominant); font-weight: 700; letter-spacing: 0.5px; opacity: 0.9;">TARGET PRIORITY</span>
-                        <span class="${overrideOn ? 'status-override-on-txt' : 'status-override-off-txt'}" style="font-weight: 700; font-size: 0.7rem;">${overrideOn ? 'ACTIVE' : 'OFF'}</span>
-                    </span>
-                    <span style="color: var(--text-muted); opacity: 0.3;">|</span>
-                    <span style="display: flex; align-items: center; gap: 6px;">
-                        <span style="color: var(--text-dominant); font-weight: 700; letter-spacing: 0.5px; opacity: 0.9;">SECTORS</span>
-                        <span><span style="color: var(--color-positive); font-weight: 700;">${activeCount}</span> <span style="color: var(--text-muted); opacity: 0.7;">/ ${totalIndustries}</span></span>
-                    </span>
-                </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+            <div class="ribbon-left" style="display: flex; align-items: center; gap: 12px; font-size: 0.7rem;">
+                <span style="display: flex; align-items: center; gap: 6px;">
+                    <span style="color: var(--text-dominant); font-weight: 700; letter-spacing: 0.5px; opacity: 0.9;">TOTAL</span>
+                    <span style="color: var(--color-accent); font-weight: 700; font-size: 0.7rem;">${totalAlertsCount}</span>
+                </span>
+                <span style="color: var(--text-muted); opacity: 0.3;">|</span>
+                <span class="status-override-discreet" style="display: flex; align-items: center; gap: 6px;">
+                    <span style="color: var(--text-dominant); font-weight: 700; letter-spacing: 0.5px; opacity: 0.9;">OVERRIDE</span>
+                    <span class="${overrideOn ? 'status-override-on-txt' : 'status-override-off-txt'}" style="font-weight: 700; font-size: 0.7rem;">${overrideOn ? 'ON' : 'OFF'}</span>
+                </span>
+                <span style="color: var(--text-muted); opacity: 0.3;">|</span>
+                <span style="display: flex; align-items: center; gap: 6px;">
+                    <span style="color: var(--text-dominant); font-weight: 700; letter-spacing: 0.5px; opacity: 0.9;">SECTORS</span>
+                    <span><span style="color: var(--color-positive); font-weight: 700;">${activeCount}</span> <span style="color: var(--text-muted); opacity: 0.7;">/ ${totalIndustries}</span></span>
+                </span>
+            </div>
                 <div class="ribbon-right" style="padding-left: 10px;">
                     <i class="fas fa-chevron-right" style="font-size: 0.75rem; opacity: 0.5; color: var(--color-accent);"></i>
                 </div>

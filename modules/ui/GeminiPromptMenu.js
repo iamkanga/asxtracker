@@ -93,6 +93,14 @@ export class GeminiPromptMenu {
                 e.preventDefault();
                 e.stopPropagation();
 
+                if (onSelect) onSelect(p);
+
+                // If internal action, don't copy or navigate
+                if (p.internal) {
+                    this.close();
+                    return;
+                }
+
                 // 1. Copy (Localhost & Mobile Compatible)
                 try {
                     const textArea = document.createElement("textarea");
@@ -106,19 +114,13 @@ export class GeminiPromptMenu {
                     console.warn('[GeminiMenu] Clipboard fail:', err);
                 }
 
-                if (onSelect) onSelect(p);
-
                 // 2. NAVIGATION (Trigger App Launch on Android via Intent)
                 if (isAndroid) {
-                    // Reverting to window.open to prevent the main app from navigating away.
-                    // This restores the stability that prevents the 're-signing' reload.
                     const intentUrl = `intent://gemini.google.com/app#Intent;scheme=https;package=com.google.android.apps.bard;S.browser_fallback_url=${encodeURIComponent(targetUrl)};end`;
                     window.open(intentUrl, '_blank');
                 } else if (isMobile) {
-                    // Standard mobile: Use open to keep tracker in background
                     window.open(targetUrl, '_blank');
                 } else {
-                    // Desktop: Standard new tab
                     window.open(targetUrl, '_blank');
                 }
 

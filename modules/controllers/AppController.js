@@ -31,6 +31,7 @@ import { SecurityUI } from '../ui/SecurityUI.js';
 import { GeneralSettingsUI } from '../ui/GeneralSettingsUI.js';
 import CalculatorUI from '../ui/CalculatorUI.js';
 import { AnalogClock } from '../ui/AnalogClock.js';
+import { AiSummaryUI } from '../ui/AiSummaryUI.js';
 import { IDS, CSS_CLASSES, EVENTS, WATCHLIST_ICON_POOL, ALL_SHARES_ID, CASH_WATCHLIST_ID, DASHBOARD_WATCHLIST_ID, PORTFOLIO_ID, UI_ICONS, USER_MESSAGES, STORAGE_KEYS, WATCHLIST_MODES, SORT_OPTIONS, WATCHLIST_NAMES, DASHBOARD_SYMBOLS, DASHBOARD_LINKS, SUMMARY_TYPES, BRIEFING_BLACKLIST } from '../utils/AppConstants.js?v=1029';
 import { ToastManager } from '../ui/ToastManager.js';
 import { navManager } from '../utils/NavigationManager.js';
@@ -96,6 +97,9 @@ export class AppController {
         if (this._initialized) return;
         this._initialized = true;
 
+
+        // Initialize Modules
+        AiSummaryUI.init();
 
         // CRITICAL DEPLOYMENT FIX: Force Unregister Service Worker to fix stale cache issues (User reported stuck on old version)
         if ('serviceWorker' in navigator) {

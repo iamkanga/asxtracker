@@ -172,7 +172,20 @@ export const AppState = {
             const stored = localStorage.getItem(STORAGE_KEYS.CARD_CHART_OPACITY) || localStorage.getItem('asx_card_chart_opacity');
             return stored !== null ? parseFloat(stored) : 1.0;
         })(),
-        showBadges: localStorage.getItem('ASX_NEXT_showBadges') !== 'false'
+        showBadges: localStorage.getItem('ASX_NEXT_showBadges') !== 'false',
+        oneTapResearch: localStorage.getItem(STORAGE_KEYS.ONE_TAP_RESEARCH) === 'true',
+        aiPromptTemplates: (() => {
+            try {
+                const stored = localStorage.getItem(STORAGE_KEYS.AI_PROMPT_TEMPLATES);
+                return stored ? JSON.parse(stored) : {};
+            } catch (e) { return {}; }
+        })(),
+        geminiSummaries: (() => {
+            try {
+                const stored = localStorage.getItem(STORAGE_KEYS.GEMINI_SUMMARIES);
+                return stored ? JSON.parse(stored) : {};
+            } catch (e) { return {}; }
+        })()
     },
 
     // Security Runtime State
@@ -317,7 +330,9 @@ export const AppState = {
                 historicalData: this.preferences.historicalData || {},
                 accentColor: this.preferences.accentColor || '#a49393',
                 accentOpacity: this.preferences.accentOpacity || '1',
-                cardChartOpacity: this.preferences.cardChartOpacity ?? 1.0
+                cardChartOpacity: this.preferences.cardChartOpacity ?? 1.0,
+                oneTapResearch: this.preferences.oneTapResearch || false,
+                aiPromptTemplates: this.preferences.aiPromptTemplates || {}
             };
             this.onPersistenceUpdate(payload);
         } else {
@@ -575,6 +590,47 @@ export const AppState = {
         this.preferences.historicalData[catId] = points;
         localStorage.setItem('ASX_NEXT_historicalData', JSON.stringify(this.preferences.historicalData));
         this._triggerSync();
+    },
+
+    saveOneTapResearch(enabled) {
+        this.preferences.oneTapResearch = !!enabled;
+        localStorage.setItem(STORAGE_KEYS.ONE_TAP_RESEARCH, this.preferences.oneTapResearch);
+        this._triggerSync();
+    },
+
+    saveAiPromptTemplate(id, text) {
+        if (!this.preferences.aiPromptTemplates) this.preferences.aiPromptTemplates = {};
+        this.preferences.aiPromptTemplates[id] = text;
+        localStorage.setItem(STORAGE_KEYS.AI_PROMPT_TEMPLATES, JSON.stringify(this.preferences.aiPromptTemplates));
+        this._triggerSync();
+    },
+
+    resetAiPromptTemplates() {
+        this.preferences.aiPromptTemplates = {};
+        localStorage.setItem(STORAGE_KEYS.AI_PROMPT_TEMPLATES, JSON.stringify({}));
+        this._triggerSync();
+    },
+
+    saveGeminiSummary(symbol, questionId, text) {
+        const today = new Date().toISOString().split('T')[0];
+        const key = `${symbol}_${questionId}_${today}`;
+        const summaries = this.preferences.geminiSummaries || {};
+
+        // Eviction logic for daily cache
+        const firstKey = Object.keys(summaries)[0];
+        if (firstKey && !firstKey.endsWith(today)) {
+            for (const k in summaries) delete summaries[k];
+        }
+
+        summaries[key] = text;
+        this.preferences.geminiSummaries = summaries;
+        localStorage.setItem(STORAGE_KEYS.GEMINI_SUMMARIES, JSON.stringify(summaries));
+    },
+
+    getGeminiSummary(symbol, questionId) {
+        const today = new Date().toISOString().split('T')[0];
+        const key = `${symbol}_${questionId}_${today}`;
+        return (this.preferences.geminiSummaries || {})[key] || null;
     },
 
     /**

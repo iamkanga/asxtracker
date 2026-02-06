@@ -1,0 +1,176 @@
+
+import { CSS_CLASSES, IDS, EVENTS, UI_LABELS, AI_DEFAULT_TEMPLATES } from '../utils/AppConstants.js';
+import { AppState } from '../state/AppState.js';
+import { DataService } from '../data/DataService.js';
+import { ToastManager } from './ToastManager.js';
+
+/**
+ * AiSummaryUI.js
+ * Handles the Universal In-App AI Research Bottom Sheet.
+ */
+export class AiSummaryUI {
+    static init() {
+        document.addEventListener(EVENTS.SHOW_AI_SUMMARY, (e) => {
+            const { symbol, questionId } = e.detail;
+            this.show(symbol, questionId);
+        });
+    }
+
+    static async show(symbol, questionId) {
+        // Dismiss other modals for clean focus
+        this._dismissOthers();
+
+        const template = AI_DEFAULT_TEMPLATES.find(t => t.id === questionId) || AI_DEFAULT_TEMPLATES[0];
+        const userPrompt = (AppState.preferences.aiPromptTemplates || {})[questionId];
+        const activePromptTemplate = userPrompt || template.text;
+
+        const modal = this._renderModal(symbol, template.label);
+        document.body.appendChild(modal);
+
+        // Animate Swipe Up
+        requestAnimationFrame(() => modal.classList.add('show'));
+
+        // Check Cache
+        const cached = AppState.getGeminiSummary(symbol, questionId);
+        if (cached) {
+            this._updateContent(modal, cached, 'Cached Analysis');
+        } else {
+            await this._fetchAndDisplay(modal, symbol, questionId, activePromptTemplate);
+        }
+    }
+
+    /**
+     * Show a custom result (like a chat answer) in the AI Bottom Sheet.
+     */
+    static showResult(title, symbol, text) {
+        this._dismissOthers();
+        const modal = this._renderModal(symbol, title);
+        document.body.appendChild(modal);
+        requestAnimationFrame(() => modal.classList.add('show'));
+        this._updateContent(modal, text, 'Direct AI Response');
+    }
+
+    static _dismissOthers() {
+        [
+            IDS.STOCK_DETAILS_MODAL,
+            IDS.SUMMARY_DETAIL_MODAL,
+            IDS.DISCOVERY_DETAIL_VIEW,
+            IDS.SNAPSHOT_MODAL_CONTAINER,
+            'asx-search-modal',
+            'asx-briefing-modal',
+            IDS.AI_SUMMARY_MODAL
+        ].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.remove();
+        });
+    }
+
+    static _renderModal(symbol, title) {
+        const modal = document.createElement('div');
+        modal.id = IDS.AI_SUMMARY_MODAL;
+        modal.className = `ai-summary-modal ${CSS_CLASSES.MODAL_OVERLAY}`;
+
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="ai-summary-drag-handle"></div>
+                <div class="ai-summary-body">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
+                        <div style="flex: 1;">
+                            <h2 style="margin: 0; font-size: 1.25rem; color: #fff;"><i class="fas fa-brain" style="color: var(--color-accent); margin-right: 8px;"></i>${title}</h2>
+                            <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;">Analysis for ${symbol}</div>
+                        </div>
+                        <button class="${CSS_CLASSES.MODAL_CLOSE_BTN}" style="background: rgba(255,255,255,0.05); border: none; color: var(--color-accent); width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    
+                    <div id="ai-summary-content">
+                        <div class="skeleton-loader">
+                            <div class="skeleton-line medium"></div>
+                            <div class="skeleton-line"></div>
+                            <div class="skeleton-line"></div>
+                            <div class="skeleton-line short"></div>
+                        </div>
+                        <p style="text-align: center; color: #666; font-size: 0.8rem; margin-top: 15px;">
+                            AI is analyzing market signals...
+                        </p>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        const closeModal = () => {
+            modal.classList.remove('show');
+            setTimeout(() => modal.remove(), 300);
+        };
+
+        modal.querySelector(`.${CSS_CLASSES.MODAL_CLOSE_BTN}`).onclick = closeModal;
+        modal.onclick = (e) => {
+            if (e.target === modal) closeModal();
+        };
+
+        return modal;
+    }
+
+    static async _fetchAndDisplay(modal, symbol, questionId, promptTemplate) {
+        const contentEl = modal.querySelector('#ai-summary-content');
+        const ds = new DataService();
+
+        try {
+            const result = await ds.fetchAiSummary(symbol, questionId, promptTemplate);
+
+            if (result && result.ok && result.text) {
+                const modelName = result.model || 'Gemini 3 Flash';
+                console.log(`%c [${modelName}] Response Recieved`, 'color: #00ff00; font-weight: bold;');
+                this._updateContent(modal, result.text, modelName);
+                // Save to Daily Cache
+                AppState.saveGeminiSummary(symbol, questionId, result.text);
+            } else {
+                const errorMsg = result?.error === 'RATE_LIMIT'
+                    ? 'AI is currently busy. Please try again in a minute.'
+                    : (result?.error || 'Failed to generate summary.');
+
+                contentEl.innerHTML = `
+                    <div style="text-align: center; padding: 20px; color: var(--color-negative);">
+                        <i class="fas fa-exclamation-triangle" style="font-size: 2rem; margin-bottom: 10px;"></i>
+                        <p>${errorMsg}</p>
+                        <button class="standard-btn" style="margin-top: 15px; background: #333;" onclick="document.getElementById('${IDS.AI_SUMMARY_MODAL}').remove()">Close</button>
+                    </div>
+                `;
+            }
+        } catch (err) {
+            contentEl.innerHTML = `<p style="color: red;">Error: ${err.message}</p>`;
+        }
+    }
+
+    static _updateContent(modal, text, modelName = 'Gemini 3 Flash') {
+        const contentEl = modal.querySelector('#ai-summary-content');
+        if (!contentEl) return;
+
+        // Process markdown-ish bolding, numerical lists and bullet points
+        let html = text
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/^\d+\.\s+(.*?)$/gm, '<li>$1</li>') // Numerical lists
+            .replace(/^\*\s+(.*?)$/gm, '<li>$1</li>')     // Bullet lists
+            .replace(/\n\n/g, '</p><p>')
+            .replace(/\n/g, '<br>')
+            .replace(/\*/g, ''); // Sweep stray asterisks
+
+        // Wrap consecutive <li> into <ul> if we found any
+        if (html.includes('<li>')) {
+            // Very basic wrapping - better to just let CSS handle the spacing
+        }
+
+        contentEl.innerHTML = `
+            <div style="animation: fadeIn 0.6s ease-out forwards;">
+                <div class="ai-text-body">
+                    <p>${html}</p>
+                </div>
+                <div style="margin-top: 30px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; opacity: 0.5; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;">
+                    <span><i class="fas fa-microchip"></i> Powered by ${modelName.split('/').pop()}</span>
+                    <span><i class="fas fa-history"></i> Daily Snapshot</span>
+                </div>
+            </div>
+        `;
+    }
+}
