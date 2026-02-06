@@ -122,7 +122,8 @@ export class LinkHelper {
 
             if (isAndroid) {
                 // Use window.open with Intent to avoid navigating the current tab away
-                const intentUrl = `intent://gemini.google.com/app#Intent;scheme=https;package=com.google.android.apps.bard;S.browser_fallback_url=${encodeURIComponent(baseUrl)};end`;
+                // Added action and category to strengthen the intent for native app launch
+                const intentUrl = `intent://gemini.google.com/app#Intent;scheme=https;action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;package=com.google.android.apps.bard;S.browser_fallback_url=${encodeURIComponent(baseUrl)};end`;
                 window.open(intentUrl, '_blank');
             } else if (isMobile) {
                 // Standard mobile: Use open to keep tracker in background

@@ -699,22 +699,24 @@ export class AppController {
         const loginBtn = document.getElementById(IDS.AUTH_BTN);
 
         if (user) {
-            this._setSignInLoadingState(true, 'Signing In...');
-
             // UI State Update for Login
             if (logoutBtn) logoutBtn.classList.remove(CSS_CLASSES.HIDDEN);
             if (loginBtn) loginBtn.classList.add(CSS_CLASSES.HIDDEN);
+            document.body.classList.add(CSS_CLASSES.LOGGED_IN);
 
-            // Provision user document (Ensures it exists for backend LIST API)
-            this.appService.provisionUser(user.uid);
-
-            // BOOT LOCK: Reset flags for new session
-            this._cloudPrefsLoaded = false;
-            AppState.isLocked = true;
-            this._isUnlockedThisSession = false; // FORCE FRESH CHALLENGE on Login/Reload
-
-            // Sanitize only if new session or necessary (idempotent usually, but cheap to skip if same)
+            // Only show 'Signing In' and perform heavy bootstrapping if it's a NEW user or fresh boot
             if (!isSameUser) {
+                this._setSignInLoadingState(true, 'Signing In...');
+
+                // Provision user document (Ensures it exists for backend LIST API)
+                this.appService.provisionUser(user.uid);
+
+                // BOOT LOCK: Reset flags for new session
+                this._cloudPrefsLoaded = false;
+                AppState.isLocked = true;
+                this._isUnlockedThisSession = false; // FORCE FRESH CHALLENGE on Login/Reload
+
+                // Sanitize corrupted shares
                 await this.appService.sanitizeCorruptedShares(user.uid);
             }
 
