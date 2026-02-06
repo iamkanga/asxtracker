@@ -1877,6 +1877,20 @@ export class NotificationUI {
     static _renderIntelligenceReport(container, rules, prefs) {
         const overrideOn = rules.excludePortfolio !== false;
 
+        // Calculate Total Alerts for display
+        const local = (notificationStore && typeof notificationStore.getLocalAlerts === 'function')
+            ? notificationStore.getLocalAlerts()
+            : { pinned: [], fresh: [] };
+        const allLocal = [...(local.pinned || []), ...(local.fresh || [])];
+        const targetCount = allLocal.filter(h => h.intent === 'target' || h.intent === 'target-hit').length;
+        const moversCount = allLocal.filter(h => h.intent !== 'target' && h.intent !== 'target-hit').length;
+        const globalData = (notificationStore && typeof notificationStore.getGlobalAlerts === 'function')
+            ? notificationStore.getGlobalAlerts(false)
+            : { movers: { up: [], down: [] }, hilo: { high: [], low: [] } };
+        const totalGlobal = (globalData.movers?.up?.length || 0) + (globalData.movers?.down?.length || 0) +
+            (globalData.hilo?.high?.length || 0) + (globalData.hilo?.low?.length || 0);
+        const totalAlertsCount = targetCount + moversCount + totalGlobal;
+
         // Threshold extraction with fallbacks
         const upPct = rules.up?.percentThreshold || 0;
         const upDol = rules.up?.dollarThreshold || 0;
@@ -1903,7 +1917,7 @@ export class NotificationUI {
             <!-- TARGET ALERTS PRIORITY (Clickable) -->
             <div class="report-section intel-nav-tile" id="watchlist-priority-btn" style="cursor: pointer; margin-bottom: 25px; padding: 12px; background: rgba(0,0,0,0.15); border-radius: 4px; opacity: 0.8;">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <div class="report-section-title" style="margin: 0; color: var(--color-accent); font-size: 0.7rem;">Target Alerts Override</div>
+                    <div class="report-section-title" style="margin: 0; color: var(--color-accent); font-size: 0.7rem;">Target Alerts Override <span style="color: var(--color-positive); margin-left: 8px; font-weight: 800;">${totalAlertsCount}</span></div>
                     <div id="priority-toggle-action" style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 4px;">
                         <span style="font-size: 0.7rem; font-weight: bold; color: ${overrideOn ? 'var(--color-positive)' : 'var(--text-muted)'};">
                             ${overrideOn ? 'ACTIVE' : 'OFF'}
