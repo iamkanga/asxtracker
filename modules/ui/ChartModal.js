@@ -14,6 +14,7 @@ export class ChartComponent {
         this.name = name;
         this.chart = null;
         this.series = null;
+        this.lastPriceLine = null; // Track price line to prevent duplicates
         this.currentRange = '1y'; // Default
         this.currentStyle = localStorage.getItem('asx_chart_style') || 'candle'; // Persist choice
         this.cachedData = null; // Store data to allow instant style switching
@@ -319,6 +320,7 @@ export class ChartComponent {
         // Remove old if exists
         if (this.series) {
             this.chart.removeSeries(this.series);
+            this.lastPriceLine = null;
         }
 
         // Theme Colors
@@ -374,10 +376,15 @@ export class ChartComponent {
 
         if (price === null) return;
 
+        // Remove old if exists to prevent duplication
+        if (this.lastPriceLine) {
+            this.series.removePriceLine(this.lastPriceLine);
+        }
+
         // Create Price Line
         // We simulate transparent BG by using Chart BG color #111
         // Text Color = Accent #a49393
-        this.series.createPriceLine({
+        this.lastPriceLine = this.series.createPriceLine({
             price: price,
             color: '#a49393', // Line color (Coffee)
             lineWidth: 1,
