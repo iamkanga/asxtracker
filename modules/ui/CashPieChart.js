@@ -66,7 +66,9 @@ export class CashPieChart {
         const rowsHtml = breakdown.map(b => {
             const pct = (b.val / total) * 100;
             return `
-                <div class="breakdown-row" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                <div class="breakdown-row interactive-row" 
+                     data-label="${b.label}" data-val="${b.val}" 
+                     style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.05); transition: background 0.2s ease; cursor: pointer;">
                     <div style="display: flex; align-items: center; gap: 12px;">
                         <div style="width: 12px; height: 12px; border-radius: 3px; background: ${b.color}; shadow: 0 0 5px ${b.color}44;"></div>
                         <span style="font-weight: 600; font-size: 0.95rem;">${b.label}</span>
@@ -94,7 +96,7 @@ export class CashPieChart {
                     <div class="pie-container-large" style="position: relative; width: 260px; height: 260px; display: flex; align-items: center; justify-content: center; margin: 10px 0;">
                         ${this._createPieSvg(breakdown, 240, 240, true)}
                         <div style="position: absolute; display: flex; flex-direction: column; align-items: center; pointer-events: none; width: 160px; text-align: center; justify-content: center; gap: 2px;">
-                            <span id="cash-pie-center-label" style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; font-weight: 800; letter-spacing: 1px; transition: all 0.2s ease;">Total Assets</span>
+                            <span id="cash-pie-center-label" style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; font-weight: 800; letter-spacing: 1px; transition: all 0.2s ease;">Assets Value</span>
                             <span id="cash-pie-center-value" style="font-size: 1.1rem; font-weight: 900; color: #fff; transition: all 0.2s ease; line-height: 1.1;">${formatCurrency(total)}</span>
                             <span id="cash-pie-center-sub" style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; transition: all 0.2s ease; opacity: 0; transform: translateY(5px);"></span>
                         </div>
@@ -140,17 +142,27 @@ export class CashPieChart {
         const valueEl = modal.querySelector('#cash-pie-center-value');
         const subEl = modal.querySelector('#cash-pie-center-sub');
 
-        const defaultLabel = "Total Assets";
+        const defaultLabel = "Assets Value";
         const defaultValue = formatCurrency(total);
 
-        slices.forEach(slice => {
-            const label = slice.dataset.label;
-            const val = parseFloat(slice.dataset.val);
+        const allInteractive = modal.querySelectorAll('.pie-slice, .interactive-row');
+
+        allInteractive.forEach(el => {
+            const label = el.dataset.label;
+            const val = parseFloat(el.dataset.val);
             const pct = ((val / total) * 100).toFixed(1) + '%';
             const valStr = formatCurrency(val);
 
-            slice.addEventListener('mouseenter', () => {
-                // Focus state: Label (Stock/Cat), Value (Pct - Large), Sub (Dollar - Small/Ghosted)
+            const onEnter = () => {
+                // Clear all existing highlights first to ensure only one is active
+                modal.querySelectorAll('.pie-slice').forEach(s => {
+                    s.style.filter = 'none';
+                    s.style.transform = 'scale(1)';
+                });
+                modal.querySelectorAll('.interactive-row').forEach(r => {
+                    r.style.background = 'transparent';
+                });
+
                 labelEl.textContent = label;
                 labelEl.style.color = 'var(--color-accent)';
 
@@ -161,10 +173,24 @@ export class CashPieChart {
                 subEl.textContent = valStr;
                 subEl.style.opacity = '0.6';
                 subEl.style.transform = 'translateY(0)';
-            });
 
-            slice.addEventListener('mouseleave', () => {
-                // Return to default
+                // Highlight corresponding slice
+                const slice = modal.querySelector(`.pie-slice[data-label="${label}"]`);
+                if (slice) {
+                    slice.style.filter = 'brightness(1.2)';
+                    slice.style.transform = 'scale(1.05)';
+                }
+
+                // Highlight corresponding row if applicable
+                if (el.classList.contains('interactive-row')) {
+                    el.style.background = 'rgba(255,255,255,0.08)';
+                } else if (el.classList.contains('pie-slice')) {
+                    const row = modal.querySelector(`.interactive-row[data-label="${label}"]`);
+                    if (row) row.style.background = 'rgba(255,255,255,0.08)';
+                }
+            };
+
+            const onLeave = () => {
                 labelEl.textContent = defaultLabel;
                 labelEl.style.color = 'var(--text-muted)';
 
@@ -174,7 +200,25 @@ export class CashPieChart {
 
                 subEl.style.opacity = '0';
                 subEl.style.transform = 'translateY(5px)';
-            });
+
+                if (el.classList.contains('interactive-row')) {
+                    el.style.background = 'transparent';
+                    // Reset the corresponding pie slice
+                    const slice = modal.querySelector(`.pie-slice[data-label="${label}"]`);
+                    if (slice) {
+                        slice.style.filter = 'none';
+                        slice.style.transform = 'scale(1)';
+                    }
+                }
+            };
+
+            el.addEventListener('mouseenter', onEnter);
+            el.addEventListener('mouseleave', onLeave);
+
+            // Touch support for mobile tapping
+            el.addEventListener('touchstart', (e) => {
+                onEnter();
+            }, { passive: true });
         });
     }
 
@@ -299,9 +343,7 @@ export class CashPieChart {
                     transform-origin: center;
                     overflow: visible;
                 }
-                .pie-slice:hover {
-                    filter: brightness(1.2);
-                    transform: scale(1.05); /* Increased scale for clearer pop-out */
+                .pie-slice {
                     cursor: pointer;
                 }
             </style>

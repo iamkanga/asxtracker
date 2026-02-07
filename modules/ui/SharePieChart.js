@@ -72,7 +72,9 @@ export class SharePieChart {
         const rowsHtml = breakdown.map(b => {
             const pct = (b.val / total) * 100;
             return `
-                <div class="breakdown-row" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                <div class="breakdown-row interactive-row" 
+                     data-id="${b.id}" data-val="${b.val}" 
+                     style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.05); transition: background 0.2s ease; cursor: pointer;">
                     <div style="display: flex; align-items: center; gap: 12px;">
                         <div style="width: 8px; height: 8px; background: ${b.color}; border-radius: 50%; box-shadow: 0 0 6px ${b.color}99; flex-shrink: 0;"></div>
                         <img src="https://files.marketindex.com.au/xasx/96x96-png/${b.id.toLowerCase()}.png" style="width: 20px; height: 20px; border-radius: 4px; background: #fff; padding: 1px;" onerror="this.src='favicon.svg'">
@@ -151,14 +153,24 @@ export class SharePieChart {
         const defaultLabel = "Market Value";
         const defaultValue = formatCurrency(total);
 
-        slices.forEach(slice => {
-            const label = slice.dataset.id; // Stock Code
-            const val = parseFloat(slice.dataset.val);
+        const allInteractive = modal.querySelectorAll('.pie-slice, .interactive-row');
+
+        allInteractive.forEach(el => {
+            const label = el.dataset.id; // Stock Code
+            const val = parseFloat(el.dataset.val);
             const pct = ((val / total) * 100).toFixed(1) + '%';
             const valStr = formatCurrency(val);
 
-            slice.addEventListener('mouseenter', () => {
-                // Focus state: Label (Stock), Value (Pct - Large), Sub (Dollar - Small/Ghosted)
+            const onEnter = () => {
+                // Clear all existing highlights first to ensure only one is active
+                modal.querySelectorAll('.pie-slice').forEach(s => {
+                    s.style.filter = 'none';
+                    s.style.transform = 'scale(1)';
+                });
+                modal.querySelectorAll('.interactive-row').forEach(r => {
+                    r.style.background = 'transparent';
+                });
+
                 labelEl.textContent = label;
                 labelEl.style.color = 'var(--color-accent)';
 
@@ -169,10 +181,24 @@ export class SharePieChart {
                 subEl.textContent = valStr;
                 subEl.style.opacity = '0.6';
                 subEl.style.transform = 'translateY(0)';
-            });
 
-            slice.addEventListener('mouseleave', () => {
-                // Return to default
+                // Highlight corresponding slice
+                const slice = modal.querySelector(`.pie-slice[data-id="${label}"]`);
+                if (slice) {
+                    slice.style.filter = 'brightness(1.2)';
+                    slice.style.transform = 'scale(1.05)';
+                }
+
+                // Highlight corresponding row if applicable
+                if (el.classList.contains('interactive-row')) {
+                    el.style.background = 'rgba(255,255,255,0.08)';
+                } else if (el.classList.contains('pie-slice')) {
+                    const row = modal.querySelector(`.interactive-row[data-id="${label}"]`);
+                    if (row) row.style.background = 'rgba(255,255,255,0.08)';
+                }
+            };
+
+            const onLeave = () => {
                 labelEl.textContent = defaultLabel;
                 labelEl.style.color = 'var(--text-muted)';
 
@@ -182,7 +208,27 @@ export class SharePieChart {
 
                 subEl.style.opacity = '0';
                 subEl.style.transform = 'translateY(5px)';
-            });
+
+                if (el.classList.contains('interactive-row')) {
+                    el.style.background = 'transparent';
+                    // Reset the corresponding pie slice
+                    const slice = modal.querySelector(`.pie-slice[data-id="${label}"]`);
+                    if (slice) {
+                        slice.style.filter = 'none';
+                        slice.style.transform = 'scale(1)';
+                    }
+                }
+            };
+
+            el.addEventListener('mouseenter', onEnter);
+            el.addEventListener('mouseleave', onLeave);
+
+            // Touch support for mobile tapping on rows
+            el.addEventListener('touchstart', (e) => {
+                onEnter();
+                // We don't preventDefault as we still want scrolling, 
+                // but we want the visual immediate feedback
+            }, { passive: true });
         });
     }
 
@@ -331,7 +377,7 @@ export class SharePieChart {
             <style>
                 @keyframes pie-pop { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
                 .pie-svg-share { animation: pie-pop 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; transform-origin: center; overflow: visible; }
-                .pie-slice:hover { filter: brightness(1.2); transform: scale(1.05); cursor: pointer; }
+                .pie-slice { cursor: pointer; }
             </style>` : '';
 
         return `

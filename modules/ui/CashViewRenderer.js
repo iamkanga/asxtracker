@@ -99,7 +99,7 @@ export class CashViewRenderer {
         headerDiv.innerHTML = `
             <div class="cash-pie-header-container" style="flex-shrink: 0; margin-right: 12px;"></div>
             <div style="display: flex; flex-direction: column; gap: 4px; flex: 1; align-items: flex-end; text-align: right;">
-                <span class="cash-total-label">Total Portfolio Cash</span>
+                <span class="cash-total-label">Assets Value</span>
                 <span class="cash-total-amount">${formatCurrency(totalValue)}</span>
             </div>
         `;
