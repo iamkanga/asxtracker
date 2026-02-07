@@ -42,7 +42,7 @@ export class ScrollManager {
                 align-items: center;
                 justify-content: center;
                 cursor: pointer;
-                z-index: 100000;
+                z-index: 2000000;
                 opacity: 0;
                 visibility: hidden;
                 transform: translateY(15px);
