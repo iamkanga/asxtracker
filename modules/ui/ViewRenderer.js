@@ -14,6 +14,7 @@ import { ToastManager } from './ToastManager.js';
 
 import { navManager } from '../utils/NavigationManager.js';
 import { MiniChartPreview, ChartModal } from './ChartModal.js';
+import { SharePieChart } from './SharePieChart.js';
 
 export class ViewRenderer {
     constructor() {
@@ -114,7 +115,7 @@ export class ViewRenderer {
         // Refinement V3: ALWAYS show summary if in Portfolio Context, regardless of mode.
         // Portfolio forces its own Grid layout, so strict mode checks (TABLE/COMPACT) are counter-productive here.
         if (summaryMetrics && (AppState.watchlist.id === PORTFOLIO_ID || AppState.isPortfolioVisible) && mode === VIEW_MODES.TABLE) {
-            this.renderSummary(summaryMetrics);
+            this.renderSummary(summaryMetrics, data);
         }
 
         switch (mode) {
@@ -584,7 +585,7 @@ export class ViewRenderer {
         }
     }
 
-    renderSummary(metrics) {
+    renderSummary(metrics, shares = []) {
         // 1. Create Container
         const container = document.createElement('div');
         container.id = 'portfolio-summary';
@@ -649,12 +650,13 @@ export class ViewRenderer {
         // 3. Construct HTML (Card Layout with Inline Percentages and Gradients)
         container.innerHTML = `
              <div class="${CSS_CLASSES.SUMMARY_CARD} ${CSS_CLASSES.CLICKABLE}" 
-                  style="background: ${neutralGradient} !important; ${valueBorderStyle}"
+                  style="background: ${neutralGradient} !important; ${valueBorderStyle}; display: flex !important; flex-direction: row !important; justify-content: space-between !important; align-items: center !important; padding: 16px 20px !important; min-height: 85px;"
                   data-type="${SUMMARY_TYPES.VALUE}">
-                 <span class="${CSS_CLASSES.METRIC_LABEL}">Portfolio Value</span>
-                 <div class="${CSS_CLASSES.METRIC_ROW}">
-                     <span class="${CSS_CLASSES.METRIC_VALUE_LARGE}">${formatCurrency(metrics.totalValue)}</span>
+                 <div style="display: flex; flex-direction: column; gap: 4px; flex: 1; align-items: flex-start;">
+                    <span class="${CSS_CLASSES.METRIC_LABEL}" style="margin: 0; text-align: left;">Portfolio Value</span>
+                    <span class="${CSS_CLASSES.METRIC_VALUE_LARGE}" style="text-align: left;">${formatCurrency(metrics.totalValue)}</span>
                  </div>
+                 <div class="share-pie-container" style="flex-shrink: 0; margin-left: 12px; display: flex; align-items: center; justify-content: center;"></div>
              </div>
  
              <div class="${CSS_CLASSES.SUMMARY_CARD} ${CSS_CLASSES.CLICKABLE}" 
@@ -730,6 +732,13 @@ export class ViewRenderer {
 
         // 3. Inject (Prepend to main container)
         this.container.prepend(container);
+
+        // 4. Initialize Pie Chart if shares available
+        const pieContainer = container.querySelector('.share-pie-container');
+        if (pieContainer && shares.length > 0) {
+            const pieChart = new SharePieChart(shares);
+            pieChart.renderSmall(pieContainer);
+        }
     }
 
     renderStockDetailsModal(stock) {
@@ -2511,9 +2520,11 @@ export class ViewRenderer {
                     <div class="${CSS_CLASSES.MODAL_HEADER}">
                         <h2 class="${CSS_CLASSES.MODAL_TITLE}">${title}</h2>
                         <div class="${CSS_CLASSES.MODAL_ACTIONS}">
-                            <button class="portfolio-history-modal-btn ${CSS_CLASSES.MODAL_ACTION_BTN}" title="View History">
-                                <i class="fas ${UI_ICONS.CHART}"></i>
-                            </button>
+                            ${title === 'Current Value' ? `
+                                <button class="portfolio-history-modal-btn ${CSS_CLASSES.MODAL_ACTION_BTN}" title="View History">
+                                    <i class="fas ${UI_ICONS.CHART}"></i>
+                                </button>
+                            ` : ''}
                             <button class="${CSS_CLASSES.MODAL_CLOSE_BTN} ${CSS_CLASSES.MODAL_ACTION_BTN}" title="Close">
                                 <i class="fas ${UI_ICONS.CLOSE}"></i>
                             </button>

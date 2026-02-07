@@ -6,6 +6,7 @@
 import { CASH_CATEGORIES, CSS_CLASSES, UI_ICONS, EVENTS, ASSET_CUSTOM_COLORS } from '../utils/AppConstants.js';
 import { formatCurrency } from '../utils/formatters.js';
 import { AppState } from '../state/AppState.js';
+import { CashPieChart } from './CashPieChart.js';
 
 export class CashViewRenderer {
     constructor(containerId) {
@@ -28,7 +29,7 @@ export class CashViewRenderer {
         this.container.classList.remove(CSS_CLASSES.HIDDEN); // Redundant if cleared, but safe
 
         // 1. Render Total Header
-        const header = this.createTotalHeader(totalValue);
+        const header = this.createTotalHeader(totalValue, assets);
         this.container.appendChild(header);
 
         // 2. Render List Container
@@ -84,16 +85,31 @@ export class CashViewRenderer {
     /**
      * Creates the Total Cash Header element.
      * @param {Number} totalValue 
+     * @param {Array} assets
      * @returns {HTMLElement}
      */
-    createTotalHeader(totalValue) {
+    createTotalHeader(totalValue, assets = []) {
         const headerDiv = document.createElement('div');
         headerDiv.className = 'cash-total-header';
+        headerDiv.style.display = 'flex';
+        headerDiv.style.flexDirection = 'row';
+        headerDiv.style.justifyContent = 'space-between';
+        headerDiv.style.alignItems = 'center';
 
         headerDiv.innerHTML = `
-            <span class="cash-total-label">Total Portfolio Cash</span>
-            <span class="cash-total-amount">${formatCurrency(totalValue)}</span>
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+                <span class="cash-total-label">Total Portfolio Cash</span>
+                <span class="cash-total-amount">${formatCurrency(totalValue)}</span>
+            </div>
+            <div class="cash-pie-header-container"></div>
         `;
+
+        // Inject Pie Chart
+        const pieContainer = headerDiv.querySelector('.cash-pie-header-container');
+        if (pieContainer && assets.length > 0) {
+            const pie = new CashPieChart(assets);
+            pie.renderSmall(pieContainer);
+        }
 
         return headerDiv;
     }
