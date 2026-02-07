@@ -44,7 +44,7 @@ export class GeneralSettingsUI {
                         <div id="ai-settings-accordion-header" class="${CSS_CLASSES.SETTING_ROW}" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border: none !important;">
                             <div style="flex: 1; padding-right: 25px;">
                                 <div class="${CSS_CLASSES.FONT_BOLD}" style="font-size: 0.95rem;">AI Intelligence</div>
-                                <div class="${CSS_CLASSES.TEXT_MUTED}" style="font-size: 0.75rem; line-height: 1.3;">When writing prompts, use <strong>\${code}.ax</strong> to automate the replacement with the ASX code</div>
+                                <div class="${CSS_CLASSES.TEXT_MUTED}" style="font-size: 0.75rem; line-height: 1.3;">When writing prompts, use <strong>\${code}.AX</strong> to automate the replacement with the ASX holding details</div>
                             </div>
                             <i class="fas fa-chevron-right" id="ai-accordion-chevron" style="transition: transform 0.3s; opacity: 0.5;"></i>
                         </div>

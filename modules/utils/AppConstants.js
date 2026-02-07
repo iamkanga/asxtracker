@@ -477,11 +477,11 @@ export const RESEARCH_LINKS_TEMPLATE = [
 
 export const GEMINI_PROMPTS = {
     STOCK: [
-        { label: 'Deep Dive Analysis', icon: 'fa-search', text: 'Summarize the latest technical and fundamental developments for ${code} on the ASX. Focus on recent price action, volume, and any relevant news or upcoming announcements. Provide a comprehensive outlook.' },
-        { label: 'Key Risks', icon: 'fa-exclamation-triangle', text: 'What are the primary bearish risks and headwinds facing ${code} right now? Consider both macro and company-specific factors.' },
-        { label: 'Future Outlook', icon: 'fa-binoculars', text: 'What are the analyst consensus targets and growth forecasts for ${code} over the next 12 months? Highlight key catalysts.' },
-        { label: 'Dividend Health', icon: 'fa-hand-holding-usd', text: 'Analyze the dividend stability and payout history of ${code} over the last 5 years. Is the yield sustainable?' },
-        { label: 'Competitor Comparison', icon: 'fa-balance-scale', text: 'Compare ${code} with its top 3 ASX competitors in terms of P/E ratio, yield, and recent price performance.' }
+        { label: 'Deep Dive Analysis', icon: 'fa-search', text: 'Summarize the latest technical and fundamental developments for ${code}.AX. Focus on recent price action, volume, and any relevant news or upcoming announcements. Provide a comprehensive outlook.' },
+        { label: 'Key Risks', icon: 'fa-exclamation-triangle', text: 'What are the primary bearish risks and headwinds facing ${code}.AX right now? Consider both macro and company-specific factors.' },
+        { label: 'Future Outlook', icon: 'fa-binoculars', text: 'What are the analyst consensus targets and growth forecasts for ${code}.AX over the next 12 months? Highlight key catalysts.' },
+        { label: 'Dividend Health', icon: 'fa-hand-holding-usd', text: 'Analyze the dividend stability and payout history of ${code}.AX over the last 5 years. Is the yield sustainable?' },
+        { label: 'Competitor Comparison', icon: 'fa-balance-scale', text: 'Compare ${code}.AX with its top 3 ASX competitors in terms of P/E ratio, yield, and recent price performance.' }
     ],
     MARKET: [
         { label: 'Portfolio Review', icon: 'fa-briefcase', text: 'Review my portfolio performance today in the context of the broader market. Highlight the biggest winners and losers and explain the likely drivers.' },
@@ -1684,36 +1684,36 @@ export const AI_DEFAULT_TEMPLATES = [
         id: 'key_risks',
         label: 'Key Risks',
         icon: 'fa-exclamation-triangle',
-        text: 'Analyze the top 3 bearish risks for ${code} on the ASX. Focus on recent news, debt levels, or sector headwinds. Be concise.'
+        text: 'Analyze the top 3 bearish risks for ${code}.AX. Focus on recent news, debt levels, or sector headwinds. Be concise.'
     },
     {
         id: 'future_outlook',
         label: 'Future Outlook',
         icon: 'fa-chart-line',
-        text: 'What is the 12-month outlook for ${code}? Include analyst sentiment and key growth drivers. Stay brief.'
+        text: 'What is the 12-month outlook for ${code}.AX? Include analyst sentiment and key growth drivers. Stay brief.'
     },
     {
         id: 'dividend_health',
         label: 'Dividend Health',
         icon: 'fa-hand-holding-usd',
-        text: 'Analyze the dividend stability and yield for ${code}. Mention payout ratio and recent history.'
+        text: 'Analyze the dividend stability and yield for ${code}.AX. Mention payout ratio and recent history.'
     },
     {
         id: 'technical_summary',
         label: 'Technical Check',
         icon: 'fa-microscope',
-        text: 'Provide a quick technical analysis for ${code}. Mentions support/resistance levels and RSI trend if possible.'
+        text: 'Provide a quick technical analysis for ${code}.AX. Mentions support/resistance levels and RSI trend if possible.'
     },
     {
         id: 'market_sentiment',
         label: 'Sentiment',
         icon: 'fa-heartbeat',
-        text: 'What is the current market sentiment for ${code} today? Is it macro-driven or specific to the company?'
+        text: 'What is the current market sentiment for ${code}.AX today? Is it macro-driven or specific to the company?'
     },
     {
         id: 'user_question',
         label: 'User Question',
         icon: 'fa-question-circle',
-        text: '${code}.ax'
+        text: '${code}.AX'
     }
 ];
