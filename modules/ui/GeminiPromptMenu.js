@@ -307,6 +307,12 @@ export class GeminiPromptMenu {
         const textarea = document.createElement('textarea');
         textarea.className = 'gemini-custom-textarea';
         textarea.placeholder = 'Type your question here...';
+
+        // Context Injection: If for external launch (long-press), pre-fill the stock context
+        if (forceExternal && contextSymbol && contextSymbol !== 'ASX') {
+            textarea.value = `${contextSymbol}.AX `;
+        }
+
         Object.assign(textarea.style, {
             width: '100%',
             height: '140px',
