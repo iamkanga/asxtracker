@@ -39,7 +39,6 @@ export class SharePieChart {
             background: rgba(255,255,255,0.03);
             border-radius: 50%;
             border: 1px solid rgba(255,255,255,0.05);
-            margin-right: 12px;
         `;
 
         wrapper.innerHTML = svg;
@@ -75,6 +74,7 @@ export class SharePieChart {
             return `
                 <div class="breakdown-row" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.05);">
                     <div style="display: flex; align-items: center; gap: 12px;">
+                        <div style="width: 8px; height: 8px; background: ${b.color}; border-radius: 50%; box-shadow: 0 0 6px ${b.color}99; flex-shrink: 0;"></div>
                         <img src="https://files.marketindex.com.au/xasx/96x96-png/${b.id.toLowerCase()}.png" style="width: 20px; height: 20px; border-radius: 4px; background: #fff; padding: 1px;" onerror="this.src='favicon.svg'">
                         <div style="display: flex; flex-direction: column;">
                             <span style="font-weight: 700; font-size: 0.95rem; color: #fff;">${b.id}</span>
@@ -238,15 +238,55 @@ export class SharePieChart {
      * Shifts a color slightly to make it distinct from a conflict.
      */
     _adjustColor(hex, index) {
+        // More robust randomization to ensure distinct colors
+        // Use HSL shift to maintain saturation/lightness but change hue significantly
         const r = parseInt(hex.slice(1, 3), 16);
         const g = parseInt(hex.slice(3, 5), 16);
         const b = parseInt(hex.slice(5, 7), 16);
 
-        // Simple shift based on index
-        const shift = ((index * 20) % 60) - 30;
-        const clamp = (val) => Math.min(255, Math.max(0, Math.round(val)));
+        // Convert to HSL (manual simplified)
+        let r_norm = r / 255, g_norm = g / 255, b_norm = b / 255;
+        let max = Math.max(r_norm, g_norm, b_norm), min = Math.min(r_norm, g_norm, b_norm);
+        let h, s, l = (max + min) / 2;
 
-        return '#' + [clamp(r + shift), clamp(g + shift), clamp(b + shift)]
+        if (max === min) {
+            h = s = 0; // achromatic
+        } else {
+            let d = max - min;
+            s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+            switch (max) {
+                case r_norm: h = (g_norm - b_norm) / d + (g_norm < b_norm ? 6 : 0); break;
+                case g_norm: h = (b_norm - r_norm) / d + 2; break;
+                case b_norm: h = (r_norm - g_norm) / d + 4; break;
+            }
+            h /= 6;
+        }
+
+        // Apply a deterministic but significant hue shift based on index
+        // Shift hue by golden ratio to maximize spacing
+        h = (h + (index * 0.618033988749895)) % 1;
+
+        // Ensure color isn't too dark or light for the pie
+        l = 0.45 + (index % 3) * 0.1;
+        s = 0.6 + (index % 2) * 0.2;
+
+        // Convert back to RGB
+        const hue2rgb = (p, q, t) => {
+            if (t < 0) t += 1;
+            if (t > 1) t -= 1;
+            if (t < 1 / 6) return p + (q - p) * 6 * t;
+            if (t < 1 / 2) return q;
+            if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+            return p;
+        };
+
+        const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+        const p = 2 * l - q;
+        const finalR = Math.round(hue2rgb(p, q, h + 1 / 3) * 255);
+        const finalG = Math.round(hue2rgb(p, q, h) * 255);
+        const finalB = Math.round(hue2rgb(p, q, h - 1 / 3) * 255);
+
+        return '#' + [finalR, finalG, finalB]
             .map(x => x.toString(16).padStart(2, '0'))
             .join('').toUpperCase();
     }

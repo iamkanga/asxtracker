@@ -464,7 +464,7 @@ export class ViewRenderer {
                         <div class="${CSS_CLASSES.DETAIL_ROW} ${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.JUSTIFY_BETWEEN} ${CSS_CLASSES.PY_TINY}">
                             <span class="${CSS_CLASSES.DETAIL_LABEL}">Capital Gain</span>
                             <span class="${CSS_CLASSES.DETAIL_VALUE} ${CSS_CLASSES.FONT_BOLD} ${capitalGain >= 0 ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}">
-                                ${formatCurrency(capitalGain)}
+                                ${formatCurrency(Math.abs(capitalGain))}
                             </span>
                         </div>
                     </div>
@@ -652,64 +652,64 @@ export class ViewRenderer {
              <div class="${CSS_CLASSES.SUMMARY_CARD} ${CSS_CLASSES.CLICKABLE}" 
                   style="background: ${neutralGradient} !important; ${valueBorderStyle}; display: flex !important; flex-direction: row !important; justify-content: space-between !important; align-items: center !important; padding: 16px 20px !important; min-height: 85px;"
                   data-type="${SUMMARY_TYPES.VALUE}">
-                 <div style="display: flex; flex-direction: column; gap: 4px; flex: 1; align-items: flex-start;">
-                    <span class="${CSS_CLASSES.METRIC_LABEL}" style="margin: 0; text-align: left;">Portfolio Value</span>
-                    <span class="${CSS_CLASSES.METRIC_VALUE_LARGE}" style="text-align: left;">${formatCurrency(metrics.totalValue)}</span>
+                 <div class="share-pie-container" style="flex-shrink: 0; margin-right: 12px; display: flex; align-items: center; justify-content: center;"></div>
+                 <div style="display: flex; flex-direction: column; gap: 4px; flex: 1; align-items: flex-end; text-align: right;">
+                    <span class="${CSS_CLASSES.METRIC_LABEL}" style="margin: 0;">Portfolio Value</span>
+                    <span class="${CSS_CLASSES.METRIC_VALUE_LARGE}">${formatCurrency(metrics.totalValue)}</span>
                  </div>
-                 <div class="share-pie-container" style="flex-shrink: 0; margin-left: 12px; display: flex; align-items: center; justify-content: center;"></div>
              </div>
  
              <div class="${CSS_CLASSES.SUMMARY_CARD} ${CSS_CLASSES.CLICKABLE}" 
-                  style="background: ${dayChangeGradient} !important; ${changeBorderStyle}"
+                  style="background: ${dayChangeGradient} !important; ${changeBorderStyle}; display: flex !important; flex-direction: row !important; justify-content: space-between !important; align-items: center !important; padding: 12px 20px !important;"
                   data-type="${SUMMARY_TYPES.DAY_CHANGE}">
-                 <span class="${CSS_CLASSES.METRIC_LABEL}">Day Change</span>
-                 <div class="${CSS_CLASSES.METRIC_ROW}">
+                 <span class="${CSS_CLASSES.METRIC_LABEL}" style="margin: 0; text-align: left;">Day<br/>Change</span>
+                 <div class="${CSS_CLASSES.METRIC_ROW}" style="margin: 0; display: flex; flex-direction: column; align-items: flex-end;">
                      <span class="${CSS_CLASSES.METRIC_VALUE_LARGE} ${(metrics.dayChangeValue >= 0) ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}">
-                         ${formatCurrency(metrics.dayChangeValue)}
+                         ${formatCurrency(Math.abs(metrics.dayChangeValue))}
                      </span>
-                     <span class="${CSS_CLASSES.METRIC_PERCENT_SMALL} ${(metrics.dayChangePercent >= 0) ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}">
+                     <span class="${CSS_CLASSES.METRIC_PERCENT_SMALL} ${(metrics.dayChangePercent >= 0) ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}" style="margin-top: -4px;">
                          ${formatPercent(metrics.dayChangePercent)}
                      </span>
                  </div>
              </div>
 
             <div class="${CSS_CLASSES.SUMMARY_CARD} ${CSS_CLASSES.CLICKABLE}" 
-                 style="background: ${greenGradient} !important; ${gainBorderStyle}"
+                 style="background: ${greenGradient} !important; ${gainBorderStyle}; display: flex !important; flex-direction: row !important; justify-content: space-between !important; align-items: center !important; padding: 12px 20px !important;"
                  data-type="${SUMMARY_TYPES.WINNERS}">
-                <span class="${CSS_CLASSES.METRIC_LABEL}">Day Gain</span>
-                <div class="${CSS_CLASSES.METRIC_ROW}">
+                <span class="${CSS_CLASSES.METRIC_LABEL}" style="margin: 0; text-align: left;">Day<br/>Gain</span>
+                <div class="${CSS_CLASSES.METRIC_ROW}" style="margin: 0; display: flex; flex-direction: column; align-items: flex-end;">
                     <span class="${CSS_CLASSES.METRIC_VALUE_LARGE} ${CSS_CLASSES.TEXT_POSITIVE}">
-                        ${formatCurrency(metrics.dayGain || 0)}
+                        ${formatCurrency(Math.abs(metrics.dayGain || 0))}
                     </span>
-                    <span class="${CSS_CLASSES.METRIC_PERCENT_SMALL} ${CSS_CLASSES.TEXT_POSITIVE}">
+                    <span class="${CSS_CLASSES.METRIC_PERCENT_SMALL} ${CSS_CLASSES.TEXT_POSITIVE}" style="margin-top: -4px;">
                         ${formatPercent(metrics.dayGainPercent || 0)}
                     </span>
                 </div>
             </div>
 
             <div class="${CSS_CLASSES.SUMMARY_CARD} ${CSS_CLASSES.CLICKABLE}" 
-                 style="background: ${redGradient} !important; ${lossBorderStyle}"
+                 style="background: ${redGradient} !important; ${lossBorderStyle}; display: flex !important; flex-direction: row !important; justify-content: space-between !important; align-items: center !important; padding: 12px 20px !important;"
                  data-type="${SUMMARY_TYPES.LOSERS}">
-                <span class="${CSS_CLASSES.METRIC_LABEL}">Day Loss</span>
-                <div class="${CSS_CLASSES.METRIC_ROW}">
+                <span class="${CSS_CLASSES.METRIC_LABEL}" style="margin: 0; text-align: left;">Day<br/>Loss</span>
+                <div class="${CSS_CLASSES.METRIC_ROW}" style="margin: 0; display: flex; flex-direction: column; align-items: flex-end;">
                     <span class="${CSS_CLASSES.METRIC_VALUE_LARGE} ${CSS_CLASSES.TEXT_NEGATIVE}">
-                        ${formatCurrency(metrics.dayLoss || 0)}
+                        ${formatCurrency(Math.abs(metrics.dayLoss || 0))}
                     </span>
-                    <span class="${CSS_CLASSES.METRIC_PERCENT_SMALL} ${CSS_CLASSES.TEXT_NEGATIVE}">
+                    <span class="${CSS_CLASSES.METRIC_PERCENT_SMALL} ${CSS_CLASSES.TEXT_NEGATIVE}" style="margin-top: -4px;">
                         ${formatPercent(metrics.dayLossPercent || 0)}
                     </span>
                 </div>
             </div>
 
             <div class="${CSS_CLASSES.SUMMARY_CARD} ${CSS_CLASSES.CLICKABLE}" 
-                 style="background: ${capitalGainGradient} !important; ${returnBorderStyle}"
+                 style="background: ${capitalGainGradient} !important; ${returnBorderStyle}; display: flex !important; flex-direction: row !important; justify-content: space-between !important; align-items: center !important; padding: 12px 20px !important;"
                  data-type="${SUMMARY_TYPES.CAPITAL_GAIN}">
-                <span class="${CSS_CLASSES.METRIC_LABEL}">Total Capital Gain</span>
-                <div class="${CSS_CLASSES.METRIC_ROW}">
+                <span class="${CSS_CLASSES.METRIC_LABEL}" style="margin: 0; text-align: left;">Total<br/>Capital Gain</span>
+                <div class="${CSS_CLASSES.METRIC_ROW}" style="margin: 0; display: flex; flex-direction: column; align-items: flex-end;">
                     <span class="${CSS_CLASSES.METRIC_VALUE_LARGE} ${isTotalPos ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}">
-                        ${formatCurrency(metrics.totalReturn)}
+                        ${formatCurrency(Math.abs(metrics.totalReturn))}
                     </span>
-                    <span class="${CSS_CLASSES.METRIC_PERCENT_SMALL} ${isTotalPos ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}">
+                    <span class="${CSS_CLASSES.METRIC_PERCENT_SMALL} ${isTotalPos ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}" style="margin-top: -4px;">
                         ${formatPercent(metrics.totalReturnPercent)}
                     </span>
                 </div>
@@ -765,7 +765,7 @@ export class ViewRenderer {
         const isPos = change > 0;
         const isNeg = change < 0;
         const isNeu = change === 0;
-        const changeStr = formatCurrency(change);
+        const changeStr = formatCurrency(Math.abs(change));
         const pctStr = formatPercent(stock.pctChange || stock.dayChangePercent);
 
         // Resolve Sector
@@ -885,7 +885,7 @@ export class ViewRenderer {
                                     <div class="${CSS_CLASSES.DETAIL_ROW} ${CSS_CLASSES.PT_TINY} ${CSS_CLASSES.MB_SMALL}">
                                         <span class="${CSS_CLASSES.DETAIL_LABEL}">Net Impact</span>
                                         <span class="${CSS_CLASSES.DETAIL_VALUE} ${stock.dayChangeValue > 0 ? CSS_CLASSES.POSITIVE : (stock.dayChangeValue < 0 ? CSS_CLASSES.NEGATIVE : CSS_CLASSES.NEUTRAL)}">
-                                            ${formatCurrency(stock.dayChangeValue || 0)}
+                                            ${formatCurrency(Math.abs(stock.dayChangeValue || 0))}
                                         </span>
                                     </div>
                                     ` : ''}
@@ -1444,7 +1444,7 @@ export class ViewRenderer {
                             <div class="${CSS_CLASSES.PREVIEW_MAIN_ROW}">
                                 <span class="${CSS_CLASSES.PREVIEW_PRICE}">${formatCurrency(stock.live)}</span>
                                 <span class="${CSS_CLASSES.PREVIEW_CHANGE} ${stock.change >= 0 ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}">
-                                    ${formatCurrency(stock.change)} (${formatPercent(stock.pctChange)})
+                                    ${formatCurrency(Math.abs(stock.change))} (${formatPercent(stock.pctChange)})
                                 </span>
                             </div>
 
