@@ -9,7 +9,7 @@ import { ToastManager } from './ToastManager.js';
  */
 export class GeminiPromptMenu {
 
-    static show(event, prompts, onSelect, targetUrl = 'https://gemini.google.com/app') {
+    static show(event, prompts, onSelect, targetUrl = 'https://gemini.google.com/app', forceExternal = false) {
         this.close();
 
         // 1. Create Overlays
@@ -57,7 +57,7 @@ export class GeminiPromptMenu {
             borderBottom: '1px solid #333',
             marginBottom: '6px'
         });
-        header.textContent = 'Ask Gemini AI';
+        header.textContent = forceExternal ? 'Gemini PWA Mode' : 'Ask Gemini AI';
         menu.appendChild(header);
 
         const ua = navigator.userAgent;
@@ -95,16 +95,19 @@ export class GeminiPromptMenu {
 
                 if (onSelect) onSelect(p);
 
-                // If internal action, don't copy or navigate
-                if (p.internal) {
+                // If internal action AND NOT forcing external, don't copy or navigate
+                if (p.internal && !forceExternal) {
                     this.close();
                     return;
                 }
 
+                // If forcing external, we need to prepare the prompt text if it's missing (e.g. from internal templates)
+                const promptText = p.text || `Summarize the technical and fundamental outlook for ${p.label || 'this stock'} on the ASX.`;
+
                 // 1. Copy (Localhost & Mobile Compatible)
                 try {
                     const textArea = document.createElement("textarea");
-                    textArea.value = p.text;
+                    textArea.value = promptText;
                     document.body.appendChild(textArea);
                     textArea.select();
                     document.execCommand("copy");

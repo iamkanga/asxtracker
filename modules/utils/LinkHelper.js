@@ -85,7 +85,7 @@ export class LinkHelper {
     /**
      * Internal helper to show the intelligence menu.
      */
-    static onShowIntelligence(e, getPrompt) {
+    static onShowIntelligence(e, getPrompt, forceExternal = false) {
         const result = getPrompt();
         let symbol = 'ASX';
         let checkText = '';
@@ -107,16 +107,18 @@ export class LinkHelper {
             label: t.label,
             icon: t.icon,
             internal: true,
-            questionId: t.id
+            questionId: t.id,
+            // Populate text for external copying (Gemini PWA mode)
+            text: LinkHelper.replacePlaceholders(t.text, { code: symbol })
         }));
 
         GeminiPromptMenu.show(e, intelligencePrompts, (selected) => {
-            if (selected.internal) {
+            if (selected.internal && !forceExternal) {
                 document.dispatchEvent(new CustomEvent(EVENTS.SHOW_AI_SUMMARY, {
                     detail: { symbol, questionId: selected.questionId }
                 }));
             }
-        });
+        }, 'https://gemini.google.com/app', forceExternal);
     }
 
     /**
@@ -125,36 +127,105 @@ export class LinkHelper {
     static bindGeminiInteraction(el, getPrompt) {
         if (!el) return;
 
-        el.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
+        let pressTimer = null;
+        let isLongPress = false;
 
-            if (AppState.preferences.oneTapResearch) {
-                this.onShowIntelligence(e, getPrompt);
+        const handlePressStart = (e) => {
+            isLongPress = false;
+            pressTimer = setTimeout(() => {
+                isLongPress = true;
+                // Vibrational feedback if available
+                if (navigator.vibrate) navigator.vibrate(50);
+
+                // Trigger LONG PRESS behavior: Always External
+                const quickSummaryOn = AppState.preferences.oneTapResearch !== false;
+                if (quickSummaryOn) {
+                    this.onShowIntelligence(e, getPrompt, true);
+                } else {
+                    const result = getPrompt();
+                    const targetUrl = el.getAttribute('href') || 'https://gemini.google.com/app';
+                    if (Array.isArray(result)) {
+                        GeminiPromptMenu.show(e, result, null, targetUrl, true);
+                    } else {
+                        // One-tap straight to PWA (handled by click fallback if timer cleared, 
+                        // but since we found it's a long press, we do it here and prevent click)
+                        this._openExternal(result, targetUrl);
+                    }
+                }
+            }, 600); // 600ms for long press
+        };
+
+        const handlePressEnd = (e) => {
+            clearTimeout(pressTimer);
+        };
+
+        // Long press detection for both touch and mouse
+        el.addEventListener('touchstart', handlePressStart, { passive: true });
+        el.addEventListener('touchend', handlePressEnd, { passive: true });
+        el.addEventListener('mousedown', handlePressStart);
+        el.addEventListener('mouseup', handlePressEnd);
+        el.addEventListener('mouseleave', handlePressEnd);
+
+        el.addEventListener('click', (e) => {
+            if (isLongPress) {
+                e.preventDefault();
+                e.stopPropagation();
+                isLongPress = false;
                 return;
             }
 
-            try {
-                const result = getPrompt();
-                if (!result) throw new Error('Prompts missing');
-                const targetUrl = el.getAttribute('href') || 'https://gemini.google.com/app';
+            e.preventDefault();
+            e.stopPropagation();
 
-                if (Array.isArray(result)) {
-                    GeminiPromptMenu.show(e, result, null, targetUrl);
-                } else {
-                    const textArea = document.createElement("textarea");
-                    textArea.value = result;
-                    document.body.appendChild(textArea);
-                    textArea.select();
-                    document.execCommand("copy");
-                    document.body.removeChild(textArea);
-                    ToastManager.info('COPIED: Paste into Gemini');
-                    window.open(targetUrl, '_blank');
+            // Short Tap Behavior
+            const quickSummaryOn = AppState.preferences.oneTapResearch !== false;
+
+            if (quickSummaryOn) {
+                // Internal summary (Show Menu)
+                this.onShowIntelligence(e, getPrompt, false);
+            } else {
+                // External PWA
+                try {
+                    const result = getPrompt();
+                    if (!result) throw new Error('Prompts missing');
+                    const targetUrl = el.getAttribute('href') || 'https://gemini.google.com/app';
+
+                    if (Array.isArray(result)) {
+                        GeminiPromptMenu.show(e, result, null, targetUrl, true); // Force external
+                    } else {
+                        this._openExternal(result, targetUrl);
+                    }
+                } catch (err) {
+                    console.warn('[LinkHelper] Tap Failed:', err);
                 }
-            } catch (err) {
-                console.warn('[LinkHelper] Click Failed:', err);
             }
         });
+    }
+
+    static _openExternal(promptText, targetUrl) {
+        try {
+            const textArea = document.createElement("textarea");
+            textArea.value = promptText;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand("copy");
+            document.body.removeChild(textArea);
+            ToastManager.info('COPIED: Paste into Gemini');
+        } catch (err) {
+            console.warn('[LinkHelper] Clipboard fail:', err);
+        }
+
+        const ua = navigator.userAgent;
+        const plat = navigator.platform;
+        const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+        const isAndroid = /Android/i.test(ua) && isTouch && !/Win32|Win64|MacIntel/i.test(plat);
+
+        if (isAndroid) {
+            const intentUrl = `intent://gemini.google.com/app#Intent;scheme=https;package=com.google.android.apps.bard;S.browser_fallback_url=${encodeURIComponent(targetUrl)};end`;
+            window.open(intentUrl, '_blank');
+        } else {
+            window.open(targetUrl, '_blank');
+        }
     }
 
     static slugify(text) {
