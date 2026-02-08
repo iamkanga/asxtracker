@@ -670,15 +670,26 @@ export class PortfolioChartUI {
 
     _updateStats(data) {
         if (!data || data.length === 0) return;
+
+        const first = data[0].value;
         const last = data[data.length - 1].value;
+        const change = last - first;
+        const pctChange = first !== 0 ? (change / first) * 100 : 0;
+
         const statsEl = this.modal.querySelector('.chart-stats-summary');
         if (statsEl) {
+            const sign = pctChange >= 0 ? '+' : '';
+            const color = pctChange >= 0 ? '#06FF4F' : '#FF3131';
+
             statsEl.innerHTML = `
-                    <div style="display:flex; flex-direction:column; gap:2px;">
-                        <div style="font-size: 1.3rem; font-weight: 900; color: #fff; line-height: 1.1;">$${Math.floor(last).toLocaleString('en-AU')}</div>
-                        <div style="font-size: 0.7rem; opacity: 0.5; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase;">Current Value</div>
+                <div style="display:flex; flex-direction:column; gap:2px;">
+                    <div style="font-size: 1.3rem; font-weight: 900; color: #fff; line-height: 1.1;">$${Math.floor(last).toLocaleString('en-AU')}</div>
+                    <div style="display:flex; align-items:center; justify-content:flex-end; gap:4px;">
+                        <span style="font-size: 0.85rem; font-weight: 800; color: ${color};">${sign}${pctChange.toFixed(2)}%</span>
+                        <span style="font-size: 0.7rem; opacity: 0.5; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase;">Performance</span>
                     </div>
-                `;
+                </div>
+            `;
         }
     }
 }

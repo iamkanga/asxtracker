@@ -202,9 +202,12 @@ export class ChartComponent {
                     <div class="${CSS_CLASSES.CHART_OVERLAY_LOADER}">
                         <i class="fas fa-spinner fa-spin fa-2x"></i>
                     </div>
-                    <div class="chart-period-overlay" id="chartPeriodStats_${this.code}">
-                        <span class="chart-period-low" style="color:#ffffff;">L: --</span>
-                        <span class="chart-period-high" style="color:#ffffff; margin-left:8px;">H: --</span>
+                    <div class="chart-period-overlay" id="chartPeriodStats_${this.code}" style="display: flex; flex-direction: column; gap: 2px;">
+                        <div class="chart-range-row">
+                            <span class="chart-period-low" style="color:#ffffff;">L: --</span>
+                            <span class="chart-period-high" style="color:#ffffff; margin-left:8px;">H: --</span>
+                        </div>
+                        <span class="chart-period-change" style="color:#a49393; font-weight:800; font-size: 0.86rem;">--</span>
                     </div>
                 </div>
                 <div class="${CSS_CLASSES.CHART_CONTROLS}">
@@ -529,10 +532,12 @@ export class ChartComponent {
 
         const highEl = statsEl.querySelector('.chart-period-high');
         const lowEl = statsEl.querySelector('.chart-period-low');
+        const changeEl = statsEl.querySelector('.chart-period-change');
 
         if (!data || data.length === 0) {
             if (highEl) highEl.textContent = 'H: --';
             if (lowEl) lowEl.textContent = 'L: --';
+            if (changeEl) changeEl.textContent = '--';
             return;
         }
 
@@ -546,6 +551,13 @@ export class ChartComponent {
             if (l < periodLow) periodLow = l;
         }
 
+        // Percentage Change Calculation
+        const first = data[0];
+        const last = data[data.length - 1];
+        const startPrice = first.open !== undefined ? first.open : (first.close || first.value);
+        const endPrice = last.close !== undefined ? last.close : last.value;
+        const changePct = startPrice !== 0 ? ((endPrice - startPrice) / startPrice) * 100 : 0;
+
         // Format with appropriate decimal places
         const formatPrice = (val) => {
             if (val >= 1) return '$' + val.toFixed(2);
@@ -554,6 +566,13 @@ export class ChartComponent {
 
         if (highEl) highEl.textContent = 'H: ' + formatPrice(periodHigh);
         if (lowEl) lowEl.textContent = 'L: ' + formatPrice(periodLow);
+
+        if (changeEl) {
+            const sign = changePct >= 0 ? '+' : '';
+            changeEl.textContent = `${sign}${changePct.toFixed(2)}%`;
+            // User Request: Use coffee color instead of sentiment colors
+            changeEl.style.color = '#a49393';
+        }
     }
 
     destroy() {
