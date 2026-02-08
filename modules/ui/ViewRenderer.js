@@ -933,13 +933,10 @@ export class ViewRenderer {
                             ${units > 0 ? `
                             <div class="${CSS_CLASSES.DETAIL_CARD} ${trendBgClass} ${CSS_CLASSES.CURSOR_POINTER}" data-action="deep-link" data-id="${stock.id}" data-section="holdings">
                                 <div class="${CSS_CLASSES.DETAIL_CARD_HEADER}">
-                                    <h3 class="${CSS_CLASSES.DETAIL_LABEL}" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                                    <h3 class="${CSS_CLASSES.DETAIL_LABEL}">
                                         <div style="display: flex; align-items: center; gap: 8px;">
                                             <i class="fas ${UI_ICONS.WALLET}"></i> Holdings & Performance
                                         </div>
-                                        <a href="https://portfolio.sharesight.com/${stock.shareSightCode ? `holdings/${stock.shareSightCode}` : ''}" target="_blank" class="${CSS_CLASSES.ICON_BTN_GHOST}" title="Open in Sharesight" style="font-size: 1.1rem; padding: 4px;" onclick="event.stopPropagation()">
-                                            <i class="fas fa-chart-pie ${CSS_CLASSES.TEXT_COFFEE}" style="opacity: 1;"></i>
-                                        </a>
                                     </h3>
                                 </div>
                                 
@@ -986,6 +983,13 @@ export class ViewRenderer {
                                     Last Purchased: ${formatFriendlyDate(stock.purchaseDate)}
                                 </div>
                                 ` : ''}
+
+                                <!-- Sharesight Link (Bottom Right) -->
+                                <div style="position: absolute; bottom: 12px; right: 12px; z-index: 10;">
+                                    <a href="https://portfolio.sharesight.com/${stock.shareSightCode ? `holdings/${stock.shareSightCode}` : ''}" target="_blank" class="${CSS_CLASSES.ICON_BTN_GHOST}" title="Open in Sharesight" style="padding: 0; display: flex;" onclick="event.stopPropagation()">
+                                        <img src="https://www.google.com/s2/favicons?domain=sharesight.com&sz=64" style="width: 22px; height: 22px; border-radius: 4px; opacity: 0.8;" alt="Sharesight">
+                                    </a>
+                                </div>
                             </div>
                             ` : ''}
     
