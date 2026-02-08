@@ -493,6 +493,15 @@ export const GEMINI_PROMPTS = {
 };
 
 
+export const REGISTRY_OPTIONS = ['Computershare', 'MUFG', 'Boardroom', 'Automic'];
+
+export const REGISTRY_LINKS = {
+    'Computershare': 'https://www-au.computershare.com/Investor/#Home',
+    'MUFG': 'https://au.investorcentre.mpms.mufg.com/',
+    'Boardroom': 'https://www.investorserve.com.au/',
+    'Automic': 'https://portal.automic.com.au/investor/home'
+};
+
 export const CASH_CATEGORIES = [
     { id: 'other', label: 'Add New Category' },
     { id: 'cash', label: 'Cash' },
@@ -1364,6 +1373,7 @@ export const IDS = {
     DIVIDEND_AMOUNT: 'dividendAmount',
     FRANKING_CREDITS: 'frankingCredits',
     SHARE_SIGHT_CODE: 'shareSightCode',
+    SHARE_REGISTRY: 'shareRegistry',
     UNFRANKED_YIELD: 'unfrankedYield',
     FRANKED_YIELD: 'frankedYield',
     DYNAMIC_COMMENTS_AREA: 'dynamicCommentsArea',

@@ -1,6 +1,6 @@
 import { AppState } from '../state/AppState.js';
 import { formatCurrency, formatPercent } from '../utils/formatters.js';
-import { UI_ICONS, HTML_TEMPLATES, CSS_CLASSES, IDS, EVENTS, USER_MESSAGES, PORTFOLIO_ID } from '../utils/AppConstants.js';
+import { UI_ICONS, HTML_TEMPLATES, CSS_CLASSES, IDS, EVENTS, USER_MESSAGES, PORTFOLIO_ID, REGISTRY_OPTIONS } from '../utils/AppConstants.js';
 import { ToastManager } from './ToastManager.js';
 import { navManager } from '../utils/NavigationManager.js';
 import { KeyboardModalHandler } from '../utils/KeyboardModalHandler.js';
@@ -357,6 +357,9 @@ export class ShareFormUI {
         const shareSightCodeInput = modal.querySelector(`#${IDS.SHARE_SIGHT_CODE}`);
         if (shareSightCodeInput) shareSightCodeInput.value = existingShare.shareSightCode || '';
 
+        const registrySelect = modal.querySelector(`#${IDS.SHARE_REGISTRY}`);
+        if (registrySelect) registrySelect.value = existingShare.shareRegistry || '';
+
         const dateInput = modal.querySelector(`#${IDS.PURCHASE_DATE}`);
         if (dateInput && (existingShare.purchaseDate || existingShare.entryDate)) {
             dateInput.type = 'date';
@@ -642,6 +645,13 @@ export class ShareFormUI {
                                 <div class="${CSS_CLASSES.FORM_GROUP}">
                                     <label for="${IDS.SHARE_SIGHT_CODE}">Sharesight Code <span class="${CSS_CLASSES.TEXT_MUTED} ${CSS_CLASSES.ITALIC}" style="font-size: 0.8em;">(Optional)</span></label>
                                     <input type="text" id="${IDS.SHARE_SIGHT_CODE}" class="${CSS_CLASSES.FORM_CONTROL} validate-trigger" placeholder="e.g. 12345" value="${shareData?.shareSightCode || ''}">
+                                </div>
+                                <div class="${CSS_CLASSES.FORM_GROUP}">
+                                    <label for="${IDS.SHARE_REGISTRY}">Share Registry <span class="${CSS_CLASSES.TEXT_MUTED} ${CSS_CLASSES.ITALIC}" style="font-size: 0.8em;">(Optional)</span></label>
+                                    <select id="${IDS.SHARE_REGISTRY}" class="${CSS_CLASSES.FORM_CONTROL}" style="color: black !important;">
+                                        <option value="" style="color: black !important;">Select Registry...</option>
+                                        ${REGISTRY_OPTIONS.map(opt => `<option value="${opt}" ${shareData?.shareRegistry === opt ? 'selected' : ''} style="color: black !important;">${opt}</option>`).join('')}
+                                    </select>
                                 </div>
                                 <div class="${CSS_CLASSES.FORM_GROUP}">
                                     <label for="${IDS.PURCHASE_DATE}">Last Purchase</label>
@@ -966,7 +976,7 @@ export class ShareFormUI {
         // 3. GENERIC INPUT BINDINGS (Date, Shares, Price, Dividends, etc)
         // This handles "dirty check" logic for all standard inputs not covered by specific handlers.
         // We add the 'validate-trigger' class in the HTML or just query generically here.
-        const genericInputs = modal.querySelectorAll(`input:not([type="checkbox"]):not([type="hidden"])`);
+        const genericInputs = modal.querySelectorAll(`input:not([type="checkbox"]):not([type="hidden"]), select, textarea`);
         genericInputs.forEach(input => {
             input.addEventListener('input', () => ShareFormUI._validateForm(modal));
             input.addEventListener('change', () => ShareFormUI._validateForm(modal));
@@ -1288,6 +1298,7 @@ export class ShareFormUI {
             portfolioShares: getNum(IDS.PORTFOLIO_SHARES),
             portfolioAvgPrice: getNum(IDS.PORTFOLIO_AVG_PRICE),
             shareSightCode: getVal(IDS.SHARE_SIGHT_CODE) || '',
+            shareRegistry: getVal(IDS.SHARE_REGISTRY) || '',
             purchaseDate: getVal(IDS.PURCHASE_DATE) || '',
             entryDate: getVal(IDS.PURCHASE_DATE) || '', // Keep for legacy compatibility
             dividendAmount: getNum(IDS.DIVIDEND_AMOUNT),

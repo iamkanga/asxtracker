@@ -7,7 +7,7 @@
 
 import { formatCurrency, formatPercent, formatFriendlyDate } from '../utils/formatters.js';
 import { AppState } from '../state/AppState.js';
-import { SORT_OPTIONS, UI_ICONS, UI_LABELS, USER_MESSAGES, RESEARCH_LINKS_TEMPLATE, CSS_CLASSES, IDS, EVENTS, SUMMARY_TYPES, STORAGE_KEYS, PORTFOLIO_ID, KANGAROO_ICON_SRC, KANGAROO_ICON_SVG, VIEW_MODES, FALLBACK_SECTOR_MAP, GEMINI_PROMPTS } from '../utils/AppConstants.js?v=1030';
+import { SORT_OPTIONS, UI_ICONS, UI_LABELS, USER_MESSAGES, RESEARCH_LINKS_TEMPLATE, CSS_CLASSES, IDS, EVENTS, SUMMARY_TYPES, STORAGE_KEYS, PORTFOLIO_ID, KANGAROO_ICON_SRC, KANGAROO_ICON_SVG, VIEW_MODES, FALLBACK_SECTOR_MAP, GEMINI_PROMPTS, REGISTRY_LINKS } from '../utils/AppConstants.js?v=1030';
 import { SnapshotUI } from './SnapshotUI.js';
 import { LinkHelper } from '../utils/LinkHelper.js';
 import { ToastManager } from './ToastManager.js';
@@ -909,9 +909,22 @@ export class ViewRenderer {
                                         <div class="${CSS_CLASSES.WATCHLIST_MEMBERSHIP} ${CSS_CLASSES.GHOSTED} ${CSS_CLASSES.TEXT_SM} ${CSS_CLASSES.TEXT_MUTED} ${CSS_CLASSES.OPACITY_70} ${CSS_CLASSES.ITALIC} ${CSS_CLASSES.TEXT_LEFT}">
                                             ${watchlistsText}
                                         </div>
-                                        <a href="https://portfolio.sharesight.com/${stock.shareSightCode ? `holdings/${stock.shareSightCode}` : ''}" target="_blank" class="${CSS_CLASSES.ICON_BTN_GHOST}" title="Open in Sharesight" style="font-size: 1.1rem;" onclick="event.stopPropagation()">
-                                            <i class="fas fa-chart-pie ${CSS_CLASSES.TEXT_COFFEE}" style="opacity: 1;"></i>
-                                        </a>
+                                        ${stock.shareRegistry && REGISTRY_LINKS[stock.shareRegistry] ? (
+                (() => {
+                    const url = REGISTRY_LINKS[stock.shareRegistry];
+                    let hostname = '';
+                    try {
+                        hostname = new URL(url).hostname;
+                        if (stock.shareRegistry === 'MUFG') hostname = 'linkmarketservices.com.au';
+                    } catch (e) { }
+                    const faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=64`;
+                    return `
+                                                <a href="${url}" target="_blank" class="${CSS_CLASSES.ICON_BTN_GHOST}" title="Open ${stock.shareRegistry}" style="padding: 0; display: flex; align-items: center;" onclick="event.stopPropagation()">
+                                                    <img src="${faviconUrl}" style="width: 24px; height: 24px; border-radius: 4px;" alt="${stock.shareRegistry}">
+                                                </a>
+                                            `;
+                })()
+            ) : ''}
                                     </div>
                                 </div>
                             </div>
@@ -920,8 +933,13 @@ export class ViewRenderer {
                             ${units > 0 ? `
                             <div class="${CSS_CLASSES.DETAIL_CARD} ${trendBgClass} ${CSS_CLASSES.CURSOR_POINTER}" data-action="deep-link" data-id="${stock.id}" data-section="holdings">
                                 <div class="${CSS_CLASSES.DETAIL_CARD_HEADER}">
-                                    <h3 class="${CSS_CLASSES.DETAIL_LABEL}">
-                                        <i class="fas ${UI_ICONS.WALLET}"></i> Holdings & Performance
+                                    <h3 class="${CSS_CLASSES.DETAIL_LABEL}" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                            <i class="fas ${UI_ICONS.WALLET}"></i> Holdings & Performance
+                                        </div>
+                                        <a href="https://portfolio.sharesight.com/${stock.shareSightCode ? `holdings/${stock.shareSightCode}` : ''}" target="_blank" class="${CSS_CLASSES.ICON_BTN_GHOST}" title="Open in Sharesight" style="font-size: 1.1rem; padding: 4px;" onclick="event.stopPropagation()">
+                                            <i class="fas fa-chart-pie ${CSS_CLASSES.TEXT_COFFEE}" style="opacity: 1;"></i>
+                                        </a>
                                     </h3>
                                 </div>
                                 
@@ -1078,18 +1096,18 @@ export class ViewRenderer {
                                 </div>
                                 <div class="research-links-grid">
                                     ${links.map(link => {
-            const finalLink = typeof link === 'string' ? { name: link, url: link } : link;
-            let hostname = '';
-            try {
-                hostname = new URL(finalLink.url).hostname;
-            } catch (e) {
-                console.warn('Invalid URL for favicon:', finalLink.url);
-            }
-            const faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
+                const finalLink = typeof link === 'string' ? { name: link, url: link } : link;
+                let hostname = '';
+                try {
+                    hostname = new URL(finalLink.url).hostname;
+                } catch (e) {
+                    console.warn('Invalid URL for favicon:', finalLink.url);
+                }
+                const faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
 
-            const substitutedUrl = (finalLink.url || '').replace(/\${code}/gi, stock.code);
+                const substitutedUrl = (finalLink.url || '').replace(/\${code}/gi, stock.code);
 
-            return `
+                return `
                                             <a href="${substitutedUrl}" target="_blank" class="research-link-btn">
                                                 <img src="${faviconUrl}" class="link-favicon" alt="">
                                                 <div class="link-info-stack">
@@ -1098,7 +1116,7 @@ export class ViewRenderer {
                                                 </div>
                                             </a>
                                         `;
-        }).join('')}
+            }).join('')}
                                 </div>
                             </div>
 
