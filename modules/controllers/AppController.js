@@ -421,6 +421,8 @@ export class AppController {
             onOpenCalculator: (mode) => this.calculatorUI.open(mode)
         });
         this.headerLayout.init();
+        // Force update initial icon state from persisted pref
+        this.headerLayout.updateViewToggleIcon(AppState.viewMode);
 
         // Sort Toggle Listener (Chevron in Title Bar)
         document.addEventListener(EVENTS.TOGGLE_SORT_DIRECTION, () => {
@@ -527,7 +529,8 @@ export class AppController {
                     accentOpacity: AppState.preferences.accentOpacity, // Fresh Read
                     cardChartOpacity: AppState.preferences.cardChartOpacity, // Fresh Read
                     researchLinks: AppState.preferences.researchLinks || [], // Fresh Read
-                    favoriteLinks: AppState.preferences.favoriteLinks || []  // Fresh Read
+                    favoriteLinks: AppState.preferences.favoriteLinks || [],  // Fresh Read
+                    viewMode: AppState.viewMode // Fresh Read
                 };
 
                 if (freshPrefs.userCategories) {
@@ -1147,6 +1150,22 @@ export class AppController {
                         }
                     }
 
+                    // 10. Sync View Mode (New)
+                    if (prefs.viewMode) {
+                        if (AppState.viewMode !== prefs.viewMode) {
+                            AppState.viewMode = prefs.viewMode;
+                            localStorage.setItem(STORAGE_KEYS.VIEW_MODE, prefs.viewMode);
+                            needsRender = true;
+                        }
+                    }
+
+                    // 11. Sync View Configs (Per-Watchlist)
+                    if (prefs.viewConfigs) {
+                        AppState.preferences.viewConfigs = prefs.viewConfigs;
+                        localStorage.setItem(STORAGE_KEYS.VIEW_CONFIGS, JSON.stringify(prefs.viewConfigs));
+                        // No immediate render needed, key lookup handles it on switch
+                    }
+
                     if (needsRender) {
                         this.updateDataAndRender(false);
                     }
@@ -1645,7 +1664,13 @@ export class AppController {
     }
 
     changeViewMode(mode) {
-        AppState.viewMode = mode;
+        AppState.viewMode = mode; // Update transient state immediately
+        // Persist to the specific watchlist
+        const currentId = AppState.watchlist?.id || 'portfolio';
+        // Handle CASH special case if ID is inconsistent (though handleSwitchWatchlist normalizes it)
+        const effectiveId = (AppState.watchlist?.type === 'cash') ? 'CASH' : currentId;
+
+        AppState.saveViewModeForWatchlist(effectiveId, mode);
         this.updateDataAndRender(false);
     }
 
@@ -1746,6 +1771,26 @@ export class AppController {
 
         // === STEP 2.5: SANITIZE HIDDEN SORT ===
         this._sanitizeActiveSort();
+
+
+        // === STEP 2.6: RESTORE VIEW MODE (NEW) ===
+        // Look up preferred view for this watchlist ID or default to 'TABLE'
+        const effectiveId = (watchlistId === CASH_WATCHLIST_ID) ? 'CASH' :
+            (watchlistId === 'portfolio' || watchlistId === null) ? 'portfolio' :
+                watchlistId;
+
+        const savedView = AppState.getViewModeForWatchlist(effectiveId);
+        AppState.viewMode = savedView;
+
+        // Update the Header Icon
+        if (this.headerLayout) {
+            this.headerLayout.updateViewToggleIcon(savedView);
+        } else {
+            // Fallback for extreme race conditions (e.g. boot)
+            requestAnimationFrame(() => {
+                if (this.headerLayout) this.headerLayout.updateViewToggleIcon(savedView);
+            });
+        }
 
         // === STEP 3: Update UI Elements ===
         const sidebarAddBtn = document.getElementById('add-share-sidebar-btn');
@@ -1895,7 +1940,7 @@ export class AppController {
 
     _handleViewToggle() {
         const modes = ['table', 'compact', 'snapshot'];
-        const currentMode = AppState.viewMode || 'table';
+        const currentMode = (AppState.viewMode || 'table').toLowerCase();
         let currentIdx = modes.indexOf(currentMode);
         if (currentIdx === -1) currentIdx = 0;
 

@@ -34,7 +34,7 @@ export const AppState = {
         id: null       // null (Portfolio) | 'ALL' | <watchlist_id>
     },
 
-    viewMode: 'TABLE', // 'TABLE' | 'COMPACT' | 'SNAPSHOT'
+    viewMode: localStorage.getItem(STORAGE_KEYS.VIEW_MODE) || 'TABLE', // 'TABLE' | 'COMPACT' | 'SNAPSHOT'
 
     // Preferences (Persisted)
     preferences: {
@@ -53,6 +53,14 @@ export const AppState = {
             }
         })(),
         badgeScope: localStorage.getItem(STORAGE_KEYS.BADGE_SCOPE) || 'all',
+        viewConfigs: (() => {
+            try {
+                const stored = localStorage.getItem(STORAGE_KEYS.VIEW_CONFIGS);
+                return stored ? JSON.parse(stored) : {};
+            } catch (e) {
+                return {};
+            }
+        })(),
         quickNav: (() => {
             try {
                 const stored = localStorage.getItem(STORAGE_KEYS.QUICK_NAV);
@@ -322,6 +330,9 @@ export const AppState = {
                 dailyEmail: this.preferences.dailyEmail || false,
                 alertEmailRecipients: this.preferences.alertEmailRecipients || '',
                 gradientStrength: this.preferences.gradientStrength ?? 0.25,
+                gradientStrength: this.preferences.gradientStrength ?? 0.25,
+                viewMode: this.viewMode || 'TABLE',
+                viewConfigs: this.preferences.viewConfigs || {},
                 customWatchlistNames: this.preferences.customWatchlistNames || {},
                 containerBorders: this.preferences.containerBorders || { sides: [0, 0, 0, 1], thickness: 3 },
                 badgeScope: this.preferences.badgeScope || 'all',
@@ -625,6 +636,25 @@ export const AppState = {
         summaries[key] = text;
         this.preferences.geminiSummaries = summaries;
         localStorage.setItem(STORAGE_KEYS.GEMINI_SUMMARIES, JSON.stringify(summaries));
+    },
+
+    saveViewMode(mode) {
+        this.viewMode = mode;
+        // Legacy: still save global for fallback
+        localStorage.setItem(STORAGE_KEYS.VIEW_MODE, mode);
+        this._triggerSync();
+    },
+
+    saveViewModeForWatchlist(watchlistId, mode) {
+        if (!watchlistId) return;
+        this.preferences.viewConfigs[watchlistId] = mode;
+        localStorage.setItem(STORAGE_KEYS.VIEW_CONFIGS, JSON.stringify(this.preferences.viewConfigs));
+        this._triggerSync();
+    },
+
+    getViewModeForWatchlist(watchlistId) {
+        if (!watchlistId) return 'TABLE';
+        return this.preferences.viewConfigs[watchlistId] || 'TABLE';
     },
 
     getGeminiSummary(symbol, questionId) {

@@ -98,7 +98,9 @@ export const STORAGE_KEYS = {
     CARD_CHART_OPACITY: 'ASX_NEXT_cardChartOpacity',
     AI_PROMPT_TEMPLATES: 'ASX_NEXT_aiPromptTemplates',
     ONE_TAP_RESEARCH: 'ASX_NEXT_oneTapResearch',
-    GEMINI_SUMMARIES: 'ASX_NEXT_geminiSummaries'
+    GEMINI_SUMMARIES: 'ASX_NEXT_geminiSummaries',
+    VIEW_MODE: 'ASX_NEXT_viewMode', // Global fallback/Legacy
+    VIEW_CONFIGS: 'ASX_NEXT_viewConfigs' // Per-watchlist Map
 };
 
 export const EVENTS = {

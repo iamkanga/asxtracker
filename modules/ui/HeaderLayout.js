@@ -711,12 +711,13 @@ export class HeaderLayout {
         const btn = document.getElementById(IDS.VIEW_TOGGLE_BTN);
         if (!btn) return;
 
+        const effectiveMode = (mode || '').toLowerCase();
         const icons = {
             'table': UI_ICONS.VIEW_TABLE,
             'compact': UI_ICONS.VIEW_COMPACT,
             'snapshot': UI_ICONS.VIEW_SNAPSHOT
         };
-        const iconClass = icons[mode] || UI_ICONS.VIEW_TABLE;
+        const iconClass = icons[effectiveMode] || UI_ICONS.VIEW_TABLE;
         // Support 'far' (Regular) icons by checking prefix, defaulting to 'fas' (Solid)
         const prefix = (iconClass.includes('far ') || iconClass.includes('fab ')) ? '' : 'fas ';
         btn.innerHTML = `<i class="${prefix}${iconClass}"></i>`;
