@@ -7,7 +7,7 @@
 import { AuthService } from '../auth/AuthService.js';
 import { DataService } from '../data/DataService.js';
 import { AppService } from '../data/AppService.js';
-import { ViewRenderer } from '../ui/ViewRenderer.js?v=1040';
+import { ViewRenderer } from '../ui/ViewRenderer.js?v=1116';
 import { AppState } from '../state/AppState.js';
 import { HeaderLayout } from '../ui/HeaderLayout.js';
 import { processShares, getSingleShareData, getASXCodesStatus } from '../data/DataProcessor.js';
@@ -24,7 +24,7 @@ import { QuickNavUI } from '../ui/QuickNavUI.js'; // Added
 import { notificationStore } from '../state/NotificationStore.js';
 import { DashboardViewRenderer } from '../ui/DashboardViewRenderer.js?v=1075';
 import { ModalController } from './ModalController.js?v=1040';
-import ResearchLinksUI from '../ui/ResearchLinksUI.js';
+import ResearchLinksUI from '../ui/ResearchLinksUI.js?v=1116';
 import { CashController } from './CashController.js';
 import { SecurityController } from './SecurityController.js';
 import { SecurityUI } from '../ui/SecurityUI.js';
@@ -2100,6 +2100,45 @@ export class AppController {
         document.addEventListener(EVENTS.REFRESH_WATCHLIST, () => {
             this.updateDataAndRender(false); // Render current state without fetching
         });
+
+        // GLOBAL INTERCEPTOR: CommSec Deep Links (Firebase Dynamic Link)
+        // This ensures that ANY CommSec link clicked in the app (Research, Shortcuts, etc.) 
+        // is automatically converted to the deep link format to open the native app.
+        document.body.addEventListener('click', (e) => {
+            const link = e.target.closest('a');
+            if (!link || !link.href) return;
+
+            // 1. COMMSEC (Firebase Dynamic Link)
+            if (link.href.includes('commsec.com.au') && !link.href.includes('page.link')) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                // Standard Dynamic Link (Opens App to Home Page)
+                // Note: Direct navigation to specific stock codes is not supported via public deep links.
+                const encodedTarget = encodeURIComponent(link.href);
+                const deepLink = `https://commsecau.page.link/?link=${encodedTarget}&apn=au.com.commsec.android`;
+
+                console.log('[AppController] Intercepted CommSec Link:', deepLink);
+                window.open(deepLink, '_blank', 'noreferrer');
+                return;
+            }
+
+            // 2. SELFWEALTH (Android Intent - Deep Link)
+            // Package ID confirmed by user: au.com.selfwealth.mobilev2
+            // Reinstated per user request. Creates a detailed intent to launch the app.
+            if (link.href.toLowerCase().includes('selfwealth.com.au')) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                // Construct Deep Link Intent
+                const cleanUrl = link.href.replace(/^https?:\/\//, '');
+                const fallback = encodeURIComponent(link.href);
+                const intentUrl = `intent://${cleanUrl}#Intent;scheme=https;package=au.com.selfwealth.mobilev2;S.browser_fallback_url=${fallback};end`;
+
+                console.log('[AppController] Launching SelfWealth Intent (v2):', intentUrl);
+                window.open(intentUrl, '_blank', 'noreferrer');
+            }
+        }, true); // Use Capture Phase to win against other listeners
     }
 
     /**

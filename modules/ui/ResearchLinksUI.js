@@ -125,7 +125,11 @@ export default class ResearchLinksUI {
                 hostname = new URL(testUrl).hostname;
             } catch (e) { hostname = 'research'; }
 
-            const iconSrc = `https://www.google.com/s2/favicons?domain=${hostname}&sz=64`;
+            // Fix for SelfWealth: Use DuckDuckGo icons which are often more reliable for this domain
+            let iconSrc = `https://www.google.com/s2/favicons?domain=${hostname}&sz=64`;
+            if (hostname.includes('selfwealth')) {
+                iconSrc = 'https://icons.duckduckgo.com/ip3/selfwealth.com.au.ico';
+            }
 
             return `
                 <div class="${CSS_CLASSES.RESEARCH_MANAGE_ROW}" data-index="${index}" draggable="true">

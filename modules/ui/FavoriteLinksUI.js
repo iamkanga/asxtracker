@@ -205,7 +205,13 @@ export class FavoriteLinksUI {
         container.innerHTML = links.map((link, index) => {
             let hostname = '';
             try { hostname = new URL(link.url).hostname; } catch (e) { hostname = 'unknown'; }
-            const iconSrc = `https://www.google.com/s2/favicons?domain=${hostname}&sz=64`;
+
+            // Fix for SelfWealth: Use DuckDuckGo icons which are often more reliable for this domain
+            let iconSrc = `https://www.google.com/s2/favicons?domain=${hostname}&sz=64`;
+
+            if (hostname.includes('selfwealth')) {
+                iconSrc = 'https://icons.duckduckgo.com/ip3/selfwealth.com.au.ico';
+            }
 
             return `
                 <a href="${link.url}" target="_blank" class="${CSS_CLASSES.FAVORITE_LINK_CARD}">
@@ -221,7 +227,13 @@ export class FavoriteLinksUI {
         container.innerHTML = links.map((link, index) => {
             let hostname = '';
             try { hostname = new URL(link.url).hostname; } catch (e) { hostname = 'unknown'; }
-            const iconSrc = `https://www.google.com/s2/favicons?domain=${hostname}&sz=64`;
+
+            // Fix for SelfWealth: Use DuckDuckGo icons which are often more reliable for this domain
+            let iconSrc = `https://www.google.com/s2/favicons?domain=${hostname}&sz=64`;
+
+            if (hostname.includes('selfwealth')) {
+                iconSrc = 'https://icons.duckduckgo.com/ip3/selfwealth.com.au.ico';
+            }
 
             return `
                 <div class="${CSS_CLASSES.FAVORITE_MANAGE_ROW}" data-index="${index}" draggable="true">

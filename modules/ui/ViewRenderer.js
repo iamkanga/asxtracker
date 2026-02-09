@@ -1107,19 +1107,24 @@ export class ViewRenderer {
                 } catch (e) {
                     console.warn('Invalid URL for favicon:', finalLink.url);
                 }
-                const faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
+
+                // Fix for SelfWealth: Use DuckDuckGo icons
+                let faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
+                if (hostname.includes('selfwealth')) {
+                    faviconUrl = 'https://icons.duckduckgo.com/ip3/selfwealth.com.au.ico';
+                }
 
                 const substitutedUrl = (finalLink.url || '').replace(/\${code}/gi, stock.code);
 
                 return `
-                                            <a href="${substitutedUrl}" target="_blank" class="research-link-btn">
-                                                <img src="${faviconUrl}" class="link-favicon" alt="">
-                                                <div class="link-info-stack">
-                                                    <span class="link-name">${finalLink.displayName || finalLink.name}</span>
-                                                    <span class="link-desc">${finalLink.description || ''}</span>
-                                                </div>
-                                            </a>
-                                        `;
+                    <a href="${substitutedUrl}" target="_blank" rel="noopener noreferrer external" class="research-link-btn" onclick="event.stopPropagation();">
+                        <img src="${faviconUrl}" class="link-favicon" alt="">
+                        <div class="link-info-stack">
+                            <span class="link-name">${finalLink.displayName || finalLink.name}</span>
+                            <span class="link-desc">${finalLink.description || ''}</span>
+                        </div>
+                    </a>
+                `;
             }).join('')}
                                 </div>
                             </div>
@@ -1408,20 +1413,31 @@ export class ViewRenderer {
             : RESEARCH_LINKS_TEMPLATE;
 
         const linksHtml = rawLinks.map(link => {
-            const url = link.url.split('${code}').join(stock.code);
+            const finalLink = typeof link === 'string' ? { name: link, url: link } : link;
             let hostname = '';
             try {
-                hostname = new URL(url).hostname;
+                hostname = new URL(finalLink.url).hostname;
             } catch (e) {
-                console.warn('Invalid URL for favicon:', url);
+                console.warn('Invalid URL for favicon:', finalLink.url);
             }
             const faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
 
+            // Robust substitution using Regex (Matches Details Card logic)
+            const codeRegex = /\$(?:\{code\}|\(code\)|code)/gi;
+            const substitutedUrl = (finalLink.url || '').replace(codeRegex, stock.code);
+
+            // CommSec Deep Link Fix (Firebase Dynamic Link)
+            let finalUrl = substitutedUrl;
+            if (substitutedUrl.includes('commsec.com.au') && !substitutedUrl.includes('page.link')) {
+                const encodedTarget = encodeURIComponent(substitutedUrl);
+                finalUrl = `https://commsecau.page.link/?link=${encodedTarget}&apn=au.com.commsec.android`;
+            }
+
             return `
-                <a href="${url}" target="_blank" rel="noopener noreferrer" class="research-link-btn">
+                <a href="${finalUrl}" target="_blank" rel="noopener noreferrer external" class="research-link-btn" onclick="event.stopPropagation();">
                     <img src="${faviconUrl}" class="link-favicon" alt="">
                     <div class="link-info-stack">
-                        <span class="link-name">${link.displayName || link.name}</span>
+                        <span class="link-name">${finalLink.displayName || finalLink.name}</span>
                         <span class="link-desc">${link.description || ''}</span>
                     </div>
                 </a>
