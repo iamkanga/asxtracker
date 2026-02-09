@@ -2154,6 +2154,10 @@ export class AppController {
             const link = e.target.closest('a');
             if (!link || !link.href) return;
 
+            // 0. GEMINI (Internal Interaction Handling)
+            // Prevent the global interceptor from capturing links handled by bindGeminiInteraction
+            if (link.href.includes('gemini.google.com')) return;
+
             // 1. COMMSEC (Firebase Dynamic Link)
             if (link.href.includes('commsec.com.au') && !link.href.includes('page.link')) {
                 e.preventDefault();

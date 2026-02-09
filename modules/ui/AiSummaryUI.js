@@ -3,6 +3,7 @@ import { CSS_CLASSES, IDS, EVENTS, UI_LABELS, AI_DEFAULT_TEMPLATES } from '../ut
 import { AppState } from '../state/AppState.js';
 import { DataService } from '../data/DataService.js';
 import { ToastManager } from './ToastManager.js';
+import { navManager } from '../utils/NavigationManager.js';
 
 /**
  * AiSummaryUI.js
@@ -17,7 +18,7 @@ export class AiSummaryUI {
     }
 
     static async show(symbol, questionId) {
-        // Dismiss other modals for clean focus
+        // Dismiss other modals for clean focus (track for restoration)
         this._dismissOthers();
 
         const template = AI_DEFAULT_TEMPLATES.find(t => t.id === questionId) || AI_DEFAULT_TEMPLATES[0];
@@ -51,18 +52,35 @@ export class AiSummaryUI {
     }
 
     static _dismissOthers() {
+        this._restorableModals = [];
+
         [
             IDS.STOCK_DETAILS_MODAL,
             IDS.SUMMARY_DETAIL_MODAL,
             IDS.DISCOVERY_DETAIL_VIEW,
             IDS.SNAPSHOT_MODAL_CONTAINER,
             'asx-search-modal',
-            'asx-briefing-modal',
-            IDS.AI_SUMMARY_MODAL
+            'asx-briefing-modal'
         ].forEach(id => {
             const el = document.getElementById(id);
-            if (el) el.remove();
+            if (el && !el.classList.contains(CSS_CLASSES.HIDDEN)) {
+                el.classList.add(CSS_CLASSES.HIDDEN);
+                this._restorableModals.push(el);
+            }
         });
+
+        // Always remove existing AI summary modal if it exists
+        const existing = document.getElementById(IDS.AI_SUMMARY_MODAL);
+        if (existing) existing.remove();
+    }
+
+    static _restoreOthers() {
+        if (this._restorableModals && this._restorableModals.length > 0) {
+            this._restorableModals.forEach(el => {
+                if (el) el.classList.remove(CSS_CLASSES.HIDDEN);
+            });
+            this._restorableModals = [];
+        }
     }
 
     static _renderModal(symbol, title) {
@@ -99,10 +117,10 @@ export class AiSummaryUI {
             </div>
         `;
 
-        const closeModal = () => {
-            modal.classList.remove('show');
-            setTimeout(() => modal.remove(), 300);
-        };
+        const closeModal = () => this.close();
+
+        modal._navActive = true;
+        navManager.pushState(closeModal);
 
         modal.querySelector(`.${CSS_CLASSES.MODAL_CLOSE_BTN}`).onclick = closeModal;
         modal.onclick = (e) => {
@@ -110,6 +128,24 @@ export class AiSummaryUI {
         };
 
         return modal;
+    }
+
+    static close() {
+        const modal = document.getElementById(IDS.AI_SUMMARY_MODAL);
+        if (!modal) return;
+
+        // Restore underlying modals IMMEDIATELY so they are visible behind the closing sheet
+        this._restoreOthers();
+
+        modal.classList.remove('show');
+        setTimeout(() => {
+            if (modal.parentNode) modal.remove();
+        }, 300);
+
+        if (modal._navActive) {
+            modal._navActive = false;
+            navManager.popStateSilently();
+        }
     }
 
     static async _fetchAndDisplay(modal, symbol, questionId, promptTemplate) {
@@ -134,7 +170,7 @@ export class AiSummaryUI {
                     <div style="text-align: center; padding: 20px; color: var(--color-negative);">
                         <i class="fas fa-exclamation-triangle" style="font-size: 2rem; margin-bottom: 10px;"></i>
                         <p>${errorMsg}</p>
-                        <button class="standard-btn" style="margin-top: 15px; background: #333;" onclick="document.getElementById('${IDS.AI_SUMMARY_MODAL}').remove()">Close</button>
+                        <button class="standard-btn" style="margin-top: 15px; background: #333;" onclick="AiSummaryUI.close()">Close</button>
                     </div>
                 `;
             }
