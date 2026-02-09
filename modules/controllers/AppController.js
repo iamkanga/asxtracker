@@ -18,6 +18,7 @@ import { NotificationUI } from '../ui/NotificationUI.js?v=1040';
 import { NotificationStore } from '../state/NotificationStore.js';
 import { BriefingUI } from '../ui/BriefingUI.js?v=1040';
 import { SnapshotUI } from '../ui/SnapshotUI.js'; // Added
+import { LinkHelper } from '../utils/LinkHelper.js';
 import { SettingsUI } from '../ui/SettingsUI.js?v=55';
 import { FavoriteLinksUI } from '../ui/FavoriteLinksUI.js';
 import { QuickNavUI } from '../ui/QuickNavUI.js'; // Added
@@ -2182,6 +2183,15 @@ export class AppController {
 
                 console.log('[AppController] Launching SelfWealth Intent (v2):', intentUrl);
                 window.open(intentUrl, '_blank', 'noreferrer');
+                return;
+            }
+
+            // 3. UNIVERSAL: Open all other external links in the "App Browser" (Custom Tab)
+            // This ensures Research links, custom links, and registry links stay in-app.
+            if (link.href.startsWith('http') && !link.href.includes(window.location.hostname)) {
+                e.preventDefault();
+                e.stopPropagation();
+                LinkHelper.openInAppBrowser(link.href);
             }
         }, true); // Use Capture Phase to win against other listeners
     }
@@ -2419,6 +2429,19 @@ export class AppController {
 
         // Code Pills (ASX Details)
         document.body.addEventListener('click', (e) => {
+            // Market Index Link Handling
+            const marketIndexBtn = e.target.closest('[data-action="market-index"]');
+            if (marketIndexBtn) {
+                e.preventDefault();
+                e.stopPropagation();
+                const code = marketIndexBtn.dataset.code;
+                if (code) {
+                    const url = `https://www.marketindex.com.au/asx/${code.toLowerCase()}`;
+                    LinkHelper.openInAppBrowser(url);
+                }
+                return;
+            }
+
             // Deep Link Handling (Alerts/Notes) - Global delegation to catch Modals too
             const deepLink = e.target.closest('[data-action="deep-link"]');
             if (deepLink) {

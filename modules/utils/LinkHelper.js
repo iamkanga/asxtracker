@@ -249,4 +249,39 @@ export class LinkHelper {
             .replace(/\$(?:\{name_slug\}|\(name_slug\)|name_slug)/gi, slug)
             .replace(/\$(?:\{code\}|\(code\)|code)/gi, code.toUpperCase());
     }
+
+    /**
+     * UNIVERSAL LINK OPENER: "The App Browser"
+     * Forces the link to open in an integrated Custom Tab on Android 
+     * instead of flipping over to the main Chrome browser.
+     */
+    static openInAppBrowser(url) {
+        if (!url) return;
+
+        // Ensure we have a valid absolute URL
+        let finalUrl = url;
+        if (!finalUrl.startsWith('http')) {
+            finalUrl = finalUrl.startsWith('//') ? 'https:' + finalUrl : 'https://' + finalUrl;
+        }
+
+        const ua = navigator.userAgent;
+        const plat = navigator.platform;
+        const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+        const isAndroid = /Android/i.test(ua) && isTouch && !/Win32|Win64|MacIntel/i.test(plat);
+
+        if (isAndroid) {
+            // Android Chrome Intent - This "nudges" the phone to use the Custom Tab (In-App) view 
+            // if the app is running in PWA/Standalone mode.
+            const cleanUrl = finalUrl.replace(/^https?:\/\//, '');
+            const fallback = encodeURIComponent(finalUrl);
+            const intentUrl = `intent://${cleanUrl}#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=${fallback};end`;
+
+            console.log('[LinkHelper] Launching in App Browser (Intent):', intentUrl);
+            window.open(intentUrl, '_blank');
+        } else {
+            // iOS / Desktop : Standard cross-origin open
+            // Browsers like Safari handle this automatically for PWAs by showing a "Done" button.
+            window.open(finalUrl, '_blank', 'noopener,noreferrer');
+        }
+    }
 }
