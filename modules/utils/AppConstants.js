@@ -202,85 +202,85 @@ export const SORT_OPTIONS = {
 // Comprehensive Sector -> Industry Map (GICS Aligned)
 export const SECTOR_INDUSTRY_MAP = {
     "Energy": [
-        "Coal", "Energy", "Integrated Oil & Gas",
-        "Oil & Gas Exploration and Production", "Oil & Gas Refining and Marketing",
-        "Oil & Gas Transportation Services", "Oil Related Services and Equipment",
-        "Renewable Energy Equipment & Services", "Renewable Fuels", "Uranium"
+        "Oil & Gas Drilling", "Oil & Gas Equipment & Services", "Integrated Oil & Gas",
+        "Oil & Gas Exploration & Production", "Oil & Gas Refining & Marketing",
+        "Oil & Gas Storage & Transportation", "Coal & Consumable Fuels"
     ],
     "Materials": [
-        "Agricultural Chemicals", "Aluminum", "Commodities (Gold)", "Commodity Chemicals",
-        "Construction Materials", "Diversified Chemicals", "Forest & Wood Products",
-        "Gold", "Integrated Mining", "Materials", "Materials (Aluminum)",
-        "Materials (Base Metals)", "Materials (Copper Mining)", "Materials (Exploration)",
-        "Materials (Gold Exploration)", "Materials (Gold Mining)", "Materials (Gold/Multi-Metals)",
-        "Materials (Metals Exploration)", "Materials (Mining Investment)", "Materials (Rare Earths/Titanium)",
-        "Materials (Specialty Metals)", "Mining Support Services & Equipment",
-        "Non-Paper Containers & Packaging", "Paper Products", "Precious Metals & Minerals",
-        "Specialty Chemicals", "Specialty Mining & Metals", "Steel"
+        "Commodity Chemicals", "Diversified Chemicals", "Fertilizers & Agricultural Chemicals",
+        "Industrial Gases", "Specialty Chemicals", "Construction Materials",
+        "Metal, Glass & Plastic Containers", "Paper & Plastic Packaging Products & Materials",
+        "Aluminum", "Diversified Metals & Mining", "Copper", "Gold",
+        "Precious Metals & Minerals", "Silver", "Steel", "Forest Products", "Paper Products"
     ],
     "Industrials": [
-        "Aerospace & Defense", "Airlines", "Airport Operators & Services",
-        "Auto Vehicles, Parts & Svc Retailers", "Auto, Truck & Motorcycle Parts",
-        "Business Support Services", "Business Support Supplies", "Construction & Engineering",
-        "Construction Supplies & Fixtures", "Corporate Financial Services",
-        "Courier, Postal, Air Freight&Land Log", "Diversified Industrial Goods Wholesale",
-        "Diversified Investment Services", "Electronic Equipment & Parts", "Employment Services",
-        "Environmental Services & Equipment", "Ground Freight & Logistics",
-        "Healthcare Facilities & Services", "Heavy Electrical Equipment", "Heavy Machinery & Vehicles",
-        "Highways & Rail Tracks", "Homebuilding", "Industrial Machinery & Equipment",
-        "Industrials (Logistics/Courier)", "Industrials (Transportation)",
-        "Integrated Telecommunications Services", "Marine Freight & Logistics",
-        "Marine Port Services", "Office Equipment", "Passenger Transportation, Ground & Sea",
-        "Professional & Business Education", "Professional Information Services",
-        "Shipbuilding", "Tires & Rubber Products"
+        "Aerospace & Defense", "Building Products", "Construction & Engineering",
+        "Electrical Components & Equipment", "Heavy Electrical Equipment", "Industrial Conglomerates",
+        "Construction Machinery & Heavy Transportation Equipment", "Agricultural & Farm Machinery",
+        "Industrial Machinery & Supplies & Components", "Trading Companies & Distributors",
+        "Commercial Printing", "Environmental & Facilities Services", "Office Services & Supplies",
+        "Diversified Support Services", "Security & Alarm Services", "Human Resource & Employment Services",
+        "Research & Consulting Services", "Data Processing & Outsourced Services",
+        "Air Freight & Logistics", "Passenger Airlines", "Marine Transportation",
+        "Rail Transportation", "Cargo Ground Transportation", "Passenger Ground Transportation",
+        "Airport Services", "Highways & Railtracks", "Marine Ports & Services"
     ],
     "Consumer Discretionary": [
-        "Apparel & Accessories", "Apparel & Accessories Retailers", "Appliances, Tools & Housewares",
-        "Auto & Truck Manufacturers", "Broadcasting", "Casinos & Gaming",
-        "Computers & Electronics Retailers", "Consumer Publishing", "Department Stores",
-        "Distillers & Wineries", "Food Retail & Distribution", "Home Furnishings",
-        "Home Furnishings Retailers", "Home Improvement Prod&Svcs Retailers",
-        "Hotels, Motels & Cruise Lines", "Household Electronics", "Household Products",
-        "Leisure & Recreation", "Misc Educational Service Providers", "Non-Alcoholic Beverages",
-        "Other Specialty Retailers", "Restaurants & Bars", "Textiles & Leather Goods"
+        "Automotive Parts & Equipment", "Tires & Rubber", "Automobile Manufacturers",
+        "Motorcycle Manufacturers", "Consumer Electronics", "Home Furnishings",
+        "Homebuilding", "Household Appliances", "Housewares & Specialties", "Leisure Products",
+        "Apparel, Accessories & Luxury Goods", "Footwear", "Textiles", "Casinos & Gaming",
+        "Hotels, Resorts & Cruise Lines", "Leisure Facilities", "Restaurants",
+        "Education Services", "Specialized Consumer Services", "Distributors",
+        "Broadline Retail", "Apparel Retail", "Computer & Electronics Retail",
+        "Home Improvement Retail", "Other Specialty Retail", "Automotive Retail", "Homefurnishing Retail"
     ],
     "Consumer Staples": [
-        "Fishing & Farming", "Food Processing", "Personal Products"
+        "Drug Retail", "Food Distributors", "Food Retail", "Consumer Staples Merchandise Retail",
+        "Brewers", "Distillers & Vintners", "Soft Drinks & Non-alcoholic Beverages",
+        "Agricultural Products & Services", "Packaged Foods & Meats", "Tobacco",
+        "Household Products", "Personal Care Products"
     ],
     "Health Care": [
-        "Advanced Medical Equipment & Technology", "Biotechnology & Medical Research",
-        "Health Care (Aged Care)", "Health Care (Medical Devices)",
-        "Medical Equipment, Supplies & Dist'n", "Pharmaceuticals"
+        "Health Care Equipment", "Health Care Supplies", "Health Care Distributors",
+        "Health Care Services", "Health Care Facilities", "Managed Health Care",
+        "Health Care Technology", "Biotechnology", "Pharmaceuticals", "Life Sciences Tools & Services"
     ],
     "Financials": [
-        "Banks", "Closed End Funds", "Consumer Lending", "Financial Technology (Fintech)",
-        "Financial, Commodity Market Ops & Svc", "Financials (Asset Management)",
-        "Holding Companies", "Insurance Funds", "Investment Banking & Brokerage Services",
-        "Investment Management & Fund Operators", "Investment Trusts",
-        "Life & Health Insurance", "Miscellaneous Fintech Infrastructure",
-        "Multiline Insurance & Brokers", "Mutual Funds", "Property & Casualty Insurance"
+        "Diversified Banks", "Regional Banks", "Diversified Financial Services",
+        "Multi-Sector Holdings", "Specialized Finance", "Commercial & Residential Mortgage Finance",
+        "Transaction & Payment Processing Services", "Consumer Finance",
+        "Asset Management & Custody Banks", "Investment Banking & Brokerage",
+        "Diversified Capital Markets", "Financial Exchanges & Data", "Mortgage REITs",
+        "Insurance Brokers", "Life & Health Insurance", "Multi-line Insurance",
+        "Property & Casualty Insurance", "Reinsurance"
     ],
     "Information Technology": [
-        "Computer Hardware", "Electrical Components & Equipment",
-        "Information Technology (Cloud/SaaS)", "Information Technology (Software)",
-        "Integrated Hardware & Software", "IT Services & Consulting", "Online Services",
-        "Semiconductors", "Software"
+        "IT Consulting & Other Services", "Internet Services & Infrastructure",
+        "Application Software", "Systems Software", "Communications Equipment",
+        "Technology Hardware, Storage & Peripherals", "Electronic Equipment & Instruments",
+        "Electronic Components", "Electronic Manufacturing Services", "Technology Distributors",
+        "Semiconductor Materials & Equipment", "Semiconductors"
     ],
     "Communication Services": [
-        "Advertising & Marketing", "Communications & Networking",
-        "Wireless Telecommunications Services"
+        "Alternative Carriers", "Integrated Telecommunication Services",
+        "Wireless Telecommunication Services", "Advertising", "Broadcasting",
+        "Cable & Satellite", "Publishing", "Movies & Entertainment",
+        "Interactive Home Entertainment", "Interactive Media & Services"
     ],
     "Utilities": [
-        "Electric Utilities", "Independent Power Producers", "Multiline Utilities",
-        "Natural Gas Utilities", "Water & Related Utilities"
+        "Electric Utilities", "Gas Utilities", "Multi-Utilities", "Water Utilities",
+        "Independent Power Producers & Energy Traders", "Renewable Electricity"
     ],
     "Real Estate": [
-        "Commercial REITs", "Diversified REITs", "Real Estate (Property Development)",
-        "Real Estate Rental, Devel & Operations", "Real Estate Services",
-        "Residential REITs", "Specialized REITs"
+        "Diversified REITs", "Industrial REITs", "Hotel & Resort REITs", "Office REITs",
+        "Health Care REITs", "Multi-Family Residential REITs", "Single-Family Residential REITs",
+        "Retail REITs", "Other Specialized REITs", "Self-Storage REITs", "Telecom Tower REITs",
+        "Timber REITs", "Data Center REITs", "Diversified Real Estate Activities",
+        "Real Estate Operating Companies", "Real Estate Development", "Real Estate Services"
     ],
     "ETF": [
-        "Commodities (Exchange Traded Product)", "ETF"
+        "ETF", "Commodities (Exchange Traded Product)"
     ]
 };
 
