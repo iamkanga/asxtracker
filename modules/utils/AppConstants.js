@@ -199,7 +199,7 @@ export const SORT_OPTIONS = {
     ]
 };
 
-// Comprehensive Sector -> Industry Map (GICS Aligned)
+// Comprehensive Sector -> Industry Map (GICS Aligned) 
 export const SECTOR_INDUSTRY_MAP = {
     "Energy": [
         "Oil & Gas Drilling", "Oil & Gas Equipment & Services", "Integrated Oil & Gas",
