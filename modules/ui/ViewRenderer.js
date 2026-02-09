@@ -484,22 +484,36 @@ export class ViewRenderer {
 
             const faviconUrl = `https://files.marketindex.com.au/xasx/96x96-png/${item.code.toLowerCase()}.png`;
 
-            // Row 2: Utility Slots (Status Badges)
-            const targetSlot = hasAlert ? `
-                <div class="utility-slot has-content" data-action="deep-link" data-id="${item.id}" data-section="target">
-                    <i class="fas fa-crosshairs utility-icon"></i>
-                </div>` : '<div class="utility-slot"></div>';
+            // Row 2: Utility Slots (Status Badges) - Only render if they have content
+            const activeSlots = [];
 
-            const starsSlot = hasStars ? `
-                <div class="utility-slot has-content" data-action="deep-link" data-id="${item.id}" data-section="rating">
-                    <i class="fas ${UI_ICONS.STAR} utility-icon"></i>
-                    ${item.starRating}
-                </div>` : '<div class="utility-slot"></div>';
+            if (hasAlert) {
+                activeSlots.push(`
+                    <div class="utility-slot has-content" data-action="deep-link" data-id="${item.id}" data-section="target">
+                        <i class="fas fa-crosshairs utility-icon"></i>
+                    </div>`);
+            }
 
-            const notesSlot = hasComments ? `
-                <div class="utility-slot has-content" data-action="deep-link" data-id="${item.id}" data-section="notes">
-                    <i class="fas ${UI_ICONS.COMMENTS} utility-icon" style="margin-right: 0;"></i>
-                </div>` : '<div class="utility-slot"></div>';
+            if (hasStars) {
+                activeSlots.push(`
+                    <div class="utility-slot has-content" data-action="deep-link" data-id="${item.id}" data-section="rating">
+                        <i class="fas ${UI_ICONS.STAR} utility-icon"></i>
+                        ${item.starRating}
+                    </div>`);
+            }
+
+            if (hasComments) {
+                activeSlots.push(`
+                    <div class="utility-slot has-content" data-action="deep-link" data-id="${item.id}" data-section="notes">
+                        <i class="fas ${UI_ICONS.COMMENTS} utility-icon" style="margin-right: 0;"></i>
+                    </div>`);
+            }
+
+            const utilityBarHtml = activeSlots.length > 0 ? `
+                <div class="card-row-utility">
+                    ${activeSlots.join('')}
+                </div>
+            ` : '';
 
             return `
                 <div class="${CSS_CLASSES.CARD} unified-layout ${trendClass} ${gradeClass}" data-id="${item.id}" data-code="${item.code}" style="${borderStyle}">
@@ -508,15 +522,11 @@ export class ViewRenderer {
                         <div class="card-left-col">
                             <div class="card-code-pill">
                                 <img src="${faviconUrl}" class="favicon-icon" onerror="this.src='${KANGAROO_ICON_SRC}'" alt="">
-                                <span>${item.code}</span>
+                                <span class="${CSS_CLASSES.CARD_CODE}" data-code="${item.code}">${item.code}</span>
                             </div>
                             
                             <!-- Row 2: Utility Bar (Underneath Code) -->
-                            <div class="card-row-utility">
-                                ${targetSlot}
-                                ${starsSlot}
-                                ${notesSlot}
-                            </div>
+                            ${utilityBarHtml}
                         </div>
 
                         <!-- Right Column: Value & Change -->
