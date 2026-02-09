@@ -3174,6 +3174,9 @@ function repairSheet_(sheetName, isForce = false) {
   const isDashboard = (sheetName === 'Dashboard');
   const fullRange = sheet.getDataRange();
   const data = fullRange.getValues();
+  // ANTIGRAVITY UPDATE: Also fetch formulas to prevent overwriting them with static values
+  const formulas = fullRange.getFormulas(); 
+  
   if (data.length < 2) return;
 
   // 1. Hardened Header Detection
@@ -3233,7 +3236,7 @@ function repairSheet_(sheetName, isForce = false) {
     
     // Check for broken data
     if (currentPrice == null || currentPrice === '' || currentPrice === 0 || 
-        String(currentPrice) === '#N/A' || String(currentPrice).includes('Error')) {
+        String(currentPrice) === '#N/A' || String(currentPrice) === 'Loading...' || String(currentPrice).includes('Error')) {
       needsRepair = true;
     }
     // Check for Penny Stocks (Force API for <= 1 cent)
@@ -3346,18 +3349,25 @@ function repairSheet_(sheetName, isForce = false) {
   // CRITICAL: We must NOT use fullRange.setValues(data) because it destroys formulas 
   // in columns we didn't intend to touch (like Live Price in 'Prices' sheet).
   // We only write back the specific columns we targeted.
+  // UPDATE: We also look at 'formulas' array to preserve any existing formulas in the target column.
   
   const numRows = data.length;
   
   if (priceIdx !== -1) {
-    // Extract just the price column
-    const colData = data.map(row => [row[priceIdx]]);
+    // Extract just the price column, respecting formulas
+    const colData = data.map((row, r) => {
+        if (formulas[r] && formulas[r][priceIdx]) return [formulas[r][priceIdx]];
+        return [row[priceIdx]];
+    });
     sheet.getRange(1, priceIdx + 1, numRows, 1).setValues(colData);
   }
 
   if (prevIdx !== -1) {
-    // Extract just the prev column
-    const colData = data.map(row => [row[prevIdx]]);
+    // Extract just the prev column, respecting formulas
+    const colData = data.map((row, r) => {
+        if (formulas[r] && formulas[r][prevIdx]) return [formulas[r][prevIdx]];
+        return [row[prevIdx]];
+    });
     sheet.getRange(1, prevIdx + 1, numRows, 1).setValues(colData);
   }
   
