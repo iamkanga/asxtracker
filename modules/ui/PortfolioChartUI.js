@@ -116,10 +116,10 @@ export class PortfolioChartUI {
                     </div>
                     
                     <!-- Timeframe Toggles -->
-                    <div class="control-row timeframe-row" style="display:flex; gap:18px; justify-content:center; overflow-x:auto; padding-bottom:4px; -webkit-overflow-scrolling: touch; flex-shrink:0;">
-                        ${['1d', '5d', '1m', '3m', '6m', '1y', '5y', '10y', 'max'].map(r => `
+                    <div class="control-row timeframe-row" style="display:flex; gap:14px; justify-content:center; overflow-x:auto; padding: 4px 8px; -webkit-overflow-scrolling: touch; flex-shrink:0;">
+                        ${['1d', '5d', '1m', '3m', '6m', '1y', '3y', '5y', '10y', 'max'].map(r => `
                             <button class="range-btn ${this.range === r ? 'active' : ''}" data-range="${r}" 
-                                    style="background:transparent; border:none; outline:none; padding:4px 0; color:#fff; font-size:0.85rem; font-weight:800; cursor:pointer; text-transform:uppercase; transition: color 0.15s ease;">
+                                    style="background:transparent; border:none; outline:none; padding:4px 0; color:#fff; font-size:0.82rem; font-weight:800; cursor:pointer; text-transform:uppercase; transition: color 0.15s ease; flex-shrink:0;">
                                 ${r}
                             </button>
                         `).join('')}
@@ -167,7 +167,25 @@ export class PortfolioChartUI {
                     color: var(--color-accent) !important;
                 }
                 #portfolio-chart-modal .timeframe-row::-webkit-scrollbar { display: none; }
-                #portfolio-chart-modal .timeframe-row { -ms-overflow-style: none; scrollbar-width: none; }
+                #portfolio-chart-modal .timeframe-row { 
+                    -ms-overflow-style: none; 
+                    scrollbar-width: none; 
+                }
+                
+                @media (max-width: 480px) and (orientation: portrait) {
+                    #portfolio-chart-modal .timeframe-row {
+                        gap: 8px !important;
+                        justify-content: space-between !important;
+                        padding-left: 12px !important;
+                        padding-right: 12px !important;
+                        overflow: hidden !important; /* Force fit if possible */
+                    }
+                    #portfolio-chart-modal .range-btn {
+                        font-size: 0.72rem !important;
+                        flex: 1;
+                        text-align: center;
+                    }
+                }
                 
                 #portfolio-chart-modal .portfolio-chart-controls.collapsed {
                     max-height: 40px !important;
@@ -593,6 +611,7 @@ export class PortfolioChartUI {
             case '3m': return now - (92 * day);
             case '6m': return now - (183 * day);
             case '1y': return now - (365 * day);
+            case '3y': return now - (3 * 365 * day);
             case '5y': return now - (5 * 365 * day);
             case '10y': return now - (10 * 365 * day);
             case 'max': return 0;

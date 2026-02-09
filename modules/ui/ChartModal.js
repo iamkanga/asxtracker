@@ -56,9 +56,14 @@ export class ChartComponent {
                     padding: 6px 8px;
                     background: var(--card-bg);
                     border-top: 1px solid var(--border-color);
-                    justify-content: center;
+                    justify-content: space-between;
                     align-items: center;
                 }
+                /* Controls Layout */
+                .chart-selector-container { order: 1; }
+                .chart-timeframe-row { order: 2; }
+                .chart-zoom-container { order: 3; }
+
                 /* Timeframe row - always centered */
                 .chart-timeframe-row {
                     display: flex;
@@ -67,35 +72,39 @@ export class ChartComponent {
                     align-items: center;
                     flex-wrap: wrap;
                 }
-                /* Second row - style and zoom */
-                .chart-style-row {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    width: 100%;
-                }
-                /* Landscape: single line layout */
+                
+                /* Landscape: single line with extreme ends */
                 @media (orientation: landscape) {
-                    .chart-style-row {
-                        width: auto;
-                        justify-content: center;
-                        gap: 6px;
-                    }
-                    .chart-controls-separator-portrait {
-                        display: none;
-                    }
+                    .chart-selector-container { min-width: 100px; }
+                    .chart-zoom-container { min-width: 40px; text-align: right; }
+                    .chart-controls-separator-portrait { display: none; }
                 }
+
                 /* Portrait: two row layout */
                 @media (orientation: portrait) {
                     .chart-timeframe-row {
                         width: 100% !important;
+                        flex-wrap: nowrap !important;
+                        justify-content: space-between !important;
+                        gap: 0 !important;
+                        order: 1 !important; /* Force to top */
+                        margin-bottom: 8px;
                     }
-                    .chart-style-row {
-                        width: 100% !important;
-                        margin-top: 2px;
+                    .chart-selector-container {
+                        order: 2 !important;
+                        flex: 1;
+                        text-align: left;
                     }
-                    .chart-controls-separator-landscape {
-                        display: none !important;
+                    .chart-zoom-container {
+                        order: 3 !important;
+                        flex: 1;
+                        text-align: right;
+                    }
+                    .chart-timeframe-row .${CSS_CLASSES.CHART_BTN} {
+                        padding: 4px 4px !important;
+                        font-size: 0.72rem !important;
+                        flex: 1;
+                        text-align: center;
                     }
                 }
                 .${CSS_CLASSES.CHART_BTN} {
@@ -211,17 +220,18 @@ export class ChartComponent {
                     </div>
                 </div>
                 <div class="${CSS_CLASSES.CHART_CONTROLS}">
-                    <div class="chart-timeframe-row">
-                        ${this._renderRangeButtons()}
-                    </div>
-                    <span class="chart-controls-separator-landscape" style="font-size:0.8rem; color:var(--border-color); margin:0 6px;">|</span>
-                    <div class="chart-style-row">
+                    <div class="chart-selector-container">
                         <select class="${CSS_CLASSES.CHART_SELECT}" id="${IDS.CHART_STYLE_SELECT}" title="Chart Style">
                             <option value="candle">Candles</option>
                             <option value="bar">Bars</option>
                             <option value="line">Line</option>
                             <option value="area">Area</option>
                         </select>
+                    </div>
+                    <div class="chart-timeframe-row">
+                        ${this._renderRangeButtons()}
+                    </div>
+                    <div class="chart-zoom-container">
                         <button id="${IDS.CHART_ROTATOR}" class="${CSS_CLASSES.CHART_BTN}" title="Fullscreen"><i class="fas fa-expand"></i></button>
                     </div>
                 </div>
@@ -248,7 +258,7 @@ export class ChartComponent {
 
     _renderRangeButtons() {
         // Updated Ranges: 1D, 5D, 1M, ..., 10Y, Max
-        const ranges = ['1d', '5d', '1m', '3m', '6m', '1y', '5y', '10y', 'max'];
+        const ranges = ['1d', '5d', '1m', '3m', '6m', '1y', '3y', '5y', '10y', 'max'];
         return ranges.map(r =>
             `<button class="${CSS_CLASSES.CHART_BTN} ${this.currentRange === r ? 'active' : ''}" data-range="${r}">${r.toUpperCase()}</button>`
         ).join('');

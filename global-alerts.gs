@@ -907,6 +907,7 @@ function fetchHistory(code, range = '1y') {
       case '3m': yRange = '3mo'; yInterval = '1d'; break;
       case '6m': yRange = '6mo'; yInterval = '1d'; break;
       case '1y': yRange = '1y'; yInterval = '1d'; break;
+      case '3y': yRange = '3y'; yInterval = '1d'; break;
       case '5y': yRange = '5y'; yInterval = '1d'; break; // Could use 1wk for speed if needed
       case '10y': yRange = '10y'; yInterval = '1d'; break;
       case 'max': yRange = 'max'; yInterval = '1mo'; break; // Max is huge, use monthly

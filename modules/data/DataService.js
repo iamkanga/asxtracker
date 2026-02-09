@@ -378,7 +378,7 @@ export class DataService {
         // CACHE IMPLEMENTATION: Check localStorage first to save API quota
         // Key format: asx_history_{code}_{range}
         // Expiry: 24 hours
-        const cacheKey = `asx_history_v2_${code}_${range}`;
+        const cacheKey = `asx_history_v3_${code}_${range}`;
         const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 
         try {
