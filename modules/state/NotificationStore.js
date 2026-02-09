@@ -666,9 +666,16 @@ export class NotificationStore {
      * @returns {Array<Object>} The filtered list of alert hits.
      */
     filterLocalHits(rawHits, rules, mutedCodes, pinnedAlerts) {
+
+
         const filtered = rawHits.filter(hit => {
             const match = String(hit.userId) === String(this.userId);
             if (!match) return false;
+
+            // Debug specific stock
+            const isDebug = (hit.code === 'BHP' || hit.code === 'CBA' || (hit.code && hit.code.includes('YOUR_STOCK_CODE_HERE'))); // Replace if known
+            if (isDebug) console.log(`[NotificationStore] Checking ${hit.code} (${hit.intent})...`);
+
 
             // --- TARGET HIT GUARD ---
             // If it's a target alert, re-validate against CURRENT price to ensure it's still a hit.

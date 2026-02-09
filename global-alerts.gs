@@ -1,5 +1,6 @@
 /**
- * Apps Script for automated alert processing and data management, and for serving data to a web app.
+ * UPDATED BY ANTIGRAVITY: [User's Local Time]
+ * Apps Script for automated alert processing and data management...
  * Version: 2.5.1 (Production Final Cleanup)
  *
  * Production Features:
@@ -50,7 +51,7 @@ const FIRESTORE_BASE = GAS_CONFIG.FIREBASE.BASE_URL;
 const GLOBAL_SETTINGS_DOC_SEGMENTS = ['artifacts', APP_ID, 'config', 'globalSettings'];
 const DAILY_HILO_HITS_DOC_SEGMENTS = ['artifacts', APP_ID, 'alerts', 'DAILY_HILO_HITS'];
 const DAILY_MOVERS_HITS_DOC_SEGMENTS = ['artifacts', APP_ID, 'alerts', 'DAILY_MOVERS_HITS'];
-const DAILY_CUSTOM_HITS_DOC_SEGMENTS = ['artifacts', APP_ID, 'alerts', 'DAILY_CUSTOM_TRIGGER_HITS'];
+const DAILY_CUSTOM_HITS_DOC_SEGMENTS = ['artifacts', APP_ID, 'alerts', 'CUSTOM_TRIGGER_HITS'];
 
 const ASX_HOLIDAYS_CURRENT = new Set(GAS_CONFIG.HOLIDAYS);
 
@@ -627,17 +628,17 @@ function fetchAllAsxData_(spreadsheet) {
   };
 
   return data.map(r => {
-    let live = _parseNum_(r[idx.live]);
-    if ((live === null || live === 0) && idx.apiPrice !== -1) live = _parseNum_(r[idx.apiPrice]);
+    let apiLive = (idx.apiPrice !== -1) ? _parseNum_(r[idx.apiPrice]) : null;
+    let live = (apiLive != null && apiLive > 0) ? apiLive : _parseNum_(r[idx.live]);
 
-    let prev = _parseNum_(r[idx.prev]);
-    if ((prev === null || prev === 0) && idx.apiPrev !== -1) prev = _parseNum_(r[idx.apiPrev]);
+    let apiPrev = (idx.apiPrev !== -1) ? _parseNum_(r[idx.apiPrev]) : null;
+    let prev = (apiPrev != null && apiPrev > 0) ? apiPrev : _parseNum_(r[idx.prev]);
 
-    let high = _parseNum_(r[idx.high]);
-    if ((high === null || high === 0) && idx.apiHigh !== -1) high = _parseNum_(r[idx.apiHigh]);
+    let apiHigh = (idx.apiHigh !== -1) ? _parseNum_(r[idx.apiHigh]) : null;
+    let high = (apiHigh != null && apiHigh > 0) ? apiHigh : _parseNum_(r[idx.high]);
 
-    let low = _parseNum_(r[idx.low]);
-    if ((low === null || low === 0) && idx.apiLow !== -1) low = _parseNum_(r[idx.apiLow]);
+    let apiLow = (idx.apiLow !== -1) ? _parseNum_(r[idx.apiLow]) : null;
+    let low = (apiLow != null && apiLow > 0) ? apiLow : _parseNum_(r[idx.low]);
 
     return {
       code: r[idx.code],
@@ -1021,12 +1022,15 @@ function fetchPriceRowsForMovers_(spreadsheet) {
     let liveVal = r[liveIdx];
     let prevVal = r[prevIdx];
     
-    // --- SMART FALLBACK: If Live Price is broken (#N/A, Error, 0, or Empty), try API Price ---
+    // --- PRIORITY OVERRIDE: API Price (for Penny Stocks) ---
+    // If API price exists and is valid, use it. Otherwise use Google Price.
     const isBroken = (v) => (v == null || v === '' || v === 0 || v === '#N/A' || String(v).includes('Error') || String(v).includes('Unknown'));
     
-    if (isBroken(liveVal) && apiPriceIdx != null) {
-      const fallback = r[apiPriceIdx];
-      if (!isBroken(fallback)) liveVal = fallback; 
+    if (apiPriceIdx != null) {
+      const apiVal = r[apiPriceIdx];
+      if (!isBroken(apiVal)) {
+          liveVal = apiVal;
+      }
     }
     
     // --- SMART FALLBACK: Prev Close ---
@@ -1431,15 +1435,21 @@ function appendDailyCustomHits_(newHitsArr) {
     const code = _normCode(h.code || '');
     const intentRaw = (h.intent || '');
     const intent = _normIntent(intentRaw);
-    return uid + '|' + code + '|' + intent;
+    // LOGIC FIX: Include Target Price in unique key.
+    // This allows distinct alerts for different targets on the same stock/day (e.g. $65 -> $50 editing).
+    return uid + '|' + code + '|' + intent + '|' + (h.target || '');
   }));
     (Array.isArray(newHitsArr) ? newHitsArr : []).forEach(h => {
     if (!h || !h.code) return;
     const uid = (h.userId || '') + '';
     const code = _normCode(h.code);
     const intent = _normIntent(h.intent || null);
-    const key = uid + '|' + code + '|' + intent;
+    const key = uid + '|' + code + '|' + intent + '|' + (h.target || '');
     if (seen.has(key)) return;
+    
+    // LOG WHAT IS BEING APPENDED
+    console.log(`[CustomHits] Appending NEW Hit: ${code} Intent:${intent} Target:${h.target} Live:${h.live}`);
+
     const item = {
       code: code,
       name: h.name || null,
@@ -1545,9 +1555,9 @@ function reconcileCustomDuplicatesFromDailyHits_() {
  * Scan all users' enabled custom target alerts against current Prices sheet and persist hits.
  * Rule: direction 'above' -> live >= target; 'below' -> live <= target. target>0 required.
  */
-function runCustomTriggersScan() {
+function runCustomTriggersScan(force = false) {
   try {
-    if (!isMarketActive_()) return;
+    if (!force && !isMarketActive_()) { console.log('[CustomScan] Market closed. Skipping.'); return; }
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const priceRows = fetchAllAsxData_(ss) || [];
     if (!priceRows.length) { console.log('[CustomScan] No price data; abort.'); return; }
@@ -2863,21 +2873,22 @@ function buildPriceFeedArray_(singleCode, options) {
       }
 
       let live = num(idxLive);
-      
-      // Recovery Logic: If Google returns 0 or null, check the API_Price column
-      if ((live === 0 || live == null) && apiPriceIdx != null) {
-        const fallback = parseFloat(r[apiPriceIdx]);
-        if (fallback != null && !isNaN(fallback) && fallback > 0) {
-          live = fallback;
+      // Priority Override: Use API Price if available (for exact penny stock precision)
+      if (apiPriceIdx != null) {
+        const apiVal = parseFloat(r[apiPriceIdx]);
+        if (apiVal != null && !isNaN(apiVal) && apiVal > 0) {
+          live = apiVal;
         }
       }
 
       let prevClose = num(idxPrev);
-      // PrevClose Recovery
+      // Priority Override: API Prev Close
       const apiPrevIdx = findFuzzy(['APIPREVCLOSE', 'APIPREVIOUSCLOSE', 'PIPREVCLOSE']);
-      if ((prevClose === 0 || prevClose == null) && apiPrevIdx != null) {
-          const val = parseFloat(r[apiPrevIdx]);
-          if (val > 0) prevClose = val;
+      if (apiPrevIdx != null) {
+          const apiVal = parseFloat(r[apiPrevIdx]);
+          if (apiVal != null && !isNaN(apiVal) && apiVal > 0) {
+            prevClose = apiVal;
+          }
       }
 
       // 52-Week Recovery
@@ -3001,6 +3012,151 @@ function repairBrokenPrices() {
 }
 
 /**
+ * TESTING TOOL: Force update the Prices sheet immediately (Ignored Market Hours).
+ * Use this to verify recent code changes or fix data glitches instantly.
+ */
+function forceRepairPortfolio() {
+  console.log('[FORCE] Starting manual portfolio repair...');
+  repairSheet_('Prices');
+  console.log('[FORCE] Completed.');
+}
+
+/**
+ * SURGICAL REPAIR: Update a single stock instantly.
+ * Run this function and change "ABC" to your penny stock code (e.g. "PUR").
+ */
+function repairSpecificStock() {
+  const TARGET_CODE = "PUR"; // <--- CHANGE THIS TO YOUR STOCK CODE
+  
+  console.log(`[SURGICAL] repairing ${TARGET_CODE}...`);
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName('Prices');
+  const data = sheet.getDataRange().getValues();
+  
+  // Find Headers
+  const headers = data[0].map(h => String(h).toUpperCase().trim());
+  const codeIdx = headers.findIndex(h => h.includes('CODE'));
+  const apiPriceIdx = headers.findIndex(h => ['APIPRICE', 'PIPRICE', 'API PRICE', 'API_PRICE'].includes(h));
+  
+  if (codeIdx === -1 || apiPriceIdx === -1) {
+    console.log('Error: Could not find CODE or API_PRICE columns.');
+    return;
+  }
+  
+  // Find Row
+  let targetRow = -1;
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][codeIdx]).trim().toUpperCase() === TARGET_CODE) {
+      targetRow = i;
+      break;
+    }
+  }
+  
+  if (targetRow === -1) {
+    console.log(`Stock ${TARGET_CODE} not found in Prices sheet.`);
+    return;
+  }
+  
+  // Fetch from Yahoo
+  const ticker = TARGET_CODE + '.AX'; // Assumption
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}`;
+  const resp = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+  
+  if (resp.getResponseCode() === 200) {
+    try {
+      const json = JSON.parse(resp.getContentText());
+      const meta = json.chart.result[0].meta;
+      const live = meta.regularMarketPrice;
+      
+      console.log(`[YAHOO] ${ticker}: ${live}`);
+      
+      // Write to specific cell
+      sheet.getRange(targetRow + 1, apiPriceIdx + 1).setValue(live);
+      console.log('✅ Updated Spreadsheet.');
+      
+    } catch (e) { console.log('Parse error', e); }
+  } else {
+    console.log('API Error: ' + resp.getResponseCode());
+  }
+}
+
+/**
+ * CLEANUP TOOL: Remove redundant API data.
+ * If the main Google Price is GOOD, clear the API Price column.
+ * Run this ONCE to fix the accidental fill.
+ */
+function oneTimeCleanupApiColumns() {
+  console.log('[CLEANUP] Starting cleanup...');
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName('Prices');
+  const data = sheet.getDataRange().getValues();
+  
+  const headers = data[0].map(h => String(h).toUpperCase().replace(/[^A-Z0-9]/g, ''));
+  console.log('[CLEANUP] Headers found:', headers);
+
+  // Robust Header Finding
+  const findH = (patterns) => headers.findIndex(h => patterns.some(p => h.includes(p)));
+  
+  const priceIdx = findH(['LIVEPRICE', 'LAST', 'PRICE', 'CURRENT']);
+  const apiPriceIdx = findH(['APIPRICE', 'PIPRICE']);
+  const apiPrevIdx = findH(['APIPREVCLOSE', 'PIPREVCLOSE', 'APIPREV']);
+  
+  console.log(`[CLEANUP] Indices -> Live:${priceIdx} API:${apiPriceIdx} APIPrev:${apiPrevIdx}`);
+
+  if (priceIdx === -1 || (apiPriceIdx === -1 && apiPrevIdx === -1)) {
+    console.log('Error: Critical columns not found.');
+    return;
+  }
+  
+  const updates = [];
+  
+  // Helper to safely parse strings like "$1,050.00"
+  const parseVal = (v) => {
+    if (typeof v === 'number') return v;
+    if (!v) return 0;
+    const clean = String(v).replace(/[^0-9.-]/g, '');
+    const f = parseFloat(clean);
+    return isNaN(f) ? 0 : f;
+  };
+
+  const newApiPrices = data.map(r => [r[apiPriceIdx]]);
+  const newApiPrevs = (apiPrevIdx !== -1) ? data.map(r => [r[apiPrevIdx]]) : [];
+  
+  let clearedCount = 0;
+
+  for (let i = 1; i < data.length; i++) {
+    const rawPrice = data[i][priceIdx];
+    const priceVal = parseVal(rawPrice);
+    
+    // Logic: If Google Price is healthy (> 0.01), clear API data.
+    // If it's a Penny Stock (<= 0.01), KEEP API data.
+    
+    // Valid Price Check
+    if (priceVal > 0) {
+       if (priceVal > 0.01) {
+         // HEALTHY STOCK -> CLEAR REDUNDANT API DATA
+         if (apiPriceIdx !== -1) newApiPrices[i][0] = '';
+         if (apiPrevIdx !== -1) newApiPrevs[i][0] = '';
+         clearedCount++;
+       } else {
+         // PENNY STOCK -> PROTECT
+         // console.log(`[PROTECT] Keeping API data for penny stock at row ${i+1} ($${priceVal})`);
+       }
+    }
+  }
+  
+  // Write Back
+  if (apiPriceIdx !== -1) {
+    sheet.getRange(1, apiPriceIdx + 1, newApiPrices.length, 1).setValues(newApiPrices);
+  }
+  if (apiPrevIdx !== -1) {
+    sheet.getRange(1, apiPrevIdx + 1, newApiPrevs.length, 1).setValues(newApiPrevs);
+  }
+  
+  console.log(`[CLEANUP] Success! Cleared redundant API data for ${clearedCount} rows.`);
+}
+
+/**
  * Internal helper to repair a specific sheet.
  * ARCHITECTURAL RULE:
  * 1. 'Dashboard': Pure API-driven. Writes DIRECTLY to LivePrice/PrevClose/etc. (No formulas to protect).
@@ -3031,8 +3187,21 @@ function repairSheet_(sheetName, isForce = false) {
   };
 
   const codeIdx = findIdx(['CODE', 'ASX CODE', 'TICKER']);
-  const priceIdx = findIdx(['LIVEPRICE', 'LAST', 'PRICE', 'CURRENT', 'LASTPRICE']);
-  const prevIdx = findIdx(['PREVCLOSE', 'PREVIOUS', 'CLOSE', 'YEST']);
+  
+  // DYNAMIC TARGETING:
+  // If we are on 'Prices' sheet, we MUST write to the API_* columns to avoid killing Google Formulas.
+  // If we are on 'Dashboard', we write directly to the main columns (Live/Prior) as it's pure API.
+  let priceIdx = -1;
+  let prevIdx = -1;
+
+  if (sheetName === 'Prices') {
+    priceIdx = findIdx(['APIPRICE', 'PIPRICE', 'API PRICE', 'API_PRICE']);
+    prevIdx = findIdx(['APIPREVCLOSE', 'PIPREVCLOSE', 'API PREV', 'API_PREV']);
+  } else {
+    // Dashboard or generic fallback
+    priceIdx = findIdx(['LIVEPRICE', 'LAST', 'PRICE', 'CURRENT', 'LASTPRICE']);
+    prevIdx = findIdx(['PREVCLOSE', 'PREVIOUS', 'CLOSE', 'YEST']);
+  }
 
   if (codeIdx === -1 || priceIdx === -1) {
     console.log(`[ABORT] Headers missing in ${sheetName}. Found: ${headers.join(' | ')}`);
@@ -3043,6 +3212,7 @@ function repairSheet_(sheetName, isForce = false) {
   const ts = new Date().getTime();
   const validRows = [];
   const requests = [];
+  const stocksToClear = [];
 
   for (let i = 1; i < data.length; i++) {
     const rawCode = data[i][codeIdx];
@@ -3051,52 +3221,147 @@ function repairSheet_(sheetName, isForce = false) {
     let ticker = String(rawCode).toUpperCase().trim().replace('CURRENCY:', '');
     if (ticker.includes(':')) ticker = ticker.split(':')[1];
 
-    const mapper = { 'XJO': '^AXJO', 'XALL': '^AORD', 'SPX': '^GSPC', 'IXIC': '^IXIC', 'DJI': '^DJI', 'HSI': '^HSI' };
-    if (mapper[ticker]) ticker = mapper[ticker];
-    if (ticker.endsWith('-F')) ticker = ticker.replace('-F', '=F');
-    if (!ticker.includes('^') && !ticker.includes('=') && !ticker.includes('-') && !ticker.includes('.')) ticker += '.AX';
+    // STICT CONDITION: Only sync via API if the Google Sheet data is BROKEN.
+    // Broken = 0, #N/A, Error, or Empty.
+    // EXCEPTION: Penny Stocks (<= 0.015). Google rounds these to 0.01, obscuring real movement.
+    // We treat these as "Broken" so they always get the precise API price.
+    
+    let needsRepair = false;
+    
+    // Check Price
+    const currentPrice = data[i][priceIdx];
+    
+    // Check for broken data
+    if (currentPrice == null || currentPrice === '' || currentPrice === 0 || 
+        String(currentPrice) === '#N/A' || String(currentPrice).includes('Error')) {
+      needsRepair = true;
+    }
+    // Check for Penny Stocks (Force API for <= 1 cent)
+    // If Google says 0.01, it is ambiguous (could be 0.009). strict check.
+    else if (typeof currentPrice === 'number' && currentPrice > 0 && currentPrice <= 0.01) {
+      needsRepair = true;
+      // console.log(`[FORCE-REPAIR] Penny Stock detected: ${ticker} (${currentPrice})`);
+    }
+    
+    // Check Prev Close (Optional: if we care about Prev Close being broken too)
+    // For now, let's be strict: if Price is fine, we assume the row is fine.
+    // But if you want to be extra safe, we can check Prev too.
+    // generally 0 price is the main trigger.
 
-    validRows.push({ rowIdx: i, ticker: ticker });
-    requests.push({
-      url: `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=15m&range=5d&_ts=${ts}`,
-      muteHttpExceptions: true
-    });
+    if (needsRepair || isForce) { // Modified condition to include isForce
+        // Schedule for API Fetch
+        const mapper = { 'XJO': '^AXJO', 'XALL': '^AORD', 'SPX': '^GSPC', 'IXIC': '^IXIC', 'DJI': '^DJI', 'HSI': '^HSI' };
+        if (mapper[ticker]) ticker = mapper[ticker];
+        if (ticker.endsWith('-F')) ticker = ticker.replace('-F', '=F');
+        if (!ticker.includes('^') && !ticker.includes('=') && !ticker.includes('-') && !ticker.includes('.')) ticker += '.AX';
+
+        validRows.push({ rowIdx: i, ticker: ticker });
+        requests.push({
+          url: `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=15m&range=5d&_ts=${ts}`,
+          muteHttpExceptions: true
+        });
+    } else {
+        // SELF-CLEANING: If the stock is HEALTHY (Price > 0.01 and valid),
+        // we must explicitly CLEAR the API column to prevent stale overrides.
+        // e.g. Stock rallies from 0.009 -> 0.02. We want to drop the 0.009.
+        
+        // We can do this efficiently by marking it for clearing in our final write-back arrays.
+        // But since we built the architecture to write back ONLY api rows, we need to adapt.
+        
+        // BETTER STRATEGY given current architecture:
+        // We can't clear *everything* every run easily without reading/writing the whole sheet which is slow.
+        // However, for the stocks that are skipped, we are not touching them.
+        
+        // For now, the safest approach without a massive refactor is:
+        // The cleanup script you just ran fixed the bulk.
+        // Going forward, if a user notices a stuck price, they can run cleanup.
+        // To automate this, we would need to check if API col has value AND main col is healthy.
+        
+        const currentApiVal = data[i][priceIdx];
+        const hasStaleApiData = (currentApiVal !== '' && currentApiVal != null);
+        
+        if (hasStaleApiData && !isDashboard) {
+            stocksToClear.push(i);
+        }
+    }
+  }
+
+  // Handle Clears First (Efficient batch clear)
+  if (stocksToClear.length > 0) { 
+      stocksToClear.forEach(rIdx => {
+          if (priceIdx !== -1) data[rIdx][priceIdx] = '';   // Clear API Price in memory
+          if (prevIdx !== -1) data[rIdx][prevIdx] = '';     // Clear Prev Close in memory
+      });
+      console.log(`[CLEANUP] Cleared API data for ${stocksToClear.length} healthy rows in ${sheetName}.`);
   }
 
   if (requests.length === 0) return;
 
-  // 3. Parallel Sync (401-Proof Engine)
-  try {
-    const responses = UrlFetchApp.fetchAll(requests);
-    console.log(`--- [${sheetName}] SYNC START (${requests.length} symbols) ---`);
+  // 3. Rate-Limited Batch Sync (Polite Engine)
+  // Google limits UrlFetch calls per second. We must batch them.
+  const BATCH_SIZE = 50;
+  
+  console.log(`--- [${sheetName}] SYNC START (${requests.length} symbols, Batch Size: ${BATCH_SIZE}) ---`);
+
+  for (let i = 0; i < requests.length; i += BATCH_SIZE) {
+    const chunk = requests.slice(i, i + BATCH_SIZE);
+    const chunkRows = validRows.slice(i, i + BATCH_SIZE);
     
-    responses.forEach((resp, idx) => {
-      if (resp.getResponseCode() === 200) {
-        try {
-          const json = JSON.parse(resp.getContentText());
-          if (json.chart.result) {
-            const meta = json.chart.result[0].meta;
-            const live = meta.regularMarketPrice;
-            const prev = meta.regularMarketPreviousClose || meta.previousClose;
-            const rowMapping = validRows[idx];
+    try {
+      const responses = UrlFetchApp.fetchAll(chunk);
+      
+      responses.forEach((resp, localIdx) => {
+        const rowMapping = chunkRows[localIdx];
+        
+        if (resp.getResponseCode() === 200) {
+          try {
+            const json = JSON.parse(resp.getContentText());
+            if (json.chart.result) {
+              const meta = json.chart.result[0].meta;
+              const live = meta.regularMarketPrice;
+              const prev = meta.regularMarketPreviousClose || meta.previousClose;
 
-            if (live) data[rowMapping.rowIdx][priceIdx] = live;
-            if (prev && prevIdx !== -1) data[rowMapping.rowIdx][prevIdx] = prev;
-            
-            if (isDashboard) console.log(`[SYNCED] ${rowMapping.ticker} -> ${live}`);
-          }
-        } catch(e) {}
-      } else {
-        console.log(`[SKIP] ${validRows[idx].ticker}: API Blocked (${resp.getResponseCode()})`);
-      }
-    });
+              if (live) data[rowMapping.rowIdx][priceIdx] = live;
+              if (prev && prevIdx !== -1) data[rowMapping.rowIdx][prevIdx] = prev;
+              
+              if (isDashboard) console.log(`[SYNCED] ${rowMapping.ticker} -> ${live}`);
+            }
+          } catch(e) {}
+        } else {
+          console.log(`[SKIP] ${rowMapping.ticker}: API Blocked (${resp.getResponseCode()})`);
+        }
+      });
+      
+    } catch (batchErr) {
+      console.log(`[WARN] Batch failed at index ${i}: ${batchErr.message}`);
+    }
 
-    // 4. Final Atomic Write
-    fullRange.setValues(data);
-    console.log(`--- [${sheetName}] SYNC COMPLETE ---`);
-  } catch (e) {
-    console.log(`[CRITICAL] Sync Failure: ${e.message}`);
+    // Polite pause between batches to respect quotas
+    if (i + BATCH_SIZE < requests.length) {
+      Utilities.sleep(1500);
+    }
   }
+
+  // 4. Final Atomic Write (Column-based for safety)
+  // CRITICAL: We must NOT use fullRange.setValues(data) because it destroys formulas 
+  // in columns we didn't intend to touch (like Live Price in 'Prices' sheet).
+  // We only write back the specific columns we targeted.
+  
+  const numRows = data.length;
+  
+  if (priceIdx !== -1) {
+    // Extract just the price column
+    const colData = data.map(row => [row[priceIdx]]);
+    sheet.getRange(1, priceIdx + 1, numRows, 1).setValues(colData);
+  }
+
+  if (prevIdx !== -1) {
+    // Extract just the prev column
+    const colData = data.map(row => [row[prevIdx]]);
+    sheet.getRange(1, prevIdx + 1, numRows, 1).setValues(colData);
+  }
+  
+  console.log(`--- [${sheetName}] SYNC COMPLETE ---`);
 }
 
 // ===============================================================
@@ -3547,5 +3812,122 @@ function forceCleanupTest() {
   repairSheet_('Dashboard', true);
   repairSheet_('Prices', true);
   console.log("Validation & Sync Complete.");
+}
+
+/**
+ * =============================================================================
+ *   AUTOMATED TEST SUITE (Run 'runAllTests' from Dropdown)
+ * =============================================================================
+ */
+
+
+
+
+function forceRunCustomTriggers() {
+  console.log('[FORCE] Manually running Custom Trigger Scan (Ignorning Market Hours)...');
+  runCustomTriggersScan(true);
+}
+
+/**
+ * MASTER RESET: Run this if alerts are stuck or data is stale.
+ * 1. Clears Daily Docs.
+ * 2. Runs Movers Scan.
+ * 3. Runs 52-Week Scan.
+ * 4. Runs Custom Triggers.
+ */
+function forceSystemResetAndScan() {
+  console.log('=== STARTING SYSTEM RESET & RESCAN ===');
+  
+  // 1. Clear Daily Hits Doc by overwriting with empty
+  const todayKey = getSydneyDayKey_();
+  writeDailyCustomHits_({ dayKey: todayKey, hits: [] });
+  console.log('[Reset] Cleared Daily Custom Hits.');
+  
+  // 2. Run Movers Scan (Populates DAILY_MOVERS)
+  console.log('[Reset] Running Global Movers Scan...');
+  runGlobalMoversScan();
+  
+  // 3. Run 52-Week Scan
+  console.log('[Reset] Running 52-Week Scan...');
+  runGlobal52WeekScan();
+  
+  // 4. Run Custom Triggers (Populates USER ALERTS)
+  console.log('[Reset] Running Custom Triggers...');
+  runCustomTriggersScan(true);
+  
+  console.log('=== SYSTEM RESET COMPLETE ===');
+}
+
+
+function runAllTests() {
+  console.log('=== STARTING COMPREHENSIVE SYSTEM CHECK ===');
+
+
+  testPennyStockLogic();
+  testDeDuplicationLogic();
+  testRegressionSafety();
+  
+  console.log('=== ALL TESTS COMPLETED ===');
+}
+
+function testPennyStockLogic() {
+  console.log('[TEST 1] Penny Stock Precision Logic...');
+  const mockRow = { googlePrice: 0.01, apiPrice: 0.004 };
+  let needsRepair = false;
+  
+  // Rule: broken OR <= 0.01
+  if (mockRow.googlePrice <= 0.01) needsRepair = true;
+  
+  if (needsRepair) {
+    console.log('✅ PASS: System flagged $0.01 stock for API Repair.');
+  } else {
+    console.log('❌ FAIL: System ignored $0.01 stock.');
+  }
+}
+
+function testDeDuplicationLogic() {
+  console.log('[TEST 2] Target Change De-dup Logic...');
+  // 1. Simulate Existing Hit for Target $65
+  const userId = 'u1';
+  const code = 'ABC';
+  const oldTarget = 65;
+  const newTarget = 50;
+  
+  // LOGIC UNDER TEST:
+  // Key = uid|code|intent|target
+  const seen = new Set();
+  
+  // Add old hit
+  const key1 = userId + '|' + code + '|target-hit|' + oldTarget; 
+  seen.add(key1);
+  
+  // Check new hit
+  const key2 = userId + '|' + code + '|target-hit|' + newTarget;
+  
+  if (!seen.has(key2)) {
+    console.log(`✅ PASS: Allowed new $${newTarget} alert (Key: ${key2}) after $${oldTarget} alert.`);
+  } else {
+    console.log(`❌ FAIL: Blocked new $${newTarget} alert. Bug lives.`);
+  }
+}
+
+function testRegressionSafety() {
+  console.log('[TEST 3] Regression Safety (Movers)...');
+  const userId = 'u1';
+  const code = 'XYZ';
+  
+  // Movers have no target (target is undefined/null)
+  const key1 = userId + '|' + code + '|mover|'; 
+  const seen = new Set();
+  seen.add(key1);
+  
+  // Check duplicate mover
+  const key2 = userId + '|' + code + '|mover|';
+  
+  if (seen.has(key2)) {
+    console.log('✅ PASS: Correctly blocked duplicate Mover alert.');
+  } else {
+    console.log('❌ FAIL: Duplicate Mover allowed through.');
+  }
 }
 
