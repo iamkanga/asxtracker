@@ -663,7 +663,7 @@ export class ViewRenderer {
         const cardCommon = `${transition} cursor: pointer !important; position: relative; overflow: hidden; text-align: center;`;
         const stripThickness = 9;
         const baseCardHeight = 70; // Ultra compact height
-        const mainValueSize = '1.15rem';
+        const mainValueSize = '1.3rem';
         const labelSize = '0.6rem';
 
         container.innerHTML = `
