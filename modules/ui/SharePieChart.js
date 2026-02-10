@@ -169,7 +169,7 @@ export class SharePieChart {
                      data-id="${b.id}" data-val="${b.val}" 
                      style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.05); transition: background 0.2s ease; cursor: pointer;">
                     <div style="display: flex; align-items: center; gap: 12px;">
-                        <div style="width: 8px; height: 8px; background: ${b.color}; border-radius: 50%; box-shadow: 0 0 6px ${b.color}99; flex-shrink: 0;"></div>
+                        <div style="width: 14px; height: 14px; background: ${b.color}; border-radius: 2px; box-shadow: 0 0 8px ${b.color}b3; flex-shrink: 0;"></div>
                         <img src="https://files.marketindex.com.au/xasx/96x96-png/${b.id.toLowerCase()}.png" style="width: 20px; height: 20px; border-radius: 4px; background: #fff; padding: 1px;" onerror="this.src='favicon.svg'">
                         <div style="display: flex; flex-direction: column;">
                             <span style="font-weight: 700; font-size: 0.95rem; color: #fff;">${b.id}</span>
