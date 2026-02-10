@@ -1003,6 +1003,16 @@ export class ViewRenderer {
                                 </div>
                             </div>
                             ` : ''}
+
+                            <!-- Card: 52W Chart Preview -->
+                            <div class="${CSS_CLASSES.DETAIL_CARD} ${trendBgClass} ${CSS_CLASSES.CURSOR_POINTER}" id="miniChartCard_${stock.code}">
+                                <div class="${CSS_CLASSES.DETAIL_CARD_HEADER}">
+                                    <h3 class="${CSS_CLASSES.DETAIL_LABEL}">
+                                        <i class="fas fa-hourglass-half"></i> 52W Chart Preview
+                                    </h3>
+                                </div>
+                                <div id="miniChartHost_${stock.code}" style="margin-top: 8px;"></div>
+                            </div>
     
                             <!-- Card 3: Dividends -->
                             ${stock.dividendAmount > 0 ? `
@@ -1073,15 +1083,7 @@ export class ViewRenderer {
                                 </div>
                                 ` : ''}
 
-                            <!-- Card: 52W Chart Preview -->
-                            <div class="${CSS_CLASSES.DETAIL_CARD} ${trendBgClass} ${CSS_CLASSES.CURSOR_POINTER}" id="miniChartCard_${stock.code}">
-                                <div class="${CSS_CLASSES.DETAIL_CARD_HEADER}">
-                                    <h3 class="${CSS_CLASSES.DETAIL_LABEL}">
-                                        <i class="fas fa-hourglass-half"></i> 52W Chart Preview
-                                    </h3>
-                                </div>
-                                <div id="miniChartHost_${stock.code}" style="margin-top: 8px;"></div>
-                            </div>
+
 
                             <!-- Card 5: Entry Details (Decoupled & Decentered) -->
                             <div class="${CSS_CLASSES.DETAIL_CARD} ${trendBgClass} ${CSS_CLASSES.CURSOR_POINTER}" data-action="deep-link" data-id="${stock.id}" data-section="holdings">
