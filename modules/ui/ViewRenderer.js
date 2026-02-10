@@ -658,69 +658,101 @@ export class ViewRenderer {
         const lossBorderStyle = this._getBorderStyles(-1); // Loss is negative
         const returnBorderStyle = this._getBorderStyles(metrics.totalReturn);
 
-        // 3. Construct HTML (Card Layout with Inline Percentages and Gradients)
+        // 3. Construct HTML (Centered Hero Layout - Compact & Bold)
+        const transition = 'transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.2s ease, background 0.2s ease !important;';
+        const cardCommon = `${transition} cursor: pointer !important; position: relative; overflow: hidden; text-align: center;`;
+        const stripThickness = 9;
+        const baseCardHeight = 95; // Original height user prefers
+        const mainValueSize = '1.8rem';
+        const labelSize = '0.75rem';
+
         container.innerHTML = `
              <div class="${CSS_CLASSES.SUMMARY_CARD} ${CSS_CLASSES.CLICKABLE}" 
-                  style="background: ${neutralGradient} !important; ${valueBorderStyle}; display: flex !important; flex-direction: row !important; justify-content: space-between !important; align-items: center !important; padding: 16px 20px !important; min-height: 85px;"
-                  data-type="${SUMMARY_TYPES.VALUE}">
-                 <div class="share-pie-container" style="flex-shrink: 0; margin-right: 12px; display: flex; align-items: center; justify-content: center;"></div>
-                 <div style="display: flex; flex-direction: column; gap: 4px; flex: 1; align-items: flex-end; text-align: right;">
-                    <span class="${CSS_CLASSES.METRIC_LABEL}" style="margin: 0;">Portfolio Value</span>
-                    <span class="${CSS_CLASSES.METRIC_VALUE_LARGE}">${formatCurrency(metrics.totalValue)}</span>
-                 </div>
+                  style="background: ${neutralGradient} !important; ${valueBorderStyle}; display: flex !important; flex-direction: column !important; justify-content: center !important; align-items: center !important; padding: ${16 + stripThickness}px 20px 16px !important; min-height: ${baseCardHeight + stripThickness}px; ${cardCommon}"
+                  data-type="${SUMMARY_TYPES.VALUE}"
+                  onmouseenter="this.style.transform='scale(1.02)'; this.style.zIndex='10';"
+                  onmouseleave="this.style.transform='scale(1)'; this.style.zIndex='1';">
+                 
+                 <!-- Gloss Overlay -->
+                 <div style="position: absolute; top: 0; left: 0; width: 100%; height: 50%; background: linear-gradient(to bottom, rgba(255,255,255,0.05), transparent); pointer-events: none;"></div>
+                 
+                 <div class="share-dna-container" style="position: absolute; top: 0; left: 0; height: ${stripThickness}px; width: 100%; border-bottom: 1px solid rgba(255,255,255,0.1); z-index: 5;"></div>
+                 
+                 <span class="${CSS_CLASSES.METRIC_LABEL}" style="margin: 0 0 10px 0; text-transform: uppercase; font-size: ${labelSize}; letter-spacing: 1.5px; opacity: 0.6; font-weight: 600;">Portfolio Value</span>
+                 <span class="${CSS_CLASSES.METRIC_VALUE_LARGE}" style="font-size: ${mainValueSize}; line-height: 1; font-weight: 800; letter-spacing: -0.5px;">${formatCurrency(metrics.totalValue)}</span>
              </div>
- 
+
              <div class="${CSS_CLASSES.SUMMARY_CARD} ${CSS_CLASSES.CLICKABLE}" 
-                  style="background: ${dayChangeGradient} !important; ${changeBorderStyle}; display: flex !important; flex-direction: row !important; justify-content: space-between !important; align-items: center !important; padding: 12px 20px !important;"
-                  data-type="${SUMMARY_TYPES.DAY_CHANGE}">
-                 <span class="${CSS_CLASSES.METRIC_LABEL}" style="margin: 0; text-align: left;">Day<br/>Change</span>
-                 <div class="${CSS_CLASSES.METRIC_ROW}" style="margin: 0; display: flex; flex-direction: column; align-items: flex-end;">
-                     <span class="${CSS_CLASSES.METRIC_VALUE_LARGE} ${(metrics.dayChangeValue >= 0) ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}">
-                         ${formatCurrency(Math.abs(metrics.dayChangeValue))}
-                     </span>
-                     <span class="${CSS_CLASSES.METRIC_PERCENT_SMALL} ${(metrics.dayChangePercent >= 0) ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}" style="margin-top: -4px;">
-                         ${formatPercent(metrics.dayChangePercent)}
-                     </span>
-                 </div>
+                  style="background: ${dayChangeGradient} !important; ${changeBorderStyle}; display: flex !important; flex-direction: column !important; justify-content: center !important; align-items: center !important; padding: 20px !important; min-height: ${baseCardHeight}px; ${cardCommon}"
+                  data-type="${SUMMARY_TYPES.DAY_CHANGE}"
+                  onmouseenter="this.style.transform='scale(1.02)'; this.style.zIndex='10';"
+                  onmouseleave="this.style.transform='scale(1)'; this.style.zIndex='1';">
+                  
+                  <div style="position: absolute; top: 0; left: 0; width: 100%; height: 50%; background: linear-gradient(to bottom, rgba(255,255,255,0.03), transparent); pointer-events: none;"></div>
+                  
+                  <span class="${CSS_CLASSES.METRIC_LABEL}" style="margin: 0 0 10px 0; text-transform: uppercase; font-size: ${labelSize}; letter-spacing: 1.5px; opacity: 0.6; font-weight: 600;">Day Change</span>
+                  <div style="display: flex; align-items: baseline; gap: 10px; justify-content: center;">
+                      <span class="${CSS_CLASSES.METRIC_VALUE_LARGE} ${(metrics.dayChangeValue >= 0) ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}" style="font-size: ${mainValueSize}; line-height: 1; font-weight: 800;">
+                          ${formatCurrency(Math.abs(metrics.dayChangeValue))}
+                      </span>
+                      <span class="${CSS_CLASSES.METRIC_PERCENT_SMALL} ${(metrics.dayChangePercent >= 0) ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}" style="font-size: 1rem; font-weight: 700;">
+                          ${formatPercent(metrics.dayChangePercent)}
+                      </span>
+                  </div>
              </div>
 
             <div class="${CSS_CLASSES.SUMMARY_CARD} ${CSS_CLASSES.CLICKABLE}" 
-                 style="background: ${greenGradient} !important; ${gainBorderStyle}; display: flex !important; flex-direction: row !important; justify-content: space-between !important; align-items: center !important; padding: 12px 20px !important;"
-                 data-type="${SUMMARY_TYPES.WINNERS}">
-                <span class="${CSS_CLASSES.METRIC_LABEL}" style="margin: 0; text-align: left;">Day<br/>Gain</span>
-                <div class="${CSS_CLASSES.METRIC_ROW}" style="margin: 0; display: flex; flex-direction: column; align-items: flex-end;">
-                    <span class="${CSS_CLASSES.METRIC_VALUE_LARGE} ${CSS_CLASSES.TEXT_POSITIVE}">
+                 style="background: ${greenGradient} !important; ${gainBorderStyle}; display: flex !important; flex-direction: column !important; justify-content: center !important; align-items: center !important; padding: 20px !important; min-height: ${baseCardHeight}px; ${cardCommon}"
+                 data-type="${SUMMARY_TYPES.WINNERS}"
+                 onmouseenter="this.style.transform='scale(1.02)'; this.style.zIndex='10';"
+                 onmouseleave="this.style.transform='scale(1)'; this.style.zIndex='1';">
+                
+                <div style="position: absolute; top: 0; left: 0; width: 100%; height: 50%; background: linear-gradient(to bottom, rgba(255,255,255,0.03), transparent); pointer-events: none;"></div>
+                
+                <span class="${CSS_CLASSES.METRIC_LABEL}" style="margin: 0 0 10px 0; text-transform: uppercase; font-size: ${labelSize}; letter-spacing: 1.5px; opacity: 0.6; font-weight: 600;">Day Gain</span>
+                <div style="display: flex; align-items: baseline; gap: 10px; justify-content: center;">
+                    <span class="${CSS_CLASSES.METRIC_VALUE_LARGE} ${CSS_CLASSES.TEXT_POSITIVE}" style="font-size: ${mainValueSize}; line-height: 1; font-weight: 800;">
                         ${formatCurrency(Math.abs(metrics.dayGain || 0))}
                     </span>
-                    <span class="${CSS_CLASSES.METRIC_PERCENT_SMALL} ${CSS_CLASSES.TEXT_POSITIVE}" style="margin-top: -4px;">
+                    <span class="${CSS_CLASSES.METRIC_PERCENT_SMALL} ${CSS_CLASSES.TEXT_POSITIVE}" style="font-size: 1rem; font-weight: 700;">
                         ${formatPercent(metrics.dayGainPercent || 0)}
                     </span>
                 </div>
             </div>
 
             <div class="${CSS_CLASSES.SUMMARY_CARD} ${CSS_CLASSES.CLICKABLE}" 
-                 style="background: ${redGradient} !important; ${lossBorderStyle}; display: flex !important; flex-direction: row !important; justify-content: space-between !important; align-items: center !important; padding: 12px 20px !important;"
-                 data-type="${SUMMARY_TYPES.LOSERS}">
-                <span class="${CSS_CLASSES.METRIC_LABEL}" style="margin: 0; text-align: left;">Day<br/>Loss</span>
-                <div class="${CSS_CLASSES.METRIC_ROW}" style="margin: 0; display: flex; flex-direction: column; align-items: flex-end;">
-                    <span class="${CSS_CLASSES.METRIC_VALUE_LARGE} ${CSS_CLASSES.TEXT_NEGATIVE}">
+                 style="background: ${redGradient} !important; ${lossBorderStyle}; display: flex !important; flex-direction: column !important; justify-content: center !important; align-items: center !important; padding: 20px !important; min-height: ${baseCardHeight}px; ${cardCommon}"
+                 data-type="${SUMMARY_TYPES.LOSERS}"
+                 onmouseenter="this.style.transform='scale(1.02)'; this.style.zIndex='10';"
+                 onmouseleave="this.style.transform='scale(1)'; this.style.zIndex='1';">
+                
+                <div style="position: absolute; top: 0; left: 0; width: 100%; height: 50%; background: linear-gradient(to bottom, rgba(255,255,255,0.03), transparent); pointer-events: none;"></div>
+                
+                <span class="${CSS_CLASSES.METRIC_LABEL}" style="margin: 0 0 10px 0; text-transform: uppercase; font-size: ${labelSize}; letter-spacing: 1.5px; opacity: 0.6; font-weight: 600;">Day Loss</span>
+                <div style="display: flex; align-items: baseline; gap: 10px; justify-content: center;">
+                    <span class="${CSS_CLASSES.METRIC_VALUE_LARGE} ${CSS_CLASSES.TEXT_NEGATIVE}" style="font-size: ${mainValueSize}; line-height: 1; font-weight: 800;">
                         ${formatCurrency(Math.abs(metrics.dayLoss || 0))}
                     </span>
-                    <span class="${CSS_CLASSES.METRIC_PERCENT_SMALL} ${CSS_CLASSES.TEXT_NEGATIVE}" style="margin-top: -4px;">
+                    <span class="${CSS_CLASSES.METRIC_PERCENT_SMALL} ${CSS_CLASSES.TEXT_NEGATIVE}" style="font-size: 1rem; font-weight: 700;">
                         ${formatPercent(metrics.dayLossPercent || 0)}
                     </span>
                 </div>
             </div>
 
             <div class="${CSS_CLASSES.SUMMARY_CARD} ${CSS_CLASSES.CLICKABLE}" 
-                 style="background: ${capitalGainGradient} !important; ${returnBorderStyle}; display: flex !important; flex-direction: row !important; justify-content: space-between !important; align-items: center !important; padding: 12px 20px !important;"
-                 data-type="${SUMMARY_TYPES.CAPITAL_GAIN}">
-                <span class="${CSS_CLASSES.METRIC_LABEL}" style="margin: 0; text-align: left;">Total<br/>Capital Gain</span>
-                <div class="${CSS_CLASSES.METRIC_ROW}" style="margin: 0; display: flex; flex-direction: column; align-items: flex-end;">
-                    <span class="${CSS_CLASSES.METRIC_VALUE_LARGE} ${isTotalPos ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}">
+                 style="background: ${capitalGainGradient} !important; ${returnBorderStyle}; display: flex !important; flex-direction: column !important; justify-content: center !important; align-items: center !important; padding: 20px !important; min-height: ${baseCardHeight}px; ${cardCommon}"
+                 data-type="${SUMMARY_TYPES.CAPITAL_GAIN}"
+                 onmouseenter="this.style.transform='scale(1.02)'; this.style.zIndex='10';"
+                 onmouseleave="this.style.transform='scale(1)'; this.style.zIndex='1';">
+                
+                <div style="position: absolute; top: 0; left: 0; width: 100%; height: 50%; background: linear-gradient(to bottom, rgba(255,255,255,0.03), transparent); pointer-events: none;"></div>
+                
+                <span class="${CSS_CLASSES.METRIC_LABEL}" style="margin: 0 0 10px 0; text-transform: uppercase; font-size: ${labelSize}; letter-spacing: 1.5px; opacity: 0.6; font-weight: 600;">Total Capital Gain</span>
+                <div style="display: flex; align-items: baseline; gap: 10px; justify-content: center;">
+                    <span class="${CSS_CLASSES.METRIC_VALUE_LARGE} ${isTotalPos ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}" style="font-size: ${mainValueSize}; line-height: 1; font-weight: 800;">
                         ${formatCurrency(Math.abs(metrics.totalReturn))}
                     </span>
-                    <span class="${CSS_CLASSES.METRIC_PERCENT_SMALL} ${isTotalPos ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}" style="margin-top: -4px;">
+                    <span class="${CSS_CLASSES.METRIC_PERCENT_SMALL} ${isTotalPos ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}" style="font-size: 1rem; font-weight: 700;">
                         ${formatPercent(metrics.totalReturnPercent)}
                     </span>
                 </div>
@@ -744,11 +776,11 @@ export class ViewRenderer {
         // 3. Inject (Prepend to main container)
         this.container.prepend(container);
 
-        // 4. Initialize Pie Chart if shares available
-        const pieContainer = container.querySelector('.share-pie-container');
-        if (pieContainer && shares.length > 0) {
+        // 4. Initialize DNA Strip if shares available
+        const dnaContainer = container.querySelector('.share-dna-container');
+        if (dnaContainer && shares.length > 0) {
             const pieChart = new SharePieChart(shares);
-            pieChart.renderSmall(pieContainer);
+            pieChart.renderDnaStrip(dnaContainer, 9);
         }
     }
 

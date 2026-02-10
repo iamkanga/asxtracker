@@ -54,6 +54,99 @@ export class SharePieChart {
     }
 
     /**
+     * Renders a horizontal DNA-style strip breakdown.
+     * @param {HTMLElement} container 
+     * @param {number} height
+     */
+    async renderDnaStrip(container, height = 9) {
+        if (!container || this.shares.length === 0) return;
+
+        const rawBreakdown = await this._getBreakdown();
+        const total = rawBreakdown.reduce((sum, b) => sum + b.val, 0);
+        if (total === 0) return;
+
+        // Grouping logic: Items < 1% go into "Others" to keep the strip clean and full-width
+        const breakdown = [];
+        let otherVal = 0;
+
+        rawBreakdown.forEach(item => {
+            const pct = (item.val / total) * 100;
+            if (pct >= 1.0) {
+                breakdown.push(item);
+            } else {
+                otherVal += item.val;
+            }
+        });
+
+        if (otherVal > 0) {
+            breakdown.push({
+                id: 'OTHERS',
+                label: 'Other Holdings',
+                val: otherVal,
+                color: '#444' // Neutral gray for Others
+            });
+        }
+
+        const strip = document.createElement('div');
+        strip.className = 'portfolio-dna-strip';
+        strip.style.cssText = `
+            width: 100%;
+            height: ${height}px;
+            display: flex;
+            background: rgba(255,255,255,0.05);
+            cursor: pointer;
+            transition: height 0.2s ease, box-shadow 0.2s ease;
+            overflow: hidden;
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.5);
+        `;
+
+        breakdown.forEach((item, idx) => {
+            const pct = (item.val / total) * 100;
+            const segment = document.createElement('div');
+            segment.title = `${item.id}: ${((item.val / total) * 100).toFixed(1)}%`;
+            segment.style.cssText = `
+                height: 100%;
+                width: ${pct}%;
+                background: ${item.color};
+                position: relative;
+                transition: filter 0.2s ease, width 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+                border-right: 0.5px solid rgba(0,0,0,0.2);
+            `;
+
+            // Initial animation state
+            const finalWidth = pct + '%';
+            segment.style.width = '0%';
+            requestAnimationFrame(() => {
+                segment.style.width = finalWidth;
+            });
+
+            // Hover effect for the strip
+            segment.addEventListener('mouseenter', () => segment.style.filter = 'brightness(1.5) saturate(1.2)');
+            segment.addEventListener('mouseleave', () => segment.style.filter = 'none');
+
+            strip.appendChild(segment);
+        });
+
+        strip.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.showModal();
+        });
+
+        // Hover effect for the whole strip container
+        container.addEventListener('mouseenter', () => {
+            strip.style.height = `${height + 2}px`;
+            strip.style.boxShadow = '0 0 10px rgba(0,255,255,0.1)';
+        });
+        container.addEventListener('mouseleave', () => {
+            strip.style.height = `${height}px`;
+            strip.style.boxShadow = 'inset 0 1px 2px rgba(0,0,0,0.5)';
+        });
+
+        container.innerHTML = '';
+        container.appendChild(strip);
+    }
+
+    /**
      * Shows the full-screen interactive breakdown modal.
      */
     async showModal() {
@@ -262,13 +355,21 @@ export class SharePieChart {
         const colors = await Promise.all(colorPromises);
 
         items.forEach((item, idx) => {
-            let color = ColorHelper.validateColor(colors[idx]);
+            let color;
 
-            // Precedence logic: If color is already used by a larger share (lower index in sorted list), 
-            // slightly adjust it for the smaller share.
-            if (usedColors.has(color)) {
-                color = this._adjustColor(color, idx);
+            // Override top 3 colors with theme colors per user request
+            if (idx === 0) color = '#06FF4F'; // Green
+            else if (idx === 1) color = '#FF3131'; // Red
+            else if (idx === 2) color = '#a49393'; // Coffee
+            else {
+                color = ColorHelper.validateColor(colors[idx]);
+                // Precedence logic: If color is already used by a larger share (lower index in sorted list), 
+                // slightly adjust it for the smaller share.
+                if (usedColors.has(color)) {
+                    color = this._adjustColor(color, idx);
+                }
             }
+
             usedColors.add(color);
 
             weightedBreakdown.push({
