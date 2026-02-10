@@ -14,6 +14,7 @@ import { ToastManager } from './ToastManager.js';
 
 import { navManager } from '../utils/NavigationManager.js';
 import { MiniChartPreview, ChartModal } from './ChartModal.js';
+import { SparklinePreview } from './SparklinePreview.js';
 import { SharePieChart } from './SharePieChart.js';
 
 export class ViewRenderer {
@@ -1307,6 +1308,7 @@ export class ViewRenderer {
         if (miniChartHost) {
             // Use day change to determine line color (green if up, red if down)
             const dayChange = stock.change || stock.dayChangeValue || 0;
+            // Pass callback to open fullscreen chart
             // Pass callback to open fullscreen chart
             miniChartInstance = new MiniChartPreview(
                 miniChartHost,
@@ -2729,7 +2731,7 @@ export class ViewRenderer {
                     if (container.querySelector('div')) return;
 
                     // Hydrate chart
-                    new MiniChartPreview(container, code, name, change, () => {
+                    new SparklinePreview(container, code, name, change, () => {
                         ChartModal.show(code, name);
                     }, false, '#a49393');
                 }
