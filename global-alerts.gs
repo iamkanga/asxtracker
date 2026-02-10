@@ -2716,6 +2716,10 @@ function createTriggers() {
   // 30 minutes is a good balance for "Pro" users; 60 for free tiers. 
   // Yahoo Finance is used here (robust but should be used politely).
   _ensureTimeTrigger_('repairBrokenPrices', b => b.everyHours(1));
+
+  // --- 5) Dashboard Repair & Price Sync (Hourly) ---
+  // Ensures formulas are preserved while prices update.
+  _ensureTimeTrigger_('autoRepairDashboard', b => b.everyHours(1));
   // Ensure a recurring trigger exists for the correct function name
   _ensureTimeTrigger_('runGlobal52WeekScan', b => b.everyMinutes(30));
 
@@ -3941,3 +3945,216 @@ function testRegressionSafety() {
   }
 }
 
+
+// ===============================================================
+// ================== SYSTEM AUTOMATION & REPAIR =================
+// ===============================================================
+
+/**
+ * INTERNAL UTILITY: Repair Sheet Logic
+ * Moved here to insure it persists with the main script.
+ */
+function repairSheet_(sheetName, isForce = false) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(sheetName);
+  if (!sheet) return;
+  
+  const isDashboard = (sheetName === 'Dashboard');
+  const dataRange = sheet.getDataRange();
+  const data = dataRange.getValues();
+  if (data.length < 2) return;
+
+  // 1. ROBUST HEADER DETECTION
+  // Normalize headers: "Live Price" -> "LIVEPRICE"
+  const rawHeader = data[0].map(h => String(h).toUpperCase().replace(/[^A-Z0-9]/g, ''));
+  const findCol = (name) => rawHeader.indexOf(name.toUpperCase());
+  
+  const codeIdx = findCol('CODE') !== -1 ? findCol('CODE') : findCol('ASXCODE');
+  // Check for LIVEPRICE, LAST, LASTPRICE, PRICE
+  let priceIdx = findCol('LIVEPRICE');
+  if (priceIdx === -1) priceIdx = findCol('LAST');
+  if (priceIdx === -1) priceIdx = findCol('LASTPRICE');
+  if (priceIdx === -1) priceIdx = findCol('PRICE');
+  const prevIdx = findCol('PrevClose');
+  const targetPrice = priceIdx; // Always write to LivePrice on Dashboard
+  const targetPrev = prevIdx;
+
+  if (codeIdx === -1 || targetPrice === -1) {
+    Logger.log(`[Error] Required columns missing in ${sheetName}. Looking for Code/LivePrice.`);
+    return;
+  }
+
+  const problems = [];
+  for (let i = 1; i < data.length; i++) {
+    const codeRaw = data[i][codeIdx];
+    if (!codeRaw) continue;
+
+    const priceVal = data[i][targetPrice];
+    let cleanVal = (typeof priceVal === 'string') ? Number(priceVal.replace(/[$, ]/g, '')) : priceVal;
+    
+    // "Broken" definition
+    const isBroken = (cleanVal === 0 || cleanVal === '' || cleanVal == null || isNaN(cleanVal) || cleanVal === '#N/A');
+
+    // RULES:
+    // 1. Dashboard: Update everything UNLESS it's a formula.
+    // 2. Others (Prices): Update ONLY if broken.
+    if (isDashboard || isBroken || isForce) {
+      
+      // CRITICAL SAFETY CHECK (DASHBOARD ONLY): Do not overwrite existing formulas
+      if (isDashboard) {
+        const cellRange = sheet.getRange(i + 1, targetPrice + 1);
+        if (cellRange.getFormula()) continue; // SKIP FORMULAS
+      }
+
+      let ticker = String(codeRaw).toUpperCase().trim();
+      // Handle Yahoo specifics
+      const mapper = { 'XJO': '^AXJO', 'XALL': '^AORD', 'SPX': '^GSPC', 'IXIC': '^IXIC', 'DJI': '^DJI' };
+      if (mapper[ticker]) ticker = mapper[ticker];
+      if (ticker.endsWith('-F')) ticker = ticker.replace('-F', '=F');
+      if (!ticker.includes('^') && !ticker.includes('=') && !ticker.includes('-') && !ticker.includes('.')) ticker += '.AX';
+
+      problems.push({ row: i + 1, code: ticker });
+    }
+  }
+
+  if (problems.length === 0) return;
+
+  // 2. BATCH FETCH OFFICIAL DATA
+  for (let i = 0; i < problems.length; i += 40) {
+    const batch = problems.slice(i, i + 40);
+    const ts = new Date().getTime();
+
+    // Construct BATCH URL (One request for 40 symbols)
+    const symbols = batch.map(p => encodeURIComponent(p.code)).join(',');
+    const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${symbols}&_ts=${ts}`;
+
+    try {
+      // Revert to simple params (no User-Agent) as fake UA can trigger blocks without cookies
+      const params = { muteHttpExceptions: true };
+      
+      const resp = UrlFetchApp.fetch(url, params);
+      const code = resp.getResponseCode();
+
+      if (code === 200) {
+        const json = JSON.parse(resp.getContentText());
+        const results = json.quoteResponse?.result || [];
+        
+        // Create Lookup Map (Symbol -> Data)
+        const map = {};
+        results.forEach(r => map[r.symbol] = r);
+
+        // Process Batch
+        batch.forEach(p => {
+           // Try to find exact match, or fallback
+           const data = map[p.code] || map[p.code.toUpperCase()];
+           
+           if (data) {
+             const live = data.regularMarketPrice;
+             const prev = data.regularMarketPreviousClose;
+
+             if (live != null) {
+               sheet.getRange(p.row, targetPrice + 1).setValue(live);
+               if (targetPrev && targetPrev !== -1 && prev != null) {
+                  sheet.getRange(p.row, targetPrev + 1).setValue(prev);
+               }
+             }
+           } else {
+             // SIlent fail for individual items in batch (common for delisted stocks)
+             // console.log(`[${sheetName}] No data for ${p.code}`);
+           }
+        });
+      } else {
+         console.log(`[${sheetName}] Batch API Error ${code}`);
+      }
+    } catch(e) { 
+      console.log(`[${sheetName}] Batch Exception: ${e.message}`);
+    }
+    
+    // Friendly pause between batches
+    if (i + 40 < problems.length) Utilities.sleep(1000);
+  }
+  Logger.log(`[${sheetName}] Repair Logic Complete. Formulas Preserved.`);
+}
+
+/**
+ * Public wrapper for the Dashboard Repair Logic.
+ * Run this Manually or via Trigger.
+ */
+function autoRepairDashboard() {
+  console.log('Starting Auto-Repair...');
+  repairSheet_('Dashboard', true);
+  // repairSheet_('Prices', true); // Disabled upon user request to isolate Dashboard logic
+  console.log('Auto-Repair Complete.');
+}
+
+/**
+ * DIAGNOSTIC: Run this to see EXACTLY why the dashboard isn't updating.
+ * It checks Headers, Row Parsing, and API Connectivity for the first row.
+ */
+function debug_DashboardInternals() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Dashboard');
+  if (!sheet) { console.log('FAIL: Dashboard not found'); return; }
+  
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  console.log('HEADERS FOUND:', headers);
+  
+  // Replicate repairSheet_ logic EXACTLY to test it
+  const rawHeader = headers.map(h => String(h).toUpperCase().trim());
+  const findCol = (name) => rawHeader.indexOf(name.toUpperCase());
+  
+  // Logic from repairSheet_
+  const codeCol = findCol('Code') !== -1 ? findCol('Code') : findCol('ASXCode');
+  const priceCol = findCol('LivePrice') !== -1 ? findCol('LivePrice') : findCol('Price');
+
+  console.log(`MAPPED COLUMNS: Code_Index=${codeCol} Price_Index=${priceCol}`);
+  
+  if (codeCol === -1 || priceCol === -1) {
+    console.log('❌ CRITICAL FAIL: Helper cannot find columns. Script stops here.');
+    console.log('   (Looking for "CODE" and "LIVEPRICE" or "PRICE" - case insensitive, trimmed)');
+    return;
+  }
+  
+  // Test Row 1 Data
+  if (data.length < 2) { console.log('FAIL: Sheet has no data rows.'); return; }
+  const row = data[1]; 
+  const code = row[codeCol];
+  const price = row[priceCol];
+  console.log(`ROW 1 DATA: Code="${code}" Current_Price="${price}"`);
+  
+  if (!code) { console.log('FAIL: formatting issue? Row 1 code is empty.'); return; }
+
+  // Test API Fetch Logic
+  let ticker = String(code).toUpperCase().trim();
+  // Handle Yahoo specifics (replicated from repairSheet_)
+  const mapper = { 'XJO': '^AXJO', 'XALL': '^AORD', 'SPX': '^GSPC', 'IXIC': '^IXIC', 'DJI': '^DJI' };
+  if (mapper[ticker]) ticker = mapper[ticker];
+  if (ticker.endsWith('-F')) ticker = ticker.replace('-F', '=F');
+  if (!ticker.includes('^') && !ticker.includes('=') && !ticker.includes('-') && !ticker.includes('.')) ticker += '.AX';
+  
+  const url = `https://query2.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(ticker)}?modules=price,summaryDetail`;
+  console.log(`TESTING API: ${url}`);
+  
+  try {
+    const resp = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+    console.log(`HTTP STATUS: ${resp.getResponseCode()}`);
+    
+    if (resp.getResponseCode() === 200) {
+       const json = JSON.parse(resp.getContentText());
+       const res = json.quoteSummary.result[0];
+       const live = res.price.regularMarketPrice?.raw;
+       
+       console.log(`API RETURNED PRICE: ${live}`);
+       
+       if (live && live > 0) {
+         console.log('✅ SUCCESS: Logic is sound. Script WOULD write to cell.');
+       } else {
+         console.log('❌ FAIL: API returned valid JSON but price was null/zero.');
+       }
+    } else {
+       console.log('❌ FAIL: API Error (Non-200). Rate limit or invalid ticker?');
+    }
+  } catch (e) {
+    console.log('❌ FAIL: Exception during fetch:', e.message);
+  }
+}
