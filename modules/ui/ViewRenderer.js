@@ -881,11 +881,11 @@ export class ViewRenderer {
                         <div class="${CSS_CLASSES.SHARE_DETAIL_SECTIONS}">
 
                             <!-- Card 1: Investment -->
-                            <div class="${CSS_CLASSES.DETAIL_CARD} ${CSS_CLASSES.ALIGN_START} ${CSS_CLASSES.TEXT_LEFT} ${CSS_CLASSES.INVESTMENT_CARD} ${trendBgClass} ${CSS_CLASSES.CURSOR_POINTER}" data-action="market-index" data-code="${stock.code}" title="View ${stock.code} on Market Index">
+                            <div class="${CSS_CLASSES.DETAIL_CARD} ${CSS_CLASSES.ALIGN_START} ${CSS_CLASSES.TEXT_LEFT} ${CSS_CLASSES.INVESTMENT_CARD} ${trendBgClass} ${CSS_CLASSES.CURSOR_POINTER}" data-action="deep-link" data-id="${stock.id}" data-section="core" title="Edit Share Details">
                                 <div class="${CSS_CLASSES.DETAIL_CARD_HEADER}">
                                     <h3 class="${CSS_CLASSES.DETAIL_LABEL} ${CSS_CLASSES.W_FULL} ${CSS_CLASSES.TEXT_LEFT} ${CSS_CLASSES.START_CENTER_ROW}">
                                         <div class="${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.ALIGN_CENTER} ${CSS_CLASSES.JUSTIFY_BETWEEN} ${CSS_CLASSES.W_FULL}">
-                                            <div class="${CSS_CLASSES.FLEX_COLUMN} ${CSS_CLASSES.ALIGN_START}">
+                                            <div class="${CSS_CLASSES.FLEX_COLUMN} ${CSS_CLASSES.ALIGN_START} ${CSS_CLASSES.CURSOR_POINTER}" data-action="market-index" data-code="${stock.code}" title="View ${stock.code} on Market Index" style="position: relative; z-index: 10;">
                                                 <div class="${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.ALIGN_CENTER}">
                                                     <i class="fas ${UI_ICONS.INVESTMENT}" style="margin-right: 8px;"></i>
                                                     <span>Investment</span>
