@@ -3161,12 +3161,134 @@ function oneTimeCleanupApiColumns() {
 
 /**
  * Internal helper to repair a specific sheet.
- * ARCHITECTURAL RULE:
- * 1. 'Dashboard': Pure API-driven. Writes DIRECTLY to LivePrice/PrevClose/etc. (No formulas to protect).
- * 2. 'Prices' (or others): Formula-driven. Writes ONLY to API_* columns. (Protects GoogleFinance formulas).
+ * ARCHITECTURAL RULE COMPLIANT REWRITE:
+ * 1. Checks for Formulas on Dashboard (Protect Row 27).
+ * 2. Checks for Live Price > 0.01 on Prices (Protect Healthy Rows).
+ * 3. Uses Batching (V7 endpoint) to save quota.
  */
-/**
+function repairSheet_(sheetName, force = false) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(sheetName);
+  if (!sheet) return;
 
+  console.log(`[REPAIR] Scanning ${sheetName}...`);
+  const isDashboard = (sheetName === 'Dashboard');
+  
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0].map(h => String(h).toUpperCase().replace(/[^A-Z0-9]/g, ''));
+  
+  // Robust Header Finding
+  const findH = (patterns) => headers.findIndex(h => patterns.some(p => h.includes(p)));
+  const codeIdx = findH(['CODE', 'ASXCODE', 'SYMBOL']);
+  
+  // 1. Target Column Logic
+  // Dashboard -> Writes to LivePrice directly (unless formula).
+  // Prices -> Writes to API_Price (Col J) to preserve Google Formulas in LivePrice.
+  let targetPriceIdx = -1;
+  let livePriceCheckIdx = -1; // Used to check if Google Price is healthy
+  
+  if (isDashboard) {
+      targetPriceIdx = findH(['LIVEPRICE', 'LAST', 'PRICE']);
+  } else {
+      targetPriceIdx = findH(['APIPRICE', 'PIPRICE']);
+      livePriceCheckIdx = findH(['LIVEPRICE', 'LAST', 'PRICE']); // We check this before writing to API col
+  }
+
+  if (codeIdx === -1 || targetPriceIdx === -1) {
+      console.log(`[REPAIR] Skpped ${sheetName} - Missing Columns.`);
+      return;
+  }
+
+  // 2. Scan & Collect Broken Rows
+  const updates = []; // { row: 5, col: 2, val: 1.23 }
+  const symbolsToFetch = [];
+  const symbolRowMap = new Map(); // "BHP.AX" -> [rowIndex1, rowIndex2]
+
+  for (let i = 1; i < data.length; i++) {
+    const code = String(data[i][codeIdx]).trim().toUpperCase();
+    if (!code) continue;
+    
+    // SAFETY CHECK 1: Dashboard Formula Protection
+    if (isDashboard) {
+       const cell = sheet.getRange(i + 1, targetPriceIdx + 1);
+       if (cell.getFormula()) {
+           // console.log(`[PROTECT] Skipping formula row for ${code}`);
+           continue; 
+       }
+    }
+
+    // SAFETY CHECK 2: Prices Sheet Health Check
+    // If we are on 'Prices' sheet, and the MAIN LivePrice column has a valid price > $0.01,
+    // we DO NOT need to repair it. Skip.
+    if (!isDashboard && livePriceCheckIdx !== -1) {
+        const liveVal = parseFloat(data[i][livePriceCheckIdx]);
+        if (typeof liveVal === 'number' && !isNaN(liveVal) && liveVal > 0.01 && !force) {
+            continue; // Skip healthy stock
+        }
+    }
+    
+    // If we are here, the row is either:
+    // a) A Dashboard row with no formula (needs update)
+    // b) A Prices row that is Broken/Penny (needs API fallback)
+    
+    let ticker = code;
+    if (!ticker.includes('.')) ticker += '.AX'; // Yahoo suffix
+    
+    symbolsToFetch.push(ticker);
+    if (!symbolRowMap.has(ticker)) symbolRowMap.set(ticker, []);
+    symbolRowMap.get(ticker).push(i); // Store 0-based row index
+  }
+
+  if (symbolsToFetch.length === 0) {
+      console.log(`[REPAIR] ${sheetName} is healthy. No external repairs needed.`);
+      return;
+  }
+
+  // 3. Batch Fetch (Yielding logic from summary: 40 per batch)
+  console.log(`[REPAIR] Fetching data for ${symbolsToFetch.length} symbols...`);
+  const uniqueSyms = [...new Set(symbolsToFetch)];
+  
+  // Optimized Batch Fetcher
+  const BATCH_SIZE = 40; // Yahoo limit safely under 50
+  for (let b = 0; b < uniqueSyms.length; b += BATCH_SIZE) {
+      const batch = uniqueSyms.slice(b, b + BATCH_SIZE);
+      const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${batch.join(',')}`; // V7 Endpoint
+      
+      try {
+          const resp = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+          if (resp.getResponseCode() !== 200) continue;
+          
+          const json = JSON.parse(resp.getContentText());
+          const results = json.quoteResponse ? json.quoteResponse.result : [];
+          
+          results.forEach(item => {
+              const sym = item.symbol;
+              const price = item.regularMarketPrice;
+              
+              if (price != null && symbolRowMap.has(sym)) {
+                  const rows = symbolRowMap.get(sym);
+                  rows.forEach(rIdx => {
+                      updates.push({
+                          row: rIdx + 1, // 1-based for setValues
+                          col: targetPriceIdx + 1,
+                          val: price
+                      });
+                  });
+              }
+          });
+      } catch (err) {
+          console.log(`[REPAIR] Batch error: ${err}`);
+      }
+      Utilities.sleep(200); // Friendly pause
+  }
+
+  // 4. Batch Write Updates
+  // (Writing one by one is slow, but safe. For speed we could optimize, but safety first for now).
+  updates.forEach(u => {
+      sheet.getRange(u.row, u.col).setValue(u.val);
+  });
+  
+  console.log(`[REPAIR] Updated ${updates.length} rows in ${sheetName}.`);
 }
 
 // ===============================================================
