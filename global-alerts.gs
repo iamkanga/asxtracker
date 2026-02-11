@@ -1,7 +1,7 @@
 /**
  * UPDATED BY ANTIGRAVITY: [User's Local Time]
  * Apps Script for automated alert processing and data management...
- * Version: 2.5.1 (Production Final Cleanup)
+ * Version: 2.5.2 (Fixed Duplicate)
  *
  * Production Features:
  *  - Centralized 52-week high/low scan (global document)
@@ -3221,9 +3221,13 @@ function repairSheet_(sheetName, force = false) {
     // If we are on 'Prices' sheet, and the MAIN LivePrice column has a valid price > $0.01,
     // we DO NOT need to repair it. Skip.
     if (!isDashboard && livePriceCheckIdx !== -1) {
-        const liveVal = parseFloat(data[i][livePriceCheckIdx]);
-        if (typeof liveVal === 'number' && !isNaN(liveVal) && liveVal > 0.01 && !force) {
-            continue; // Skip healthy stock
+        // Use robust cleaning (remove $, commas) before checking value
+        let rawVal = data[i][livePriceCheckIdx];
+        let liveVal = (typeof rawVal === 'number') ? rawVal : parseFloat(String(rawVal).replace(/[$, ]/g, ''));
+        
+        // If it's a valid number > 0.01, it is healthy. SKIP IT.
+        if (!isNaN(liveVal) && liveVal > 0.01 && !force) {
+            continue; 
         }
     }
     
@@ -3231,8 +3235,29 @@ function repairSheet_(sheetName, force = false) {
     // a) A Dashboard row with no formula (needs update)
     // b) A Prices row that is Broken/Penny (needs API fallback)
     
+    // Correctly handle Yahoo Finance ticker suffixes
+    // DO NOT append .AX if:
+    // 1. Starts with ^ (Index)
+    // 2. Contains = (Currency)
+    // 3. Contains - (Crypto)
+    // 4. Already has a dot (e.g. FBR.AX)
     let ticker = code;
-    if (!ticker.includes('.')) ticker += '.AX'; // Yahoo suffix
+    // Correctly handle Yahoo Finance ticker suffixes
+    // DO NOT append .AX if:
+    // 1. Starts with ^ (Index)
+    // 2. Contains = (Currency)
+    // 3. Contains - (Crypto)
+    // 4. Already has a dot (e.g. FBR.AX)
+    
+    if (!ticker.includes('.') && 
+        !ticker.startsWith('^') && 
+        !ticker.includes('=') && 
+        !ticker.includes('-')) {
+        ticker += '.AX'; 
+    }
+    
+    // DEBUG LOG: See if indices are getting mangled
+    if (isDashboard) console.log(`[DashboardTicker] Original: ${code} -> Fetch: ${ticker}`);
     
     symbolsToFetch.push(ticker);
     if (!symbolRowMap.has(ticker)) symbolRowMap.set(ticker, []);
@@ -3859,155 +3884,7 @@ function testRegressionSafety() {
 }
 
 
-// ===============================================================
-// ================== SYSTEM AUTOMATION & REPAIR =================
-// ===============================================================
 
-/**
- * INTERNAL UTILITY: Repair Sheet Logic
- * Moved here to insure it persists with the main script.
- */
-function repairSheet_(sheetName, isForce = false) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(sheetName);
-  if (!sheet) return;
-  
-  const isDashboard = (sheetName === 'Dashboard');
-  const dataRange = sheet.getDataRange();
-  const data = dataRange.getValues();
-  const formulas = dataRange.getFormulas();
-  if (data.length < 2) return;
-
-  // 1. ROBUST HEADER DETECTION
-  const headers = data[0].map(h => String(h).toUpperCase().replace(/[^A-Z0-9]/g, '').trim());
-  const findCol = (patterns) => {
-    for (const p of patterns) {
-      const idx = headers.indexOf(p.toUpperCase());
-      if (idx !== -1) return idx;
-    }
-    return -1;
-  };
-  
-  const codeIdx = findCol(['CODE', 'ASXCODE', 'TICKER']);
-  
-  let priceIdx, prevIdx;
-  if (sheetName === 'Prices') {
-    // Specifically target repair columns for the Prices sheet
-    priceIdx = findCol(['APIPRICE', 'PIPRICE', 'API_PRICE', 'API PRICE']);
-    prevIdx = findCol(['APIPREVCLOSE', 'PIPREVCLOSE', 'API_PREV', 'API PREV']);
-  } else {
-    // Target main columns for Dashboard/Indices
-    priceIdx = findCol(['LIVEPRICE', 'LAST', 'LASTPRICE', 'PRICE', 'CURRENT']);
-    prevIdx = findCol(['PREVCLOSE', 'PREVIOUSCLOSE', 'YESTCLOSE', 'PREV']);
-  }
-
-  if (codeIdx === -1 || priceIdx === -1) {
-    Logger.log(`[Error] Required columns missing in ${sheetName}. Looking for Code/Price.`);
-    return;
-  }
-
-  // 2. IDENTIFY PROBLEMS (FORENSIC FILTERING)
-  const problems = [];
-  for (let i = 1; i < data.length; i++) {
-    const codeRaw = String(data[i][codeIdx] || '').trim().toUpperCase();
-    if (!codeRaw) continue;
-
-    // Check Current Status
-    const priceVal = data[i][priceIdx];
-    const hasFormula = (formulas[i][priceIdx] && formulas[i][priceIdx].startsWith('='));
-    
-    // "Broken" check (0, #N/A, or Penny Stock < 0.01)
-    const cleanVal = (typeof priceVal === 'number') ? priceVal : Number(String(priceVal || '').replace(/[$, ]/g, ''));
-    const isBroken = (cleanVal === 0 || isNaN(cleanVal) || priceVal === '#N/A' || priceVal === '' || (cleanVal > 0 && cleanVal < 0.01));
-
-    // SPECIAL RULE for line 27 (XKO/ASX 300) or other formula rows:
-    // If it's a formula and it's NOT broken, we respect the user's wish to keep it as a formula.
-    // If it's a formula but it's BROKEN (#N/A or 0), the API is allowed to repair it.
-    if (hasFormula && !isBroken && !isForce) continue; 
-
-    // General Logic: Repair if broken, OR if it's the Dashboard during a scan.
-    if (isForce || isBroken || isDashboard) {
-      let ticker = codeRaw;
-      
-      // Fix Yahoo Tickers
-      const mapper = { 
-        'XJO': '^AXJO', 'XALL': '^AORD', 'SPX': '^GSPC', 
-        'IXIC': '^IXIC', 'DJI': '^DJI', 'HSI': '^HSI', 
-        'N225': '^N225', 'FTSE': '^FTSE', 'VIX': '^VIX',
-        'XKO': 'XKO.AX' // ASX 300 fallback if not formula
-      };
-      
-      if (mapper[ticker]) {
-        ticker = mapper[ticker];
-      } else {
-        // Auto-add .AX if it looks like a standard ASX stock
-        if (!ticker.includes('^') && !ticker.includes('=') && !ticker.includes('-') && !ticker.includes('.')) {
-          ticker += '.AX';
-        }
-      }
-
-      problems.push({ row: i + 1, code: ticker });
-    }
-  }
-
-  if (problems.length === 0) return;
-
-  Logger.log(`[${sheetName}] Processing ${problems.length} updates...`);
-
-  // 3. RESILIENT FETCH (Chart v8 Endpoint is more robust vs blocks)
-  // We process in small chunks to avoid fetchAll rate limits
-  const CHUNK_SIZE = 15;
-  for (let i = 0; i < problems.length; i += CHUNK_SIZE) {
-    const chunk = problems.slice(i, i + CHUNK_SIZE);
-    const requests = chunk.map(p => {
-      return {
-        url: `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(p.code)}?interval=1m&range=1d`,
-        muteHttpExceptions: true,
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
-        }
-      };
-    });
-
-    try {
-      const responses = UrlFetchApp.fetchAll(requests);
-      
-      responses.forEach((resp, idx) => {
-        const p = chunk[idx];
-        const resCode = resp.getResponseCode();
-        
-        if (resCode === 200) {
-          try {
-            const json = JSON.parse(resp.getContentText());
-            if (json.chart && json.chart.result && json.chart.result[0].meta) {
-              const meta = json.chart.result[0].meta;
-              const live = meta.regularMarketPrice;
-              const prev = meta.previousClose;
-
-              // INDIVIDUAL ROW UPDATE (No wholesale overwrite)
-              if (live != null && live > 0) {
-                sheet.getRange(p.row, priceIdx + 1).setValue(live);
-                if (prevIdx !== -1 && prev != null) {
-                  sheet.getRange(p.row, prevIdx + 1).setValue(prev);
-                }
-              }
-            }
-          } catch (e) {
-            Logger.log(`[${p.code}] Parse Error: ${e.message}`);
-          }
-        } else {
-          Logger.log(`[${p.code}] API Error ${resCode}`);
-        }
-      });
-    } catch (e) {
-      Logger.log(`[Batch Error] ${e.message}`);
-    }
-    
-    if (i + CHUNK_SIZE < problems.length) Utilities.sleep(500);
-  }
-  
-  Logger.log(`[${sheetName}] Update cycle complete.`);
-}
 
 /**
  * Public wrapper for the Dashboard Repair Logic.
