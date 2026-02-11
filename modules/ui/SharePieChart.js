@@ -107,10 +107,12 @@ export class SharePieChart {
             segment.style.cssText = `
                 height: 100%;
                 width: ${pct}%;
+                flex-shrink: 0;
                 background: ${item.color};
                 position: relative;
                 transition: filter 0.2s ease, width 0.6s cubic-bezier(0.23, 1, 0.32, 1);
-                border-right: 0.5px solid rgba(0,0,0,0.2);
+                border-right: 0.5px solid rgba(0,0,0,0.1);
+                box-sizing: border-box;
             `;
 
             // Initial animation state
@@ -450,15 +452,20 @@ export class SharePieChart {
         let currentAngle = -Math.PI / 2;
 
         const paths = breakdown.map((b, idx) => {
-            const angle = (b.val / total) * Math.PI * 2;
-            const x1 = radius + innerRadius * Math.cos(currentAngle);
-            const y1 = radius + innerRadius * Math.sin(currentAngle);
-            const x2 = radius + radius * Math.cos(currentAngle);
-            const y2 = radius + radius * Math.sin(currentAngle);
-            const x3 = radius + radius * Math.cos(currentAngle + angle);
-            const y3 = radius + radius * Math.sin(currentAngle + angle);
-            const x4 = radius + innerRadius * Math.cos(currentAngle + angle);
-            const y4 = radius + innerRadius * Math.sin(currentAngle + angle);
+            let angle = (b.val / total) * Math.PI * 2;
+
+            // Handle 100% slice edge case for SVG Arc
+            if (angle >= Math.PI * 2) angle = Math.PI * 2 - 0.001;
+
+            const x1 = (radius + innerRadius * Math.cos(currentAngle)).toFixed(3);
+            const y1 = (radius + innerRadius * Math.sin(currentAngle)).toFixed(3);
+            const x2 = (radius + radius * Math.cos(currentAngle)).toFixed(3);
+            const y2 = (radius + radius * Math.sin(currentAngle)).toFixed(3);
+
+            const x3 = (radius + radius * Math.cos(currentAngle + angle)).toFixed(3);
+            const y3 = (radius + radius * Math.sin(currentAngle + angle)).toFixed(3);
+            const x4 = (radius + innerRadius * Math.cos(currentAngle + angle)).toFixed(3);
+            const y4 = (radius + innerRadius * Math.sin(currentAngle + angle)).toFixed(3);
 
             const largeArc = angle > Math.PI ? 1 : 0;
             const pathData = `M ${x1} ${y1} L ${x2} ${y2} A ${radius} ${radius} 0 ${largeArc} 1 ${x3} ${y3} L ${x4} ${y4} A ${innerRadius} ${innerRadius} 0 ${largeArc} 0 ${x1} ${y1} Z`;

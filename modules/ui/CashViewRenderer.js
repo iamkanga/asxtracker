@@ -91,24 +91,47 @@ export class CashViewRenderer {
     createTotalHeader(totalValue, assets = []) {
         const headerDiv = document.createElement('div');
         headerDiv.className = 'cash-total-header';
-        headerDiv.style.display = 'flex';
-        headerDiv.style.flexDirection = 'row';
-        headerDiv.style.justifyContent = 'space-between';
-        headerDiv.style.alignItems = 'center';
 
+        const stripThickness = 9;
+        const baseCardHeight = 70;
+
+        // Overlay & Layout
         headerDiv.innerHTML = `
-            <div class="cash-pie-header-container" style="flex-shrink: 0; margin-right: 12px;"></div>
-            <div style="display: flex; flex-direction: column; gap: 4px; flex: 1; align-items: flex-end; text-align: right;">
-                <span class="cash-total-label">Assets Value</span>
-                <span class="cash-total-amount">${formatCurrency(totalValue)}</span>
+            <!-- Gloss Overlay -->
+            <div style="position: absolute; top: 0; left: 0; width: 100%; height: 50%; background: linear-gradient(to bottom, rgba(255,255,255,0.05), transparent); pointer-events: none;"></div>
+            
+            <div class="cash-dna-container" style="position: absolute; top: 0; left: 0; height: ${stripThickness}px; width: 100%; border-bottom: 1px solid rgba(255,255,255,0.1); z-index: 5;"></div>
+            
+            <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; width: 100%; height: 100%; z-index: 1;">
+                <span class="cash-total-label" style="margin: 0 0 2px 0; text-transform: uppercase; font-size: 0.6rem; letter-spacing: 1px; opacity: 0.8; font-weight: 600;">Assets Value</span>
+                <span class="cash-total-amount" style="font-size: 1.3rem; line-height: 1; font-weight: 800;">${formatCurrency(totalValue)}</span>
             </div>
         `;
 
-        // Inject Pie Chart
-        const pieContainer = headerDiv.querySelector('.cash-pie-header-container');
-        if (pieContainer && assets.length > 0) {
-            const pie = new CashPieChart(assets);
-            pie.renderSmall(pieContainer);
+        // Apply Card-like Styles to Header
+        headerDiv.style.position = 'relative';
+        headerDiv.style.padding = `${10 + stripThickness}px 20px 6px`;
+        headerDiv.style.minHeight = `${baseCardHeight}px`;
+        headerDiv.style.maxHeight = `${baseCardHeight}px`;
+        headerDiv.style.display = 'flex';
+        headerDiv.style.flexDirection = 'column';
+        headerDiv.style.justifyContent = 'center';
+        headerDiv.style.alignItems = 'center';
+        headerDiv.style.cursor = 'pointer';
+        headerDiv.style.transition = 'transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+
+        // Hover Effect
+        headerDiv.addEventListener('mouseenter', () => headerDiv.style.transform = 'scale(1.02)');
+        headerDiv.addEventListener('mouseleave', () => headerDiv.style.transform = 'scale(1)');
+
+        // Tap for Modal
+        const pie = new CashPieChart(assets);
+        headerDiv.addEventListener('click', () => pie.showModal());
+
+        // Inject DNA Strip
+        const dnaContainer = headerDiv.querySelector('.cash-dna-container');
+        if (dnaContainer && assets.length > 0) {
+            pie.renderDnaStrip(dnaContainer, stripThickness);
         }
 
         return headerDiv;

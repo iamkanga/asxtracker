@@ -17,7 +17,7 @@ export class CashPieChart {
      * Renders a small pie chart icon for the header.
      * @param {HTMLElement} container 
      */
-    renderSmall(container) {
+    async renderSmall(container) {
         if (!container || this.assets.length === 0) return;
 
         const breakdown = this._getBreakdown();
@@ -45,6 +45,102 @@ export class CashPieChart {
         wrapper.addEventListener('mouseleave', () => wrapper.style.transform = 'scale(1)');
 
         container.appendChild(wrapper);
+    }
+
+    /**
+     * Renders a horizontal DNA-style strip breakdown.
+     * @param {HTMLElement} container 
+     * @param {number} height
+     */
+    async renderDnaStrip(container, height = 9) {
+        if (!container || this.assets.length === 0) return;
+
+        const rawBreakdown = this._getBreakdown(true); // Get individual assets
+        const total = rawBreakdown.reduce((sum, b) => sum + b.val, 0);
+        if (total === 0) return;
+
+        // Grouping logic: Items < 0.5% go into "Others" to keep the strip clean
+        const breakdown = [];
+        let otherVal = 0;
+
+        rawBreakdown.forEach(item => {
+            const pct = (item.val / total) * 100;
+            if (pct >= 0.5) {
+                breakdown.push(item);
+            } else {
+                otherVal += item.val;
+            }
+        });
+
+        if (otherVal > 0) {
+            breakdown.push({
+                id: 'OTHERS',
+                label: 'Other Assets',
+                val: otherVal,
+                color: 'var(--asset-other)'
+            });
+        }
+
+        const strip = document.createElement('div');
+        strip.className = 'cash-dna-strip';
+        strip.style.cssText = `
+            width: 100%;
+            height: ${height}px;
+            display: flex;
+            background: rgba(255,255,255,0.05);
+            cursor: pointer;
+            transition: height 0.2s ease, box-shadow 0.2s ease;
+            overflow: hidden;
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.5);
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        `;
+
+        breakdown.forEach((item, idx) => {
+            const pct = (item.val / total) * 100;
+            const segment = document.createElement('div');
+            segment.title = `${item.label}: ${((item.val / total) * 100).toFixed(1)}%`;
+            segment.style.cssText = `
+                height: 100%;
+                width: ${pct}%;
+                flex-shrink: 0;
+                background: ${item.color};
+                position: relative;
+                transition: filter 0.2s ease, width 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+                border-right: 0.5px solid rgba(0,0,0,0.1);
+                box-sizing: border-box;
+            `;
+
+            // Initial animation state
+            const finalWidth = pct + '%';
+            segment.style.width = '0%';
+            requestAnimationFrame(() => {
+                segment.style.width = finalWidth;
+            });
+
+            // Hover effect
+            segment.addEventListener('mouseenter', () => segment.style.filter = 'brightness(1.5) saturate(1.2)');
+            segment.addEventListener('mouseleave', () => segment.style.filter = 'none');
+
+            strip.appendChild(segment);
+        });
+
+        strip.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.showModal();
+        });
+
+        // Hover effect for the whole strip container
+        container.addEventListener('mouseenter', () => {
+            strip.style.height = `${height + 2}px`;
+            strip.style.boxShadow = '0 0 10px rgba(0,255,255,0.1)';
+        });
+        container.addEventListener('mouseleave', () => {
+            strip.style.height = `${height}px`;
+            strip.style.boxShadow = 'inset 0 1px 2px rgba(0,0,0,0.5)';
+        });
+
+        container.innerHTML = '';
+        container.appendChild(strip);
     }
 
     /**
@@ -223,17 +319,30 @@ export class CashPieChart {
     }
 
     /**
-     * Aggregates assets by category.
+     * Aggregates assets by category or returns individual assets.
+     * @param {Boolean} byIndividual - If true, returns individual assets.
      * @returns {Array} Array of { id, label, val, color } objects sorted by value.
      */
-    _getBreakdown() {
+    _getBreakdown(byIndividual = false) {
+        if (byIndividual) {
+            return this.assets
+                .filter(a => !a.isHidden && parseFloat(a.balance) > 0)
+                .map(asset => {
+                    return {
+                        id: asset.id,
+                        label: asset.name,
+                        val: parseFloat(asset.balance),
+                        color: this._getAssetColor(asset)
+                    };
+                })
+                .sort((a, b) => b.val - a.val);
+        }
+
         const breakdown = {};
         this.assets.forEach(asset => {
             const catId = asset.category || 'other';
             const val = parseFloat(asset.balance || 0);
-            if (val <= 0 && !asset.isHidden) return; // Skip zero or negative assets unless hidden is intended to be shown? 
-            // Usually we show what's visible.
-            if (asset.isHidden) return;
+            if (val <= 0 || asset.isHidden) return;
 
             if (!breakdown[catId]) {
                 breakdown[catId] = {
@@ -247,6 +356,48 @@ export class CashPieChart {
         });
 
         return Object.values(breakdown).sort((a, b) => b.val - a.val);
+    }
+
+    /**
+     * Matches CashViewRenderer's color resolution logic exactly.
+     */
+    _getAssetColor(asset) {
+        if (asset.category) {
+            const userCat = AppState.preferences.userCategories?.find(c => c.id === asset.category);
+            if (userCat && userCat.color) return userCat.color;
+
+            const standardColors = {
+                'cash': 'var(--asset-cash)',
+                'cash_in_bank': 'var(--asset-cash-in-bank)',
+                'term_deposit': 'var(--asset-term-deposit)',
+                'property': 'var(--asset-property)',
+                'crypto': 'var(--asset-crypto)',
+                'shares': 'var(--asset-shares)',
+                'super': 'var(--asset-super)',
+                'personal': 'var(--asset-personal)',
+                'other': 'var(--asset-other)'
+            };
+
+            if (asset.color) return asset.color;
+            if (standardColors[asset.category]) return standardColors[asset.category];
+            if (asset.category === 'other' && asset.name) {
+                return this._getColorForString(asset.name);
+            }
+        } else if (asset.color) {
+            return asset.color;
+        }
+        return 'var(--asset-other)';
+    }
+
+    _getColorForString(str) {
+        if (!str) return ASSET_CUSTOM_COLORS[0];
+        const seed = AppState.preferences?.colorSeed || 0;
+        let hash = seed;
+        for (let i = 0; i < str.length; i++) {
+            hash = str.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        const index = Math.abs(hash) % ASSET_CUSTOM_COLORS.length;
+        return ASSET_CUSTOM_COLORS[index];
     }
 
     _getCategoryLabel(catId) {
@@ -295,27 +446,24 @@ export class CashPieChart {
         let currentAngle = -Math.PI / 2; // Start from top
 
         const paths = breakdown.map((b, idx) => {
-            const angle = (b.val / total) * Math.PI * 2;
-            const x1 = radius + innerRadius * Math.cos(currentAngle);
-            const y1 = radius + innerRadius * Math.sin(currentAngle);
-            const x2 = radius + radius * Math.cos(currentAngle);
-            const y2 = radius + radius * Math.sin(currentAngle);
+            let angle = (b.val / total) * Math.PI * 2;
 
-            const x3 = radius + radius * Math.cos(currentAngle + angle);
-            const y3 = radius + radius * Math.sin(currentAngle + angle);
-            const x4 = radius + innerRadius * Math.cos(currentAngle + angle);
-            const y4 = radius + innerRadius * Math.sin(currentAngle + angle);
+            // Handle 100% slice edge case for SVG Arc (cannot have start == end)
+            if (angle >= Math.PI * 2) angle = Math.PI * 2 - 0.001;
+
+            const x1 = (radius + innerRadius * Math.cos(currentAngle)).toFixed(3);
+            const y1 = (radius + innerRadius * Math.sin(currentAngle)).toFixed(3);
+            const x2 = (radius + radius * Math.cos(currentAngle)).toFixed(3);
+            const y2 = (radius + radius * Math.sin(currentAngle)).toFixed(3);
+
+            const x3 = (radius + radius * Math.cos(currentAngle + angle)).toFixed(3);
+            const y3 = (radius + radius * Math.sin(currentAngle + angle)).toFixed(3);
+            const x4 = (radius + innerRadius * Math.cos(currentAngle + angle)).toFixed(3);
+            const y4 = (radius + innerRadius * Math.sin(currentAngle + angle)).toFixed(3);
 
             const largeArc = angle > Math.PI ? 1 : 0;
 
-            const path = `
-                M ${x1} ${y1}
-                L ${x2} ${y2}
-                A ${radius} ${radius} 0 ${largeArc} 1 ${x3} ${y3}
-                L ${x4} ${y4}
-                A ${innerRadius} ${innerRadius} 0 ${largeArc} 0 ${x1} ${y1}
-                Z
-            `;
+            const path = `M ${x1} ${y1} L ${x2} ${y2} A ${radius} ${radius} 0 ${largeArc} 1 ${x3} ${y3} L ${x4} ${y4} A ${innerRadius} ${innerRadius} 0 ${largeArc} 0 ${x1} ${y1} Z`;
 
             currentAngle += angle;
 
