@@ -1423,16 +1423,20 @@ export class NotificationUI {
                 const hasDol = ruleSet.dollarThreshold && ruleSet.dollarThreshold > 0;
 
                 const chevronIcon = direction === 'up'
-                    ? `<i class="fas fa-caret-up" style="margin-left: 2px; font-size: 0.8em; color: ${colorVar};"></i>`
-                    : `<i class="fas fa-caret-down" style="margin-left: 2px; font-size: 0.8em; color: ${colorVar};"></i>`;
+                    ? `<i class="fas fa-caret-up" style="margin-right: 1px; font-size: 0.8em; color: ${colorVar};"></i>`
+                    : `<i class="fas fa-caret-down" style="margin-right: 1px; font-size: 0.8em; color: ${colorVar};"></i>`;
 
                 if (hasPct || hasDol) {
                     let textParts = [];
-                    if (hasPct) textParts.push(`${ruleSet.percentThreshold}% ${chevronIcon} `);
-                    if (hasDol) textParts.push(`$${ruleSet.dollarThreshold} `);
-                    text = `${textParts.join(' or ')} min`;
+                    if (hasPct) textParts.push(`${chevronIcon}${ruleSet.percentThreshold}%`);
+                    if (hasDol) textParts.push(`${chevronIcon}$${ruleSet.dollarThreshold}`);
+
+                    const minP = rules.minPrice || 0;
+                    const minPart = (minP > 0) ? ` • Min $${minP}` : '';
+
+                    text = `${textParts.join(' or ')}${minPart}`;
                 } else {
-                    text = `${Math.abs(enrichedPct).toFixed(2)}% ${chevronIcon} `;
+                    text = `${chevronIcon}${Math.abs(enrichedPct).toFixed(2)}%`;
                 }
 
                 const low = (alertItem.low52 || alertItem.low || 0).toFixed(2);
