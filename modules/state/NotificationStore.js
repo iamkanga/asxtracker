@@ -365,7 +365,7 @@ export class NotificationStore {
             const isLocal = hit._isLocal === true;
             const overrideOn = rules.excludePortfolio !== false;
             const isTarget = (hit.intent === 'target' || hit.intent === 'TARGET');
-            const shouldBypass = isTarget || (isLocal && overrideOn);
+            const shouldBypass = isTarget || hit._bypassFilters === true || (isLocal && overrideOn);
 
             // 1. Zombie Check
             // Block items with no meaningful movement. Handles undefined or NaN values.
@@ -430,7 +430,9 @@ export class NotificationStore {
                 // If Whitelist is explicitly empty array, block everything that isn't bypassed
                 if (activeFilters.length === 0) return false;
 
-                if (ind && !activeFilters.includes(ind)) {
+                // STRICT FILTERING: If whitelist is active, item MUST match.
+                // Previously allowed items with unknown sector (ind='') to pass. Now filtered.
+                if (!ind || !activeFilters.includes(ind)) {
                     return false;
                 }
             }
@@ -911,10 +913,10 @@ export class NotificationStore {
                     }
                 }
 
-                // 3. Global Min Price Filter (Enforce if Override OFF)
-                // "Ignore stocks below..." rule.
+                // 3. Global Min Price Filter (Enforce UNIVERSALLY as per user request)
+                // "Ignore stocks below..." rule applies to Portfolio items too now.
                 const minPrice = rules.minPrice || 0;
-                if (!overrideOn && minPrice > 0 && price < minPrice) {
+                if (minPrice > 0 && price < minPrice) {
                     return false;
                 }
 
@@ -1047,7 +1049,7 @@ export class NotificationStore {
                 return chgB - chgA; // Secondary: Dollar magnitude DESC
             })
             .slice(0, 500)
-            .map(i => this._mapPriceToHit(i));
+            .map(i => ({ ...this._mapPriceToHit(i), intent: 'mover', type: 'up' }));
 
         // 2. Losers (Sort by % Change ASC -> Most Negative First, then by $ Change DESC Magnitude)
         const losers = [...candidates]
@@ -1067,7 +1069,7 @@ export class NotificationStore {
                 return chgB - chgA; // Secondary: Dollar magnitude DESC (Biggest loss first)
             })
             .slice(0, 500)
-            .map(i => this._mapPriceToHit(i));
+            .map(i => ({ ...this._mapPriceToHit(i), intent: 'mover', type: 'down' }));
 
         // 3. 52-Week Highs (Price >= 99% of 52w High)
         // Sort by % Change DESC (Biggest movers at highs)
@@ -1119,10 +1121,10 @@ export class NotificationStore {
         return {
             code: priceObj.code,
             name: priceObj.name,
-            live: priceObj.live || priceObj.price || priceObj.lastPrice || 0, // Robust Price
-            change: priceObj.change || priceObj.dayChange || priceObj.c || 0,
-            pct: priceObj.pctChange ?? priceObj.changeInPercent ?? priceObj.pct ?? priceObj.dayChangePercent ?? 0, // Robust Map
-            dayChangePercent: priceObj.pctChange ?? priceObj.changeInPercent ?? priceObj.pct ?? 0, // Redundancy for UI
+            live: Number(priceObj.live || priceObj.price || priceObj.lastPrice || 0), // Robust Price
+            change: Number(priceObj.change || priceObj.dayChange || priceObj.c || 0),
+            pct: Number(priceObj.pctChange ?? priceObj.changeInPercent ?? priceObj.pct ?? priceObj.dayChangePercent ?? 0), // Robust Map
+            dayChangePercent: Number(priceObj.pctChange ?? priceObj.changeInPercent ?? priceObj.pct ?? 0), // Redundancy for UI
             high: priceObj.high || 0, // Pass 52W High
             low: priceObj.low || 0,   // Pass 52W Low
             t: this._getStableTimestamp ? this._getStableTimestamp(`${priceObj.code} -global`) : Date.now()
@@ -1138,7 +1140,8 @@ export class NotificationStore {
         let rawGlobalLow = this.scanData.globalHiLo.low || [];
 
         // Increase threshold to prefer local data if backend is weak
-        const isBackendSparse = (rawGlobalUp.length + rawGlobalDown.length) < 20;
+        // FORCE HYDRATION: Always prefer client-side calculation for "Dumb Pipe" accuracy
+        const isBackendSparse = true; // (rawGlobalUp.length + rawGlobalDown.length) < 20;
 
         if (isBackendSparse) {
             // Backend data sparse (<20). Triggering Client-Side Hydration (Silent).
@@ -1191,7 +1194,12 @@ export class NotificationStore {
                 // Add Local (Override or Append?)
                 // Local is usually "live" so might be fresher. Let's overwrite global with local if collision.
                 (localList || []).forEach(item => {
-                    if (item.code) map.set(item.code, { ...item, _isLocal: true }); // Mark as local for debug
+                    if (item.code) map.set(item.code, {
+                        ...item,
+                        _isLocal: true,
+                        // If Override pref is ON, explicitly flag local items to bypass global filters later
+                        _bypassFilters: rules.excludePortfolio !== false
+                    });
                 });
             }
             return Array.from(map.values());
@@ -1215,13 +1223,11 @@ export class NotificationStore {
 
             // FORCE FINAL SORT (Desc for Up, Asc for Down)
             // FORCE FINAL SORT (Desc for Up, Asc for Down)
-            // RE-FILTER SIGN: Ensure purity of lists (Fixes negative stocks in Gainers)
-            // Use Number() casting to prevent string comparison errors.
-            mergedUp = mergedUp.filter(i => Number(i.pctChange || i.pct || 0) > 0);
-            mergedUp.sort((a, b) => (b.pctChange || b.pct || 0) - (a.pctChange || a.pct || 0));
+            mergedUp = mergedUp.filter(i => (Number(i.pctChange) || Number(i.pct) || 0) > 0);
+            mergedUp.sort((a, b) => (Number(b.pctChange) || Number(b.pct) || 0) - (Number(a.pctChange) || Number(a.pct) || 0));
 
-            mergedDown = mergedDown.filter(i => Number(i.pctChange || i.pct || 0) < 0);
-            mergedDown.sort((a, b) => (a.pctChange || a.pct || 0) - (b.pctChange || b.pct || 0));
+            mergedDown = mergedDown.filter(i => (Number(i.pctChange) || Number(i.pct) || 0) < 0);
+            mergedDown.sort((a, b) => (Number(a.pctChange) || Number(a.pct) || 0) - (Number(b.pctChange) || Number(b.pct) || 0));
 
             // Pass Global minPrice, activeFilters, and excludePortfolio into filterHits rules
             // FIX: Remove '|| 0' from minPrice. Allow null (Blank) to pass through as "Off".
@@ -1230,7 +1236,8 @@ export class NotificationStore {
 
             const allSectors = Object.values(SECTOR_INDUSTRY_MAP).flat().map(s => s.toUpperCase());
             const userFilters = rules.activeFilters; // Can be null (All) or [] (None)
-            const resolveFilters = (f) => (f === null || f === undefined) ? null : f;
+            // FIX: Treat empty array as "Show All" (null) to prevent accidental blocking of all global alerts
+            const resolveFilters = (f) => (f === null || f === undefined || (Array.isArray(f) && f.length === 0)) ? null : f;
 
             const upRules = {
                 ...(rules.up || {}),
@@ -1282,7 +1289,8 @@ export class NotificationStore {
         // Treat Null activeFilters as Show All.
         const allSectorsHilo = Object.values(SECTOR_INDUSTRY_MAP).flat().map(s => s.toUpperCase());
         const userFiltersHilo = rules.activeFilters;
-        const resolveFiltersHilo = (f) => (f === null || f === undefined) ? null : f;
+        // FIX: Treat empty array as "Show All" (null) for HiLo too
+        const resolveFiltersHilo = (f) => (f === null || f === undefined || (Array.isArray(f) && f.length === 0)) ? null : f;
 
         const hiloRules = {
             percentThreshold: 0,
@@ -1815,6 +1823,15 @@ export class NotificationStore {
             if (code && liveData) {
                 // EXCLUDE DASHBOARD SYMBOLS (Double Check)
                 if (this._isDashboardCode(code)) return;
+
+                // EXCLUDE NON-TRADABLE ASSETS (Currencies, Indices, Commodities)
+                // We only want alerts for actionable Shares and ETFs.
+                const type = (liveData.type || '').toUpperCase();
+                // Default to allowing if type is missing (fallback to share), but block known bad types
+                if (type && type !== 'SHARE' && type !== 'ETF' && type !== 'company') {
+                    return;
+                }
+
                 const price = Number(liveData.live || liveData.price || liveData.last || 0);
                 const volume = Number(liveData.volume || liveData.vol || 0);
 
@@ -1974,9 +1991,48 @@ export class NotificationStore {
                             });
                         }
                     }
-                }
-            }
-        });
+                    /*
+                                        // 4. VALUE ALERTS (PE Ratio) - DISABLED BY USER REQUEST
+                                        // Only for Shares (not ETFs/Indices which have no P/E or aggregate P/E)
+                                        // Note: Independent of Hilo 'shouldProcess' flag.
+                                        if (!isStatic && !isPhantom && liveData.pe > 0 && type === 'SHARE') {
+                                            const pe = Number(liveData.pe);
+                    
+                                            // Rule: High PE Warning (> 35)
+                                            if (pe > 35) {
+                                                const key = `${code}-value-highpe`;
+                                                alerts.push({
+                                                    userId: this.userId,
+                                                    code: code,
+                                                    intent: 'value',
+                                                    type: 'overvalued',
+                                                    price: price,
+                                                    pe: pe,
+                                                    message: `High PE Ratio: ${pe.toFixed(1)}`,
+                                                    t: this._getStableTimestamp(key)
+                                                });
+                                            }
+                    
+                                            // Rule: Low PE Opportunity (< 15)
+                                            if (pe < 15 && pe > 0) {
+                                                const key = `${code}-value-lowpe`;
+                                                alerts.push({
+                                                    userId: this.userId,
+                                                    code: code,
+                                                    intent: 'value',
+                                                    type: 'undervalued',
+                                                    price: price,
+                                                    pe: pe,
+                                                    message: `Low PE Ratio: ${pe.toFixed(1)}`,
+                                                    t: this._getStableTimestamp(key)
+                                                });
+                                            }
+                                        }
+                    */ // End PE
+                } // End Price > 0
+            } // End Data
+        }); // End forEach
+
         return alerts;
     }
 

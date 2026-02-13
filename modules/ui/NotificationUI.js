@@ -1389,7 +1389,21 @@ export class NotificationUI {
                 }
             }
 
-            // 3. MARKET MOVERS (Gainers/Losers/Generic)
+            // 3. VALUE ALERTS
+            else if (intent === 'value' || type === 'overvalued' || type === 'undervalued') {
+                iconClass = 'fa-balance-scale';
+                const pe = (Number(alertItem.pe) || 0).toFixed(1);
+
+                if (type === 'overvalued') {
+                    colorVar = 'var(--color-negative)';
+                    text = `High P/E ${pe}`;
+                } else {
+                    colorVar = 'var(--color-positive)';
+                    text = `Low P/E ${pe}`;
+                }
+            }
+
+            // 4. MARKET MOVERS (Gainers/Losers/Generic)
             else {
                 iconClass = 'fa-chart-line'; // Chart Icon
                 let direction = 'up';

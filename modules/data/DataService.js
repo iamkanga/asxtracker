@@ -551,8 +551,8 @@ export class DataService {
                 prevClose: isPrevValid ? prevClose : 0,
                 // ROBUST NORMALIZATION: Check multiple casing variants from API/Sheet for 52-WEEK data ONLY
                 // FIX: Remove fallback to daily .High/.Low which causes false 52W alerts
-                high: parseFloat(item.H52 || item.High52 || item.high52 || item.high_52 || 0),
-                low: parseFloat(item.L52 || item.Low52 || item.low52 || item.low_52 || 0),
+                high: parseFloat(item.H52 || item.High52 || item.high52 || item.high_52 || item.high || 0),
+                low: parseFloat(item.L52 || item.Low52 || item.low52 || item.low_52 || item.low || 0),
                 pe: parseFloat(item.PE || item.pe || 0),
                 volume: parseInt(item.Volume || 0),
                 change: change,
