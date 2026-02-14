@@ -74,7 +74,7 @@ export class AppService {
      * @param {Function} callback
      * @returns {Function} unsubscribe function
      */
-    subscribeToUserData(userId, callback) {
+    subscribeToUserData(userId, callback = null) {
         return userStore.subscribe(userId, callback);
     }
 

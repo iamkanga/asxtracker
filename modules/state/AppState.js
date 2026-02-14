@@ -392,7 +392,10 @@ export const AppState = {
     },
 
     saveSecurityPreferences(newPrefs) {
-        this.preferences.security = { ...this.preferences.security, ...newPrefs };
+        const merged = { ...this.preferences.security, ...newPrefs };
+        if (JSON.stringify(merged) === JSON.stringify(this.preferences.security)) return;
+
+        this.preferences.security = merged;
         localStorage.setItem(STORAGE_KEYS.SECURITY_PREFS, JSON.stringify(this.preferences.security));
         this._triggerSync();
     },
@@ -402,7 +405,10 @@ export const AppState = {
      * @param {Object} newPrefs 
      */
     saveScannerPreferences(newPrefs) {
-        this.preferences.scanner = { ...this.preferences.scanner, ...newPrefs };
+        const merged = { ...this.preferences.scanner, ...newPrefs };
+        if (JSON.stringify(merged) === JSON.stringify(this.preferences.scanner)) return;
+
+        this.preferences.scanner = merged;
         this._persistPreferences();
     },
 
@@ -410,6 +416,9 @@ export const AppState = {
     // Per-Watchlist Sort Persistence
     saveSortConfigForWatchlist(watchlistId) {
         const key = watchlistId || 'portfolio';
+        const currentStored = this.sortConfigMap[key];
+        if (currentStored && currentStored.field === this.sortConfig.field && currentStored.direction === this.sortConfig.direction) return;
+
         this.sortConfigMap[key] = { ...this.sortConfig };
         localStorage.setItem(STORAGE_KEYS.SORT, JSON.stringify(this.sortConfigMap));
         this._triggerSync();
@@ -437,6 +446,9 @@ export const AppState = {
     saveHiddenAssets() {
         // Enforce array of strings for storage
         const currentList = [...this.hiddenAssets].map(String);
+        const stored = localStorage.getItem(STORAGE_KEYS.HIDDEN_ASSETS);
+        if (stored && JSON.stringify(currentList) === stored) return;
+
         localStorage.setItem(STORAGE_KEYS.HIDDEN_ASSETS, JSON.stringify(currentList));
         this._triggerSync();
     },
@@ -462,6 +474,8 @@ export const AppState = {
     },
 
     saveWatchlistState() {
+        if (localStorage.getItem(STORAGE_KEYS.WATCHLIST_ID) === this.watchlist.id) return;
+
         // Persist Watchlist Selection
         if (this.watchlist.id) {
             localStorage.setItem(STORAGE_KEYS.WATCHLIST_ID, this.watchlist.id);
@@ -476,6 +490,9 @@ export const AppState = {
 
     saveCarouselSelections() {
         const currentList = [...this.carouselSelections];
+        const stored = localStorage.getItem(STORAGE_KEYS.CAROUSEL_SELECTIONS);
+        if (stored && JSON.stringify(currentList) === stored) return;
+
         localStorage.setItem(STORAGE_KEYS.CAROUSEL_SELECTIONS, JSON.stringify(currentList));
         this._triggerSync();
     },
@@ -488,6 +505,9 @@ export const AppState = {
 
     saveHiddenWatchlists() {
         const currentList = [...this.hiddenWatchlists];
+        const stored = localStorage.getItem(STORAGE_KEYS.HIDDEN_WATCHLISTS);
+        if (stored && JSON.stringify(currentList) === stored) return;
+
         localStorage.setItem(STORAGE_KEYS.HIDDEN_WATCHLISTS, JSON.stringify(currentList));
         this._triggerSync();
     },
@@ -498,6 +518,9 @@ export const AppState = {
         for (const key in this.hiddenSortOptions) {
             storageObj[key] = [...this.hiddenSortOptions[key]];
         }
+        const stored = localStorage.getItem(STORAGE_KEYS.HIDDEN_SORT_OPTIONS);
+        if (stored && JSON.stringify(storageObj) === stored) return;
+
         localStorage.setItem(STORAGE_KEYS.HIDDEN_SORT_OPTIONS, JSON.stringify(storageObj));
         this._triggerSync();
     },
@@ -573,6 +596,8 @@ export const AppState = {
     },
 
     saveFavoriteLinks(links) {
+        if (JSON.stringify(links) === JSON.stringify(this.preferences.favoriteLinks)) return;
+
         this.preferences.favoriteLinks = links;
         localStorage.setItem(STORAGE_KEYS.FAVORITE_LINKS, JSON.stringify(links));
         this._triggerSync();

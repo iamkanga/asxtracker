@@ -5,6 +5,7 @@
 
 import { db } from '../auth/AuthService.js';
 import { AppState } from '../state/AppState.js';
+import { StateAuditor } from '../state/StateAuditor.js';
 import { ToastManager } from '../ui/ToastManager.js';
 import {
     collection,
@@ -68,15 +69,17 @@ export class UserStore {
         // Firestore fires onSnapshot for shares, cash, and watchlists independently.
         // Each fires in a separate setTimeout (Firestore internal scheduling), so
         // queueMicrotask cannot batch them. Using setTimeout with a 20ms window
-        // batches all 3 into a SINGLE onDataChange callback.
+        // batches all 3 into a SINGLE "DATA_UPDATED" event.
         let _notifyTimer = null;
         const notify = () => {
             if (_notifyTimer) clearTimeout(_notifyTimer);
             _notifyTimer = setTimeout(() => {
                 _notifyTimer = null;
-                if (onDataChange) {
-                    onDataChange(AppState.data);
-                }
+                // LEGACY: Keep onDataChange for now to prevent breakage during migration
+                if (onDataChange) onDataChange(AppState.data);
+
+                // REACTIVE BROADCST: Use semantic event bus
+                StateAuditor.emit('DATA_UPDATED', AppState.data);
             }, 20); // 20ms window: enough to catch all 3 snapshots (~7ms apart)
         };
 

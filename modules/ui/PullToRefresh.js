@@ -19,6 +19,7 @@ export class PullToRefresh {
         this.indicator = null;
         this.icon = null;
 
+        this.onRefresh = options.onRefresh || null;
         this._initStyles();
     }
 
@@ -41,36 +42,36 @@ export class PullToRefresh {
         style.textContent = `
             .ptr-indicator {
                 position: absolute;
-                top: -50px;
+                top: -60px;
                 left: 0;
                 width: 100%;
-                height: 50px;
+                height: 60px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                z-index: 1000;
+                z-index: 2000;
                 pointer-events: none;
-                transition: transform 0.1s ease-out, opacity 0.2s;
+                transition: transform 0.2s ease-out, opacity 0.2s;
                 opacity: 0;
             }
             .ptr-icon-wrap {
-                width: 40px;
-                height: 40px;
+                width: 45px;
+                height: 45px;
                 background: var(--card-bg, #2c2c2c);
-                border: 1px solid var(--color-accent, #a49393);
+                border: 2px solid var(--color-accent, #a49393);
                 border-radius: 50%;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 color: var(--color-accent, #a49393);
-                box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+                box-shadow: 0 4px 15px rgba(0,0,0,0.4);
                 transform: rotate(0deg);
                 transition: transform 0.1s, background 0.3s, color 0.3s;
             }
             .ptr-indicator.active .ptr-icon-wrap {
                 background: var(--color-accent, #a49393);
                 color: #fff;
-                transform: scale(1.1) rotate(180deg);
+                transform: scale(1.1);
             }
             .ptr-indicator.pulling {
                 opacity: 1;
@@ -147,26 +148,45 @@ export class PullToRefresh {
         }
     }
 
-    _handleTouchEnd() {
+    async _handleTouchEnd() {
         if (!this.isPulling) return;
 
         if (this.hasTriggered) {
             // Trigger Refresh
-            setTimeout(() => {
-                window.location.reload();
-            }, 300);
+            if (this.onRefresh) {
+                try {
+                    await this.onRefresh();
+                } catch (e) {
+                    console.error('[PTR] Refresh failed:', e);
+                } finally {
+                    this._resetIndicator();
+                }
+            } else {
+                setTimeout(() => {
+                    window.location.reload();
+                }, 300);
+            }
         } else {
-            // Reset
-            this.indicator.style.transition = 'transform 0.3s ease-out, opacity 0.3s';
-            this.indicator.style.transform = 'translateY(0)';
-            this.indicator.classList.remove('pulling');
-
-            setTimeout(() => {
-                this.indicator.style.transition = 'transform 0.1s ease-out, opacity 0.2s';
-                this.iconWrap.innerHTML = '<i class="fas fa-arrow-down"></i>';
-            }, 300);
+            this._resetIndicator();
         }
 
         this.isPulling = false;
+    }
+
+    _resetIndicator() {
+        if (!this.indicator) return;
+
+        this.indicator.style.transition = 'transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s';
+        this.indicator.style.transform = 'translateY(0)';
+        this.indicator.classList.remove('pulling', 'active');
+
+        setTimeout(() => {
+            if (this.indicator) {
+                this.indicator.style.transition = 'transform 0.1s ease-out, opacity 0.2s';
+            }
+            if (this.iconWrap) {
+                this.iconWrap.innerHTML = '<i class="fas fa-arrow-down"></i>';
+            }
+        }, 400);
     }
 }

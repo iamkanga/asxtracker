@@ -33,9 +33,11 @@ export class SplashScreen {
             logo.addEventListener('animationend', (e) => this._handleAnimationEnd(e));
         }
 
-        // --- DATA SIGNAL ---
-        document.addEventListener(EVENTS.FIREBASE_DATA_LOADED, () => {
-            this.attemptExit();
+        // --- DATA SIGNAL (v1137: Reactive) ---
+        import('../state/StateAuditor.js').then(({ StateAuditor }) => {
+            StateAuditor.on('DATA_UPDATED', () => {
+                this.attemptExit();
+            });
         });
 
         // --- START SEQUENCE ---

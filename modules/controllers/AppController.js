@@ -88,6 +88,9 @@ export class AppController {
         this._isUnlockedThisSession = false;
         this._lockModalActive = false;
         this._lastBackgroundTime = 0; // PWA Resume Tracking
+        this._initialWatchlistRestored = false; // v1137: Track first-run restoration
+        this._initialRenderComplete = false; // v1137: Track first-run render completion
+        this._initialized = false;
 
         // Binds
         this.init = this.init.bind(this);
@@ -120,7 +123,12 @@ export class AppController {
         ScrollManager.init();
 
         // Initialize Pull to Refresh (PWA support)
-        const ptr = new PullToRefresh();
+        const ptr = new PullToRefresh({
+            onRefresh: async () => {
+                console.log('[AppController] Manual Pull-to-Refresh triggered.');
+                await this.updateDataAndRender(true);
+            }
+        });
         ptr.init();
 
         // CRITICAL DEPLOYMENT FIX: Force Unregister Service Worker to fix stale cache issues (User reported stuck on old version)
@@ -139,18 +147,101 @@ export class AppController {
         this._bindGlobalEvents();
         this._setupDelegatedEvents(); // Binds Delete, Watchlist Actions, etc.
 
-        // REACTIVE REFRESH: Centralize UI updates when data arrives
-        StateAuditor.on('PRICES_UPDATED', () => {
-            // Only update the main watchlist if not locked and we have an active UI
+        // Notification System Bindings (Unified)
+        NotificationUI.init(); // Initialize Floating Bell
+
+        // --- REACTIVE DATA ARCHITECTURE (v1137+) ---
+        // Decouples Firestore updates from the Controller's init flow
+        StateAuditor.on('DATA_UPDATED', async (userData) => {
+            if (!userData) return;
+
+            // Sync to AppState (Local Cache)
+            AppState.data = userData;
+            this._userDataLoaded = true;
+
+            // ONBOARDING GATE: Handles Race Condition between Data and Prefs
+            if (await this._checkAndTriggerOnboarding()) return;
+
+            // UI Refresh / Restoration
+            if (this.watchlistUI) {
+                this.watchlistUI.renderWatchlistDropdown();
+                this.watchlistUI.updateHeaderTitle();
+            }
+
+            // === GLOBAL PRICE SEEDING (DEBOUNCED) ===
+            // v1137: Retain 800ms debounce to avoid rapid fetch on every Firestore chunk
+            if (this._bootSeedTimer) clearTimeout(this._bootSeedTimer);
+            this._bootSeedTimer = setTimeout(() => {
+                this._refreshAllPrices(AppState.data.shares || []);
+            }, 800);
+
+            // === WATCHLIST RESTORATION (First Run Only) ===
+            if (!this._initialWatchlistRestored) {
+                this._initialWatchlistRestored = true; // v1140: Mark immediately to prevent race
+                const savedId = AppState.preferences.lastWatchlistId || 'portfolio';
+                this.handleSwitchWatchlist(savedId, true);
+            }
+
+            // Trigger UI Refresh if not locked
             if (!AppState.isLocked && this.watchlistUI && AppState.watchlist.id) {
                 this.updateDataAndRender(false);
             }
         });
 
-        // Notification System Bindings (Unified)
-        NotificationUI.init(); // Initialize Floating Bell
+        // REACTIVE REFRESH: Centralize UI updates when prices arrive
+        StateAuditor.on('PRICES_UPDATED', () => {
+            if (!AppState.isLocked && this.watchlistUI && AppState.watchlist.id) {
+                this.updateDataAndRender(false);
+            }
+        });
 
-        // Start Health fresh monitor
+        // --- REACTIVE AUTH ARCHITECTURE (v1137+) ---
+        StateAuditor.on('AUTH_CHANGE', async ({ user, wasLoggedIn, isSameUser }) => {
+            const logoutBtn = document.getElementById(IDS.LOGOUT_BTN);
+            const loginBtn = document.getElementById(IDS.AUTH_BTN);
+
+            if (user) {
+                // UI State Update for Login
+                if (logoutBtn) logoutBtn.classList.remove(CSS_CLASSES.HIDDEN);
+                if (loginBtn) loginBtn.classList.add(CSS_CLASSES.HIDDEN);
+                document.body.classList.add(CSS_CLASSES.LOGGED_IN);
+
+                // Provisioning / Reset (New User/Session)
+                if (!isSameUser) {
+                    this._setSignInLoadingState(true, 'Signing In...');
+                    this.appService.provisionUser(user.uid);
+                    this._initialized = false;
+                    this._userDataLoaded = false;
+                    this._cloudPrefsLoaded = false;
+                    this._syncingPreferences = false; // Re-entrancy guard for Cloud Sync
+                    this._isUnlockedThisSession = false;
+                    await this.appService.sanitizeCorruptedShares(user.uid);
+                }
+
+                // Security Challenge
+                // v1138: Removed redundant call - _syncPreferencesWithDebounce will trigger this once prefs arrive.
+                // this.handleSecurityLock();
+
+                // Start Notification Stream
+                notificationStore.init(user.uid);
+
+                // Update Connection Indicator
+                if (this.headerLayout) {
+                    this.headerLayout.updateConnectionStatus(true, AppState.health.status);
+                }
+            } else {
+                // UI State Update for Logout
+                if (logoutBtn) logoutBtn.classList.add(CSS_CLASSES.HIDDEN);
+                if (loginBtn) loginBtn.classList.remove(CSS_CLASSES.HIDDEN);
+                document.body.classList.remove(CSS_CLASSES.LOGGED_IN);
+
+                if (this.headerLayout) {
+                    this.headerLayout.updateConnectionStatus(false, AppState.health.status);
+                }
+            }
+        });
+
+        // Trigger Health Monitor
         this.startHealthMonitor();
 
         // Initialize Global CSS Variables from Prefs (USER REQUEST - Standardized)
@@ -721,592 +812,415 @@ export class AppController {
     /* ================= Logic Handlers ================= */
 
     async handleAuthStateChange(user) {
-        // Capture previous user state to detect if this is a transition from Logged In to Logged Out
         const wasLoggedIn = !!AppState.user;
-
-        // ARCHITECTURAL FIX: Check if user identity has actually changed.
-        // Redundant auth events (e.g. token refresh) should NOT trigger a data wipe (unsubscribe).
         const isSameUser = (user && AppState.user && user.uid === AppState.user.uid);
 
         AppState.user = user;
-        const splashScreen = document.getElementById(IDS.SPLASH_SCREEN);
-        // Splash Screen management is now Event-Driven (See SplashScreen.js)
 
-        // Fix ID mismatch (HTML uses 'logout-btn' and 'auth-btn')
-        const logoutBtn = document.getElementById(IDS.LOGOUT_BTN);
-        const loginBtn = document.getElementById(IDS.AUTH_BTN);
+        // v1137: BROADCAST: Let reactive listeners handle the heavy lifting
+        StateAuditor.emit('AUTH_CHANGE', { user, wasLoggedIn, isSameUser });
 
         if (user) {
-            // UI State Update for Login
-            if (logoutBtn) logoutBtn.classList.remove(CSS_CLASSES.HIDDEN);
-            if (loginBtn) loginBtn.classList.add(CSS_CLASSES.HIDDEN);
-            document.body.classList.add(CSS_CLASSES.LOGGED_IN);
-
-            // Only show 'Signing In' and perform heavy bootstrapping if it's a NEW user or fresh boot
-            if (!isSameUser) {
-                this._setSignInLoadingState(true, 'Signing In...');
-
-                // Provision user document (Ensures it exists for backend LIST API)
-                this.appService.provisionUser(user.uid);
-
-                // BOOT LOCK: Reset flags for new session
-                this._cloudPrefsLoaded = false;
-                AppState.isLocked = true;
-                this._isUnlockedThisSession = false; // FORCE FRESH CHALLENGE on Login/Reload
-
-                // Sanitize corrupted shares
-                await this.appService.sanitizeCorruptedShares(user.uid);
-            }
-
-            // --- HISTORICAL DATA SEEDING ---
-            // If super history is empty, seed it with the provided dataset
-            if (!AppState.preferences.historicalData?.super) {
-                try {
-                    const { HISTORICAL_SUPER_DATA } = await import('../data/HistoricalSuperData.js');
-                    if (HISTORICAL_SUPER_DATA && HISTORICAL_SUPER_DATA.length > 0) {
-                        AppState.saveHistoricalData('super', HISTORICAL_SUPER_DATA);
-                    }
-                } catch (e) {
-                    console.warn('[AppController] Failed to seed historical super data:', e);
-                }
-            }
-
-
-            // Update Status Indicator (Universal)
-            if (this.headerLayout) {
-                this.headerLayout.updateConnectionStatus(!!user, AppState.health.status);
-            }
-
-
-            // INIT GATE: Keep splash screen VISIBLE until prefs are loaded
-            // Splash hide is now handled by prefs callback or timeout fallback
-            if (logoutBtn) logoutBtn.classList.remove(CSS_CLASSES.HIDDEN);
-            if (loginBtn) loginBtn.classList.add(CSS_CLASSES.HIDDEN);
-            document.body.classList.add(CSS_CLASSES.LOGGED_IN);
-
-            // ⚠️ SECURITY GATE ⚠️
-            // Intercept normal flow to show Privacy Lock
-            // RACE FIX: Defer to next microtask to avoid rapid isLocked toggle
-            // (Line 744 sets true, then handleSecurityLock may immediately set false)
-            queueMicrotask(() => this.handleSecurityLock());
-
             // CRITICAL: Only Unsub/Resub if user CHANGED.
-            // Blindly unsubscribing wipes AppState.data.cash (UserStore cleanup), causing the "Flash".
             if (!isSameUser || !AppState.unsubscribeStore) {
                 if (AppState.unsubscribeStore) AppState.unsubscribeStore();
                 if (AppState.unsubscribePrefs) AppState.unsubscribePrefs();
-
-                // Initialize Notification Store
-                notificationStore.init(user.uid);
 
                 // Reset Data Load (Race Guard)
                 this._userDataLoaded = false;
 
                 // === DATA SUBSCRIPTION ===
-                AppState.unsubscribeStore = this.appService.subscribeToUserData(user.uid, async (userData) => {
-                    const codes = (userData.shares || []).map(s => (s.code || s.shareName || s.symbol || '???').toUpperCase());
-                    AppState.data = userData;
-                    this._userDataLoaded = true;
-
-
-                    // ONBOARDING GATE: Handles Race Condition between Data and Prefs
-                    // If this returns true, we are waiting for a new snapshot, so return early.
-                    if (await this._checkAndTriggerOnboarding()) {
-                        return;
-                    }
-
-                    if (this.watchlistUI) this.watchlistUI.renderWatchlistDropdown();
-
-
-                    // === GLOBAL PRICE SEEDING (DEBOUNCED) ===
-                    if (this._bootSeedTimer) clearTimeout(this._bootSeedTimer);
-                    this._bootSeedTimer = setTimeout(() => {
-                        this._refreshAllPrices(AppState.data.shares || []);
-                    }, 800);
-
-                    // === WATCHLIST RESTORATION ===
-                    const savedWatchlistId = AppState.preferences.lastWatchlistId;
-                    const currentWatchlistId = AppState.watchlist.id;
-
-                    if (savedWatchlistId && currentWatchlistId === 'portfolio') {
-                        const isSystemId = savedWatchlistId === 'ALL' ||
-                            savedWatchlistId === 'CASH' ||
-                            savedWatchlistId === 'DASHBOARD' ||
-                            savedWatchlistId === 'portfolio';
-
-                        if (!isSystemId && (!userData.watchlists || userData.watchlists.length === 0)) {
-                            return;
-                        }
-
-                        const isValidId = isSystemId ||
-                            (userData.watchlists && userData.watchlists.find(w => w.id === savedWatchlistId));
-
-                        if (isValidId) {
-                            this.handleSwitchWatchlist(savedWatchlistId, true); // Pass true for isBoot
-                            return;
-                        } else if (userData.watchlists && userData.watchlists.length > 0) {
-                            this.handleSwitchWatchlist('portfolio', true); // Pass true for isBoot
-                        }
-                    }
-
-                    // Handle stale/deleted watchlist
-                    if (AppState.watchlist.id &&
-                        !['ALL', 'CASH', 'DASHBOARD', 'portfolio'].includes(AppState.watchlist.id) &&
-                        userData.watchlists &&
-                        !userData.watchlists.find(w => w.id === AppState.watchlist.id)) {
-                        this.handleSwitchWatchlist('portfolio', true); // Pass true for isBoot
-                        return;
-                    }
-
-
-                    this.watchlistUI.updateHeaderTitle();
-
-                    // BOOT STABILITY
-                    if (!this._initialRenderComplete) {
-                        const PREFS_TIMEOUT = 2500;
-                        this._prefsTimeoutId = setTimeout(() => {
-                            if (!this._initialRenderComplete) {
-                                // this._cloudPrefsLoaded = true; // DISABLED: Do not unblock sync if we haven't confirmed cloud state
-                                this._initialRenderComplete = true; // Allow UI to show
-                                this.handleSecurityLock();
-                                this.updateDataAndRender();
-                            }
-                        }, PREFS_TIMEOUT);
-                    } else {
-                        this.updateDataAndRender();
-                    }
-                });
+                AppState.unsubscribeStore = this.appService.subscribeToUserData(user.uid);
 
                 // === CLOUD PREFERENCES SYNC (INBOUND) ===
                 AppState.unsubscribePrefs = this.appService.subscribeToUserPreferences(user.uid, (prefs, metadata) => {
-                    // Clear pending timeout since prefs arrived
-                    if (this._prefsTimeoutId) {
-                        clearTimeout(this._prefsTimeoutId);
-                        this._prefsTimeoutId = null;
-                    }
-
-                    if (!prefs) {
-                        // No prefs in cloud - complete initial render with defaults
-                        this._cloudPrefsLoaded = true; // Mark as loaded even if empty
-                        if (!this._initialRenderComplete) {
-                            this._initialRenderComplete = true;
-                            // Check lock based on local/default state before hiding splash
-                            this.handleSecurityLock();
-                        }
-                        return;
-                    }
-
-                    // SYNC GUARD (Directive 024): 
-                    // 1. If we have a local sync timer active, ignore the cloud (our write is pending).
-                    // 2. If the snapshot has pending writes (local echo), or if it's from cache while online.
-                    if (this._syncTimeout) {
-                        return;
-                    }
-
-                    if (metadata && (metadata.hasPendingWrites || metadata.fromCache)) {
-                        return;
-                    }
-
-                    // Mark as loaded before processing specific updates so handleSecurityLock works
-                    this._cloudPrefsLoaded = true;
-
-
-                    let needsRender = false;
-
-                    // 0. Sync Security Prefs (CRITICAL: Prioritize this)
-                    if (prefs.security) {
-                        AppState.preferences.security = { ...AppState.preferences.security, ...prefs.security };
-                        this.handleSecurityLock();
-                    }
-
-                    // 00. Check Onboarding (Race Fix)
-                    // If Data arrived before Prefs, the check in subscribeToUserData would have been skipped.
-                    // Now that Prefs are here, we verify emptiness and trigger if needed.
-                    this._checkAndTriggerOnboarding();
-
-
-                    // 0a. Sync Gradient Preference
-                    // 0a. Sync Gradient Preference (Fixes Tinting Bug)
-                    if (prefs.gradientStrength !== undefined && prefs.gradientStrength !== null) {
-                        const strength = parseFloat(prefs.gradientStrength);
-                        if (!isNaN(strength)) {
-                            AppState.preferences.gradientStrength = strength;
-                            localStorage.setItem(STORAGE_KEYS.GRADIENT_STRENGTH, strength);
-
-                            const tint = strength === 0.125 ? '22%' : '0%';
-                            document.documentElement.style.setProperty('--gradient-strength', strength);
-                            document.documentElement.style.setProperty('--gradient-tint', tint);
-                            needsRender = true;
-                        }
-                    }
-
-                    // 0a.1 Sync Accent Color & Opacity
-                    if (prefs.accentColor !== undefined || prefs.accentOpacity !== undefined) {
-                        const color = prefs.accentColor || AppState.preferences.accentColor || '#a49393';
-                        const opacity = prefs.accentOpacity || AppState.preferences.accentOpacity || '1';
-
-                        AppState.preferences.accentColor = color;
-                        AppState.preferences.accentOpacity = opacity;
-                        localStorage.setItem(STORAGE_KEYS.ACCENT_COLOR, color);
-                        localStorage.setItem(STORAGE_KEYS.ACCENT_OPACITY, opacity);
-
-                        const r = parseInt(color.slice(1, 3), 16);
-                        const g = parseInt(color.slice(3, 5), 16);
-                        const b = parseInt(color.slice(5, 7), 16);
-                        document.documentElement.style.setProperty('--color-accent', `rgba(${r}, ${g}, ${b}, ${opacity})`);
-                        document.documentElement.style.setProperty('--color-accent-rgb', `${r}, ${g}, ${b}`);
-                        document.documentElement.style.setProperty('--accent-opacity', opacity);
-                        needsRender = true;
-                    }
-
-                    // 0a.2 Sync Card Chart Opacity
-                    if (prefs.cardChartOpacity !== undefined && prefs.cardChartOpacity !== null) {
-                        const val = parseFloat(prefs.cardChartOpacity);
-                        if (!isNaN(val)) {
-                            AppState.preferences.cardChartOpacity = val;
-                            localStorage.setItem(STORAGE_KEYS.CARD_CHART_OPACITY, val);
-                            document.documentElement.style.setProperty('--card-chart-opacity', val);
-                            needsRender = true;
-                        }
-                    }
-
-                    // 0a.3 Sync Container Borders
-                    if (prefs.containerBorders) {
-                        AppState.preferences.containerBorders = { ...AppState.preferences.containerBorders, ...prefs.containerBorders };
-                        localStorage.setItem(STORAGE_KEYS.BORDER_PREFS, JSON.stringify(AppState.preferences.containerBorders));
-                        needsRender = true;
-                    }
-
-                    // 0b. Sync Notification Prefs
-                    if (prefs.showBadges !== undefined) {
-                        AppState.preferences.showBadges = prefs.showBadges !== false;
-                        needsRender = true;
-                    }
-                    if (prefs.quickNav !== undefined) {
-                        AppState.preferences.quickNav = prefs.quickNav;
-                        localStorage.setItem(STORAGE_KEYS.QUICK_NAV, JSON.stringify(prefs.quickNav));
-                        // No render needed, it's Just-In-Time
-                    }
-                    if (prefs.badgeScope !== undefined) {
-                        AppState.preferences.badgeScope = prefs.badgeScope || 'all';
-                        localStorage.setItem(STORAGE_KEYS.BADGE_SCOPE, AppState.preferences.badgeScope);
-                        needsRender = true;
-
-                        // Ensure badge updates immediately if scope changed via cloud sync
-                        if (typeof notificationStore !== 'undefined' && notificationStore._notifyCountChange) {
-                            notificationStore._notifyCountChange();
-                        }
-                    }
-                    if (prefs.alertEmailRecipients !== undefined) {
-                        AppState.preferences.alertEmailRecipients = prefs.alertEmailRecipients || '';
-                    }
-                    if (prefs.excludePortfolio !== undefined) {
-                        AppState.preferences.excludePortfolio = prefs.excludePortfolio;
-                    }
-                    if (prefs.dailyEmail !== undefined && prefs.dailyEmail !== null) {
-                        // ROBUSTNESS: Handle string 'true' from legacy/external updates
-                        const val = prefs.dailyEmail;
-                        const isTrue = (val === true || val === 'true');
-                        AppState.preferences.dailyEmail = isTrue;
-                        localStorage.setItem(STORAGE_KEYS.DAILY_EMAIL, isTrue);
-                        needsRender = true;
-                    }
-
-                    if (prefs.colorSeed !== undefined && prefs.colorSeed !== null) {
-                        const newSeed = parseInt(prefs.colorSeed);
-                        if (!isNaN(newSeed) && newSeed !== AppState.preferences.colorSeed) {
-                            AppState.preferences.colorSeed = newSeed;
-                            localStorage.setItem('ASX_NEXT_colorSeed', newSeed);
-                            needsRender = true;
-                        }
-                    }
-
-                    // 1. Sync Watchlist ID (if different and valid)
-                    if (prefs.lastWatchlistId && prefs.lastWatchlistId !== AppState.watchlist.id) {
-                        if (AppState.watchlist.id === 'portfolio' && prefs.lastWatchlistId !== 'portfolio') {
-                            this._initialRenderComplete = true;
-                            this.handleSwitchWatchlist(prefs.lastWatchlistId);
-                            needsRender = false;
-                        }
-                    }
-
-                    // 2. Sync Sort Config & Global Sort
-                    let _sortConfigMapSynced = false; // RACE FIX: Track if sortConfigMap already written
-                    if (prefs.globalSort) {
-                        AppState.saveGlobalSort(prefs.globalSort, true);
-                        AppState.sortConfig = { ...prefs.globalSort };
-                        needsRender = true;
-                    } else if (prefs.sortConfigMap) {
-                        AppState.sortConfigMap = { ...AppState.sortConfigMap, ...prefs.sortConfigMap };
-                        _sortConfigMapSynced = true; // Mark as handled
-
-                        if (prefs.globalSort === null) {
-                            if (AppState.preferences.globalSort) {
-                                AppState.saveGlobalSort(null, true);
-                                needsRender = true;
-                            }
-                        }
-
-                        if (!AppState.preferences.globalSort) {
-                            const currentKey = AppState.watchlist.id || 'portfolio';
-                            if (prefs.sortConfigMap[currentKey]) {
-                                AppState.sortConfig = { ...prefs.sortConfigMap[currentKey] };
-                                needsRender = true;
-                            }
-                        }
-                    }
-
-                    // 3. Sync Hidden Assets
-                    if (prefs.hiddenAssets && Array.isArray(prefs.hiddenAssets)) {
-                        AppState.hiddenAssets = new Set(prefs.hiddenAssets.map(String));
-                        localStorage.setItem(STORAGE_KEYS.HIDDEN_ASSETS, JSON.stringify(prefs.hiddenAssets)); // Persist immediately
-                        needsRender = true;
-                    }
-
-                    // 4. Sync Carousel Selections
-                    if (prefs.carouselSelections && Array.isArray(prefs.carouselSelections)) {
-                        AppState.carouselSelections = new Set(prefs.carouselSelections.map(String));
-                        localStorage.setItem(STORAGE_KEYS.CAROUSEL_SELECTIONS, JSON.stringify(prefs.carouselSelections));
-                        needsRender = true;
-                    }
-
-                    // 5. Sync Watchlist Order
-                    if (prefs.watchlistOrder) {
-                        AppState.preferences.watchlistOrder = prefs.watchlistOrder;
-                        localStorage.setItem(STORAGE_KEYS.WATCHLIST_ORDER, JSON.stringify(prefs.watchlistOrder));
-                        needsRender = true;
-                    }
-
-                    // 5.1 Sync Favorite Links
-                    if (prefs.favoriteLinks && Array.isArray(prefs.favoriteLinks)) {
-                        const cloudLinks = prefs.favoriteLinks || [];
-
-                        // Overwrite strategy: Trust the Cloud
-                        AppState.preferences.favoriteLinks = cloudLinks;
-                        localStorage.setItem(STORAGE_KEYS.FAVORITE_LINKS, JSON.stringify(cloudLinks));
-
-                        // LIVE UPDATE: If modal is open, refresh it
-                        if (!document.getElementById(IDS.MODAL_FAVORITE_LINKS).classList.contains(CSS_CLASSES.HIDDEN)) {
-                            import('../ui/FavoriteLinksUI.js').then(module => {
-                                const event = new CustomEvent(EVENTS.FAVORITE_LINKS_UPDATED);
-                                window.dispatchEvent(event);
-                            });
-                        }
-                    }
-
-                    // 5.2 Sync Research Links
-                    if (prefs.researchLinks && Array.isArray(prefs.researchLinks)) {
-                        const cloudLinks = prefs.researchLinks || [];
-
-                        // Overwrite strategy: Trust the Cloud
-                        AppState.preferences.researchLinks = cloudLinks;
-                        localStorage.setItem(STORAGE_KEYS.RESEARCH_LINKS, JSON.stringify(cloudLinks));
-
-                        // LIVE UPDATE: Trigger refresh
-                        window.dispatchEvent(new CustomEvent(EVENTS.RESEARCH_LINKS_UPDATED));
-                    }
-
-                    // 6. Sync Watchlist Mode
-                    if (prefs.watchlistMode) {
-                        AppState.preferences.watchlistMode = prefs.watchlistMode;
-                        localStorage.setItem(STORAGE_KEYS.WATCHLIST_PICKER_MODE, prefs.watchlistMode);
-                        needsRender = true;
-                    }
-
-                    // 7. Sync Hidden Watchlists
-                    if (prefs.hiddenWatchlists && Array.isArray(prefs.hiddenWatchlists)) {
-                        AppState.hiddenWatchlists = new Set(prefs.hiddenWatchlists.map(String));
-                        localStorage.setItem(STORAGE_KEYS.HIDDEN_WATCHLISTS, JSON.stringify(prefs.hiddenWatchlists));
-                        needsRender = true;
-                    }
-
-                    // 7.1 Sync Sort Config Map (CRITICAL FOR PERSISTENCE)
-                    // RACE FIX: Skip if already synced earlier in this callback (step 2)
-                    if (prefs.sortConfigMap && !_sortConfigMapSynced) {
-                        const cloudJSON = JSON.stringify(prefs.sortConfigMap);
-                        const localJSON = JSON.stringify(AppState.sortConfigMap);
-                        if (cloudJSON !== localJSON) {
-                            AppState.sortConfigMap = prefs.sortConfigMap;
-                            localStorage.setItem(STORAGE_KEYS.SORT, cloudJSON);
-                        }
-                        // No render needed, but essential for next watchlist switch
-                    }
-
-
-                    // 7.2 Sync Dashboard Order & Hidden
-                    if (prefs.dashboardOrder) {
-                        AppState.preferences.dashboardOrder = prefs.dashboardOrder;
-                        localStorage.setItem(STORAGE_KEYS.DASHBOARD_ORDER, JSON.stringify(prefs.dashboardOrder));
-                        needsRender = true;
-                    }
-
-                    if (prefs.dashboardHidden) {
-                        AppState.preferences.dashboardHidden = prefs.dashboardHidden;
-                        localStorage.setItem(STORAGE_KEYS.DASHBOARD_HIDDEN, JSON.stringify(prefs.dashboardHidden));
-                        needsRender = true;
-                    }
-
-                    // 7b. Sync Onboarded Flag
-                    if (prefs.onboarded !== undefined) {
-                        AppState.preferences.onboarded = !!prefs.onboarded;
-                    }
-
-                    // 7b. SANITIZE
-                    this._sanitizeActiveWatchlist();
-
-                    // 8. Sync Hidden Sort Options
-                    if (prefs.hiddenSortOptions) {
-                        const restored = {};
-                        for (const key in prefs.hiddenSortOptions) {
-                            restored[key] = new Set((prefs.hiddenSortOptions[key] || []).map(String));
-                        }
-                        AppState.hiddenSortOptions = restored;
-                        localStorage.setItem(STORAGE_KEYS.HIDDEN_SORT_OPTIONS, JSON.stringify(prefs.hiddenSortOptions));
-                        needsRender = true;
-                    }
-
-                    // 8.1 Sync Custom Watchlist Names
-                    if (prefs.customWatchlistNames) {
-                        AppState.preferences.customWatchlistNames = prefs.customWatchlistNames;
-                        localStorage.setItem(STORAGE_KEYS.CUSTOM_WATCHLIST_NAMES, JSON.stringify(prefs.customWatchlistNames));
-                        // Force Title Update immediately if current watchlist is affected
-                        const currentId = AppState.watchlist.id;
-                        if (currentId && prefs.customWatchlistNames[currentId]) {
-                            AppState.watchlist.name = prefs.customWatchlistNames[currentId];
-                            needsRender = true;
-                        }
-                    }
-
-                    // 9. Sync User Categories (Trust Cloud)
-                    if (prefs.userCategories && Array.isArray(prefs.userCategories)) {
-                        const remoteCats = prefs.userCategories;
-
-                        // Overwrite strategy: Trust the Cloud
-                        if (JSON.stringify(remoteCats) !== JSON.stringify(AppState.preferences.userCategories)) {
-                            AppState.preferences.userCategories = remoteCats;
-                            localStorage.setItem(STORAGE_KEYS.USER_CATEGORIES, JSON.stringify(remoteCats));
-                            needsRender = true;
-                        }
-                    }
-
-                    // 10. Sync View Mode (New)
-                    if (prefs.viewMode) {
-                        if (AppState.viewMode !== prefs.viewMode) {
-                            AppState.viewMode = prefs.viewMode;
-                            localStorage.setItem(STORAGE_KEYS.VIEW_MODE, prefs.viewMode);
-                            needsRender = true;
-                        }
-                    }
-
-                    // 11. Sync View Configs (Per-Watchlist)
-                    if (prefs.viewConfigs) {
-                        AppState.preferences.viewConfigs = prefs.viewConfigs;
-                        localStorage.setItem(STORAGE_KEYS.VIEW_CONFIGS, JSON.stringify(prefs.viewConfigs));
-                        // No immediate render needed, key lookup handles it on switch
-                    }
-
-                    if (needsRender) {
-                        this.updateDataAndRender(false);
-                    }
-
-                    // SAFETY: If we didn't switch watchlists (which hides splash), but we are done loading
-                    if (!this._initialRenderComplete) {
-                        this._initialRenderComplete = true;
-                        // RACE FIX: Only call handleSecurityLock if not already unlocked
-                        // (avoids redundant isLocked = false write that triggers race detection)
-                        if (!this._isUnlockedThisSession) {
-                            this.handleSecurityLock(); // Final check
-                        }
-                    }
-
-                    // UNLOCK OUTBOUND SYNC: Cloud prefs have been applied, allow future syncs.
-                    if (!this._cloudPrefsLoaded) {
-                        this._cloudPrefsLoaded = true;
-                    }
+                    this._syncPreferencesWithDebounce(prefs, metadata);
                 });
             }
         } else {
-            // DELAY: Don't show red flag immediately on boot.
-            // Give the "Resume Guard" or "Silent Login" a chance to fire first.
+            // LOGOUT: Cleanup subscriptions
+            if (AppState.unsubscribeStore) AppState.unsubscribeStore();
+            if (AppState.unsubscribePrefs) AppState.unsubscribePrefs();
+            AppState.unsubscribeStore = null;
+            AppState.unsubscribePrefs = null;
+            this._cloudPrefsLoaded = false;
+        }
+    }
 
-            this._updateDebugStatus('Checking...', 'warn');
+    _syncPreferencesWithDebounce(prefs, metadata) {
+        if (this._syncingPreferences) return; // RE-ENTRANCY GUARD (Directive 024)
 
-            setTimeout(() => {
-                if (!AppState.user) {
-                    if (this.headerLayout) this.headerLayout.updateConnectionStatus(false);
-                    this._updateDebugStatus('Disconnected', 'err');
-                } else {
-                    this._updateDebugStatus('Restored', 'ok');
+        // Clear pending timeout since prefs arrived
+        if (this._prefsTimeoutId) {
+            clearTimeout(this._prefsTimeoutId);
+            this._prefsTimeoutId = null;
+        }
+
+        if (!prefs) {
+            // No prefs in cloud - complete initial render with defaults
+            this._cloudPrefsLoaded = true; // Mark as loaded even if empty
+            if (!this._initialRenderComplete) {
+                this._initialRenderComplete = true;
+                // Check lock based on local/default state before hiding splash
+                this.handleSecurityLock();
+            }
+            return;
+        }
+
+        // SYNC GUARD (Directive 024): 
+        // 1. If we have a local sync timer active, ignore the cloud (our write is pending).
+        // 2. If the snapshot has pending writes (local echo), or if it's from cache while online.
+        if (this._syncTimeout) {
+            return;
+        }
+
+        if (metadata && (metadata.hasPendingWrites || metadata.fromCache)) {
+            return;
+        }
+
+        this._syncingPreferences = true; // LOCK
+        try {
+            // Mark as loaded before processing specific updates so handleSecurityLock works
+            this._cloudPrefsLoaded = true;
+
+            let needsRender = false;
+
+            // 0. Sync Security Prefs (CRITICAL: Prioritize this)
+            if (prefs.security) {
+                // Defensive: Merge and apply only if changed
+                AppState.saveSecurityPreferences(prefs.security);
+                this.handleSecurityLock();
+            }
+
+            // 00. Check Onboarding (Race Fix)
+            this._checkAndTriggerOnboarding();
+
+            // 0a. Sync Gradient Preference (Fixes Tinting Bug)
+            if (prefs.gradientStrength !== undefined && prefs.gradientStrength !== null) {
+                const strength = parseFloat(prefs.gradientStrength);
+                if (!isNaN(strength) && AppState.preferences.gradientStrength !== strength) {
+                    AppState.preferences.gradientStrength = strength;
+                    localStorage.setItem(STORAGE_KEYS.GRADIENT_STRENGTH, strength);
+
+                    const tint = strength === 0.125 ? '22%' : '0%';
+                    document.documentElement.style.setProperty('--gradient-strength', strength);
+                    document.documentElement.style.setProperty('--gradient-tint', tint);
+                    needsRender = true;
                 }
-            }, 1500);
-
-            document.body.classList.remove(CSS_CLASSES.LOGGED_IN);
-
-            // 1. Reset security and application state
-            this._isUnlockedThisSession = false;
-            this._lockModalActive = false;
-
-            // CRITICAL: Wipe all user data from memory immediately
-            AppState.resetAll();
-
-            // 2. Clear UI
-            this.viewRenderer.render([]);
-
-            // Enable button again since we know they are logged out
-            this._setSignInLoadingState(false);
-
-            // 3. Show Splash Screen with Logout Feedback
-            if (splashScreen) {
-                splashScreen.classList.remove(CSS_CLASSES.HIDDEN);
-                splashScreen.classList.remove(CSS_CLASSES.SPLASH_IS_EXITING);
-                splashScreen.classList.add(CSS_CLASSES.SPLASH_IS_ACTIVE);
             }
 
-            const logoutBtn = document.getElementById(IDS.LOGOUT_BTN);
-            const loginBtn = document.getElementById(IDS.AUTH_BTN);
-            if (logoutBtn) logoutBtn.classList.add(CSS_CLASSES.HIDDEN);
-            if (loginBtn) loginBtn.classList.remove(CSS_CLASSES.HIDDEN);
+            // 0a.1 Sync Accent Color & Opacity
+            if (prefs.accentColor !== undefined || prefs.accentOpacity !== undefined) {
+                const color = prefs.accentColor || AppState.preferences.accentColor || '#a49393';
+                const opacity = prefs.accentOpacity || AppState.preferences.accentOpacity || '1';
 
-            // 4. HARD RELOAD (Close App Environment)
-            // Fix: Only reload if we were actually logged in (prevents loop on boot-up)
-            if (wasLoggedIn) {
-                setTimeout(() => {
-                    window.location.reload();
-                }, 800); // Short delay for splash visual feedback
+                if (AppState.preferences.accentColor !== color || AppState.preferences.accentOpacity !== opacity) {
+                    AppState.preferences.accentColor = color;
+                    AppState.preferences.accentOpacity = opacity;
+                    localStorage.setItem(STORAGE_KEYS.ACCENT_COLOR, color);
+                    localStorage.setItem(STORAGE_KEYS.ACCENT_OPACITY, opacity);
+
+                    const r = parseInt(color.slice(1, 3), 16);
+                    const g = parseInt(color.slice(3, 5), 16);
+                    const b = parseInt(color.slice(5, 7), 16);
+                    document.documentElement.style.setProperty('--color-accent', `rgba(${r}, ${g}, ${b}, ${opacity})`);
+                    document.documentElement.style.setProperty('--color-accent-rgb', `${r}, ${g}, ${b}`);
+                    document.documentElement.style.setProperty('--accent-opacity', opacity);
+                    needsRender = true;
+                }
             }
+
+            // 0a.2 Sync Card Chart Opacity
+            if (prefs.cardChartOpacity !== undefined && prefs.cardChartOpacity !== null) {
+                const val = parseFloat(prefs.cardChartOpacity);
+                if (!isNaN(val) && AppState.preferences.cardChartOpacity !== val) {
+                    AppState.preferences.cardChartOpacity = val;
+                    localStorage.setItem(STORAGE_KEYS.CARD_CHART_OPACITY, val);
+                    document.documentElement.style.setProperty('--card-chart-opacity', val);
+                    needsRender = true;
+                }
+            }
+
+            // 0a.3 Sync Container Borders
+            if (prefs.containerBorders) {
+                AppState.preferences.containerBorders = { ...AppState.preferences.containerBorders, ...prefs.containerBorders };
+                localStorage.setItem(STORAGE_KEYS.BORDER_PREFS, JSON.stringify(AppState.preferences.containerBorders));
+                needsRender = true;
+            }
+
+            // 0b. Sync Notification Prefs
+            if (prefs.showBadges !== undefined && AppState.preferences.showBadges !== (prefs.showBadges !== false)) {
+                AppState.preferences.showBadges = prefs.showBadges !== false;
+                needsRender = true;
+            }
+            if (prefs.quickNav !== undefined) {
+                AppState.preferences.quickNav = prefs.quickNav;
+                localStorage.setItem(STORAGE_KEYS.QUICK_NAV, JSON.stringify(prefs.quickNav));
+                // No render needed, it's Just-In-Time
+            }
+            if (prefs.badgeScope !== undefined && AppState.preferences.badgeScope !== (prefs.badgeScope || 'all')) {
+                AppState.preferences.badgeScope = prefs.badgeScope || 'all';
+                localStorage.setItem(STORAGE_KEYS.BADGE_SCOPE, AppState.preferences.badgeScope);
+                needsRender = true;
+
+                // Ensure badge updates immediately if scope changed via cloud sync
+                if (typeof notificationStore !== 'undefined' && notificationStore._notifyCountChange) {
+                    notificationStore._notifyCountChange();
+                }
+            }
+            if (prefs.alertEmailRecipients !== undefined) {
+                AppState.preferences.alertEmailRecipients = prefs.alertEmailRecipients || '';
+            }
+            if (prefs.excludePortfolio !== undefined) {
+                AppState.preferences.excludePortfolio = prefs.excludePortfolio;
+            }
+            if (prefs.dailyEmail !== undefined && prefs.dailyEmail !== null) {
+                // ROBUSTNESS: Handle string 'true' from legacy/external updates
+                const val = prefs.dailyEmail;
+                const isTrue = (val === true || val === 'true');
+                if (AppState.preferences.dailyEmail !== isTrue) {
+                    AppState.preferences.dailyEmail = isTrue;
+                    localStorage.setItem(STORAGE_KEYS.DAILY_EMAIL, isTrue);
+                    needsRender = true;
+                }
+            }
+
+            if (prefs.colorSeed !== undefined && prefs.colorSeed !== null) {
+                const newSeed = parseInt(prefs.colorSeed);
+                if (!isNaN(newSeed) && newSeed !== AppState.preferences.colorSeed) {
+                    AppState.preferences.colorSeed = newSeed;
+                    localStorage.setItem('ASX_NEXT_colorSeed', newSeed);
+                    needsRender = true;
+                }
+            }
+
+            // 1. Sync Watchlist ID (if different and valid)
+            if (prefs.lastWatchlistId && prefs.lastWatchlistId !== AppState.watchlist.id) {
+                if (AppState.watchlist.id === 'portfolio' && prefs.lastWatchlistId !== 'portfolio') {
+                    this._initialRenderComplete = true;
+                    // v1138: Pass skipPersist=true to avoid loopback
+                    this.handleSwitchWatchlist(prefs.lastWatchlistId, false, true);
+                    needsRender = false;
+                }
+            }
+
+            // 2. Sync Sort Config & Global Sort
+            let _sortConfigMapSynced = false; // RACE FIX: Track if sortConfigMap already written
+            if (prefs.globalSort && JSON.stringify(prefs.globalSort) !== JSON.stringify(AppState.preferences.globalSort)) {
+                AppState.saveGlobalSort(prefs.globalSort, true);
+                if (JSON.stringify(AppState.sortConfig) !== JSON.stringify(prefs.globalSort)) {
+                    AppState.sortConfig = { ...prefs.globalSort };
+                    needsRender = true;
+                }
+            } else if (prefs.sortConfigMap && JSON.stringify(prefs.sortConfigMap) !== JSON.stringify(AppState.sortConfigMap)) {
+                AppState.sortConfigMap = { ...AppState.sortConfigMap, ...prefs.sortConfigMap };
+                _sortConfigMapSynced = true; // Mark as handled
+
+                if (prefs.globalSort === null) {
+                    if (AppState.preferences.globalSort) {
+                        AppState.saveGlobalSort(null, true);
+                        needsRender = true;
+                    }
+                }
+
+                if (!AppState.preferences.globalSort) {
+                    const currentKey = AppState.watchlist.id || 'portfolio';
+                    if (prefs.sortConfigMap[currentKey]) {
+                        const newSort = prefs.sortConfigMap[currentKey];
+                        if (JSON.stringify(AppState.sortConfig) !== JSON.stringify(newSort)) {
+                            AppState.sortConfig = { ...newSort };
+                            needsRender = true;
+                        }
+                    }
+                }
+            }
+
+            // 3. Sync Hidden Assets
+            if (prefs.hiddenAssets && Array.isArray(prefs.hiddenAssets)) {
+                const newList = prefs.hiddenAssets.map(String);
+                const currentList = [...AppState.hiddenAssets].map(String);
+                if (JSON.stringify(newList) !== JSON.stringify(currentList)) {
+                    AppState.hiddenAssets = new Set(newList);
+                    localStorage.setItem(STORAGE_KEYS.HIDDEN_ASSETS, JSON.stringify(newList)); // Persist immediately
+                    needsRender = true;
+                }
+            }
+
+            // 4. Sync Carousel Selections
+            if (prefs.carouselSelections && Array.isArray(prefs.carouselSelections)) {
+                const newList = prefs.carouselSelections.map(String);
+                const currentList = [...AppState.carouselSelections].map(String);
+                if (JSON.stringify(newList) !== JSON.stringify(currentList)) {
+                    AppState.carouselSelections = new Set(newList);
+                    localStorage.setItem(STORAGE_KEYS.CAROUSEL_SELECTIONS, JSON.stringify(newList));
+                    needsRender = true;
+                }
+            }
+
+            // 5. Sync Watchlist Order
+            if (prefs.watchlistOrder && JSON.stringify(prefs.watchlistOrder) !== JSON.stringify(AppState.preferences.watchlistOrder)) {
+                AppState.preferences.watchlistOrder = prefs.watchlistOrder;
+                localStorage.setItem(STORAGE_KEYS.WATCHLIST_ORDER, JSON.stringify(prefs.watchlistOrder));
+                needsRender = true;
+            }
+
+            // 5.1 Sync Favorite Links
+            if (prefs.favoriteLinks && Array.isArray(prefs.favoriteLinks)) {
+                const cloudLinks = prefs.favoriteLinks || [];
+
+                // Overwrite strategy: Trust the Cloud
+                AppState.preferences.favoriteLinks = cloudLinks;
+                localStorage.setItem(STORAGE_KEYS.FAVORITE_LINKS, JSON.stringify(cloudLinks));
+
+                // LIVE UPDATE: If modal is open, refresh it
+                if (!document.getElementById(IDS.MODAL_FAVORITE_LINKS).classList.contains(CSS_CLASSES.HIDDEN)) {
+                    import('../ui/FavoriteLinksUI.js').then(module => {
+                        const event = new CustomEvent(EVENTS.FAVORITE_LINKS_UPDATED);
+                        window.dispatchEvent(event);
+                    });
+                }
+            }
+
+            // 5.2 Sync Research Links
+            if (prefs.researchLinks && Array.isArray(prefs.researchLinks)) {
+                const cloudLinks = prefs.researchLinks || [];
+
+                // Overwrite strategy: Trust the Cloud
+                AppState.preferences.researchLinks = cloudLinks;
+                localStorage.setItem(STORAGE_KEYS.RESEARCH_LINKS, JSON.stringify(cloudLinks));
+
+                // LIVE UPDATE: Trigger refresh
+                window.dispatchEvent(new CustomEvent(EVENTS.RESEARCH_LINKS_UPDATED));
+            }
+
+            // 6. Sync Watchlist Mode
+            if (prefs.watchlistMode) {
+                AppState.preferences.watchlistMode = prefs.watchlistMode;
+                localStorage.setItem(STORAGE_KEYS.WATCHLIST_PICKER_MODE, prefs.watchlistMode);
+                needsRender = true;
+            }
+
+            // 7. Sync Hidden Watchlists
+            if (prefs.hiddenWatchlists && Array.isArray(prefs.hiddenWatchlists)) {
+                AppState.hiddenWatchlists = new Set(prefs.hiddenWatchlists.map(String));
+                localStorage.setItem(STORAGE_KEYS.HIDDEN_WATCHLISTS, JSON.stringify(prefs.hiddenWatchlists));
+                needsRender = true;
+            }
+
+            // 7.1 Sync Sort Config Map (CRITICAL FOR PERSISTENCE)
+            // RACE FIX: Skip if already synced earlier in this callback (step 2)
+            if (prefs.sortConfigMap && !_sortConfigMapSynced) {
+                const cloudJSON = JSON.stringify(prefs.sortConfigMap);
+                const localJSON = JSON.stringify(AppState.sortConfigMap);
+                if (cloudJSON !== localJSON) {
+                    AppState.sortConfigMap = prefs.sortConfigMap;
+                    localStorage.setItem(STORAGE_KEYS.SORT, cloudJSON);
+                }
+                // No render needed, but essential for next watchlist switch
+            }
+
+
+            // 7.2 Sync Dashboard Order & Hidden
+            if (prefs.dashboardOrder) {
+                AppState.preferences.dashboardOrder = prefs.dashboardOrder;
+                localStorage.setItem(STORAGE_KEYS.DASHBOARD_ORDER, JSON.stringify(prefs.dashboardOrder));
+                needsRender = true;
+            }
+
+            if (prefs.dashboardHidden) {
+                AppState.preferences.dashboardHidden = prefs.dashboardHidden;
+                localStorage.setItem(STORAGE_KEYS.DASHBOARD_HIDDEN, JSON.stringify(prefs.dashboardHidden));
+                needsRender = true;
+            }
+
+            // 7b. Sync Onboarded Flag
+            if (prefs.onboarded !== undefined) {
+                AppState.preferences.onboarded = !!prefs.onboarded;
+            }
+
+            // 7b. SANITIZE
+            this._sanitizeActiveWatchlist();
+
+            // 8. Sync Hidden Sort Options
+            if (prefs.hiddenSortOptions) {
+                const restored = {};
+                for (const key in prefs.hiddenSortOptions) {
+                    restored[key] = new Set((prefs.hiddenSortOptions[key] || []).map(String));
+                }
+                AppState.hiddenSortOptions = restored;
+                localStorage.setItem(STORAGE_KEYS.HIDDEN_SORT_OPTIONS, JSON.stringify(prefs.hiddenSortOptions));
+                needsRender = true;
+            }
+
+            // 8.1 Sync Custom Watchlist Names
+            if (prefs.customWatchlistNames) {
+                AppState.preferences.customWatchlistNames = prefs.customWatchlistNames;
+                localStorage.setItem(STORAGE_KEYS.CUSTOM_WATCHLIST_NAMES, JSON.stringify(prefs.customWatchlistNames));
+                // Force Title Update immediately if current watchlist is affected
+                const currentId = AppState.watchlist.id;
+                if (currentId && prefs.customWatchlistNames[currentId]) {
+                    AppState.watchlist.name = prefs.customWatchlistNames[currentId];
+                    needsRender = true;
+                }
+            }
+
+            // 9. Sync User Categories (Trust Cloud)
+            if (prefs.userCategories && Array.isArray(prefs.userCategories)) {
+                const remoteCats = prefs.userCategories;
+
+                // Overwrite strategy: Trust the Cloud
+                if (JSON.stringify(remoteCats) !== JSON.stringify(AppState.preferences.userCategories)) {
+                    AppState.preferences.userCategories = remoteCats;
+                    localStorage.setItem(STORAGE_KEYS.USER_CATEGORIES, JSON.stringify(remoteCats));
+                    needsRender = true;
+                }
+            }
+
+            // 10. Sync View Mode (New)
+            if (prefs.viewMode) {
+                if (AppState.viewMode !== prefs.viewMode) {
+                    AppState.viewMode = prefs.viewMode;
+                    localStorage.setItem(STORAGE_KEYS.VIEW_MODE, prefs.viewMode);
+                    needsRender = true;
+                }
+            }
+
+            // 11. Sync View Configs (Per-Watchlist)
+            if (prefs.viewConfigs) {
+                AppState.preferences.viewConfigs = prefs.viewConfigs;
+                localStorage.setItem(STORAGE_KEYS.VIEW_CONFIGS, JSON.stringify(prefs.viewConfigs));
+                // No immediate render needed, key lookup handles it on switch
+            }
+
+            if (needsRender) {
+                this.updateDataAndRender(false);
+            }
+
+            // SAFETY: If we didn't switch watchlists (which hides splash), but we are done loading
+            if (!this._initialRenderComplete) {
+                this._initialRenderComplete = true;
+                // RACE FIX: Only call handleSecurityLock if not already unlocked
+                // (avoids redundant isLocked = false write that triggers race detection)
+                if (!this._isUnlockedThisSession) {
+                    this.handleSecurityLock(); // Final check
+                }
+            }
+
+            // UNLOCK OUTBOUND SYNC: Cloud prefs have been applied, allow future syncs.
+            if (!this._cloudPrefsLoaded) {
+                this._cloudPrefsLoaded = true;
+            }
+        } finally {
+            this._syncingPreferences = false; // UNLOCK
         }
     }
-
-    /**
-     * Updates the technical connection status for debug logging and UI feedback.
-     * @param {string} msg - The status message
-     * @param {string} mode - 'ok' | 'warn' | 'err'
-     */
-    _updateDebugStatus(msg, mode) {
-        const colors = {
-            'ok': 'color: #28a745;',
-            'err': 'color: #dc3545;'
-        };
-
-        // Optional: Update a hidden technical status field if needed for power-user support
-        const debugNode = document.getElementById('debug-conn-status');
-        if (debugNode) {
-            debugNode.textContent = msg;
-            debugNode.className = `technical-status ${mode}`;
-        }
-    }
-
     /**
      * Handles the security lock/unlock flow.
      */
     async handleSecurityLock() {
-        // 1. SESSION GUARD: If already unlocked this session, don't re-lock.
+        // 1. SESSION GUARD: If already unlocked this session, stay unlocked.
         if (this._isUnlockedThisSession) {
-            // RACE FIX: Only write if state actually needs to change
-            if (AppState.isLocked !== false) {
-                AppState.isLocked = false;
-            }
-            document.dispatchEvent(new CustomEvent(EVENTS.FIREBASE_DATA_LOADED));
+            if (AppState.isLocked !== false) AppState.isLocked = false;
             return;
         }
 
@@ -1319,14 +1233,14 @@ export class AppController {
         // SECURITY GATE: 
         // If we haven't loaded Cloud Prefs yet, we MUST wait (Default Secure).
         if (!this._cloudPrefsLoaded && AppState.user) {
-            AppState.isLocked = true; // Force Lock visual until we know for sure
+            if (AppState.isLocked !== true) AppState.isLocked = true; // Force Lock visual until we know for sure
             return;
         }
 
         // Now we have prefs. Check if we should lock.
         if (!this.securityController.shouldLock()) {
             // NOT LOCKED
-            AppState.isLocked = false;
+            if (AppState.isLocked !== false) AppState.isLocked = false;
             this._isUnlockedThisSession = true; // Mark as passed
             this._lockModalActive = false;
             document.dispatchEvent(new CustomEvent(EVENTS.FIREBASE_DATA_LOADED));
@@ -1334,14 +1248,14 @@ export class AppController {
         }
 
         // MUST LOCK
-        AppState.isLocked = true;
+        if (AppState.isLocked !== true) AppState.isLocked = true;
         this._lockModalActive = true;
 
         await SecurityUI.renderUnlockModal({
             onUnlock: (pin) => {
                 const isValid = this.securityController.verifyPin(pin);
                 if (isValid) {
-                    AppState.isLocked = false;
+                    if (AppState.isLocked !== false) AppState.isLocked = false;
                     this._isUnlockedThisSession = true;
                     this._lockModalActive = false; // Resolved
                     document.dispatchEvent(new CustomEvent(EVENTS.FIREBASE_DATA_LOADED));
@@ -1350,9 +1264,9 @@ export class AppController {
                 return isValid;
             },
             onBiometric: async () => {
-                const isAuthed = await this.securityController.authenticateBiometric();
-                if (isAuthed) {
-                    AppState.isLocked = false;
+                const success = await this.securityController.authenticateBiometric();
+                if (success) {
+                    if (AppState.isLocked !== false) AppState.isLocked = false;
                     this._isUnlockedThisSession = true;
                     this._lockModalActive = false; // Resolved
                     document.dispatchEvent(new CustomEvent(EVENTS.FIREBASE_DATA_LOADED));
@@ -1360,6 +1274,7 @@ export class AppController {
                     document.getElementById(IDS.SECURITY_UNLOCK_MODAL)?.remove();
                     this.updateDataAndRender();
                 }
+                return success;
             }
         });
     }
@@ -1701,7 +1616,7 @@ export class AppController {
         this.updateDataAndRender(false);
     }
 
-    async handleSwitchWatchlist(watchlistId, isBoot = false) {
+    async handleSwitchWatchlist(watchlistId, isBoot = false, skipPersist = false) {
         // QUICK EXIT: If same watchlist and not boot, ignore.
         if (!isBoot && watchlistId === AppState.watchlist.id) return;
 
@@ -1716,29 +1631,35 @@ export class AppController {
         const customNames = AppState.preferences.customWatchlistNames || {};
 
         if (watchlistId === CASH_WATCHLIST_ID) {
-            AppState.watchlist.type = 'cash';
-            AppState.watchlist.id = CASH_WATCHLIST_ID;
-            AppState.watchlist.name = customNames[CASH_WATCHLIST_ID] || 'Cash & Assets';
-            AppState.isPortfolioVisible = false;
+            if (AppState.watchlist.type !== 'cash') AppState.watchlist.type = 'cash';
+            if (AppState.watchlist.id !== CASH_WATCHLIST_ID) AppState.watchlist.id = CASH_WATCHLIST_ID;
+            const newName = customNames[CASH_WATCHLIST_ID] || 'Cash & Assets';
+            if (AppState.watchlist.name !== newName) AppState.watchlist.name = newName;
+            if (AppState.isPortfolioVisible !== false) AppState.isPortfolioVisible = false;
         } else {
-            AppState.watchlist.type = 'stock';
-            AppState.watchlist.id = (watchlistId === ALL_SHARES_ID) ? ALL_SHARES_ID : watchlistId;
+            if (AppState.watchlist.type !== 'stock') AppState.watchlist.type = 'stock';
+            const targetId = (watchlistId === ALL_SHARES_ID) ? ALL_SHARES_ID : watchlistId;
+            if (AppState.watchlist.id !== targetId) AppState.watchlist.id = targetId;
 
             if (watchlistId === 'portfolio' || watchlistId === null) {
-                AppState.watchlist.id = 'portfolio';
-                AppState.watchlist.name = customNames['portfolio'] || 'Portfolio';
-                AppState.isPortfolioVisible = true;
+                if (AppState.watchlist.id !== 'portfolio') AppState.watchlist.id = 'portfolio';
+                const newName = customNames['portfolio'] || 'Portfolio';
+                if (AppState.watchlist.name !== newName) AppState.watchlist.name = newName;
+                if (AppState.isPortfolioVisible !== true) AppState.isPortfolioVisible = true;
             } else if (watchlistId === DASHBOARD_WATCHLIST_ID) {
-                AppState.watchlist.id = DASHBOARD_WATCHLIST_ID;
-                AppState.watchlist.name = customNames[DASHBOARD_WATCHLIST_ID] || 'Dashboard';
-                AppState.isPortfolioVisible = false;
+                if (AppState.watchlist.id !== DASHBOARD_WATCHLIST_ID) AppState.watchlist.id = DASHBOARD_WATCHLIST_ID;
+                const newName = customNames[DASHBOARD_WATCHLIST_ID] || 'Dashboard';
+                if (AppState.watchlist.name !== newName) AppState.watchlist.name = newName;
+                if (AppState.isPortfolioVisible !== false) AppState.isPortfolioVisible = false;
             } else if (watchlistId === ALL_SHARES_ID) {
-                AppState.watchlist.name = customNames[ALL_SHARES_ID] || 'All Shares';
-                AppState.isPortfolioVisible = false;
+                const newName = customNames[ALL_SHARES_ID] || 'All Shares';
+                if (AppState.watchlist.name !== newName) AppState.watchlist.name = newName;
+                if (AppState.isPortfolioVisible !== false) AppState.isPortfolioVisible = false;
             } else {
                 const w = (AppState.data.watchlists || []).find(w => w.id === watchlistId);
-                AppState.watchlist.name = w ? w.name : (customNames[watchlistId] || 'Watchlist');
-                AppState.isPortfolioVisible = false;
+                const newName = w ? w.name : (customNames[watchlistId] || 'Watchlist');
+                if (AppState.watchlist.name !== newName) AppState.watchlist.name = newName;
+                if (AppState.isPortfolioVisible !== false) AppState.isPortfolioVisible = false;
             }
         }
 
@@ -1810,7 +1731,9 @@ export class AppController {
                 watchlistId;
 
         const savedView = AppState.getViewModeForWatchlist(effectiveId);
-        AppState.viewMode = savedView;
+        if (AppState.viewMode !== savedView) {
+            AppState.viewMode = savedView;
+        }
 
         // Update the Header Icon
         if (this.headerLayout) {
@@ -1894,7 +1817,7 @@ export class AppController {
         }
 
         // Persist watchlist state (Fire-and-Forget)
-        AppState.saveWatchlistState();
+        if (!skipPersist) AppState.saveWatchlistState();
     }
 
     /**
