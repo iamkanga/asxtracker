@@ -37,6 +37,7 @@ import { ScrollManager } from '../ui/ScrollManager.js';
 import { IDS, CSS_CLASSES, EVENTS, WATCHLIST_ICON_POOL, ALL_SHARES_ID, CASH_WATCHLIST_ID, DASHBOARD_WATCHLIST_ID, PORTFOLIO_ID, UI_ICONS, USER_MESSAGES, STORAGE_KEYS, WATCHLIST_MODES, SORT_OPTIONS, WATCHLIST_NAMES, DASHBOARD_SYMBOLS, DASHBOARD_LINKS, SUMMARY_TYPES, BRIEFING_BLACKLIST } from '../utils/AppConstants.js?v=1029';
 import { ToastManager } from '../ui/ToastManager.js';
 import { navManager } from '../utils/NavigationManager.js';
+import { PullToRefresh } from '../ui/PullToRefresh.js';
 // renderSortSelect removed
 
 export class AppController {
@@ -103,6 +104,10 @@ export class AppController {
         // Initialize Modules
         AiSummaryUI.init();
         ScrollManager.init();
+
+        // Initialize Pull to Refresh (PWA support)
+        const ptr = new PullToRefresh();
+        ptr.init();
 
         // CRITICAL DEPLOYMENT FIX: Force Unregister Service Worker to fix stale cache issues (User reported stuck on old version)
         if ('serviceWorker' in navigator) {

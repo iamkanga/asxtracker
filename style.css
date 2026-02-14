@@ -553,6 +553,8 @@ body {
     /* Width constraints moved to inner container */
     margin: 0;
     padding: 0;
+    overscroll-behavior-y: none;
+    /* Prevent native PWA pull-to-refresh conflict */
 }
 
 #content-container {
