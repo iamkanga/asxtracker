@@ -233,7 +233,7 @@ export class HeaderLayout {
                 pressTimer = setTimeout(() => {
                     isLongPress = true;
                     if (navigator.vibrate) navigator.vibrate(50);
-                    VisualSettingsHUD.show();
+                    VisualSettingsHUD.toggle();
                 }, LONG_PRESS_DURATION);
             };
 

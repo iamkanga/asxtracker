@@ -33,6 +33,15 @@ export class VisualSettingsHUD {
         }
     }
 
+    static toggle() {
+        const hud = document.getElementById(this.ID);
+        if (hud && hud.classList.contains('visible')) {
+            this.hide();
+        } else {
+            this.show();
+        }
+    }
+
     static render(container) {
         const prefs = AppState.preferences.containerBorders || { sides: [0, 0, 0, 0], thickness: 1 };
         // Gradient Strength Logic matches HeaderLayout.js
