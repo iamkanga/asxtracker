@@ -1234,7 +1234,8 @@ export class NotificationUI {
     static _renderCard(item, type, rules = {}) {
         // --- ROBUST KEY MAPPING & ENRICHMENT ---
         let code = String(item.code || item.shareName || item.symbol || item.s || item.shareCode || '???').toUpperCase();
-        let name = item.name || '';
+        let name = item.name || item.companyName || '';
+        if (!name && item.desc) name = item.desc; // common alias
         let rawPrice = item.live || item.price || item.last || item.closePrice || item.p || 0;
         let price = formatCurrency(rawPrice);
 
@@ -1276,7 +1277,13 @@ export class NotificationUI {
         // --- ENRICHMENT APPLICATION ---
         if (liveShare) {
             // Name polyfill
-            if (!name) name = liveShare.companyName || liveShare.name || '';
+            if (!name) name = liveShare.companyName || liveShare.name || liveShare.desc || '';
+
+            // If still empty, try one last lookup in global shares list
+            if (!name && AppState.data.shares) {
+                const fallback = AppState.data.shares.find(s => (s.code === cleanCode || s.code === code));
+                if (fallback) name = fallback.name || fallback.companyName || '';
+            }
 
             // --- NAME CLEANING ---
             name = name

@@ -553,7 +553,7 @@ export class DataService {
             // Set the map key using the strictly normalized code
             normalizedPrices.set(code, {
                 code: code,
-                name: item.CompanyName || item.companyName || '', // Support both casings
+                name: item.name || item.CompanyName || item.companyName || '', // Support both casings
                 live: isLiveValid ? live : 0,
                 prevClose: isPrevValid ? prevClose : 0,
                 // ROBUST NORMALIZATION: Check multiple casing variants from API/Sheet for 52-WEEK data ONLY

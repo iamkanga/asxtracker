@@ -525,6 +525,10 @@ export class ViewRenderer {
                                 <img src="${faviconUrl}" class="favicon-icon" onerror="this.src='${KANGAROO_ICON_SRC}'" alt="">
                                 <span class="${CSS_CLASSES.CARD_CODE}" data-code="${item.code}">${item.code}</span>
                             </div>
+                            <!-- Company Name (New) -->
+                            <div class="card-name-label" style="font-size: 0.75rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; margin-top: 2px;">
+                                ${item.name || item.companyName || ''}
+                            </div>
                             
                             <!-- Row 2: Utility Bar (Underneath Code) -->
                             ${utilityBarHtml}
@@ -788,6 +792,13 @@ export class ViewRenderer {
         this._currentDetailsStock = stock;
         const existingModal = document.getElementById(IDS.STOCK_DETAILS_MODAL);
         if (existingModal) existingModal.remove();
+
+        // FAILSAFE: Resolve Name if missing (e.g. from partial updates)
+        if (!stock.name) {
+            const found = AppState.data.shares.find(s => (s.code === stock.code || s.shareName === stock.code));
+            if (found && found.name) stock.name = found.name;
+            else if (found && found.companyName) stock.name = found.companyName;
+        }
 
         // Calculate Derived Metrics
         const currentPrice = stock.currentPrice || 0;
