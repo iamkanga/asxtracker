@@ -318,6 +318,31 @@ export class SharePieChart {
             el.addEventListener('mouseenter', onEnter);
             el.addEventListener('mouseleave', onLeave);
 
+            // Click to scroll and highlight
+            el.addEventListener('click', () => {
+                if (el.classList.contains('pie-slice')) {
+                    const row = modal.querySelector(`.interactive-row[data-id="${label}"]`);
+                    if (row) {
+                        row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                        // Visual Feedback: Temporary stronger highlight
+                        const prevTransition = row.style.transition;
+                        row.style.transition = 'background 0.3s ease';
+                        row.style.background = 'rgba(255,255,255,0.2)';
+
+                        setTimeout(() => {
+                            // If still hovering, keep hover color, else reset
+                            if (row.matches(':hover')) {
+                                row.style.background = 'rgba(255,255,255,0.08)';
+                            } else {
+                                row.style.background = 'transparent';
+                            }
+                            row.style.transition = prevTransition;
+                        }, 1000);
+                    }
+                }
+            });
+
             // Touch support for mobile tapping on rows
             el.addEventListener('touchstart', (e) => {
                 onEnter();
