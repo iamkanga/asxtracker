@@ -391,8 +391,8 @@ export class NotificationUI {
                         <button id="${IDS.BTN_DAILY_BRIEFING}" title="${UI_LABELS.DAILY_BRIEFING_TITLE}" style="background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem;">
                             <i class="fas fa-coffee"></i>
                         </button>
-                        <button id="${IDS.BTN_MARKET_PULSE}" title="${UI_LABELS.MARKET_PULSE_TITLE}" style="background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem;">
-                            <i class="fas fa-heartbeat"></i>
+                        <button id="${IDS.BTN_ANNOUNCEMENTS}" title="${UI_LABELS.ANNOUNCEMENTS_TITLE}" style="background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem;">
+                            <i class="fas fa-bullhorn"></i>
                         </button>
                         <button id="${IDS.NOTIF_SETTINGS_BTN}" title="${UI_LABELS.NOTIFICATION_SETTINGS}" style="background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem;">
                             <i class="fas ${UI_ICONS.PEN}"></i>
@@ -492,12 +492,13 @@ export class NotificationUI {
             });
         }
 
-        // Market Pulse Button
-        const marketPulseBtn = modal.querySelector(`#${IDS.BTN_MARKET_PULSE}`);
-        if (marketPulseBtn) {
-            marketPulseBtn.addEventListener('click', () => {
-
-                SnapshotUI.show();
+        // Announcements Button
+        const announceBtn = modal.querySelector(`#${IDS.BTN_ANNOUNCEMENTS}`);
+        if (announceBtn) {
+            announceBtn.addEventListener('click', () => {
+                import('./MarketIndexController.js').then(({ marketIndexController }) => {
+                    marketIndexController.openModal();
+                });
             });
         }
 

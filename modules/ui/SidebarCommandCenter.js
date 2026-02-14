@@ -3,6 +3,8 @@ import { AppState } from '../state/AppState.js';
 import { notificationStore } from '../state/NotificationStore.js'; // FIX: Interact with Global Store
 import { ToastManager } from './ToastManager.js';
 import { VisualSettingsHUD } from './VisualSettingsHUD.js';
+import { AuthService } from '../auth/AuthService.js';
+
 
 
 export class SidebarCommandCenter {
@@ -229,14 +231,12 @@ export class SidebarCommandCenter {
                         <button class="command-grid-item" id="nav-calculator" title="Calculators">
                             <i class="fas fa-calculator command-icon"></i>
                         </button>
-                        <button class="command-grid-item" id="nav-pulse" title="Market Pulse">
-                            <i class="fas fa-heartbeat command-icon"></i>
+                        <button class="command-grid-item" id="nav-announcements" title="Announcements">
+                            <i class="fas fa-bullhorn command-icon"></i>
                         </button>
-                         <!-- SWAPPED: Visuals now here (was Favorites) -->
                         <button class="command-grid-item" id="nav-visuals" title="Visual Style">
                             <i class="fas fa-palette command-icon"></i>
                         </button>
-                        <!-- SWAPPED: Favorites now here (was Visuals) -->
                         <button class="command-grid-item" id="nav-favorites" title="Favorite Links">
                             <i class="fas fa-link command-icon"></i>
                         </button>
@@ -266,6 +266,7 @@ export class SidebarCommandCenter {
                                 <i class="fas fa-pen sub-icon" style="font-size: 0.9rem; right: -2px; bottom: -2px;"></i>
                             </div>
                         </button>
+
                         <button class="command-grid-item" id="nav-notify" title="Notifications">
                             <span class="command-icon" style="display: flex; align-items: center; justify-content: center; width: 3.5rem; height: 3.5rem;">
                                 ${kangarooSVG}
@@ -286,12 +287,26 @@ export class SidebarCommandCenter {
                             <i class="fas fa-cog command-icon"></i>
                         </button>
                     </div>
-                     <!-- Notification Count Text -->
-                    <div style="text-align: center; margin-top: 8px; font-size: 0.75rem; color: var(--text-muted); opacity: 0.8;">
-                        Notifications: <span style="color: var(--color-accent); font-weight:600;">${notifCount}</span>
+
+                    <!-- Layout Footer: Notification Count & Auth -->
+                    <div class="command-center-footer" style="margin-top: 24px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.05);">
+                        <div style="font-size: 0.75rem; color: var(--text-muted); opacity: 0.8; margin-bottom: 12px; text-align: center;">
+                            Notifications: <span style="color: var(--color-accent); font-weight:600;">${notifCount}</span>
+                        </div>
+
+                        ${AppState.user ? `
+                            <button id="sidebar-logout-btn" class="sidebar-btn" style="color: #ff3131; background: transparent; border: none; padding: 12px 0; font-size: 1rem; font-weight: 600; justify-content: flex-start; gap: 12px; width: 100%;">
+                                <i class="fas fa-sign-out-alt" style="color: #ff3131; width: 20px; text-align: center;"></i> Logout
+                            </button>
+                        ` : `
+                            <button id="sidebar-login-btn" class="sidebar-btn" style="color: var(--color-accent); background: transparent; border: none; padding: 12px 0; font-size: 1rem; font-weight: 600; justify-content: flex-start; gap: 12px; width: 100%;">
+                                <i class="fab fa-google" style="color: var(--color-accent); width: 20px; text-align: center;"></i> Login
+                            </button>
+                        `}
                     </div>
                 </div>
             </div>
+
         `;
     }
 
@@ -330,14 +345,17 @@ export class SidebarCommandCenter {
                 document.dispatchEvent(new CustomEvent(EVENTS.SHOW_DAILY_BRIEFING));
                 break;
 
-            case 'nav-pulse':
-                // Grid Button -> Opens Market Pulse (Legacy Pulse)
-                // Try to find the legacy pulse button or dispatch event directly
-                const pulseBtn = document.getElementById('sidebar-market-pulse-btn');
-                if (pulseBtn) {
-                    pulseBtn.click();
+            case 'nav-announcements':
+                // Grid Button -> Opens Announcements (Market Stream)
+                this._closeSidebar();
+                const announceBtn = document.getElementById('sidebar-market-stream-btn');
+                if (announceBtn) {
+                    announceBtn.click();
                 } else {
-                    document.dispatchEvent(new CustomEvent('open-market-pulse'));
+                    // Fallback to controller if button not found
+                    import('./MarketIndexController.js').then(({ marketIndexController }) => {
+                        marketIndexController.openModal();
+                    });
                 }
                 break;
 
@@ -378,6 +396,19 @@ export class SidebarCommandCenter {
                 this._closeSidebar();
                 VisualSettingsHUD.show();
                 break;
+
+            case 'sidebar-login-btn':
+                // Auth: Login
+                this._closeSidebar();
+                AuthService.signIn();
+                break;
+
+            case 'sidebar-logout-btn':
+                // Auth: Logout
+                this._closeSidebar();
+                AuthService.signOut();
+                break;
+
 
             case 'act-add':
                 this._closeSidebar();

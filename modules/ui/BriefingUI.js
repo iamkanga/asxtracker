@@ -202,12 +202,17 @@ export class BriefingUI {
                         <div class="${CSS_CLASSES.HERO_LABEL}" style="margin-bottom: 0;">Daily Briefing</div>
                     </div>
 
-                    <!-- Right: Actions (Market Pulse & Portfolio) -->
+                    <!-- Right: Actions (Market Pulse, Announcements & Portfolio) -->
                     <div style="display: flex; gap: 16px; align-items: center;">
                         
                         <!-- Market Pulse Icon (Coffee Color) -->
                         <div style="opacity: 1; cursor: pointer;" id="hero-pulse-btn" title="Market Pulse">
                             <i class="fas fa-heartbeat" style="font-size: 1.4rem; color: var(--color-accent);"></i>
+                        </div>
+
+                        <!-- Announcements Icon (Bullhorn) -->
+                        <div style="opacity: 1; cursor: pointer;" id="hero-announce-btn" title="Announcements">
+                            <i class="fas fa-bullhorn" style="font-size: 1.4rem; color: var(--color-accent);"></i>
                         </div>
 
                         <!-- Portfolio Icon (Coffee Color) -->
@@ -258,6 +263,18 @@ export class BriefingUI {
                 pulseBtn.onclick = (e) => {
                     e.stopPropagation();
                     SnapshotUI.show();
+                };
+            }
+
+            // Interaction: Announcements
+            const announceBtn = heroCard.querySelector('#hero-announce-btn');
+            if (announceBtn) {
+                announceBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    // Import and open Market Stream
+                    import('./MarketIndexController.js').then(({ marketIndexController }) => {
+                        marketIndexController.openModal();
+                    });
                 };
             }
 

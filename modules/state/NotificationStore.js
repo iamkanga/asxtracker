@@ -10,7 +10,7 @@ import { AppState } from './AppState.js';
 // Import userStore to listen for Preference Updates
 import { userStore } from '../data/DataService.js';
 import { EVENTS, STORAGE_KEYS, DASHBOARD_SYMBOLS, SECTOR_INDUSTRY_MAP } from '../utils/AppConstants.js';
-import { doc, getDoc, updateDoc, arrayUnion, arrayRemove, onSnapshot, setDoc, getDocFromServer } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, getDoc, updateDoc, arrayUnion, arrayRemove, onSnapshot, setDoc, getDocFromServer, collection, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getBestShareMatch } from '../data/DataProcessor.js';
 
 const APP_ID = "asx-watchlist-app";
@@ -34,6 +34,8 @@ export class NotificationStore {
         this.dataTimestamp = null; // Store last update time from DB
         this.pinnedAlerts = [];
         this.scannerRules = { up: {}, down: {} }; // Capture rules
+        this.marketIndexAlerts = []; // Market Index Stream Data
+        this.unsubscribeMarketIndex = null; // Listener for Market Index
         this.lastViewed = { total: 0, custom: 0 };
         this.unsubscribePinned = null;
         this.unsubscribePrefs = null; // Subscription handle
@@ -58,6 +60,8 @@ export class NotificationStore {
                 this._subscribeToPinned(userId);
                 // Subscribe to Live Preferences (Rules)
                 this._subscribeToPreferences(userId);
+                // Subscribe to Market Index Stream
+                this._subscribeToMarketIndex();
 
                 // Fetch data implies a network call. We do this once on init.
                 await this.refreshDailyData();
@@ -675,8 +679,8 @@ export class NotificationStore {
             if (!match) return false;
 
             // Debug specific stock
-            const isDebug = (hit.code === 'BHP' || hit.code === 'CBA' || (hit.code && hit.code.includes('YOUR_STOCK_CODE_HERE'))); // Replace if known
-            if (isDebug) console.log(`[NotificationStore] Checking ${hit.code} (${hit.intent})...`);
+            // const isDebug = (hit.code === 'BHP' || hit.code === 'CBA' || (hit.code && hit.code.includes('YOUR_STOCK_CODE_HERE'))); // Replace if known
+            // if (isDebug) console.log(`[NotificationStore] Checking ${hit.code} (${hit.intent})...`);
 
 
             // --- TARGET HIT GUARD ---
@@ -2296,6 +2300,80 @@ export class NotificationStore {
             console.groupEnd();
         });
         console.log("%c🔍 PROBE COMPLETE", "color: #00ffff; font-weight: bold;");
+    }
+
+    /**
+     * Subscribes to the Market Index alerts stream in Firestore.
+     * Listens for the latest batches of alerts.
+     */
+    _subscribeToMarketIndex() {
+        if (this.unsubscribeMarketIndex) this.unsubscribeMarketIndex();
+
+        try {
+            // "artifacts/asx-watchlist-app/alerts_stream"
+            // Note: APP_ID is "asx-watchlist-app" defined at top
+            const streamRef = collection(db, "artifacts", APP_ID, "alerts_stream");
+            const q = query(streamRef, orderBy("timestamp", "desc"), limit(20));
+
+            this.unsubscribeMarketIndex = onSnapshot(q, (snapshot) => {
+                const batches = [];
+                snapshot.forEach((doc) => {
+                    batches.push(doc.data());
+                });
+
+                console.log('[NotificationStore] Raw Stream Batches:', batches); // DEBUG: Inspect Data Structure
+
+                // Flatten batches into a single list of alerts
+                let allAlerts = [];
+                batches.forEach(batch => {
+                    let items = [];
+                    if (batch.items && Array.isArray(batch.items)) {
+                        items = batch.items;
+                    } else if (batch.latestAlerts && Array.isArray(batch.latestAlerts)) {
+                        items = batch.latestAlerts;
+                    }
+
+                    // Pre-process items to ensure timestamp exists
+                    items.forEach(item => {
+                        // Inherit Batch Timestamp if item missing it
+                        if (!item.timestamp && item.date) {
+                            item.timestamp = new Date(item.date).getTime();
+                        } else if (!item.timestamp && batch.timestamp) {
+                            item.timestamp = batch.timestamp;
+                        }
+                        allAlerts.push(item);
+                    });
+                });
+
+                // Sort by timestamp descending (newest first)
+                // Filter out invalid items just in case
+                this.marketIndexAlerts = allAlerts
+                    .filter(item => item && item.timestamp)
+                    .sort((a, b) => b.timestamp - a.timestamp);
+
+                // Dispatch event for UI
+                document.dispatchEvent(new CustomEvent('MARKET_INDEX_UPDATED', {
+                    detail: {
+                        count: this.marketIndexAlerts.length,
+                        alerts: this.marketIndexAlerts
+                    }
+                }));
+
+                console.log(`[NotificationStore] Market Index Stream Updated: ${this.marketIndexAlerts.length} items.`);
+            }, (error) => {
+                console.error("[NotificationStore] Market Index Stream Error:", error);
+            });
+
+        } catch (e) {
+            console.error("[NotificationStore] Failed to subscribe to Market Index:", e);
+        }
+    }
+
+    /**
+     * Returns the current list of Market Index alerts.
+     */
+    getMarketIndexAlerts() {
+        return this.marketIndexAlerts || [];
     }
 }
 

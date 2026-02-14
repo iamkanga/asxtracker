@@ -11,11 +11,17 @@ __pycache__/
 .env
 .vscode/
 .idea/
+firestore.rules
+firebase.json
+.firebaserc
+global-alerts.gs
+market-index-integration.gs
 
 # Data Dumps & Workbooks
 *.xlsx
 *.csv
 *.xls
+App Database - Prices*.csv
 
 # Logs & Debug Output
 *.log
@@ -64,6 +70,7 @@ enrich_indices.py
 detail_sample.py
 dump_sheets.py
 diagnostic_raw_dump.js
+diagnose_*.js
 debug-*.gs
 integrity-audit.gs
 system-*.gs
@@ -71,6 +78,8 @@ test-*.js
 scientific-audit.html
 handover_*.md
 walkthrough.md
+refactor_*.md
+handoff_*.md
 FIND_MY_MASTER.gs
 git_files.txt
 

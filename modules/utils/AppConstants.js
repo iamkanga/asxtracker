@@ -1626,6 +1626,7 @@ export const IDS = {
     NOTIF_TIMESTAMP: 'notif-timestamp',
     NOTIF_SETTINGS_BTN: 'notif-settings-btn',
     BTN_DAILY_BRIEFING: 'btn-daily-briefing',
+    BTN_ANNOUNCEMENTS: 'btn-announcements',
     AI_SUMMARY_MODAL: 'ai-summary-modal',
     AI_PROMPT_EDITOR: 'ai-prompt-editor-container'
 };
@@ -1634,6 +1635,7 @@ export const UI_LABELS = {
     NOTIFICATIONS_TITLE: 'Notifications',
     MARKET_PULSE_TITLE: 'Market Pulse',
     DAILY_BRIEFING_TITLE: 'Daily Brief',
+    ANNOUNCEMENTS_TITLE: 'Announcements',
     NOTIFICATION_SETTINGS: 'Notification Settings',
     DISMISS_BADGE: 'Dismiss Badge',
     CLOSE: 'Close',

@@ -6,6 +6,7 @@
 
 import { AppController } from './modules/controllers/AppController.js?v=1132';
 import { SplashScreen } from './modules/ui/SplashScreen.js';
+import { marketIndexController } from './modules/ui/MarketIndexController.js';
 
 console.log('%c [MAIN] ASX TRACKER v1132 ', 'background: #222; color: #bada55; font-weight: bold;');
 
