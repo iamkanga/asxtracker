@@ -463,7 +463,14 @@ export class DataService {
         // RESILIENCE FIX: If dashboardData is missing/empty, auto-extract from the primary items list
         if (dashboardData.length === 0 && Array.isArray(items)) {
             dashboardData = items.filter(item => {
-                const code = String(item.ASXCode || '').trim().toUpperCase();
+                const code = String(item.ASXCode || item.code || '').trim().toUpperCase();
+                const type = String(item.Type || item.type || '').trim();
+
+                // 1. Type-Based Detection (Most Accurate)
+                if (['Index', 'Currency', 'Crypto', 'Commodity'].includes(type) || type === 'Index') {
+                    return true;
+                }
+
                 return code.startsWith('^') ||
                     code.includes('.') ||
                     code.includes('=') ||
@@ -471,8 +478,8 @@ export class DataService {
                     code === 'XKO';
             }).map(item => ({
                 ...item,
-                code: String(item.ASXCode || '').trim().toUpperCase(),
-                name: item.CompanyName || item.Name || item.companyName || String(item.ASXCode || '').trim().toUpperCase()
+                code: String(item.ASXCode || item.code || '').trim().toUpperCase(),
+                name: item.CompanyName || item.Name || item.companyName || item.name || String(item.ASXCode || item.code || '').trim().toUpperCase()
             }));
             if (dashboardData.length > 0) {
                 // console.log(`[DataService] Recovered ${dashboardData.length} dashboard items from flat payload.`);
