@@ -5,6 +5,7 @@
  */
 
 import { AppState } from '../state/AppState.js';
+import { StateAuditor } from '../state/StateAuditor.js';
 import { CSS_CLASSES, IDS, UI_ICONS, EVENTS, UI_LABELS } from '../utils/AppConstants.js';
 import { navManager } from '../utils/NavigationManager.js';
 import { formatCurrency, formatPercent } from '../utils/formatters.js';
@@ -28,6 +29,15 @@ export class SnapshotUI {
         this._updateGrid(modal);
         this._bindEvents(modal);
 
+        // REACTIVE UPDATE: Keep Snapshot Live
+        if (StateAuditor && typeof StateAuditor.on === 'function') {
+            modal._priceUnsub = StateAuditor.on('PRICES_UPDATED', () => {
+                if (document.body.contains(modal) && modal.classList.contains(CSS_CLASSES.SHOW)) {
+                    this._updateGrid(modal);
+                }
+            });
+        }
+
         requestAnimationFrame(() => {
             modal.classList.remove(CSS_CLASSES.HIDDEN);
             modal.classList.add(CSS_CLASSES.SHOW);
@@ -37,6 +47,12 @@ export class SnapshotUI {
     static _close(modal) {
         modal.classList.remove(CSS_CLASSES.SHOW);
         modal.classList.add(CSS_CLASSES.HIDDEN);
+
+        // Unsubscribe from Live Updates
+        if (modal._priceUnsub) {
+            modal._priceUnsub();
+            modal._priceUnsub = null;
+        }
 
         // No need for complex restoration since Briefing was never hidden.
         // Just remove ourselves.

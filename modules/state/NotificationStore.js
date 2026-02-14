@@ -7,6 +7,7 @@
 
 import { db } from '../auth/AuthService.js';
 import { AppState } from './AppState.js';
+import { StateAuditor } from './StateAuditor.js';
 // Import userStore to listen for Preference Updates
 import { userStore } from '../data/DataService.js';
 import { EVENTS, STORAGE_KEYS, DASHBOARD_SYMBOLS, SECTOR_INDUSTRY_MAP } from '../utils/AppConstants.js';
@@ -74,10 +75,9 @@ export class NotificationStore {
                 await this.refreshScannerRules();
             }
 
-            // --- BIND TO LIVE DATA UPDATES ---
-            // When AppController fetches new prices, it dispatches REQUEST_RENDER_WATCHLIST.
-            // We use this signal to re-calculate Client-Side Alerts (which depend on Live Prices).
-            document.addEventListener(EVENTS.REQUEST_RENDER_WATCHLIST, () => {
+            // --- BIND TO LIVE DATA UPDATES (Event-Driven) ---
+            // Replaces manual calls from AppController and dead legacy events.
+            StateAuditor.on('PRICES_UPDATED', () => {
                 this._notifyCountChange();
             });
         } catch (err) {

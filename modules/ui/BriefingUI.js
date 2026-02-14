@@ -6,6 +6,7 @@
 
 import { notificationStore } from '../state/NotificationStore.js';
 import { AppState } from '../state/AppState.js';
+import { StateAuditor } from '../state/StateAuditor.js';
 import { CSS_CLASSES, IDS, UI_ICONS, EVENTS, UI_LABELS } from '../utils/AppConstants.js';
 import { navManager } from '../utils/NavigationManager.js';
 import { formatCurrency, formatPercent } from '../utils/formatters.js';
@@ -32,6 +33,15 @@ export class BriefingUI {
 
         // Trigger Data Calculation
         this._updateDigest(modal);
+
+        // REACTIVE UPDATE: Keep Briefing Live
+        if (StateAuditor && typeof StateAuditor.on === 'function') {
+            modal._priceUnsub = StateAuditor.on('PRICES_UPDATED', () => {
+                if (document.body.contains(modal) && !modal.classList.contains(CSS_CLASSES.HIDDEN)) {
+                    this._updateDigest(modal);
+                }
+            });
+        }
     }
 
     static _renderModal() {
@@ -607,6 +617,12 @@ export class BriefingUI {
     }
 
     static _close(modal) {
+        // Unsubscribe from Live Updates
+        if (modal._priceUnsub) {
+            modal._priceUnsub();
+            modal._priceUnsub = null;
+        }
+
         modal.classList.add(CSS_CLASSES.HIDDEN);
         setTimeout(() => modal.remove(), 300);
         if (modal._navActive) {

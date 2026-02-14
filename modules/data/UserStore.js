@@ -64,12 +64,20 @@ export class UserStore {
         const cashRef = collection(db, `artifacts/${APP_ID}/users/${userId}/cashCategories`);
         const watchlistsRef = collection(db, `artifacts/${APP_ID}/users/${userId}/watchlists`);
 
-        // Helper to notify listener
+        // Helper to notify listener (DEBOUNCED via setTimeout)
+        // Firestore fires onSnapshot for shares, cash, and watchlists independently.
+        // Each fires in a separate setTimeout (Firestore internal scheduling), so
+        // queueMicrotask cannot batch them. Using setTimeout with a 20ms window
+        // batches all 3 into a SINGLE onDataChange callback.
+        let _notifyTimer = null;
         const notify = () => {
-            if (onDataChange) {
-                // Pass the centralized data structure
-                onDataChange(AppState.data);
-            }
+            if (_notifyTimer) clearTimeout(_notifyTimer);
+            _notifyTimer = setTimeout(() => {
+                _notifyTimer = null;
+                if (onDataChange) {
+                    onDataChange(AppState.data);
+                }
+            }, 20); // 20ms window: enough to catch all 3 snapshots (~7ms apart)
         };
 
         // Subscribe to Shares

@@ -5,6 +5,7 @@
 import { CSS_CLASSES } from '../utils/AppConstants.js';
 import { AppState } from '../state/AppState.js';
 import { ToastManager } from './ToastManager.js';
+import { StateAuditor } from '../state/StateAuditor.js';
 
 // Custom Event Names removed (Registry Rule)
 import { EVENTS, UI_ICONS, IDS, WATCHLIST_NAMES, ALL_SHARES_ID, PORTFOLIO_ID, CASH_WATCHLIST_ID, DASHBOARD_WATCHLIST_ID, STORAGE_KEYS } from '../utils/AppConstants.js';
@@ -38,10 +39,42 @@ export class HeaderLayout {
         this.render();
         this.cacheDOM();
         this.bindEvents();
+        this._subscribeToStateEvents();
+
+        // Initial Time Set
+        this._updateRefreshTime();
         // console.log('HeaderLayout: Render Complete.');
 
         // Architectural Change: Removed JS-based padding adjustment.
         // We now rely on CSS sticky positioning for proper layout flow.
+    }
+
+    /**
+     * REACTIVE SUBSCRIPTION: Listen for state events via StateAuditor channels.
+     * This replaces the need for AppController to manually call update methods.
+     */
+    _subscribeToStateEvents() {
+        // AUTO-UPDATE: Refresh timestamp when prices arrive
+        StateAuditor.on('PRICES_UPDATED', (payload) => {
+            this._updateRefreshTime();
+
+            // Visual feedback: pulse the connection dot green
+            const dot = document.getElementById('connection-dot');
+            if (dot) {
+                dot.classList.add('pulse-fresh');
+                setTimeout(() => dot.classList.remove('pulse-fresh'), 2000);
+            }
+        });
+    }
+
+    /**
+     * Updates the refresh time display in the header.
+     */
+    _updateRefreshTime() {
+        const el = document.getElementById(IDS.LIVE_REFRESH_TIME);
+        if (el) {
+            el.textContent = new Date().toLocaleTimeString('en-GB', { hour12: false });
+        }
     }
 
     render() {

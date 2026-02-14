@@ -1,5 +1,6 @@
 import { CSS_CLASSES, EVENTS, UI_ICONS, IDS, CASH_WATCHLIST_ID, KANGAROO_ICON_SVG } from '../utils/AppConstants.js';
 import { AppState } from '../state/AppState.js';
+import { StateAuditor } from '../state/StateAuditor.js';
 import { notificationStore } from '../state/NotificationStore.js'; // FIX: Interact with Global Store
 import { ToastManager } from './ToastManager.js';
 import { VisualSettingsHUD } from './VisualSettingsHUD.js';
@@ -23,6 +24,16 @@ export class SidebarCommandCenter {
         this._injectStyles(); // FIX: Global Visual Overrides (Sidebar Glow + Chart Opacity)
         this.render();
         this._bindEvents();
+
+        // REACTIVE UPDATE: Keep Control Center Live
+        if (StateAuditor && typeof StateAuditor.on === 'function') {
+            StateAuditor.on('PRICES_UPDATED', () => {
+                // Only re-render if the sidebar is actually in the DOM and likely visible
+                if (this.container && document.body.contains(this.container)) {
+                    this.render();
+                }
+            });
+        }
     }
 
     _injectStyles() {

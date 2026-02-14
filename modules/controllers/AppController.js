@@ -38,6 +38,9 @@ import { IDS, CSS_CLASSES, EVENTS, WATCHLIST_ICON_POOL, ALL_SHARES_ID, CASH_WATC
 import { ToastManager } from '../ui/ToastManager.js';
 import { navManager } from '../utils/NavigationManager.js';
 import { PullToRefresh } from '../ui/PullToRefresh.js';
+import { StateAuditor } from '../state/StateAuditor.js';
+import { StateHealthPanel } from '../state/StateHealthPanel.js';
+import { runHealthCheck, startRaceRegressionMonitor } from '../state/AppHealthTest.js';
 // renderSortSelect removed
 
 export class AppController {
@@ -100,6 +103,17 @@ export class AppController {
         if (this._initialized) return;
         this._initialized = true;
 
+        // STATE AUDITOR: Enable diagnostic monitoring (non-invasive)
+        StateAuditor.enable();
+        startRaceRegressionMonitor(); // v1135: Monitor race regressions on fixed keys
+        StateHealthPanel.init();
+
+        // AUTO HEALTH CHECK: Run 8s after boot (allows data to load)
+        setTimeout(() => {
+            console.log('%c[AppController] Running post-boot health check...', 'color: #4fc3f7');
+            runHealthCheck();
+        }, 8000);
+
 
         // Initialize Modules
         AiSummaryUI.init();
@@ -124,6 +138,14 @@ export class AppController {
         // 1. Event Bindings (Global)
         this._bindGlobalEvents();
         this._setupDelegatedEvents(); // Binds Delete, Watchlist Actions, etc.
+
+        // REACTIVE REFRESH: Centralize UI updates when data arrives
+        StateAuditor.on('PRICES_UPDATED', () => {
+            // Only update the main watchlist if not locked and we have an active UI
+            if (!AppState.isLocked && this.watchlistUI && AppState.watchlist.id) {
+                this.updateDataAndRender(false);
+            }
+        });
 
         // Notification System Bindings (Unified)
         NotificationUI.init(); // Initialize Floating Bell
@@ -681,12 +703,13 @@ export class AppController {
                 if (freshDashboard && Array.isArray(freshDashboard)) {
                     AppState.data.dashboard = freshDashboard;
                 }
-
-                if (this.watchlistUI && AppState.watchlist.id) {
-                    this.updateDataAndRender(false);
-                }
-
-                // Redundant call removed - handled by REQUEST_RENDER_WATCHLIST listener in NotificationStore
+                // BROADCAST: Notify all subscribed components that prices have been refreshed.
+                StateAuditor.emit('PRICES_UPDATED', {
+                    count: freshPrices.size,
+                    totalCached: AppState.livePrices.size,
+                    hasDashboard: !!(freshDashboard && freshDashboard.length > 0),
+                    timestamp: AppState.lastGlobalFetch
+                });
             }
         } catch (err) {
             console.warn('Global Price Seed failed:', err);
@@ -761,9 +784,11 @@ export class AppController {
             if (loginBtn) loginBtn.classList.add(CSS_CLASSES.HIDDEN);
             document.body.classList.add(CSS_CLASSES.LOGGED_IN);
 
-            // âš ï¸ SECURITY GATE âš ï¸
+            // ⚠️ SECURITY GATE ⚠️
             // Intercept normal flow to show Privacy Lock
-            this.handleSecurityLock();
+            // RACE FIX: Defer to next microtask to avoid rapid isLocked toggle
+            // (Line 744 sets true, then handleSecurityLock may immediately set false)
+            queueMicrotask(() => this.handleSecurityLock());
 
             // CRITICAL: Only Unsub/Resub if user CHANGED.
             // Blindly unsubscribing wipes AppState.data.cash (UserStore cleanup), causing the "Flash".
@@ -1006,12 +1031,14 @@ export class AppController {
                     }
 
                     // 2. Sync Sort Config & Global Sort
+                    let _sortConfigMapSynced = false; // RACE FIX: Track if sortConfigMap already written
                     if (prefs.globalSort) {
                         AppState.saveGlobalSort(prefs.globalSort, true);
                         AppState.sortConfig = { ...prefs.globalSort };
                         needsRender = true;
                     } else if (prefs.sortConfigMap) {
                         AppState.sortConfigMap = { ...AppState.sortConfigMap, ...prefs.sortConfigMap };
+                        _sortConfigMapSynced = true; // Mark as handled
 
                         if (prefs.globalSort === null) {
                             if (AppState.preferences.globalSort) {
@@ -1094,11 +1121,17 @@ export class AppController {
                     }
 
                     // 7.1 Sync Sort Config Map (CRITICAL FOR PERSISTENCE)
-                    if (prefs.sortConfigMap) {
-                        AppState.sortConfigMap = prefs.sortConfigMap;
-                        localStorage.setItem(STORAGE_KEYS.SORT, JSON.stringify(prefs.sortConfigMap));
+                    // RACE FIX: Skip if already synced earlier in this callback (step 2)
+                    if (prefs.sortConfigMap && !_sortConfigMapSynced) {
+                        const cloudJSON = JSON.stringify(prefs.sortConfigMap);
+                        const localJSON = JSON.stringify(AppState.sortConfigMap);
+                        if (cloudJSON !== localJSON) {
+                            AppState.sortConfigMap = prefs.sortConfigMap;
+                            localStorage.setItem(STORAGE_KEYS.SORT, cloudJSON);
+                        }
                         // No render needed, but essential for next watchlist switch
                     }
+
 
                     // 7.2 Sync Dashboard Order & Hidden
                     if (prefs.dashboardOrder) {
@@ -1179,7 +1212,11 @@ export class AppController {
                     // SAFETY: If we didn't switch watchlists (which hides splash), but we are done loading
                     if (!this._initialRenderComplete) {
                         this._initialRenderComplete = true;
-                        this.handleSecurityLock(); // Final check
+                        // RACE FIX: Only call handleSecurityLock if not already unlocked
+                        // (avoids redundant isLocked = false write that triggers race detection)
+                        if (!this._isUnlockedThisSession) {
+                            this.handleSecurityLock(); // Final check
+                        }
                     }
 
                     // UNLOCK OUTBOUND SYNC: Cloud prefs have been applied, allow future syncs.
@@ -1265,8 +1302,10 @@ export class AppController {
     async handleSecurityLock() {
         // 1. SESSION GUARD: If already unlocked this session, don't re-lock.
         if (this._isUnlockedThisSession) {
-            // Re-apply unlocked state just in case
-            AppState.isLocked = false;
+            // RACE FIX: Only write if state actually needs to change
+            if (AppState.isLocked !== false) {
+                AppState.isLocked = false;
+            }
             document.dispatchEvent(new CustomEvent(EVENTS.FIREBASE_DATA_LOADED));
             return;
         }
@@ -1561,7 +1600,6 @@ export class AppController {
         );
 
         this.viewRenderer.render(mergedData, summaryMetrics);
-        this._updateLiveRefreshTime();
 
         // Ensure Header Title / Gradient updates with new data
         if (this.watchlistUI) {
@@ -1618,9 +1656,8 @@ export class AppController {
 
                         if (freshPrices && freshPrices.size > 0) {
                             AppState.livePrices = new Map([...AppState.livePrices, ...freshPrices]);
-                            if (this.notificationStore) {
-                                this.notificationStore.updateLivePrices(freshPrices);
-                            }
+
+                            // Manual notification removed - now event-driven via PRICES_UPDATED at end of block
 
                             if (freshDashboard && Array.isArray(freshDashboard)) {
                                 AppState.data.dashboard = freshDashboard;
@@ -1634,30 +1671,14 @@ export class AppController {
                                 return;
                             }
 
-                            const { mergedData: freshMerged, summaryMetrics: freshMetrics } = processShares(
-                                AppState.data.shares || [],
-                                AppState.watchlist.id,
-                                AppState.livePrices,
-                                AppState.sortConfig,
-                                AppState.hiddenAssets
-                            );
-                            this.viewRenderer.render(freshMerged, freshMetrics);
-                            if (this.watchlistUI) {
-                                this.watchlistUI.updateHeaderTitle(freshMetrics);
-                            }
-
-                            const freshCodes = freshMerged
-                                .filter(s => !s.isHidden)
-                                .map(s => s.code)
-                                .sort((a, b) => a.localeCompare(b));
-                            const statuses = getASXCodesStatus(freshCodes, AppState.livePrices);
-                            this.viewRenderer.renderASXCodeDropdownV2(statuses);
-
-                            this._updateLiveRefreshTime();
-
-                            if (notificationStore) {
-                                notificationStore._notifyCountChange();
-                            }
+                            // Manual re-render logic removed - now centralized and triggered by PRICES_UPDATED below
+                            // BROADCAST: Per-watchlist fetch complete
+                            StateAuditor.emit('PRICES_UPDATED', {
+                                count: freshPrices.size,
+                                totalCached: AppState.livePrices.size,
+                                hasDashboard: !!(freshDashboard && freshDashboard.length > 0),
+                                timestamp: Date.now()
+                            });
                         }
                     } catch (e) {
                         console.warn('Background price refresh failed:', e);
@@ -1762,8 +1783,11 @@ export class AppController {
             const validFields = new Set(allOptions.map(opt => opt.field));
 
             if (storedSort && validFields.has(storedSort.field)) {
-                // Use stored sort for this watchlist
-                AppState.sortConfig = { ...storedSort };
+                // RACE FIX: Only write if value actually changed
+                const current = AppState.sortConfig;
+                if (!current || current.field !== storedSort.field || current.direction !== storedSort.direction) {
+                    AppState.sortConfig = { ...storedSort };
+                }
             } else {
                 // Fallback to safe defaults
                 if (AppState.watchlist.type === 'cash') {
@@ -2494,7 +2518,7 @@ export class AppController {
         });
 
         // Initial Time Set (Defer to ensure DOM is ready)
-        setTimeout(() => this._updateLiveRefreshTime(), 500);
+        // Handled by HeaderLayout reactive listener and init()
 
         const container = document.getElementById(IDS.CONTENT_CONTAINER);
         if (!container) return;
@@ -3198,6 +3222,7 @@ export class AppController {
                 this._downloadNavActive = false;
                 navManager.popStateSilently();
             }
+        } else {
         }
     }
 
@@ -3547,13 +3572,6 @@ export class AppController {
         setTimeout(() => {
             SecurityUI.renderSecuritySettings(this.securityController);
         }, 150);
-    }
-
-    _updateLiveRefreshTime() {
-        const el = document.getElementById(IDS.LIVE_REFRESH_TIME);
-        if (el) {
-            el.textContent = new Date().toLocaleTimeString('en-GB', { hour12: false });
-        }
     }
 }
 

@@ -9818,6 +9818,25 @@ body.dashboard-active .sidebar {
     animation: pulse-red 2s infinite;
 }
 
+/* Pulse animation when fresh prices arrive (StateAuditor event-driven) */
+@keyframes pulse-green {
+    0% {
+        box-shadow: 0 0 3px #4CAF50;
+    }
+
+    50% {
+        box-shadow: 0 0 12px #4CAF50, 0 0 20px rgba(76, 175, 80, 0.4);
+    }
+
+    100% {
+        box-shadow: 0 0 5px #4CAF50;
+    }
+}
+
+.connection-dot.pulse-fresh {
+    animation: pulse-green 0.75s ease-in-out 2;
+}
+
 /* -------------------------------------------------------------------------- */
 /*                       PORTFOLIO BACKGROUND CHART                           */
 /* -------------------------------------------------------------------------- */
