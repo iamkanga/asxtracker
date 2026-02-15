@@ -87,7 +87,7 @@ export class UserStore {
         this.unsubscribeShares = onSnapshot(query(sharesRef), (snapshot) => {
             const shares = [];
             snapshot.forEach((doc) => {
-                shares.push({ id: doc.id, ...doc.data() });
+                shares.push({ ...doc.data(), id: doc.id });
             });
             AppState.data.shares = shares;
             notify();
@@ -102,7 +102,7 @@ export class UserStore {
                 const d = doc.data();
                 if (d.category === 'other') {
                 }
-                cash.push({ id: doc.id, ...d });
+                cash.push({ ...d, id: doc.id });
             });
             AppState.data.cash = cash;
             notify();
@@ -114,7 +114,7 @@ export class UserStore {
         this.unsubscribeWatchlists = onSnapshot(query(watchlistsRef), (snapshot) => {
             const watchlists = [];
             snapshot.forEach((doc) => {
-                watchlists.push({ id: doc.id, ...doc.data() });
+                watchlists.push({ ...doc.data(), id: doc.id });
             });
             // Sort by creation time if available, or name
             watchlists.sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
@@ -153,9 +153,9 @@ export class UserStore {
         const prefsRef = doc(db, `artifacts/${APP_ID}/users/${userId}/preferences/config`);
         return onSnapshot(prefsRef, (docSnap) => {
             if (docSnap.exists()) {
-                onDataChange(docSnap.data());
+                onDataChange(docSnap.data(), docSnap.metadata);
             } else {
-                onDataChange(null);
+                onDataChange(null, docSnap.metadata);
             }
         }, (err) => {
         });
@@ -236,6 +236,9 @@ export class UserStore {
 
         const sanitized = {};
         Object.keys(data).forEach(key => {
+            // FIX (Directive 045): Aggressively strip 'id' from internal data to prevent Firestore collision
+            if (key === 'id') return;
+
             const value = data[key];
             if (value !== undefined) {
                 sanitized[key] = this._sanitizeData(value);

@@ -109,7 +109,7 @@ export class AppController {
         // STATE AUDITOR: Enable diagnostic monitoring (non-invasive)
         StateAuditor.enable();
         startRaceRegressionMonitor(); // v1135: Monitor race regressions on fixed keys
-        StateHealthPanel.init();
+        // StateHealthPanel.init(); // Disabled per user request (v1144) to keep UI clean.
 
         // AUTO HEALTH CHECK: Run 8s after boot (allows data to load)
         setTimeout(() => {
@@ -994,6 +994,50 @@ export class AppController {
                 }
             }
 
+            // 0z. PRE-SYNC Map structures needed by switch logic (v1143 Race Fix)
+            let _sortConfigMapSynced = false;
+            if (prefs.sortConfigMap && JSON.stringify(prefs.sortConfigMap) !== JSON.stringify(AppState.sortConfigMap)) {
+                AppState.sortConfigMap = { ...AppState.sortConfigMap, ...prefs.sortConfigMap };
+                localStorage.setItem(STORAGE_KEYS.SORT, JSON.stringify(prefs.sortConfigMap));
+                _sortConfigMapSynced = true;
+            }
+
+            if (prefs.globalSort && JSON.stringify(prefs.globalSort) !== JSON.stringify(AppState.preferences.globalSort)) {
+                AppState.saveGlobalSort(prefs.globalSort, true);
+                if (JSON.stringify(AppState.sortConfig) !== JSON.stringify(prefs.globalSort)) {
+                    AppState.sortConfig = { ...prefs.globalSort };
+                    needsRender = true;
+                }
+            } else if (prefs.sortConfigMap && !AppState.preferences.globalSort) {
+                // If map was updated and we don't have a global override, ensure current sort matches the map
+                const currentKey = AppState.watchlist.id || 'portfolio';
+                if (prefs.sortConfigMap[currentKey]) {
+                    const newSort = prefs.sortConfigMap[currentKey];
+                    if (JSON.stringify(AppState.sortConfig) !== JSON.stringify(newSort)) {
+                        AppState.sortConfig = { ...newSort };
+                        needsRender = true;
+                    }
+                }
+            }
+
+            // Sync View Mode BEFORE watchlist switch
+            if (prefs.viewMode && AppState.viewMode !== prefs.viewMode) {
+                AppState.viewMode = prefs.viewMode;
+                localStorage.setItem(STORAGE_KEYS.VIEW_MODE, prefs.viewMode);
+                needsRender = true;
+            }
+
+            // Sync Hidden Assets BEFORE watchlist switch
+            if (prefs.hiddenAssets && Array.isArray(prefs.hiddenAssets)) {
+                const newList = prefs.hiddenAssets.map(String);
+                const currentList = [...AppState.hiddenAssets].map(String);
+                if (JSON.stringify(newList) !== JSON.stringify(currentList)) {
+                    AppState.hiddenAssets = new Set(newList);
+                    localStorage.setItem(STORAGE_KEYS.HIDDEN_ASSETS, JSON.stringify(newList));
+                    needsRender = true;
+                }
+            }
+
             // 1. Sync Watchlist ID (if different and valid)
             if (prefs.lastWatchlistId && prefs.lastWatchlistId !== AppState.watchlist.id) {
                 if (AppState.watchlist.id === 'portfolio' && prefs.lastWatchlistId !== 'portfolio') {
@@ -1001,48 +1045,6 @@ export class AppController {
                     // v1138: Pass skipPersist=true to avoid loopback
                     this.handleSwitchWatchlist(prefs.lastWatchlistId, false, true);
                     needsRender = false;
-                }
-            }
-
-            // 2. Sync Sort Config & Global Sort
-            let _sortConfigMapSynced = false; // RACE FIX: Track if sortConfigMap already written
-            if (prefs.globalSort && JSON.stringify(prefs.globalSort) !== JSON.stringify(AppState.preferences.globalSort)) {
-                AppState.saveGlobalSort(prefs.globalSort, true);
-                if (JSON.stringify(AppState.sortConfig) !== JSON.stringify(prefs.globalSort)) {
-                    AppState.sortConfig = { ...prefs.globalSort };
-                    needsRender = true;
-                }
-            } else if (prefs.sortConfigMap && JSON.stringify(prefs.sortConfigMap) !== JSON.stringify(AppState.sortConfigMap)) {
-                AppState.sortConfigMap = { ...AppState.sortConfigMap, ...prefs.sortConfigMap };
-                _sortConfigMapSynced = true; // Mark as handled
-
-                if (prefs.globalSort === null) {
-                    if (AppState.preferences.globalSort) {
-                        AppState.saveGlobalSort(null, true);
-                        needsRender = true;
-                    }
-                }
-
-                if (!AppState.preferences.globalSort) {
-                    const currentKey = AppState.watchlist.id || 'portfolio';
-                    if (prefs.sortConfigMap[currentKey]) {
-                        const newSort = prefs.sortConfigMap[currentKey];
-                        if (JSON.stringify(AppState.sortConfig) !== JSON.stringify(newSort)) {
-                            AppState.sortConfig = { ...newSort };
-                            needsRender = true;
-                        }
-                    }
-                }
-            }
-
-            // 3. Sync Hidden Assets
-            if (prefs.hiddenAssets && Array.isArray(prefs.hiddenAssets)) {
-                const newList = prefs.hiddenAssets.map(String);
-                const currentList = [...AppState.hiddenAssets].map(String);
-                if (JSON.stringify(newList) !== JSON.stringify(currentList)) {
-                    AppState.hiddenAssets = new Set(newList);
-                    localStorage.setItem(STORAGE_KEYS.HIDDEN_ASSETS, JSON.stringify(newList)); // Persist immediately
-                    needsRender = true;
                 }
             }
 
@@ -1107,16 +1109,14 @@ export class AppController {
                 needsRender = true;
             }
 
-            // 7.1 Sync Sort Config Map (CRITICAL FOR PERSISTENCE)
-            // RACE FIX: Skip if already synced earlier in this callback (step 2)
+            /* Redundant sortConfigMap sync removed - handled earlier in 0z */
             if (prefs.sortConfigMap && !_sortConfigMapSynced) {
+                // Secondary check in case Step 2 was partially skipped
                 const cloudJSON = JSON.stringify(prefs.sortConfigMap);
-                const localJSON = JSON.stringify(AppState.sortConfigMap);
-                if (cloudJSON !== localJSON) {
+                if (cloudJSON !== JSON.stringify(AppState.sortConfigMap)) {
                     AppState.sortConfigMap = prefs.sortConfigMap;
                     localStorage.setItem(STORAGE_KEYS.SORT, cloudJSON);
                 }
-                // No render needed, but essential for next watchlist switch
             }
 
 
@@ -1176,14 +1176,7 @@ export class AppController {
                 }
             }
 
-            // 10. Sync View Mode (New)
-            if (prefs.viewMode) {
-                if (AppState.viewMode !== prefs.viewMode) {
-                    AppState.viewMode = prefs.viewMode;
-                    localStorage.setItem(STORAGE_KEYS.VIEW_MODE, prefs.viewMode);
-                    needsRender = true;
-                }
-            }
+            /* View Mode sync moved to early block */
 
             // 11. Sync View Configs (Per-Watchlist)
             if (prefs.viewConfigs) {
@@ -1678,15 +1671,21 @@ export class AppController {
             const isValid = validOptions.some(opt => opt.field === currentGlobal.field);
 
             if (isValid) {
-                AppState.sortConfig = { ...currentGlobal };
+                if (JSON.stringify(AppState.sortConfig) !== JSON.stringify(currentGlobal)) {
+                    AppState.sortConfig = { ...currentGlobal };
+                }
             } else {
                 // Fallback Logic
                 if (viewType === 'CASH') {
-                    // Cash/Assets: Asset Name (A to Z) using the "Green Chevron" (High to Low / Ascending for text)
-                    AppState.sortConfig = { field: 'name', direction: 'asc' };
+                    const fallback = { field: 'name', direction: 'asc' };
+                    if (JSON.stringify(AppState.sortConfig) !== JSON.stringify(fallback)) {
+                        AppState.sortConfig = fallback;
+                    }
                 } else {
-                    // Standard: ASX Code (A to Z) using "Green Chevron" (High to Low / Ascending for text)
-                    AppState.sortConfig = { field: 'code', direction: 'asc' };
+                    const fallback = { field: 'code', direction: 'asc' };
+                    if (JSON.stringify(AppState.sortConfig) !== JSON.stringify(fallback)) {
+                        AppState.sortConfig = fallback;
+                    }
                 }
             }
         } else {
@@ -1707,14 +1706,18 @@ export class AppController {
                 // RACE FIX: Only write if value actually changed
                 const current = AppState.sortConfig;
                 if (!current || current.field !== storedSort.field || current.direction !== storedSort.direction) {
-                    AppState.sortConfig = { ...storedSort };
+                    if (JSON.stringify(AppState.sortConfig) !== JSON.stringify(storedSort)) {
+                        AppState.sortConfig = { ...storedSort };
+                    }
                 }
             } else {
                 // Fallback to safe defaults
-                if (AppState.watchlist.type === 'cash') {
-                    AppState.sortConfig = { field: 'category', direction: 'asc' };
-                } else {
-                    AppState.sortConfig = { field: 'code', direction: 'asc' };
+                const fallback = (AppState.watchlist.type === 'cash')
+                    ? { field: 'category', direction: 'asc' }
+                    : { field: 'code', direction: 'asc' };
+
+                if (JSON.stringify(AppState.sortConfig) !== JSON.stringify(fallback)) {
+                    AppState.sortConfig = fallback;
                 }
                 AppState.saveSortConfigForWatchlist(watchlistId);
             }
