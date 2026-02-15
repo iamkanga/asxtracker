@@ -1,4 +1,5 @@
 import { notificationStore } from '../state/NotificationStore.js';
+import { EVENTS } from '../utils/AppConstants.js';
 
 export class MarketIndexController {
     constructor() {
@@ -38,7 +39,7 @@ export class MarketIndexController {
         this.modal.querySelector('.modal-overlay')?.addEventListener('click', () => this.closeModal());
 
         // Listen for Data Updates
-        document.addEventListener('MARKET_INDEX_UPDATED', (e) => {
+        document.addEventListener(EVENTS.MARKET_INDEX_UPDATED, (e) => {
             if (!this.modal.classList.contains('hidden')) {
                 this.render(e.detail.alerts);
             }

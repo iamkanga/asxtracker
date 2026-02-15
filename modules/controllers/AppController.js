@@ -364,7 +364,7 @@ export class AppController {
         });
 
         // CUSTOM NAVIGATION EVENTS (Briefing / External)
-        document.addEventListener('open-portfolio-view', () => {
+        document.addEventListener(EVENTS.OPEN_PORTFOLIO_VIEW, () => {
             // Check if we are in Dashboard view or Watchlist view?
             // Force switch to 'portfolio' watchlist
             if (this.watchlistUI) {
@@ -375,7 +375,7 @@ export class AppController {
 
         // OPEN_NOTIFICATIONS listener removed (Handled by NotificationUI.js with debounce)
 
-        document.addEventListener('open-market-pulse', () => {
+        document.addEventListener(EVENTS.OPEN_MARKET_PULSE, () => {
             // Open Snapshot / Market Pulse UI
             // Assuming SnapshotUI is available globally or imported. 
             // If not, we might fail. But WatchlistUI imported it. 

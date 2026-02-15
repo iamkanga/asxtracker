@@ -221,19 +221,8 @@ export class NotificationStore {
             }
 
             // FILTER: Source-Level Exclusion of Dashboard Symbols (XJO, XAO, etc.)
-            // We do this AFTER normalization to ensure we catch "XJO.AX" as "XJO".
-            // FILTER: Source-Level Exclusion of Dashboard Symbols (XJO, XAO, etc.)
-            // We do this AFTER normalization to ensure we catch "XJO.AX" as "XJO".
             const filterDashboard = (list) => {
-                return list.filter(h => {
-                    const code = h.code || h.shareName;
-                    if (!code) return false;
-
-                    // --- ROBUST CENTRAL HELPER CHECK ---
-                    if (this._isDashboardCode(code)) return false;
-
-                    return true;
-                });
+                return list.filter(h => !this._isDashboardCode(h.code || h.symbol));
             };
 
             if (hiloSnap.status === 'fulfilled' && hiloSnap.value.exists()) {
@@ -1026,105 +1015,70 @@ export class NotificationStore {
     _hydrateFromClientCache() {
         if (!AppState.livePrices || AppState.livePrices.size === 0) return { up: [], down: [], high: [], low: [] };
 
-        const all = Array.from(AppState.livePrices.values());
+        const prices = Array.from(AppState.livePrices.values());
 
-        // Filter: Exclude Dashboard Symbols and Invalid Data
-        const candidates = all.filter(item => {
-            if (!item.code) return false;
-            // Exclude Indices/Currencies (Strict Helper)
-            if (this._isDashboardCode(item.code)) return false;
+        // Map ALL prices to a standardized "Hit" structure immediately to avoid fallback chains
+        const candidates = prices
+            .map(p => ({ ...this._mapPriceToHit(p), Industry: (p.industry || p.Industry || p.Sector || p.sector || '') }))
+            .filter(hit => {
+                if (!hit.code) return false;
+                // Exclude Indices/Currencies (Strict Helper)
+                if (this._isDashboardCode(hit.code)) return false;
+                if (hit.code.startsWith('.')) return false;
 
-            if (item.code.startsWith('.')) return false;
+                // Must have valid price and movement
+                if (hit.live <= 0) return false;
+                if (Math.abs(hit.pct) === 0 && Math.abs(hit.change) === 0) return false;
+                return true;
+            });
 
-            // Robust Property Access
-            const pct = item.pctChange ?? item.changeInPercent ?? item.pct ?? item.dayChangePercent ?? 0;
-            const change = item.change ?? item.c ?? item.dayChange ?? 0;
-
-            // Must have valid change
-            if (Math.abs(pct) === 0 && Math.abs(change) === 0) return false;
-
-            return true;
-        });
-
-        // 1. Gainers (Sort by % Change DESC, then by $ Change DESC)
-        const gainers = [...candidates]
-            .filter(i => (i.pctChange ?? i.changeInPercent ?? i.pct ?? 0) > 0)
+        // 1. Gainers
+        const gainers = candidates
+            .filter(i => i.pct > 0)
             .sort((a, b) => {
-                const pctA = a.pctChange ?? a.changeInPercent ?? a.pct ?? 0;
-                const pctB = b.pctChange ?? b.changeInPercent ?? b.pct ?? 0;
-
-                // Rounding for tie detection (Matches UI)
-                const pAR = Math.round(pctA * 100);
-                const pBR = Math.round(pctB * 100);
-
-                if (pBR !== pAR) return pBR - pAR; // Primary: Percentage DESC
-
-                const chgA = Math.abs(a.change ?? a.dayChange ?? a.c ?? 0);
-                const chgB = Math.abs(b.change ?? b.dayChange ?? b.c ?? 0);
-                return chgB - chgA; // Secondary: Dollar magnitude DESC
+                const pAR = Math.round(a.pct * 100);
+                const pBR = Math.round(b.pct * 100);
+                if (pBR !== pAR) return pBR - pAR; // Percentage DESC
+                return Math.abs(b.change) - Math.abs(a.change); // Dollar DESC
             })
             .slice(0, 500)
-            .map(i => ({ ...this._mapPriceToHit(i), intent: 'mover', type: 'up' }));
+            .map(i => ({ ...i, intent: 'mover', type: 'up' }));
 
-        // 2. Losers (Sort by % Change ASC -> Most Negative First, then by $ Change DESC Magnitude)
-        const losers = [...candidates]
-            .filter(i => (i.pctChange ?? i.changeInPercent ?? i.pct ?? 0) < 0)
+        // 2. Losers
+        const losers = candidates
+            .filter(i => i.pct < 0)
             .sort((a, b) => {
-                const pctA = a.pctChange ?? a.changeInPercent ?? a.pct ?? 0;
-                const pctB = b.pctChange ?? b.changeInPercent ?? b.pct ?? 0;
-
-                // Rounding for tie detection (Matches UI)
-                const pAR = Math.round(pctA * 100);
-                const pBR = Math.round(pctB * 100);
-
-                if (pAR !== pBR) return pAR - pBR; // Primary: Percentage ASC (Most Negative First)
-
-                const chgA = Math.abs(a.change ?? a.dayChange ?? a.c ?? 0);
-                const chgB = Math.abs(b.change ?? b.dayChange ?? b.c ?? 0);
-                return chgB - chgA; // Secondary: Dollar magnitude DESC (Biggest loss first)
+                const pAR = Math.round(a.pct * 100);
+                const pBR = Math.round(b.pct * 100);
+                if (pAR !== pBR) return pAR - pBR; // Percentage ASC
+                return Math.abs(b.change) - Math.abs(a.change); // Dollar DESC
             })
             .slice(0, 500)
-            .map(i => ({ ...this._mapPriceToHit(i), intent: 'mover', type: 'down' }));
+            .map(i => ({ ...i, intent: 'mover', type: 'down' }));
 
         // 3. 52-Week Highs (Price >= 99% of 52w High)
-        // Sort by % Change DESC (Biggest movers at highs)
-        // FIX: DataService maps High52 -> .high, Low52 -> .low
-        // SLICE: Increase to 2500 (Full Market) to ensure we don't drop valid stocks due to penny stock crowding before MinPrice filter.
-        const highs = [...candidates]
-            .filter(i => {
-                const price = i.live || i.price || i.lastPrice || 0;
-                return i.high > 0 && price >= (i.high * 0.99);
-            })
+        const highs = candidates
+            .filter(i => i.high > 0 && i.live >= (i.high * 0.99))
             .sort((a, b) => {
-                const pA = a.pctChange ?? a.changeInPercent ?? a.pct ?? 0;
-                const pB = b.pctChange ?? b.changeInPercent ?? b.pct ?? 0;
-                const pAR = Math.round(pA * 100);
-                const pBR = Math.round(pB * 100);
+                const pAR = Math.round(a.pct * 100);
+                const pBR = Math.round(b.pct * 100);
                 if (pBR !== pAR) return pBR - pAR;
-                return Math.abs(b.change ?? 0) - Math.abs(a.change ?? 0);
+                return Math.abs(b.change) - Math.abs(a.change);
             })
             .slice(0, 2500)
-            .map(i => ({ ...this._mapPriceToHit(i), type: 'high', intent: 'hilo-up' }));
+            .map(i => ({ ...i, type: 'high', intent: 'hilo-up' }));
 
         // 4. 52-Week Lows (Price <= 101% of 52w Low)
-        // Sort by % Change ASC (Biggest drops at lows)
-        const lows = [...candidates]
-            .filter(i => {
-                const price = i.live || i.price || i.lastPrice || 0;
-                return i.low > 0 && price <= (i.low * 1.01);
-            })
+        const lows = candidates
+            .filter(i => i.low > 0 && i.live <= (i.low * 1.01))
             .sort((a, b) => {
-                const pA = a.pctChange ?? a.changeInPercent ?? a.pct ?? 0;
-                const pB = b.pctChange ?? b.changeInPercent ?? b.pct ?? 0;
-                const pAR = Math.round(pA * 100);
-                const pBR = Math.round(pB * 100);
+                const pAR = Math.round(a.pct * 100);
+                const pBR = Math.round(b.pct * 100);
                 if (pAR !== pBR) return pAR - pBR;
-                return Math.abs(b.change ?? 0) - Math.abs(a.change ?? 0);
+                return Math.abs(b.change) - Math.abs(a.change);
             })
             .slice(0, 2500)
-            .map(i => ({ ...this._mapPriceToHit(i), type: 'low', intent: 'hilo-down' }));
-
-
+            .map(i => ({ ...i, type: 'low', intent: 'hilo-down' }));
 
         return { up: gainers, down: losers, high: highs, low: lows };
     }
@@ -1237,7 +1191,6 @@ export class NotificationStore {
             let mergedUp = mergeLists(rawGlobalUp, localUp);
             let mergedDown = mergeLists(rawGlobalDown, localDown);
 
-            // FORCE FINAL SORT (Desc for Up, Asc for Down)
             // FORCE FINAL SORT (Desc for Up, Asc for Down)
             mergedUp = mergedUp.filter(i => (Number(i.pctChange) || Number(i.pct) || 0) > 0);
             mergedUp.sort((a, b) => (Number(b.pctChange) || Number(b.pct) || 0) - (Number(a.pctChange) || Number(a.pct) || 0));
@@ -1360,7 +1313,6 @@ export class NotificationStore {
 
         // FINAL SAFETY SORT: Enforce strict order on output
         // FIX: Use parseFloat to handle potential string inputs (e.g. "0.5%") which Number() chokes on.
-        // FIX: Use parseFloat to handle potential string inputs (e.g. "0.5%") which Number() chokes on.
         // ENHANCED FIX: Look up Live Data if missing, AND ENFORCE SIGN to match UI.
         const getDisplayPct = (i, type) => {
             let val = 0;
@@ -1391,7 +1343,6 @@ export class NotificationStore {
             if (!Number.isFinite(val)) val = 0;
 
             // --- CRITICAL VISUAL FIX: MATCH UI SIGN FORCING ---
-            // NotificationUI.js force signs based on type.
             // If we don't do this here, a -0.5% High (intraday drop, but 52w High) sorts to bottom.
             if (type === 'hilo-up' || type === 'up' || type === 'high') {
                 return Math.abs(val);
@@ -1694,12 +1645,7 @@ export class NotificationStore {
         const seenCodesTotal = new Set();
         const seenCodesCustom = new Set();
 
-        const parseTime = (timeVal) => {
-            if (timeVal && typeof timeVal === 'object' && timeVal.toMillis) return timeVal.toMillis();
-            if (timeVal && typeof timeVal === 'object' && timeVal.seconds) return timeVal.seconds * 1000;
-            if (timeVal) return new Date(timeVal).getTime();
-            return 0;
-        };
+        const parseTime = (timeVal) => this._parseTimestamp(timeVal);
 
         // --- CALC CUSTOM COUNT (Kangaroo) ---
         myHits.forEach(hit => {
@@ -1811,6 +1757,17 @@ export class NotificationStore {
         });
         localStorage.setItem('asx_market_stream_dismissed', JSON.stringify([...this.dismissedAnnouncements]));
         this._notifyCountChange();
+    }
+
+    /**
+     * Shared Utility: Resolves various timestamp formats to numeric milliseconds.
+     */
+    _parseTimestamp(timeVal) {
+        if (!timeVal) return 0;
+        if (typeof timeVal === 'object' && timeVal.toMillis) return timeVal.toMillis();
+        if (typeof timeVal === 'object' && timeVal.seconds) return timeVal.seconds * 1000;
+        const ts = new Date(timeVal).getTime();
+        return isNaN(ts) ? 0 : ts;
     }
 
     /**
@@ -2215,15 +2172,8 @@ export class NotificationStore {
         return list.filter(item => {
             const timeVal = item.t || item.timestamp || item.createdAt;
 
-            // CONSTITUTIONAL HARDENING: If it has no timestamp, it's a legacy zombie. Kill it.
-            if (!timeVal) return false;
-
-            let ms = 0;
-            if (typeof timeVal === 'object' && timeVal.toMillis) ms = timeVal.toMillis();
-            else if (typeof timeVal === 'object' && timeVal.seconds) ms = timeVal.seconds * 1000;
-            else ms = new Date(timeVal).getTime();
-
-            const isFresh = (now - ms) < limit;
+            const hitTime = this._parseTimestamp(timeVal);
+            const isFresh = (now - hitTime) < limit;
 
             // PERSISTENCE GUARD: Manual target hits have strict RULES:
             // 1. MUST currently meet the target (Condition Check).
@@ -2301,12 +2251,7 @@ export class NotificationStore {
                     // Pre-process items to ensure timestamp exists
                     items.forEach(item => {
                         // 1. Resolve Timestamp to Numeric Number
-                        let t = item.timestamp || item.t || item.createdAt;
-
-                        // Handle Firestore Timestamps
-                        if (t && typeof t === 'object' && t.toMillis) t = t.toMillis();
-                        else if (t && typeof t === 'object' && t.seconds) t = t.seconds * 1000;
-                        else if (t && typeof t === 'string' || t instanceof Date) t = new Date(t).getTime();
+                        let t = this._parseTimestamp(item.timestamp || item.t || item.createdAt);
 
                         // Fallback to Batch Timestamp or Date string
                         if (!t && item.date) t = new Date(item.date).getTime();
@@ -2333,7 +2278,7 @@ export class NotificationStore {
                     .sort((a, b) => b.timestamp - a.timestamp);
 
                 // Dispatch event for UI
-                document.dispatchEvent(new CustomEvent('MARKET_INDEX_UPDATED', {
+                document.dispatchEvent(new CustomEvent(EVENTS.MARKET_INDEX_UPDATED, {
                     detail: {
                         count: this.marketIndexAlerts.length,
                         alerts: this.marketIndexAlerts

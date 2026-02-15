@@ -154,7 +154,10 @@ export const EVENTS = {
     // Notification & Settings Events
     OPEN_NOTIFICATIONS: 'open-notifications',
     NOTIFICATION_UPDATE: 'notification-update', // New Event
+    MARKET_INDEX_UPDATED: 'asx_market_index_updated', // REGISTERED EVENT
     NOTIFICATION_READY: 'notification-ready', // Data loaded event
+    OPEN_PORTFOLIO_VIEW: 'open-portfolio-view',
+    OPEN_MARKET_PULSE: 'open-market-pulse',
     TOGGLE_SHARE_MUTE: 'toggle-share-mute', // Added for Constitution Compliance
     OPEN_SETTINGS: 'open-settings',
     OPEN_GENERAL_SETTINGS: 'open-general-settings',
@@ -1366,6 +1369,7 @@ export const IDS = {
     ADD_SHARE_MODAL: 'add-share-modal',
     NOTIFICATION_MODAL: 'notification-modal',
     DAILY_BRIEFING_MODAL: 'daily-briefing-modal',
+    DAILY_BRIEFING_INTERACTION: 'asx_daily_briefing_interaction',
     SETTINGS_MODAL: 'settings-modal',
     CHART_MODAL: 'chart-modal',
     CHART_ROTATOR: 'chartRotator',

@@ -51,8 +51,6 @@ export class NotificationUI {
 
             syncBadge();
 
-            syncBadge();
-
             // DATA UPDATE SYNC: Ensure badge updates when new price data arrives
             if (StateAuditor && typeof StateAuditor.on === 'function') {
                 StateAuditor.on('DATA_UPDATED', () => {

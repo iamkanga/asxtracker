@@ -195,7 +195,7 @@ export class BriefingUI {
                 this._close(modal);
                 const notifModal = document.getElementById(IDS.NOTIFICATION_MODAL);
                 if (notifModal) { notifModal.remove(); }
-                document.dispatchEvent(new CustomEvent('open-portfolio-view'));
+                document.dispatchEvent(new CustomEvent(EVENTS.OPEN_PORTFOLIO_VIEW));
             };
 
             // NEW INTEGRATED LAYOUT
@@ -295,7 +295,7 @@ export class BriefingUI {
                 this._close(modal);
                 const notifModal = document.getElementById(IDS.NOTIFICATION_MODAL);
                 if (notifModal) { notifModal.remove(); }
-                document.dispatchEvent(new CustomEvent('open-portfolio-view'));
+                document.dispatchEvent(new CustomEvent(EVENTS.OPEN_PORTFOLIO_VIEW));
             };
 
             // TRIGGER AI GENERATION (Async)
