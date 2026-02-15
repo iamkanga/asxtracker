@@ -84,8 +84,8 @@ export class CashAssetUI {
      * Helper: Merge system and user categories while removing duplicates by ID.
      */
     _getMergedCategories() {
-        const systemCats = CASH_CATEGORIES || [];
-        const userCats = AppState.preferences.userCategories || [];
+        const systemCats = (CASH_CATEGORIES || []).filter(c => c && c.id);
+        const userCats = (AppState.preferences.userCategories || []).filter(c => c && c.id);
         const categoryMap = new Map();
 
         systemCats.forEach(cat => categoryMap.set(cat.id, { ...cat }));
@@ -252,9 +252,9 @@ export class CashAssetUI {
             const cats = this._getMergedCategories();
 
             listContainer.innerHTML = cats.map(c => `
-                <div class="${CSS_CLASSES.DROPDOWN_OPTION} flex justify-between items-center px-3 py-2 cursor-pointer hover:text-[var(--accent-color)]" data-value="${c.id}" style="padding: 10px;">
-                    <span>${c.label}</span>
-                    ${c.id.startsWith('user_') ? `<button type="button" class="category-delete-btn ${CSS_CLASSES.ICON_BTN_GHOST}" data-id="${c.id}"><i class="fas ${UI_ICONS.CLOSE}"></i></button>` : ''}
+                <div class="${CSS_CLASSES.DROPDOWN_OPTION} flex justify-between items-center px-3 py-2 cursor-pointer hover:text-[var(--accent-color)]" data-value="${c.id || ''}" style="padding: 10px;">
+                    <span>${c.label || 'Unnamed'}</span>
+                    ${(c.id && c.id.startsWith('user_')) ? `<button type="button" class="category-delete-btn ${CSS_CLASSES.ICON_BTN_GHOST}" data-id="${c.id}"><i class="fas ${UI_ICONS.CLOSE}"></i></button>` : ''}
                 </div>
             `).join('');
 

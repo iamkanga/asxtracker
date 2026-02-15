@@ -202,7 +202,8 @@ export class CashViewRenderer {
 
         // --- CONTENT GRID ---
         const hasComments = Array.isArray(asset.comments) && asset.comments.length > 0;
-        const catObj = [...CASH_CATEGORIES, ...(AppState.preferences.userCategories || [])]
+        const catObj = [...(CASH_CATEGORIES || []), ...(AppState.preferences.userCategories || [])]
+            .filter(c => c && c.id)
             .find(c => c.id === asset.category);
 
         card.innerHTML = `

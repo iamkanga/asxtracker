@@ -96,7 +96,7 @@ export class CashController {
         const { field, direction } = AppState.sortConfig;
 
         // Combine categories for lookup
-        const allCategories = [...CASH_CATEGORIES, ...(AppState.preferences.userCategories || [])];
+        const allCategories = [...(CASH_CATEGORIES || []), ...(AppState.preferences.userCategories || [])].filter(c => c && c.id);
 
         return [...assets].sort((a, b) => {
             // 1. Primary Sort: Hidden state (Hidden always last)

@@ -426,7 +426,8 @@ export class CashPieChart {
     }
 
     _getCategoryLabel(catId) {
-        const userCat = AppState.preferences.userCategories?.find(c => c.id === catId);
+        if (!catId) return 'Asset';
+        const userCat = (AppState.preferences.userCategories || []).find(c => c && c.id === catId);
         if (userCat) return userCat.label;
 
         const sysCat = CASH_CATEGORIES.find(c => c.id === catId);
@@ -436,8 +437,9 @@ export class CashPieChart {
     }
 
     _getCategoryColor(catId) {
+        if (!catId) return 'var(--asset-other)';
         // Find first asset in this category to get its color if custom
-        const userCat = AppState.preferences.userCategories?.find(c => c.id === catId);
+        const userCat = (AppState.preferences.userCategories || []).find(c => c && c.id === catId);
         if (userCat && userCat.color) return userCat.color;
 
         const firstAssetInCat = this.assets.find(a => a.category === catId && a.color);
