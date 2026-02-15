@@ -2885,24 +2885,7 @@ export class AppController {
         // GENERAL NAVIGATION EVENTS
         // -------------------------------------------------------------------------
 
-        // ASX Code Click (Programmatic View Request)
-        document.addEventListener(EVENTS.ASX_CODE_CLICK, (e) => {
-            const { code } = e.detail;
-            if (code) {
-                // Safety delay for modal transitions
-                setTimeout(() => {
-                    const stockData = getSingleShareData(code, AppState.data.shares, AppState.livePrices, AppState.data.watchlists);
-                    if (stockData) {
-                        this.viewRenderer.renderStockDetailsModal(stockData);
-                        // Ensure any hanging dropdowns or other modals (if applicable) are handled
-                        document.getElementById(IDS.ASX_DROPDOWN_MENU)?.classList.remove(CSS_CLASSES.SHOW);
-                    } else {
-                        // Fallback: Open Discovery Modal
-                        document.dispatchEvent(new CustomEvent(EVENTS.OPEN_RESEARCH_MODAL, { detail: { query: code } }));
-                    }
-                }, 150);
-            }
-        });
+
 
         // === SEARCH & RESEARCH EVENTS (TWO-STAGE DISCOVERY) ===
 
@@ -2965,18 +2948,23 @@ export class AppController {
 
 
 
-        // 4.5 ASX Code Click Handler (Centralized)
+        // 4.5 ASX Code Click Detail Route (Unified)
         document.addEventListener(EVENTS.ASX_CODE_CLICK, (e) => {
             const { code } = e.detail;
             if (!code) return;
 
-            // Safety Delay: Ensures any preceding "Close" (history pop) resolves
+            // Safety Delay: Ensures any preceding transitions or history moves settle
             setTimeout(() => {
                 const stockData = getSingleShareData(code, AppState.data.shares, AppState.livePrices, AppState.data.watchlists);
                 if (stockData) {
                     this.viewRenderer.renderStockDetailsModal(stockData);
+                    // Explicitly handle UI overlaps
+                    document.getElementById(IDS.ASX_DROPDOWN_MENU)?.classList.remove(CSS_CLASSES.SHOW);
+                } else {
+                    // Fallback: Open Discovery Modal if no local data
+                    document.dispatchEvent(new CustomEvent(EVENTS.OPEN_RESEARCH_MODAL, { detail: { query: code } }));
                 }
-            }, 150);
+            }, 120);
         });
 
         // 5. Summary Detail Modals

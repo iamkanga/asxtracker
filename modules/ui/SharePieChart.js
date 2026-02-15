@@ -151,18 +151,29 @@ export class SharePieChart {
     /**
      * Shows the full-screen interactive breakdown modal.
      */
+    /**
+     * Shows the full-screen interactive breakdown modal.
+     */
     async showModal() {
         const existing = document.getElementById('share-pie-modal');
         if (existing) existing.remove();
 
-        // Show loading state if needed, but usually breakdown is cached by now
         const breakdown = await this._getBreakdown();
         const total = breakdown.reduce((sum, b) => sum + b.val, 0);
 
         this.modal = document.createElement('div');
         this.modal.id = 'share-pie-modal';
         this.modal.className = `${CSS_CLASSES.MODAL} ${CSS_CLASSES.SHOW}`;
-        this.modal.style.zIndex = '20002';
+        // Support vertical scrolling for long modals on mobile by aligning to start
+        this.modal.style.cssText = `
+            z-index: 20002;
+            display: flex;
+            align-items: flex-start; 
+            justify-content: center;
+            padding: 20px 0;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        `;
 
         const rowsHtml = breakdown.map(b => {
             const pct = (b.val / total) * 100;
@@ -187,8 +198,8 @@ export class SharePieChart {
         }).join('');
 
         this.modal.innerHTML = `
-            <div class="${CSS_CLASSES.MODAL_OVERLAY}"></div>
-            <div class="${CSS_CLASSES.MODAL_CONTENT}" style="max-width: 500px; padding: 0; overflow: hidden; border-radius: 20px; background: var(--card-bg);">
+            <div class="${CSS_CLASSES.MODAL_OVERLAY}" style="position: fixed;"></div>
+            <div class="${CSS_CLASSES.MODAL_CONTENT}" style="max-width: 500px; padding: 0; overflow: visible; border-radius: 20px; background: var(--card-bg); margin: auto;">
                 <div class="${CSS_CLASSES.MODAL_HEADER}" style="padding: 20px 24px; border-bottom: 1px solid rgba(255,255,255,0.05);">
                     <h2 class="${CSS_CLASSES.MODAL_TITLE}" style="display: flex; align-items: center; gap: 12px;">
                         <i class="fas fa-chart-pie" style="color: var(--color-accent);"></i> Portfolio Allocation
@@ -197,16 +208,16 @@ export class SharePieChart {
                         <i class="fas ${UI_ICONS.CLOSE}"></i>
                     </button>
                 </div>
-                <div class="${CSS_CLASSES.MODAL_BODY}" style="padding: 24px; display: flex; flex-direction: column; align-items: center; gap: 24px;">
-                    <div class="pie-container-large" style="position: relative; width: 260px; height: 260px; display: flex; align-items: center; justify-content: center; margin: 10px 0;">
-                        ${this._createPieSvg(breakdown, 240, 240, true)}
-                        <div style="position: absolute; display: flex; flex-direction: column; align-items: center; pointer-events: none; width: 160px; text-align: center; justify-content: center; gap: 2px;">
+                <div class="${CSS_CLASSES.MODAL_BODY}" style="padding: 16px 24px 24px; display: flex; flex-direction: column; align-items: center; gap: 16px;">
+                    <div class="pie-container-large" style="position: relative; width: 240px; height: 240px; display: flex; align-items: center; justify-content: center; margin: 0;">
+                        ${this._createPieSvg(breakdown, 220, 220, true)}
+                        <div style="position: absolute; display: flex; flex-direction: column; align-items: center; pointer-events: none; width: 140px; text-align: center; justify-content: center; gap: 2px;">
                             <span id="share-pie-center-label" style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; font-weight: 800; letter-spacing: 1px; transition: all 0.2s ease;">Market Value</span>
                             <span id="share-pie-center-value" style="font-size: 1.1rem; font-weight: 900; color: #fff; transition: all 0.2s ease; line-height: 1.1;">${formatCurrency(total)}</span>
                             <span id="share-pie-center-sub" style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; transition: all 0.2s ease; opacity: 0; transform: translateY(5px);"></span>
                         </div>
                     </div>
-                    <div class="breakdown-list" style="width: 100%; max-height: 350px; overflow-y: auto; background: rgba(0,0,0,0.2); border-radius: 12px; border: 1px solid rgba(255,255,255,0.03);">
+                    <div class="breakdown-list" style="width: 100%; max-height: 380px; overflow-y: auto; background: rgba(0,0,0,0.2); border-radius: 12px; border: 1px solid rgba(255,255,255,0.03);">
                         ${rowsHtml}
                     </div>
                 </div>
@@ -226,6 +237,14 @@ export class SharePieChart {
 
         this.modal.querySelector('.share-pie-close-btn').addEventListener('click', close);
         this.modal.querySelector(`.${CSS_CLASSES.MODAL_OVERLAY}`).addEventListener('click', close);
+
+        // Global modal untap listener
+        this.modal.addEventListener('click', (e) => {
+            if (e.target.closest('.interactive-row') || e.target.closest('.pie-slice')) return;
+            // Target background/header to clear
+            this._activeId = null;
+            this._clearHighlights(this.modal, total);
+        });
 
         this.modal._navActive = true;
         navManager.pushState(() => {
@@ -250,14 +269,35 @@ export class SharePieChart {
 
         const allInteractive = modal.querySelectorAll('.pie-slice, .interactive-row');
 
-        allInteractive.forEach(el => {
-            const label = el.dataset.id; // Stock Code
-            const val = parseFloat(el.dataset.val);
-            const pct = ((val / total) * 100).toFixed(1) + '%';
-            const valStr = formatCurrency(val);
+        const onEnter = (label, pct, valStr) => {
+            // Immediate visual feedback
+            this._updateCoreVisuals(modal, label, pct, valStr);
+        };
 
-            const onEnter = () => {
-                // Clear all existing highlights first to ensure only one is active
+        const onLeave = (label) => {
+            // Restore active state OR default
+            if (this._activeId) {
+                // If there's an active ID and it's not this one, restore the active one
+                if (this._activeId !== label) {
+                    const activeEl = Array.from(allInteractive).find(i => i.dataset.id === this._activeId);
+                    if (activeEl) {
+                        const activeVal = parseFloat(activeEl.dataset.val);
+                        const activePct = ((activeVal / total) * 100).toFixed(1) + '%';
+                        const activeValStr = formatCurrency(activeVal);
+                        this._updateCoreVisuals(modal, this._activeId, activePct, activeValStr);
+                    }
+                }
+            } else {
+                // Return to default total view
+                labelEl.textContent = defaultLabel;
+                labelEl.style.color = 'var(--text-muted)';
+                valueEl.textContent = defaultValue;
+                valueEl.style.fontSize = '1.1rem';
+                valueEl.style.color = '#fff';
+                subEl.style.opacity = '0';
+                subEl.style.transform = 'translateY(5px)';
+
+                // Clear highlights
                 modal.querySelectorAll('.pie-slice').forEach(s => {
                     s.style.filter = 'none';
                     s.style.transform = 'scale(1)';
@@ -265,104 +305,130 @@ export class SharePieChart {
                 modal.querySelectorAll('.interactive-row').forEach(r => {
                     r.style.background = 'transparent';
                 });
+            }
+        };
 
-                labelEl.textContent = label;
-                labelEl.style.color = 'var(--color-accent)';
+        allInteractive.forEach(el => {
+            const label = el.dataset.id; // Stock Code
+            const val = parseFloat(el.dataset.val);
+            const pct = ((val / total) * 100).toFixed(1) + '%';
+            const valStr = formatCurrency(val);
 
-                valueEl.textContent = pct;
-                valueEl.style.fontSize = '1.8rem';
-                valueEl.style.color = '#fff';
+            el.addEventListener('mouseenter', () => onEnter(label, pct, valStr));
+            el.addEventListener('mouseleave', () => onLeave(label));
 
-                subEl.textContent = valStr;
-                subEl.style.opacity = '0.6';
-                subEl.style.transform = 'translateY(0)';
+            // Click Logic: 1st tap highlights, 2nd tap opens details
+            el.addEventListener('click', (e) => {
+                e.stopPropagation();
 
-                // Highlight corresponding slice
-                const slice = modal.querySelector(`.pie-slice[data-id="${label}"]`);
-                if (slice) {
-                    slice.style.filter = 'brightness(1.2)';
-                    slice.style.transform = 'scale(1.05)';
-                }
-
-                // Highlight corresponding row if applicable
-                if (el.classList.contains('interactive-row')) {
-                    el.style.background = 'rgba(255,255,255,0.08)';
-                } else if (el.classList.contains('pie-slice')) {
-                    const row = modal.querySelector(`.interactive-row[data-id="${label}"]`);
-                    if (row) row.style.background = 'rgba(255,255,255,0.08)';
-                }
-            };
-
-            const onLeave = () => {
-                // Only reset if the element is not the currently active one
-                if (this._activeId !== label) {
-                    labelEl.textContent = defaultLabel;
-                    labelEl.style.color = 'var(--text-muted)';
-
-                    valueEl.textContent = defaultValue;
-                    valueEl.style.fontSize = '1.1rem';
-                    valueEl.style.color = '#fff';
-
-                    subEl.style.opacity = '0';
-                    subEl.style.transform = 'translateY(5px)';
-
-                    if (el.classList.contains('interactive-row')) {
-                        el.style.background = 'transparent';
-                        // Reset the corresponding pie slice
-                        const slice = modal.querySelector(`.pie-slice[data-id="${label}"]`);
-                        if (slice) {
-                            slice.style.filter = 'none';
-                            slice.style.transform = 'scale(1)';
-                        }
-                    }
-                }
-            };
-
-            el.addEventListener('mouseenter', onEnter);
-            el.addEventListener('mouseleave', onLeave);
-
-            // Click to scroll and highlight; Second click to open details
-            el.addEventListener('click', () => {
-                // If already active, open stock details
                 if (this._activeId === label) {
+                    // OPEN DETAILS ON SECOND TAP
                     document.dispatchEvent(new CustomEvent(EVENTS.ASX_CODE_CLICK, { detail: { code: label } }));
                     return;
                 }
 
-                // Set active ID
+                // Set new active ID
                 this._activeId = label;
-                onEnter();
+                onEnter(label, pct, valStr); // Apply visuals
 
+                // Sync List Positioning
                 if (el.classList.contains('pie-slice')) {
                     const row = modal.querySelector(`.interactive-row[data-id="${label}"]`);
                     if (row) {
                         row.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
-                        // Visual Feedback: Temporary stronger highlight
-                        const prevTransition = row.style.transition;
-                        row.style.transition = 'background 0.3s ease';
-                        row.style.background = 'rgba(255,255,255,0.2)';
-
+                        // Visual pop
+                        row.style.background = 'rgba(255,255,255,0.15)';
                         setTimeout(() => {
-                            // If still active/hovering, keep hover color, else reset
-                            if (this._activeId === label) {
-                                row.style.background = 'rgba(255,255,255,0.08)';
-                            } else {
-                                row.style.background = 'transparent';
-                            }
-                            row.style.transition = prevTransition;
-                        }, 1000);
+                            if (this._activeId === label) row.style.background = 'rgba(255,255,255,0.08)';
+                        }, 800);
                     }
                 }
             });
 
-            // Touch support for mobile tapping on rows
-            el.addEventListener('touchstart', (e) => {
-                onEnter();
-                // We don't preventDefault as we still want scrolling, 
-                // but we want the visual immediate feedback
+            // Touch support for immediate highlighting
+            el.addEventListener('touchstart', () => {
+                onEnter(label, pct, valStr);
             }, { passive: true });
         });
+    }
+
+    /**
+     * Resets the modal visuals to the default state (Total Portfolio).
+     * @param {HTMLElement} modal
+     * @param {number} total
+     */
+    _clearHighlights(modal, total) {
+        const labelEl = modal.querySelector('#share-pie-center-label');
+        const valueEl = modal.querySelector('#share-pie-center-value');
+        const subEl = modal.querySelector('#share-pie-center-sub');
+
+        if (labelEl) {
+            labelEl.textContent = 'Market Value';
+            labelEl.style.color = 'var(--text-muted)';
+        }
+        if (valueEl) {
+            valueEl.textContent = formatCurrency(total);
+            valueEl.style.fontSize = '1.1rem';
+            valueEl.style.color = '#fff';
+        }
+        if (subEl) {
+            subEl.style.opacity = '0';
+            subEl.style.transform = 'translateY(5px)';
+        }
+
+        modal.querySelectorAll('.pie-slice').forEach(s => {
+            s.style.filter = 'none';
+            s.style.transform = 'scale(1)';
+        });
+        modal.querySelectorAll('.interactive-row').forEach(r => {
+            r.style.background = 'transparent';
+        });
+    }
+
+    /**
+     * Updates the central display and highlights the corresponding pie slice/row.
+     * @param {HTMLElement} modal
+     * @param {string} label
+     * @param {string} pct
+     * @param {string} valStr
+     */
+    _updateCoreVisuals(modal, label, pct, valStr) {
+        const labelEl = modal.querySelector('#share-pie-center-label');
+        const valueEl = modal.querySelector('#share-pie-center-value');
+        const subEl = modal.querySelector('#share-pie-center-sub');
+
+        // Clear all existing highlights first
+        modal.querySelectorAll('.pie-slice').forEach(s => {
+            s.style.filter = 'none';
+            s.style.transform = 'scale(1)';
+        });
+        modal.querySelectorAll('.interactive-row').forEach(r => {
+            r.style.background = 'transparent';
+        });
+
+        labelEl.textContent = label;
+        labelEl.style.color = 'var(--color-accent)';
+
+        valueEl.textContent = pct;
+        valueEl.style.fontSize = '1.8rem';
+        valueEl.style.color = '#fff';
+
+        subEl.textContent = valStr;
+        subEl.style.opacity = '0.6';
+        subEl.style.transform = 'translateY(0)';
+
+        // Highlight corresponding slice
+        const slice = modal.querySelector(`.pie-slice[data-id="${label}"]`);
+        if (slice) {
+            slice.style.filter = 'brightness(1.2)';
+            slice.style.transform = 'scale(1.05)';
+        }
+
+        // Highlight corresponding row
+        const row = modal.querySelector(`.interactive-row[data-id="${label}"]`);
+        if (row) {
+            row.style.background = 'rgba(255,255,255,0.08)';
+        }
     }
 
     /**

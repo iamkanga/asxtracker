@@ -833,7 +833,8 @@ export class ViewRenderer {
         modal.className = `${CSS_CLASSES.MODAL} ${CSS_CLASSES.HIDDEN}`;
         modal.dataset.stockCode = stock.code;
 
-
+        // Ensure Details modal is on top of Allocation modal (Allocation is at 20002)
+        modal.style.setProperty('z-index', '21000', 'important');
 
         // Research Links - Use the static seeding logic
         const rawLinks = (AppState.preferences.researchLinks && AppState.preferences.researchLinks.length > 0)
@@ -848,6 +849,9 @@ export class ViewRenderer {
 
         const safeVal = (v, fmt) => (v !== undefined && v !== null && v !== 0) ? fmt(v) : '-';
 
+        // Check if we should show a Back button (e.g. if Allocation modal is present)
+        const hasAllocationModal = document.getElementById('share-pie-modal') !== null;
+
         modal.innerHTML = `
             <div class="${CSS_CLASSES.MODAL_OVERLAY}"></div>
                 <div class="${CSS_CLASSES.MODAL_CONTENT} ${CSS_CLASSES.MODAL_CONTENT_LARGE}">
@@ -856,6 +860,11 @@ export class ViewRenderer {
                         <div class="${CSS_CLASSES.MODAL_HEADER_LEFT} ${CSS_CLASSES.FLEX_1}">
                             <div class="${CSS_CLASSES.TEXT_LEFT} ${CSS_CLASSES.W_FULL}">
                                 <div class="${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.ALIGN_CENTER} ${CSS_CLASSES.JUSTIFY_START}">
+                                    ${hasAllocationModal ? `
+                                        <button class="modal-back-btn" id="details-back-btn" title="Back to Allocation" style="margin-right: 12px; margin-left: -5px;">
+                                            <i class="fas fa-chevron-left"></i>
+                                        </button>
+                                    ` : ''}
                                     <a href="https://gemini.google.com/app" target="_blank" rel="noopener noreferrer" id="gemini-header-link" role="link" aria-label="Ask AI Deep Dive" style="text-decoration: none; color: inherit; display: inline-flex; align-items: center; -webkit-touch-callout: default !important; user-select: auto !important; position: relative; z-index: 10; padding: 4px; margin: -4px;">
                                         <div class="card-code-pill" style="background: none; border: none; padding: 0; gap: 8px; display: inline-flex; align-items: center;">
                                             <img src="https://files.marketindex.com.au/xasx/96x96-png/${stock.code.toLowerCase()}.png" class="favicon-icon" style="width: 24px; height: 24px;" onerror="this.src='${KANGAROO_ICON_SRC}'" alt="">
@@ -1342,6 +1351,14 @@ export class ViewRenderer {
                 dayChange,
                 () => ChartModal.show(stock.code, stock.name)
             );
+        }
+
+        // Back Button functionality
+        const detailsBackBtn = modal.querySelector('#details-back-btn');
+        if (detailsBackBtn) {
+            detailsBackBtn.addEventListener('click', () => {
+                history.back(); // Triggers NavManager to close this modal and return to previous
+            });
         }
 
         requestAnimationFrame(() => {
