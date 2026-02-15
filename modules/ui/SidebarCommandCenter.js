@@ -454,12 +454,12 @@ export class SidebarCommandCenter {
 
             case 'act-create-wl':
                 this._closeSidebar();
-                document.getElementById(IDS.BTN_CREATE_WATCHLIST)?.click();
+                document.dispatchEvent(new CustomEvent(EVENTS.OPEN_CREATE_WATCHLIST));
                 break;
 
             case 'act-edit-wl':
                 this._closeSidebar();
-                document.getElementById(IDS.BTN_EDIT_WATCHLIST)?.click();
+                document.dispatchEvent(new CustomEvent(EVENTS.OPEN_EDIT_WATCHLIST));
                 break;
         }
     }

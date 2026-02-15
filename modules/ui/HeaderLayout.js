@@ -351,6 +351,15 @@ export class HeaderLayout {
                 }, 150);
             });
         }
+
+        // New Modal Trigger Listeners (Decoupled from Sidebar Proxy)
+        document.addEventListener(EVENTS.OPEN_CREATE_WATCHLIST, () => {
+            this._openCreateWatchlistModal();
+        });
+
+        document.addEventListener(EVENTS.OPEN_EDIT_WATCHLIST, () => {
+            this._openEditWatchlistModal();
+        });
     }
 
     /**

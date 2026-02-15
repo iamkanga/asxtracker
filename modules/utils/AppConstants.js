@@ -174,7 +174,9 @@ export const EVENTS = {
     TOGGLE_SORT_DIRECTION: 'toggle-sort-direction',
     SAVE_BORDER_PREFS: 'save-border-prefs',
     OPEN_PORTFOLIO_CHART: 'open-portfolio-chart',
-    SHOW_AI_SUMMARY: 'show-ai-summary'
+    SHOW_AI_SUMMARY: 'show-ai-summary',
+    OPEN_CREATE_WATCHLIST: 'open-create-watchlist',
+    OPEN_EDIT_WATCHLIST: 'open-edit-watchlist'
 };
 
 export const SORT_OPTIONS = {
