@@ -438,10 +438,12 @@ export class CashPieChart {
 
     _getCategoryColor(catId) {
         if (!catId) return 'var(--asset-other)';
-        // Find first asset in this category to get its color if custom
+
+        // 1. PRIORITY: Global Category Theme
         const userCat = (AppState.preferences.userCategories || []).find(c => c && c.id === catId);
         if (userCat && userCat.color) return userCat.color;
 
+        // 2. FALLBACK: First asset in this category with an explicit color
         const firstAssetInCat = this.assets.find(a => a.category === catId && a.color);
         if (firstAssetInCat && firstAssetInCat.color) return firstAssetInCat.color;
 

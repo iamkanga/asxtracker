@@ -17,36 +17,63 @@ export class CashAssetUI {
     }
 
     /**
-     * Helper: Get all colors currently in use across the entire application.
-     * Includes all assets and all category theme overrides.
+     * Helper: Get all colors currently in use across categories.
+     * Returns a Map of Color (lowercase) -> { id: CategoryID, label: CategoryLabel }
      */
-    _getUsedColors(excludeAssetId = null, excludeCategoryId = null) {
-        const usedMap = new Map(); // Color (lowercase) -> Source Label
+    _getUsedColors(excludeCategoryId = null) {
+        const usedMap = new Map();
+        const normExclude = (excludeCategoryId || '').toLowerCase().trim();
 
-        // 1. Scan Assets
-        (AppState.data.cash || []).forEach(a => {
-            if (a.color) {
-                const colorVal = a.color.toLowerCase().trim();
-                // A color is "used elsewhere" if it belongs to a DIFFERENT category
-                // OR if it's a DIFFERENT asset in the SAME category (only if we want absolute 1:1 asset color uniqueness)
-                // BUT the user wants unique CAT colors. If assets in the same cat share a color, that's fine/expected.
-                // SO: We block it if category differs.
-                if (a.category !== excludeCategoryId && a.id !== excludeAssetId) {
-                    usedMap.set(colorVal, a.name || 'Unnamed Asset');
-                }
-            }
-        });
-
-        // 2. Scan Category Themes in Registry
+        // 1. Scan Category Themes (Registry) - ABSOLUTE SOURCE OF TRUTH
+        const themedCategories = new Set();
         (AppState.preferences.userCategories || []).forEach(c => {
-            if (c.color) {
-                const colorVal = c.color.toLowerCase().trim();
-                // Block if it's NOT the category we are currently editing
-                if (c.id !== excludeCategoryId) {
-                    usedMap.set(colorVal, `Category: ${c.label}`);
+            if (c.id) {
+                const normId = c.id.toLowerCase().trim();
+                if (c.color) {
+                    const colorVal = c.color.toLowerCase().trim();
+                    themedCategories.add(normId);
+                    if (normId !== normExclude) {
+                        usedMap.set(colorVal, { id: c.id, label: c.label || c.id });
+                    }
                 }
             }
         });
+
+        // 2. Scan Assets (Fallback for categories without themes)
+        (AppState.data.cash || []).forEach(a => {
+            if (a.color && a.category) {
+                const normId = a.category.toLowerCase().trim();
+
+                // Only consider asset color if the category DOES NOT have a global theme
+                // and it's not the category we are currently editing
+                if (!themedCategories.has(normId) && normId !== normExclude) {
+                    const colorVal = a.color.toLowerCase().trim();
+                    if (!usedMap.has(colorVal)) {
+                        const catObj = [...CASH_CATEGORIES, ...(AppState.preferences.userCategories || [])].find(c => c.id === a.category);
+                        usedMap.set(colorVal, { id: a.category, label: catObj?.label || a.category });
+                    }
+                }
+            }
+        });
+
+        // 3. Scan Standard Fallback Colors for active categories without themes
+        const activeCategoryIds = new Set((AppState.data.cash || []).map(a => a.category).filter(Boolean));
+        const standardColors = {
+            'cash': '#4db8ff', 'cash_in_bank': '#3399ff', 'term_deposit': '#0066cc',
+            'property': '#ff9933', 'crypto': '#ffcc00', 'shares': '#a49393',
+            'super': '#9933ff', 'personal': '#ff3399', 'other': '#808080'
+        };
+
+        for (const [id, color] of Object.entries(standardColors)) {
+            const normId = id.toLowerCase().trim();
+            if (activeCategoryIds.has(id) && !themedCategories.has(normId) && normId !== normExclude) {
+                const colorVal = color.toLowerCase().trim();
+                if (!usedMap.has(colorVal)) {
+                    const catObj = CASH_CATEGORIES.find(c => c.id === id);
+                    usedMap.set(colorVal, { id, label: catObj?.label || id });
+                }
+            }
+        }
 
         return usedMap;
     }
@@ -62,11 +89,11 @@ export class CashAssetUI {
         }
 
         // 1. Check if category already has a theme
-        const userCat = AppState.preferences.userCategories?.find(c => c.id === resolvedCategoryId);
+        const userCat = (AppState.preferences.userCategories || []).find(c => c && c.id === resolvedCategoryId);
         if (userCat && userCat.color) return userCat.color;
 
         // 2. Find first available unique color
-        const usedMap = this._getUsedColors(currentAssetId, resolvedCategoryId);
+        const usedMap = this._getUsedColors(resolvedCategoryId);
         const available = this.customColors.filter(c => !usedMap.has(c.toLowerCase().trim()));
 
         if (available.length > 0) {
@@ -177,7 +204,7 @@ export class CashAssetUI {
                             </div>
                             <div id="color-picker-container" class="${CSS_CLASSES.HIDDEN} mb-3 p-3 bg-[var(--card-bg-light)] rounded border border-[var(--border-color)]">
                                 <div class="flex justify-between items-center mb-2">
-                                    <div class="text-xs text-muted">Available Colors (Unique)</div>
+                                    <div class="text-xs text-muted">Category Color Palette</div>
                                     <button type="button" id="btn-reset-category-color" class="${CSS_CLASSES.BTN_TEXT_SMALL} hidden" style="font-size: 0.7rem;">Reset</button>
                                 </div>
                                 <div id="color-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(28px, 1fr)); gap: 10px;"></div>
@@ -206,39 +233,46 @@ export class CashAssetUI {
         const resetColorBtn = modal.querySelector('#btn-reset-category-color');
 
         const renderPicker = () => {
-            const currentAssetId = asset ? asset.id : null;
             let currentCategoryId = this.selectedCategory;
             const customInput = modal.querySelector('#custom-category-name');
             if (currentCategoryId === 'other' && customInput && customInput.value.trim()) {
                 currentCategoryId = 'user_' + customInput.value.trim().toLowerCase().replace(/[^a-z0-9]/g, '_');
             }
 
-            // GET ABSOLUTELY USED COLORS
-            const usedMap = this._getUsedColors(currentAssetId, currentCategoryId);
-
-            // Available = All Colors - Blocked by other categories
-            // IMPORTANT: We do NOT allow choosing a color that is used by ANOTHER category.
-            const available = this.customColors.filter(c => !usedMap.has(c.toLowerCase().trim()));
-
-            // Safety: If current selection is suddenly used elsewhere (e.g. user typed a name), pick alternative
-            const selectedVal = modal.dataset.selectedColor?.toLowerCase().trim();
-            if (selectedVal && usedMap.has(selectedVal)) {
-                console.warn(`[CashAssetUI] Auto-correcting color conflict for ${currentCategoryId}`);
-                const fallback = available.length > 0 ? available[0] : this.customColors[0];
-                modal.dataset.selectedColor = fallback;
-                this._updateModalHeaderColor(modal);
-                return setTimeout(renderPicker, 0);
-            }
+            // Usage Map: Color -> { id, label }
+            const usedMap = this._getUsedColors(currentCategoryId);
+            const selectedColor = modal.dataset.selectedColor;
 
             const hasOverride = AppState.preferences.userCategories?.some(c => c.id === currentCategoryId && c.color);
             resetColorBtn.classList.toggle('hidden', !hasOverride);
 
-            colorGrid.innerHTML = available.map(c => `
-                <div class="color-swatch-item" data-color="${c}" style="width: 28px; height: 28px; border-radius: 50%; background-color: ${c}; cursor: pointer; border: 2px solid ${modal.dataset.selectedColor === c ? '#fff' : 'rgba(255,255,255,0.1)'}; box-shadow: ${modal.dataset.selectedColor === c ? '0 0 0 2px var(--color-accent)' : 'none'};"></div>
-            `).join('');
+            colorGrid.innerHTML = this.customColors.map(c => {
+                const isTaken = usedMap.has(c.toLowerCase().trim());
+                const isSelected = selectedColor?.toLowerCase().trim() === c.toLowerCase().trim();
+                const sourceCat = isTaken ? usedMap.get(c.toLowerCase().trim()) : null;
+
+                return `
+                    <div class="color-swatch-item ${isTaken ? 'is-taken' : 'cursor-pointer hover:scale-110 active:scale-95'}" 
+                         data-color="${c}" 
+                         data-is-taken="${isTaken}"
+                         title="${isTaken ? 'Used by: ' + (sourceCat.label || sourceCat.id) : 'Available'}"
+                         style="width: 28px; height: 28px; border-radius: 50%; background-color: ${c}; position: relative; border: 2px solid ${isSelected ? '#fff' : 'rgba(255,255,255,0.1)'}; box-shadow: ${isSelected ? '0 0 0 2px var(--color-accent)' : 'none'}; transition: all 0.2s ease;">
+                        ${isSelected ? '<i class="fas fa-check" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 10px; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.5);"></i>' : ''}
+                        ${isTaken ? `
+                            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(45deg); width: 100%; height: 2px; background: rgba(0,0,0,0.7); box-shadow: 0 0 2px rgba(255,255,255,0.8);"></div>
+                            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); width: 100%; height: 2px; background: rgba(0,0,0,0.7); box-shadow: 0 0 2px rgba(255,255,255,0.8);"></div>
+                        ` : ''}
+                    </div>
+                `;
+            }).join('');
 
             colorGrid.querySelectorAll('.color-swatch-item').forEach(item => {
                 item.addEventListener('click', () => {
+                    if (item.dataset.isTaken === 'true') {
+                        const source = usedMap.get(item.dataset.color.toLowerCase().trim());
+                        ToastManager.error(`Color Conflict! Already assigned to "${source.label}".`);
+                        return;
+                    }
                     modal.dataset.selectedColor = item.dataset.color;
                     renderPicker();
                     this._updateModalHeaderColor(modal);
@@ -288,7 +322,7 @@ export class CashAssetUI {
                         togglePickerBtn.textContent = 'Hide Colors';
                     }
 
-                    // Auto-sync color
+                    // Auto-sync color to category theme
                     modal.dataset.selectedColor = this._pickInitialColor(modal.querySelector(`#${IDS.ASSET_NAME}`).value, asset?.id, val);
                     this._updateModalHeaderColor(modal);
                     renderPicker();
@@ -399,11 +433,11 @@ export class CashAssetUI {
 
         // --- STRICT GLOBAL COLOR BLOCKADE ---
         if (color) {
-            const usedMap = this._getUsedColors(modal.dataset.editingAssetId, resolvedCategory);
+            const usedMap = this._getUsedColors(resolvedCategory);
             const colorVal = color.toLowerCase().trim();
             if (usedMap.has(colorVal)) {
                 const source = usedMap.get(colorVal);
-                ToastManager.error(`Color Conflict! This color is already used by "${source}". Please choose another.`);
+                ToastManager.error(`Color Conflict! Already used by "${source.label || source.id}".`);
                 return null;
             }
         }

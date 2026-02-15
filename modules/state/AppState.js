@@ -540,7 +540,7 @@ export const AppState = {
     saveUserCategory(categoryObj) {
         if (!categoryObj.id || !categoryObj.label) return;
 
-        // IMMUTABLE UPDATE (Ensures JSON comparison in UserStore detects change)
+        // 1. Update Category Theme
         const cats = [...(this.preferences.userCategories || [])];
         const index = cats.findIndex(c => c.id === categoryObj.id);
 
@@ -551,6 +551,16 @@ export const AppState = {
         }
 
         this.preferences.userCategories = cats;
+
+        // 2. Cascade Color change to all assets in this category (Consistency)
+        if (categoryObj.color && this.data.cash) {
+            this.data.cash.forEach(asset => {
+                if (asset.category === categoryObj.id) {
+                    asset.color = categoryObj.color;
+                }
+            });
+        }
+
         localStorage.setItem(STORAGE_KEYS.USER_CATEGORIES, JSON.stringify(cats));
         this._triggerSync();
     },

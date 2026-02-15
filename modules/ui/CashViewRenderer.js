@@ -150,13 +150,16 @@ export class CashViewRenderer {
         let colorVal = 'var(--asset-other)'; // Default
 
         if (asset.category) {
-            const userCat = AppState.preferences.userCategories?.find(c => c.id === asset.category);
+            // 1. PRIORITY: User Category Theme (Global override)
+            const userCat = (AppState.preferences.userCategories || []).find(c => c && c.id === asset.category);
 
             if (userCat && userCat.color) {
-                // User Custom Category (HEX)
                 colorVal = userCat.color;
+            } else if (asset.color) {
+                // 2. FALLBACK: Explicit Asset Color
+                colorVal = asset.color;
             } else {
-                // Standard Categories (CSS Vars)
+                // 3. FALLBACK: Standard CSS Vars
                 const standardColors = {
                     'cash': 'var(--asset-cash)',
                     'cash_in_bank': 'var(--asset-cash-in-bank)',
@@ -169,15 +172,7 @@ export class CashViewRenderer {
                     'other': 'var(--asset-other)'
                 };
 
-                // Prioritize: 
-                // 1. Explicit Asset Color (Specific override)
-                // 2. User Category Preference (Global theme override - handled above)
-                // 3. Name-based Hashing (Only for 'other')
-                // 4. Default CSS Var
-
-                if (asset.color) {
-                    colorVal = asset.color;
-                } else if (standardColors[asset.category]) {
+                if (standardColors[asset.category]) {
                     colorVal = standardColors[asset.category];
                 } else if (asset.category === 'other' && asset.name) {
                     colorVal = this._getColorForString(asset.name);
