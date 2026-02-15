@@ -122,11 +122,13 @@ export class AppController {
         AiSummaryUI.init();
         ScrollManager.init();
 
-        // Initialize Pull to Refresh (PWA support)
+        // Initialize Pull to Refresh (PWA support) - REBOOT MODE
         const ptr = new PullToRefresh({
             onRefresh: async () => {
-                console.log('[AppController] Manual Pull-to-Refresh triggered.');
-                await this.updateDataAndRender(true);
+                console.log('[AppController] Rebooting app via Pull-to-Refresh...');
+                // Short delay to allow the "refreshing" animation to be seen
+                await new Promise(resolve => setTimeout(resolve, 800));
+                window.location.reload();
             }
         });
         ptr.init();
@@ -1536,70 +1538,63 @@ export class AppController {
         if (fetchFresh) {
             if (this._fetchDebounceTimer) clearTimeout(this._fetchDebounceTimer);
 
-            this._fetchDebounceTimer = setTimeout(() => {
-                const originalWatchlistId = AppState.watchlist.id;
-                const codes = [...new Set(filteredShares.map(s => s.shareName))].filter(Boolean);
+            // Return a promise that resolves when the fetch is complete
+            return new Promise((resolve) => {
+                this._fetchDebounceTimer = setTimeout(() => {
+                    const originalWatchlistId = AppState.watchlist.id;
+                    const codes = [...new Set(filteredShares.map(s => s.shareName))].filter(Boolean);
 
-                if (codes.length === 0) return;
-
-                if (codes.length > 1) {
-                    const now = Date.now();
-                    const FIVE_MINUTES = 5 * 60 * 1000;
-                    if (AppState.lastGlobalFetch && (now - AppState.lastGlobalFetch < FIVE_MINUTES)) {
-                        const { mergedData: cachedMerged, summaryMetrics: cachedMetrics } = processShares(
-                            AppState.data.shares || [],
-                            AppState.watchlist.id,
-                            AppState.livePrices,
-                            AppState.sortConfig,
-                            AppState.hiddenAssets
-                        );
-                        this.viewRenderer.render(cachedMerged, cachedMetrics);
+                    if (codes.length === 0) {
+                        resolve();
                         return;
                     }
-                }
 
-                if (AppState._isFetching) return;
-                AppState._isFetching = true;
+                    // For Manual Pull-to-Refresh (fetchFresh=true), we bypass the 5-minute guard
+                    // to ensure the user gets what they explicitly asked for.
 
-                requestAnimationFrame(async () => {
-                    try {
-                        const result = await this.dataService.fetchLivePrices(codes);
-                        const freshPrices = result?.prices;
-                        const freshDashboard = result?.dashboard;
-
-                        if (freshPrices && freshPrices.size > 0) {
-                            AppState.livePrices = new Map([...AppState.livePrices, ...freshPrices]);
-
-                            // Manual notification removed - now event-driven via PRICES_UPDATED at end of block
-
-                            if (freshDashboard && Array.isArray(freshDashboard)) {
-                                AppState.data.dashboard = freshDashboard;
-                            }
-
-                            if (codes.length > 50) {
-                                AppState.lastGlobalFetch = Date.now();
-                            }
-
-                            if (AppState.watchlist.id !== originalWatchlistId) {
-                                return;
-                            }
-
-                            // Manual re-render logic removed - now centralized and triggered by PRICES_UPDATED below
-                            // BROADCAST: Per-watchlist fetch complete
-                            StateAuditor.emit('PRICES_UPDATED', {
-                                count: freshPrices.size,
-                                totalCached: AppState.livePrices.size,
-                                hasDashboard: !!(freshDashboard && freshDashboard.length > 0),
-                                timestamp: Date.now()
-                            });
-                        }
-                    } catch (e) {
-                        console.warn('Background price refresh failed:', e);
-                    } finally {
-                        AppState._isFetching = false;
+                    if (AppState._isFetching) {
+                        resolve();
+                        return;
                     }
-                });
-            }, 250);
+                    AppState._isFetching = true;
+
+                    requestAnimationFrame(async () => {
+                        try {
+                            const result = await this.dataService.fetchLivePrices(codes);
+                            const freshPrices = result?.prices;
+                            const freshDashboard = result?.dashboard;
+
+                            if (freshPrices && freshPrices.size > 0) {
+                                AppState.livePrices = new Map([...AppState.livePrices, ...freshPrices]);
+
+                                if (freshDashboard && Array.isArray(freshDashboard)) {
+                                    AppState.data.dashboard = freshDashboard;
+                                }
+
+                                if (codes.length > 50) {
+                                    AppState.lastGlobalFetch = Date.now();
+                                }
+
+                                if (AppState.watchlist.id === originalWatchlistId) {
+                                    // The reactive event will trigger the actual re-render, 
+                                    // but we emit it here.
+                                    StateAuditor.emit('PRICES_UPDATED', {
+                                        count: freshPrices.size,
+                                        totalCached: AppState.livePrices.size,
+                                        hasDashboard: !!(freshDashboard && freshDashboard.length > 0),
+                                        timestamp: Date.now()
+                                    });
+                                }
+                            }
+                        } catch (e) {
+                            console.warn('Background price refresh failed:', e);
+                        } finally {
+                            AppState._isFetching = false;
+                            resolve(); // Resolve the refresh promise
+                        }
+                    });
+                }, 250);
+            });
         }
     }
 
