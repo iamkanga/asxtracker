@@ -124,7 +124,7 @@ class _StateAuditor {
                     const oldValue = self._shadow[key];
                     self._shadow[key] = newValue;
 
-                    if (self._enabled && !IGNORED_KEYS.has(key)) {
+                    if (self._enabled && !IGNORED_KEYS.has(key) && oldValue !== newValue) {
                         self._recordMutation(key, oldValue, newValue);
                     }
                 },

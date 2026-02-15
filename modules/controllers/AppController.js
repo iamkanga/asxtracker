@@ -237,7 +237,7 @@ export class AppController {
                 }
 
                 // Security Challenge
-                // v1138: Removed redundant call - _syncPreferencesWithDebounce will trigger this once prefs arrive.
+                // v1138: Removed redundant call - _applyCloudPreferences will trigger this once prefs arrive.
                 // this.handleSecurityLock();
 
                 // Start Notification Stream
@@ -602,14 +602,11 @@ export class AppController {
 
 
         AppState.onPersistenceUpdate = (prefs) => {
-            this._syncPreferencesWithDebounce(prefs);
+            this._syncPreferencesToCloud(prefs);
         };
 
         // 7. Watchlist Restoration is handled in handleAuthStateChange
         //    (after data is loaded from Firebase)
-        //    We only set defaults here for immediate UI state
-        AppState.watchlist.id = 'portfolio';
-        AppState.isPortfolioVisible = true;
 
         // 8. Setup Delegated Events (Legacy DOM logic)
         this._setupDelegatedEvents();
@@ -627,7 +624,7 @@ export class AppController {
      * causing "local echo" race conditions in Firestore.
      * @param {Object} prefs Simple object containing preference keys to sync
      */
-    _syncPreferencesWithDebounce(prefs) {
+    _syncPreferencesToCloud(prefs) {
         if (!this._cloudPrefsLoaded) {
             // Still check security if enabled on another device
             if (prefs.security && (prefs.security.isPinEnabled || prefs.security.isBiometricEnabled)) {
@@ -856,7 +853,7 @@ export class AppController {
 
                 // === CLOUD PREFERENCES SYNC (INBOUND) ===
                 AppState.unsubscribePrefs = this.appService.subscribeToUserPreferences(user.uid, (prefs, metadata) => {
-                    this._syncPreferencesWithDebounce(prefs, metadata);
+                    this._applyCloudPreferences(prefs, metadata);
                 });
             }
         } else {
@@ -869,7 +866,7 @@ export class AppController {
         }
     }
 
-    _syncPreferencesWithDebounce(prefs, metadata) {
+    _applyCloudPreferences(prefs, metadata) {
         if (this._syncingPreferences) return; // RE-ENTRANCY GUARD (Directive 024)
 
         // Clear pending timeout since prefs arrived

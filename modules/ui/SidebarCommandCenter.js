@@ -275,14 +275,16 @@ export class SidebarCommandCenter {
                 <div class="command-section">
                     <h4 class="command-section-title">MANAGEMENT</h4>
                     <div class="command-grid icon-only-grid">
-                        <button class="command-grid-item" id="act-add" title="${addLabel}">
+                        <button class="command-grid-item" id="act-add" title="${addLabel}" style="position: relative;">
                             <i class="fas fa-plus-circle command-icon"></i>
+                            ${shareCount > 0 ? `<span class="notification-badge" style="position: absolute; top: 8px; right: 8px; font-size: 0.7rem; color: var(--color-accent); display: flex; align-items: center; justify-content: center; font-weight: 800; z-index: 10;">${shareCount}</span>` : ''}
                         </button>
                         <button class="command-grid-item" id="act-search" title="Search ASX Symbols">
                             <i class="fas fa-search command-icon"></i>
                         </button>
-                        <button class="command-grid-item" id="act-create-wl" title="New Watchlist">
+                        <button class="command-grid-item" id="act-create-wl" title="New Watchlist" style="position: relative;">
                             <i class="fas fa-folder-plus command-icon"></i>
+                            ${watchlistCount > 0 ? `<span class="notification-badge" style="position: absolute; top: 8px; right: 14px; font-size: 0.7rem; color: var(--color-accent); display: flex; align-items: center; justify-content: center; font-weight: 800; z-index: 10;">${watchlistCount}</span>` : ''}
                         </button>
                         <button class="command-grid-item" id="act-edit-wl" title="Edit Watchlist">
                             <div class="composite-icon">
@@ -291,10 +293,11 @@ export class SidebarCommandCenter {
                             </div>
                         </button>
 
-                        <button class="command-grid-item" id="nav-notify" title="Notifications">
+                        <button class="command-grid-item" id="nav-notify" title="Notifications" style="position: relative;">
                             <span class="command-icon" style="display: flex; align-items: center; justify-content: center; width: 3.5rem; height: 3.5rem;">
                                 ${kangarooSVG}
                             </span>
+                            ${notifCount > 0 ? `<span class="notification-badge" style="position: absolute; top: 28px; right: 8px; font-size: 0.7rem; color: var(--color-accent); display: flex; align-items: center; justify-content: center; font-weight: 800; z-index: 10;">${notifCount}</span>` : ''}
                         </button>
                         <button class="command-grid-item" id="act-alert-config" title="Alert Settings">
                             <div class="composite-icon">
@@ -313,12 +316,7 @@ export class SidebarCommandCenter {
                     </div>
 
                     <!-- Layout Footer: Notification Count & Auth -->
-                    <div class="command-center-footer" style="margin-top: 24px; padding-top: 16px;">
-                        <div style="font-size: 0.75rem; color: var(--text-muted); opacity: 0.8; margin-bottom: 12px; text-align: center; display: flex; align-items: center; justify-content: center; gap: 12px;">
-                            <span>Watchlists <span style="color: var(--color-accent); font-weight:600;">${watchlistCount}</span></span>
-                            <span>Shares <span style="color: var(--color-accent); font-weight:600;">${shareCount}</span></span>
-                            <span>Notifications <span style="color: var(--color-accent); font-weight:600;">${notifCount}</span></span>
-                        </div>
+                    <div class="command-center-footer" style="margin-top: 24px;">
 
                         ${AppState.user ? `
                             <button id="sidebar-logout-btn" class="sidebar-btn" style="color: #ff3131; background: transparent; border: none; padding: 12px 0; font-size: 1rem; font-weight: 600; justify-content: flex-start; gap: 12px; width: 100%;">
