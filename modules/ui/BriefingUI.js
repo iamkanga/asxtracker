@@ -7,7 +7,7 @@
 import { notificationStore } from '../state/NotificationStore.js';
 import { AppState } from '../state/AppState.js';
 import { StateAuditor } from '../state/StateAuditor.js';
-import { CSS_CLASSES, IDS, UI_ICONS, EVENTS, UI_LABELS } from '../utils/AppConstants.js';
+import { CSS_CLASSES, IDS, UI_ICONS, EVENTS, UI_LABELS, KANGAROO_ICON_SRC } from '../utils/AppConstants.js';
 import { navManager } from '../utils/NavigationManager.js';
 import { formatCurrency, formatPercent } from '../utils/formatters.js';
 import { SnapshotUI } from './SnapshotUI.js';
@@ -180,7 +180,7 @@ export class BriefingUI {
         // Render Hero
         const heroCard = modal.querySelector(`#${IDS.BRIEFING_PORTFOLIO_HERO}`);
         if (heroCard) {
-            const colorClass = portfolio.isUp ? CSS_CLASSES.COLOR_POSITIVE : CSS_CLASSES.COLOR_NEGATIVE;
+            const colorClass = portfolio.isUp ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE;
             const bgClass = portfolio.isUp ? CSS_CLASSES.HERO_BG_POSITIVE : CSS_CLASSES.HERO_BG_NEGATIVE;
             const arrow = portfolio.isUp ? '↗' : '↘';
 
@@ -433,13 +433,13 @@ export class BriefingUI {
                     <div class="${CSS_CLASSES.PULSE_MINIMAL_ROW}" style="justify-content: center; opacity: 0.9; font-size: 0.8rem; flex-wrap: wrap; gap: 2px;">
                          <span class="${CSS_CLASSES.PULSE_STAT}" style="font-weight: 600; color: var(--color-accent);">${pulse.custom} Custom</span>
                          <span class="${CSS_CLASSES.PULSE_DIVIDER}" style="opacity: 0.3;">|</span>
-                         <span class="${CSS_CLASSES.PULSE_STAT}"><span class="${CSS_CLASSES.COLOR_POSITIVE}">${pulse.gainers}</span> Gainers</span>
+                         <span class="${CSS_CLASSES.PULSE_STAT}"><span class="${CSS_CLASSES.TEXT_POSITIVE}">${pulse.gainers}</span> Gainers</span>
                          <span class="${CSS_CLASSES.PULSE_DIVIDER}" style="opacity: 0.3;">•</span>
-                         <span class="${CSS_CLASSES.PULSE_STAT}"><span class="${CSS_CLASSES.COLOR_NEGATIVE}">${pulse.losers}</span> Losers</span>
+                         <span class="${CSS_CLASSES.PULSE_STAT}"><span class="${CSS_CLASSES.TEXT_NEGATIVE}">${pulse.losers}</span> Losers</span>
                          <span class="${CSS_CLASSES.PULSE_DIVIDER}" style="opacity: 0.3;">•</span>
-                         <span class="${CSS_CLASSES.PULSE_STAT}"><span class="${CSS_CLASSES.COLOR_POSITIVE}">${pulse.highs}</span> Highs</span>
+                         <span class="${CSS_CLASSES.PULSE_STAT}"><span class="${CSS_CLASSES.TEXT_POSITIVE}">${pulse.highs}</span> Highs</span>
                          <span class="${CSS_CLASSES.PULSE_DIVIDER}" style="opacity: 0.3;">•</span>
-                         <span class="${CSS_CLASSES.PULSE_STAT}"><span class="${CSS_CLASSES.COLOR_NEGATIVE}">${pulse.lows}</span> Lows</span>
+                         <span class="${CSS_CLASSES.PULSE_STAT}"><span class="${CSS_CLASSES.TEXT_NEGATIVE}">${pulse.lows}</span> Lows</span>
                     </div>
                 </div>
             `;
@@ -447,25 +447,44 @@ export class BriefingUI {
     }
 
     static _renderHighlightCard(item) {
-        const isUp = (item.pctChange || 0) >= 0;
-        const colorClass = isUp ? CSS_CLASSES.COLOR_POSITIVE : CSS_CLASSES.COLOR_NEGATIVE;
-        const tintClass = isUp ? CSS_CLASSES.TINT_GREEN : CSS_CLASSES.TINT_RED;
-        const arrow = isUp ? '<i class="fas fa-caret-up"></i>' : '<i class="fas fa-caret-down"></i>';
+        const changePercent = item.pctChange || 0;
+        const changeValue = item.change || 0;
+        const price = item.live || item.price || 0;
 
-        const pctVal = Math.abs(item.pctChange || 0).toFixed(2);
-        const dolVal = Math.abs(item.change || 0).toFixed(2);
+        const isUp = changePercent >= 0;
+        const trendClass = isUp ? CSS_CLASSES.TREND_UP : CSS_CLASSES.TREND_DOWN;
+        const gradeClass = isUp ? CSS_CLASSES.DASHBOARD_GRADE_UP : CSS_CLASSES.DASHBOARD_GRADE_DOWN;
+        const borderStyle = this._getBorderStyles(changePercent);
 
-        const borderStyle = this._getBorderStyles(item.pctChange);
+        const faviconUrl = `https://files.marketindex.com.au/xasx/96x96-png/${item.code.toLowerCase()}.png`;
 
         return `
-            <div class="${CSS_CLASSES.HIGHLIGHT_CARD} ${tintClass}" style="${borderStyle}" onclick="document.dispatchEvent(new CustomEvent('${EVENTS.ASX_CODE_CLICK}', { detail: { code: '${item.code}' } }))">
-                <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                    <div class="${CSS_CLASSES.HIGHLIGHT_CODE}">${item.code}</div>
-                    <div style="display: flex; flex-direction: column; align-items: flex-end;">
-                        <span class="${CSS_CLASSES.HIGHLIGHT_PRICE}">${formatCurrency(item.live || item.price)}</span>
-                        <div class="${CSS_CLASSES.HIGHLIGHT_CHANGE} ${colorClass}" style="display: flex; gap: 6px; align-items: center; margin-top: 2px;">
-                            <span>$${dolVal}</span>
-                            <span>${arrow} ${pctVal}%</span>
+            <div class="${CSS_CLASSES.CARD} unified-layout ${trendClass} ${gradeClass}" 
+                 data-code="${item.code}" 
+                 style="${borderStyle}" 
+                 onclick="document.dispatchEvent(new CustomEvent('${EVENTS.ASX_CODE_CLICK}', { detail: { code: '${item.code}' } }))">
+                <div class="card-main-content">
+                    <!-- Left Column: Identity -->
+                    <div class="card-left-col">
+                        <div class="card-code-pill">
+                            <img src="${faviconUrl}" class="favicon-icon" onerror="this.src='${KANGAROO_ICON_SRC}'" alt="">
+                            <span class="${CSS_CLASSES.CARD_CODE}">${item.code}</span>
+                        </div>
+                        <div class="card-name-label" style="font-size: 0.75rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; margin-top: 2px;">
+                            ${item.name || ''}
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Value & Change -->
+                    <div class="card-right-col">
+                        <span class="${CSS_CLASSES.CARD_PRICE}">${formatCurrency(price)}</span>
+                        <div class="card-change-stack">
+                            <span class="${CSS_CLASSES.CHANGE_VALUE} ${isUp ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}">
+                                ${formatCurrency(Math.abs(changeValue))}
+                            </span>
+                            <span class="${CSS_CLASSES.CHANGE_PERCENT} ${isUp ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}">
+                                (${formatPercent(changePercent)})
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -482,7 +501,7 @@ export class BriefingUI {
         const footer = modal.querySelector(`#${IDS.BRIEFING_MARKET_PULSE}`);
         if (footer) {
             footer.addEventListener('click', () => {
-                NotificationUI.show();
+                NotificationUI.showModal();
             });
         }
 
