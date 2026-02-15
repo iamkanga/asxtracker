@@ -1085,6 +1085,25 @@ export const CSS_CLASSES = {
     // Component Classes (Constitution Compliance)
     MASTER_PILL_SEGMENT: 'master-pill-segment',
 
+    // Drag & Drop
+    DRAG_OVER: 'drag-over',
+    DRAG_OVER_BOTTOM: 'drag-over-bottom',
+
+    // Keyboard Modal
+    KEYBOARD_AWARE_MODAL: 'keyboard-aware-modal',
+    KEYBOARD_OPEN: 'keyboard-open',
+    KEYBOARD_VISIBLE: 'keyboard-visible',
+
+    // Pill Segments (Settings)
+    PILL_SEGMENT: 'pill-segment',
+    PILL_SEGMENT_BADGE: 'pill-segment-badge',
+    PILL_SEGMENT_BADGE_SCOPE: 'pill-segment-badge-scope',
+    PILL_SEGMENT_EMAIL: 'pill-segment-email',
+    PILL_SEGMENT_OVERRIDE: 'pill-segment-override',
+    PILL_SEGMENT_HILO: 'pill-segment-hilo',
+    PILL_SEGMENT_MOVERS: 'pill-segment-movers',
+    PILL_SEGMENT_PERSONAL: 'pill-segment-personal',
+
     // Status Classes
     STATUS_PREFIX: 'status-',
 

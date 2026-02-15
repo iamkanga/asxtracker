@@ -281,8 +281,6 @@ export class LinkHelper {
             const cleanUrl = finalUrl.replace(/^https?:\/\//, '');
             const fallback = encodeURIComponent(finalUrl);
             const intentUrl = `intent://${cleanUrl}#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=${fallback};end`;
-
-            console.log('[LinkHelper] Launching in App Browser (Intent):', intentUrl);
             window.open(intentUrl, '_blank', 'noopener,noreferrer');
         } else {
             // iOS / Desktop : Standard cross-origin open

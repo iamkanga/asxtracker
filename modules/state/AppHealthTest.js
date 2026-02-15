@@ -300,8 +300,3 @@ export function runHealthCheck() {
         raceRegressions: [..._raceRegressionLog]
     };
 }
-
-// Expose globally for console access
-if (typeof window !== 'undefined') {
-    window.runHealthCheck = runHealthCheck;
-}

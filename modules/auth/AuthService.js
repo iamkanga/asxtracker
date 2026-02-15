@@ -43,13 +43,10 @@ try {
     // Set persistence to LOCAL (users stay logged in across restarts)
     persistencePromise = setPersistence(auth, browserLocalPersistence)
         .then(() => {
-            // console.log("AuthService: Persistence set to LOCAL.");
         })
         .catch((error) => {
             console.error("AuthService: Failed to set persistence.", error);
         });
-
-    // console.log("AuthService: Firebase initialized successfully.");
 } catch (error) {
     console.error("AuthService: Firebase initialization failed.", error);
 }
@@ -78,7 +75,6 @@ export const AuthService = {
         // V71: Smart Login Hint - Auto-select last known account
         const lastEmail = localStorage.getItem('asx_last_email');
         if (lastEmail) {
-            console.log('[AuthService] Applying login_hint:', lastEmail);
             provider.setCustomParameters({
                 login_hint: lastEmail,
                 prompt: 'select_account',
@@ -154,7 +150,6 @@ export const AuthService = {
             // Using standard getIdToken() checks cache validity first.
             // This reduces 403 errors if the API Key is restricted.
             await auth.currentUser.getIdToken();
-            // console.log('[AuthService] Session token verified.');
             return true;
         } catch (e) {
             console.warn('[AuthService] Session refresh failed:', e);

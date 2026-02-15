@@ -346,8 +346,6 @@ export class SidebarCommandCenter {
             e.preventDefault();
 
             const id = target.id;
-            // console.log('[SidebarCommandCenter] Click intercepted for:', id);
-
             // Execute action after delay to allow visual feedback / sidebar transition
             setTimeout(() => {
                 this._handleAction(id);

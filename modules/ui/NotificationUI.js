@@ -169,13 +169,9 @@ export class NotificationUI {
 
         if (container) container.classList.remove(CSS_CLASSES.HIDDEN);
         bell.classList.remove(CSS_CLASSES.HIDDEN);
-
-        // DEBUG: Temporary diagnostics
         // const currentScope = AppState?.preferences?.badgeScope || 'unknown';
         // if (validCount > 0 && showBadges) {
-        //    console.log(`[BadgeDebug] Showing. Count: ${validCount}`);
         // } else {
-        //    console.log(`[BadgeDebug] Hiding. Count: ${validCount}, Pref: ${showBadges}`);
         // }
 
 
@@ -184,7 +180,6 @@ export class NotificationUI {
         // Robust badge selection (might be delay in rendering)
         const badge = bell.querySelector(`.${CSS_CLASSES.NOTIFICATION_BADGE}`);
         if (!badge) {
-            // console.warn('[NotificationUI] updateBadgeCount: Badge element NOT found in bell. Trying again in 100ms...');
             // setTimeout(() => this.updateBadgeCount(validCount), 100);
             return;
         }
@@ -222,7 +217,6 @@ export class NotificationUI {
             const hasLocal = (local?.pinned?.length || 0) + (local?.fresh?.length || 0) > 0;
             if (!hasLocal) {
                 activeTabId = 'global';
-                // console.log('[NotificationUI] Custom tab empty. Defaulting to Global.');
             }
         }
 
@@ -284,7 +278,6 @@ export class NotificationUI {
 
             // 2. Render Modal
             // This part is now handled by the if/else block above.
-            // console.log('[NotificationUI] Rendering modal DOM...');
             // modal = this._renderModal();
             // modal.style.zIndex = '2147483647'; // Force Max
             // document.body.appendChild(modal);
@@ -295,7 +288,6 @@ export class NotificationUI {
 
             // 4. Initial Render of List
             // This part is now handled by the if/else block above.
-            // console.log('[NotificationUI] Updating notification list content...');
             // this._updateList(modal);
 
             // 4b. Update Status Bar (shows disabled monitors)
@@ -943,7 +935,6 @@ export class NotificationUI {
             if (targetChip) {
                 setTimeout(() => {
                     targetChip.click();
-                    console.log(`[NotificationUI] Auto-switched to Section: ${this._targetSection} `);
                 }, 50);
             }
         }
@@ -1169,7 +1160,6 @@ export class NotificationUI {
         modal.addEventListener('click', (e) => {
             const card = e.target.closest(`.${CSS_CLASSES.NOTIFICATION_CARD_GRID}`);
             if (card && card.dataset.code) {
-                console.log(`[NotificationUI] Card Clicked: ${card.dataset.code} `);
                 // Close modal first? Or let AppController handle it?
                 // For native "Click Through" feel, we should prevent standard specific closing unless the app navigates.
                 // AppController typically handles navigation.
@@ -1572,7 +1562,6 @@ export class NotificationUI {
         //GRID LAYOUT IMPLEMENTATION
         return `
                 <div class="${CSS_CLASSES.NOTIFICATION_CARD_GRID} ${cardClass}" data-code="${code}" style="position: relative;">
-                    ${code === 'NIC' ? `<script>console.log('[Diagnostic] Rendering NIC Card:', ${JSON.stringify({ item, type, rawPrice, changePct, cardClass })});</script>` : ''}
                 <!--R1: CODE | PRICE-->
                 <div class="${CSS_CLASSES.NOTIF_CELL_CODE}">${code}</div>
                 <div class="${CSS_CLASSES.NOTIF_CELL_PRICE}">${price}</div>
@@ -1646,9 +1635,6 @@ export class NotificationUI {
                 // TOGGLE LOGIC: Check current preference state
                 const currentPref = AppState.preferences.showBadges !== false;
                 const newPref = !currentPref;
-
-                console.log(`[NotificationUI] Long Press -> Toggling Badges: ${currentPref} -> ${newPref} `);
-
                 // 1. Update State First
                 if (AppState.preferences) {
                     AppState.preferences.showBadges = newPref;
@@ -1711,7 +1697,6 @@ export class NotificationUI {
             // TOGGLE LOGIC: If notification modal is already open, close it.
             const existingModal = document.getElementById(IDS.NOTIFICATION_MODAL);
             if (existingModal && !existingModal.classList.contains(CSS_CLASSES.HIDDEN)) {
-                console.log('[NotificationUI] Bell clicked while modal open. Toggling close...');
                 this._close(existingModal);
                 return;
             }

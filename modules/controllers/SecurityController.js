@@ -52,7 +52,6 @@ export class SecurityController {
                 this.isBiometricSupported = false;
             }
         }
-        console.log("SecurityController: Biometric Support:", this.isBiometricSupported);
         return this.isBiometricSupported;
     }
 
@@ -167,7 +166,6 @@ export class SecurityController {
         const isIp = SecurityController.isIpAddress(hostname);
 
         if (isIp) {
-            console.log("SecurityController: Hostname is IP, omitting rpId.");
             return undefined; // Let browser default to origin
         }
         return hostname;
@@ -197,8 +195,6 @@ export class SecurityController {
         }
 
         try {
-            console.log("SecurityController: Triggering WebAuthn Get...");
-
             // Random challenge (server-side usually handles this, for client-side we just need A challenge)
             const challenge = new Uint8Array(32);
             window.crypto.getRandomValues(challenge);
@@ -228,7 +224,6 @@ export class SecurityController {
                 const isUserVerified = (flags & 4) !== 0; // Check 3rd bit (value 4)
 
                 if (isUserVerified) {
-                    console.log("SecurityController: Biometric auth successful (UV Checked).");
                     // DIAGNOSTIC TOAST: Remove after debugging
                     // Shows strictly what the authenticator returned.
                     // Bit 0 = UP (1), Bit 2 = UV (4). Expected: 5 or 7.
@@ -274,8 +269,6 @@ export class SecurityController {
         if (!this.isBiometricSupported) return false;
 
         try {
-            console.log("SecurityController: Creating WebAuthn Credential...");
-
             const challenge = new Uint8Array(32);
             window.crypto.getRandomValues(challenge);
 
@@ -291,7 +284,6 @@ export class SecurityController {
             if (rpId) {
                 rp.id = rpId;
             } else {
-                console.log("SecurityController: Registering with default origin (IP detected)");
             }
 
             const credential = await navigator.credentials.create({
@@ -327,8 +319,6 @@ export class SecurityController {
                     isBiometricEnabled: true,
                     biometricCredentialId: rawIdBase64
                 });
-
-                console.log("SecurityController: Biometric enabled & credential saved.");
                 return true;
             }
 

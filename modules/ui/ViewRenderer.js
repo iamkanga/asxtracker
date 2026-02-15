@@ -1282,10 +1282,7 @@ export class ViewRenderer {
         const editBtn = modal.querySelector(`#${IDS.BTN_EDIT_SHARE}`);
         if (editBtn) {
             editBtn.addEventListener('click', () => {
-                console.log('[ViewRenderer] Edit Pencil Clicked for:', stock.code, stock.id);
-
                 if (!stock.id) {
-                    // console.warn('[ViewRenderer] Stock ID is missing on Edit Click. Attempting recovery via Code:', stock.code);
                     // Do NOT return. Let AppController attempt to find it or treat as Add.
                 }
 
@@ -2454,7 +2451,7 @@ export class ViewRenderer {
 
             // Clean up lines
             const rows = container.querySelectorAll(`.${CSS_CLASSES.SORT_PICKER_ROW}`);
-            rows.forEach(r => r.classList.remove('drag-over', 'drag-over-bottom'));
+            rows.forEach(r => r.classList.remove(CSS_CLASSES.DRAG_OVER, CSS_CLASSES.DRAG_OVER_BOTTOM));
         });
 
         container.addEventListener('dragover', (e) => {
@@ -2470,14 +2467,14 @@ export class ViewRenderer {
 
             // Visual Line Logic
             const rows = [...container.querySelectorAll(`.${CSS_CLASSES.SORT_PICKER_ROW}:not(.${CSS_CLASSES.DRAGGING})`)];
-            rows.forEach(r => r.classList.remove('drag-over', 'drag-over-bottom'));
+            rows.forEach(r => r.classList.remove(CSS_CLASSES.DRAG_OVER, CSS_CLASSES.DRAG_OVER_BOTTOM));
 
             if (afterElement == null) {
                 const lastRow = rows[rows.length - 1];
-                if (lastRow) lastRow.classList.add('drag-over-bottom');
+                if (lastRow) lastRow.classList.add(CSS_CLASSES.DRAG_OVER_BOTTOM);
                 container.appendChild(this._draggedSortItem);
             } else {
-                afterElement.classList.add('drag-over');
+                afterElement.classList.add(CSS_CLASSES.DRAG_OVER);
                 container.insertBefore(this._draggedSortItem, afterElement);
             }
         });

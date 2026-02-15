@@ -210,8 +210,6 @@ export class DashboardViewRenderer {
         // Size reduced to 21px (75% of 28px)
         // Opacity 0.6 added to 'ghost' the marker
         const markerStyle = `left: ${markerPct}% !important; position: absolute !important; top: 50% !important; transform: translate(-50%, -50%) !important; z-index: 1000 !important; width: 21px !important; height: 21px !important; display: flex !important; justify-content: center !important; align-items: center !important; pointer-events: none; color: ${kangarooColor} !important; opacity: 0.6 !important;`;
-
-        // DEBUG: Trace positioning values (remove after fix)
         if (index < 5 || code.includes('IXIC') || code.includes('NASDAQ')) {
 
         }

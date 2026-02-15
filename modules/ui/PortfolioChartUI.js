@@ -13,7 +13,6 @@ import { DataService } from '../data/DataService.js';
  */
 export class PortfolioChartUI {
     static async show() {
-        console.log('[PortfolioChartUI:v1047] Global Trigger');
         const shares = AppState.data.shares || [];
         const cash = AppState.data.cash || [];
 
@@ -421,7 +420,6 @@ export class PortfolioChartUI {
     }
 
     async loadData() {
-        console.log(`[PortfolioChartUI] v1106 Loading... Range: ${this.range}`);
         const loading = document.getElementById('portfolio-chart-loading');
         if (loading) loading.style.display = 'flex';
 

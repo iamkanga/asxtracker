@@ -157,7 +157,6 @@ export class SearchDiscoveryUI {
                 const exactMatch = results.find(r => r.code === query);
 
                 if (exactMatch) {
-                    console.log(`[SearchDiscoveryUI] Auto-selecting exact match: ${exactMatch.code}`);
                     modal.dataset.viewingCode = exactMatch.code;
 
                     // Update dataset for Preview sync

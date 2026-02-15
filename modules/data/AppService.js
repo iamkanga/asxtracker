@@ -53,12 +53,10 @@ export class AppService {
         try {
             if (targetId) {
                 // UPDATE
-                console.log(`[AppService DEBUG] UPDATE: ${targetId} -> Color: ${formData.color}`);
                 await userStore.updateDocument(user.uid, 'cashCategories', targetId, formData);
                 if (!isSilent) ToastManager.success(`${formData.name} updated.`);
             } else {
                 // ADD
-                console.log(`[AppService DEBUG] ADD -> Color: ${formData.color}`);
                 await userStore.addDocument(user.uid, 'cashCategories', formData);
                 if (!isSilent) ToastManager.success(`${formData.name} added.`);
             }
@@ -299,9 +297,6 @@ export class AppService {
             ToastManager.error(USER_MESSAGES.AUTH_REQUIRED);
             return;
         }
-
-        console.log(`[AppService] Unlinking Share ${shareId} from Watchlist ${watchlistId}`);
-
         // 1. Get current share data to check other memberships
         const shares = AppState.data.shares || [];
         const share = shares.find(s => s.id === shareId);
@@ -316,11 +311,9 @@ export class AppService {
 
         if (newIds.length === 0) {
             // ORPHAN: Delete completely
-            console.log(`[AppService] Share ${shareId} has no more watchlists. Deleting document.`);
             await userStore.deleteDocument(user.uid, 'shares', shareId);
         } else {
             // SAFE: Update with removed ID
-            console.log(`[AppService] Share ${shareId} remaining in: ${newIds.join(', ')}. Updating...`);
             await userStore.updateDocument(user.uid, 'shares', shareId, {
                 watchlistIds: newIds,
                 // Legacy support: If watchlistId matched the one we removed, update it to the first available one
@@ -341,9 +334,6 @@ export class AppService {
             ToastManager.error(USER_MESSAGES.AUTH_REQUIRED);
             return;
         }
-
-        console.log(`[AppService] deleteShareRecord called for ShareID: ${shareId}, Context: ${watchlistId || 'PORTFOLIO/GLOBAL'}`);
-
         // UNIFIED DELETION PROTOCOL (Clean Delete):
         // Previously, this function hunted down "siblings" (shares with same code in other lists) and deleted them too.
         // This was causing data loss when deleting a watchlist or removing a duplicate.
@@ -358,8 +348,6 @@ export class AppService {
 
         // 2. Delete the Document
         await userStore.deleteDocument(user.uid, 'shares', shareId);
-        console.log(`[AppService] Deleted share document: ${shareId}`);
-
         // 3. SCRUB References (Prevent Zombie Resurrection)
         // If the share code remains in a watchlist array, "Ghost Recovery" will resurrect it.
         // We must remove the code from ALL watchlists, including system ones.
@@ -367,8 +355,6 @@ export class AppService {
             const customWatchlists = (AppState.data.watchlists || []).map(w => w.id);
             const systemWatchlists = ['portfolio', 'ALL'];
             const allWatchlistIds = [...new Set([...customWatchlists, ...systemWatchlists])];
-
-            console.log(`[AppService] Scrubbing references for ${shareCode} across ${allWatchlistIds.length} lists...`);
             const scrubPromises = allWatchlistIds.map(wId =>
                 userStore.removeStock(user.uid, wId, shareCode).catch(e => console.warn(`Scrub failed for ${wId}:`, e))
             );
@@ -382,8 +368,6 @@ export class AppService {
      */
     async sanitizeCorruptedShares(userId) {
         if (!userId) return;
-        // console.log("Running Data Sanitation: Checking for corrupted shares...");
-
         try {
             const shares = await userStore.getAllDocuments(userId, 'shares');
             let deletedCount = 0;
@@ -398,10 +382,8 @@ export class AppService {
             }
 
             if (deletedCount > 0) {
-                // console.log(`Sanitize: Deleted ${deletedCount} corrupted records.`);
                 // alert(`Sanitation Complete: Removed ${deletedCount} corrupted records.`); // Optional specific feedback
             } else {
-                // console.log("Sanitize: No corrupted records found.");
             }
         } catch (e) {
             console.error("Sanitize Error:", e);
@@ -462,22 +444,14 @@ export class AppService {
      */
     async createDefaultOnboardingData(userId) {
         if (!userId) return;
-
-        // console.log(`[AppService] Creating default onboarding data for user: ${userId}`);
-
         try {
             // 1. Create default watchlist "My Watch List"
-            // console.log(`[AppService] Creating 'My Watch List'...`);
             const watchlistId = await userStore.addWatchlist(userId, 'My Watch List');
-            // console.log(`[AppService] Watchlist created with ID: ${watchlistId}`);
-
             // 2. Add 5 specific Australian top shares (Request: CBA, VAS, BHP, QAN, TLS)
             const defaultStocks = ['CBA', 'VAS', 'BHP', 'QAN', 'TLS'];
-            console.log('[AppService] Seeding stocks (Active V5):', defaultStocks); // DEBUG: Prove version
             const now = new Date().toISOString();
 
             for (const symbol of defaultStocks) {
-                // console.log(`[AppService] Seeding stock: ${symbol}`);
                 // EXCEPTION: User requested Portfolio and Cash be empty.
                 // We ONLY add these to the new "My Watch List".
                 if (watchlistId) {
@@ -489,8 +463,6 @@ export class AppService {
             // 'ALL', 'portfolio', 'CASH' are system IDs.
             const defaultCarousel = ['ALL', 'portfolio', 'CASH'];
             if (watchlistId) defaultCarousel.push(watchlistId);
-
-            // console.log(`[AppService] Finalizing preferences (onboarded=true)...`);
             await userStore.savePreferences(userId, {
                 carouselSelections: defaultCarousel,
                 lastWatchlistId: 'ALL', // Default to All Shares on first load
@@ -514,8 +486,6 @@ export class AppService {
                     personalEnabled: true
                 }
             });
-
-            // console.log(`[AppService] Default data created successfully for ${userId}`);
         } catch (error) {
             console.error(`[AppService] CRITICAL FAILURE in onboarding data creation:`, error);
         }
@@ -541,7 +511,6 @@ export class AppService {
             for (const s of idless) {
                 const match = shares.find(other => other.id && other.shareName === s.shareName);
                 if (match) {
-                    console.log(`[AppService] Recovered ID for ${s.shareName}: ${match.id}`);
                     s.id = match.id;
                 }
             }
@@ -569,7 +538,6 @@ export class AppService {
             }, {});
             console.warn(`[AppService] Found ${ghostsFound.length} Ghost Share references (no master document):`, breakdown);
         } else {
-            console.log('[AppService] Health Check: All watchlist items have master documents.');
         }
 
         console.groupEnd();
@@ -600,14 +568,11 @@ export class AppService {
                 );
 
                 for (const code of codesToScrub) {
-                    console.log(`[AppService] Removing ghost "${code}" from list "${w.name}"`);
                     await userStore.removeStock(user.uid, w.id, code);
                     removedCount++;
                 }
             }
         }
-
-        console.log(`[AppService] Scrub complete. Removed ${removedCount} ghost references.`);
         console.groupEnd();
 
         // One-time refresh hint

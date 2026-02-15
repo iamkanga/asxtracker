@@ -48,10 +48,6 @@ class _StateAuditor {
         this._proxyInstalled = false;
         this._originalDescriptors = {}; // Store original property descriptors for uninstall
 
-        // Expose globally for console debugging
-        if (typeof window !== 'undefined') {
-            window.StateAuditor = this;
-        }
     }
 
     /**

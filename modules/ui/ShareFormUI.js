@@ -493,14 +493,6 @@ export class ShareFormUI {
         // This prevents "2 Selected" label when only 1 checkbox is visible
         const validWatchlistIds = new Set(Object.values(watchlists).map(w => String(w.id)));
         const currentMemberships = stringMemberships.filter(id => validWatchlistIds.has(id));
-
-        console.log('[ShareFormUI] Rendering Modal', {
-            raw: rawMemberships,
-            normalized: stringMemberships,
-            filtered: currentMemberships,
-            validIds: Array.from(validWatchlistIds)
-        });
-
         const modal = document.createElement('div');
         modal.id = IDS.ADD_SHARE_MODAL;
         modal.className = `${CSS_CLASSES.MODAL} ${CSS_CLASSES.HIDDEN}`;
@@ -1280,13 +1272,9 @@ export class ShareFormUI {
                 });
             }
         });
-
-        // DEBUG: Trace ID Extraction
         const rawId = getVal('shareId');
         const dataId = currentData?.id;
         const resolvedId = rawId || dataId || null;
-        console.log(`[ShareFormUI] Extracting Share Data.InputID = "${rawId}", DataID = "${dataId}" -> ResolvedID="${resolvedId}"`);
-
         const payload = {
             id: resolvedId, // CRITICAL: Preserve ID for Updates vs Creates
             shareName: code,
@@ -1308,8 +1296,6 @@ export class ShareFormUI {
             comments: comments,
             watchlists: selectedWatchlists
         };
-
-        console.log('[Diagnostic] Extracted Share Data for Save:', payload);
         return payload;
     }
 }

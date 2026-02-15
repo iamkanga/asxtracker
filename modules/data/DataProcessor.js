@@ -187,8 +187,6 @@ export function processShares(allShares, watchlistId, livePrices, sortConfig, hi
 
     // Convert Map back to Array
     const mergedData = Array.from(processedMap.values());
-
-    // DEBUG: Log match rate
     const liveCount = mergedData.filter(m => m.currentPrice > 0).length;
 
 

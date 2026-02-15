@@ -45,8 +45,6 @@ export class DataService {
             }
 
             // TRACE LOGGING
-            console.log(`[DataService] Fetching Live Prices. URL: ${url.toString()}`);
-
             // TIMEOUT PROTECTION (20 Seconds)
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 20000);
@@ -176,7 +174,6 @@ export class DataService {
             }
 
             const json = await response.json();
-            console.log('[DataService] Roast Portfolio Response:', json);
             return json;
         } catch (err) {
             console.error('DataService: Roast Gen Exception:', err);
@@ -204,8 +201,6 @@ export class DataService {
                 query: query,
                 context: context
             };
-
-            console.log('[DataService] Asking Gemini:', mode, query);
             const response = await fetch(API_ENDPOINT, {
                 method: 'POST',
                 body: JSON.stringify(payload)
@@ -217,7 +212,6 @@ export class DataService {
             }
 
             const json = await response.json();
-            console.log('[DataService] Ask Gemini Response:', json);
             if (!json.ok && json.error) console.warn('[DataService] Gemini Error:', json.error);
             return json;
 
@@ -254,23 +248,16 @@ export class DataService {
                 prompt: prompt,
                 thinking: true // Critical for dividend/technical analysis
             };
-
-            console.log(`[DataService] Requesting AI Analysis for ${symbol} (${questionId})`);
-
             const response = await fetch(API_ENDPOINT, {
                 method: 'POST',
                 body: JSON.stringify(payload)
             });
-
-            console.log('[DataService] AI Summary HTTP Status:', response.status);
-
             if (!response.ok) {
                 if (response.status === 429) return { ok: false, error: 'RATE_LIMIT', retryAfter: 60 };
                 return { ok: false, error: `HTTP ${response.status}` };
             }
 
             const json = await response.json();
-            console.log('[DataService] AI Summary Response:', json);
             return json;
 
         } catch (err) {
@@ -386,7 +373,6 @@ export class DataService {
             if (cached) {
                 const { timestamp, data } = JSON.parse(cached);
                 if (Date.now() - timestamp < CACHE_DURATION) {
-                    // console.log(`[DataService] Serving cached history for ${code}`);
                     return data; // Return valid cached data
                 }
             }
@@ -503,7 +489,6 @@ export class DataService {
                 name: item.CompanyName || item.Name || item.companyName || item.name || String(item.ASXCode || item.code || '').trim().toUpperCase()
             }));
             if (dashboardData.length > 0) {
-                // console.log(`[DataService] Recovered ${dashboardData.length} dashboard items from flat payload.`);
             }
         } else if (Array.isArray(dashboardData)) {
             // ROBUST MAPPING: Explicitly normalize keys for the UI to consume directly
@@ -521,7 +506,6 @@ export class DataService {
         // VERIFICATION: Log presence and count
         if (dashboardData.length > 0) {
             const sample = dashboardData[0];
-            // console.log(`[DataService] Dashboard Normalized Sample: Code=${sample.code} Live=${sample.live}`);
         }
 
         if (!Array.isArray(items)) {
@@ -545,11 +529,6 @@ export class DataService {
 
             // DIAGNOSTIC (One-Time): Check for Day High/Low keys AND VALUES
             // if (code === 'ANZ' || code === 'WOW') {
-            //     console.log(`[DataService] Raw Data for ${code}:`, {
-            //         H52: item.High52,
-            //         L52: item.Low52,
-            //         Live: item.LivePrice
-            //     });
             // }
 
             // Skip invalid entries after normalization

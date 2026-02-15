@@ -1,4 +1,4 @@
-﻿/**
+/**
  * AppController.js
  * Main Application Orchestrator.
  * Coordinates Services, State, and UI.
@@ -47,8 +47,6 @@ export class AppController {
 
     constructor() {
         AppController.instance = this;
-        window.AppController = AppController; // Expose Class
-        window.app = this; // Expose Instance for easy testing
         AppState.controller = this; // Register global controller for UI modules
         // Services
         this.dataService = new DataService();
@@ -71,8 +69,6 @@ export class AppController {
 
         // Register controller for UI access
         AppState.securityController = this.securityController;
-
-        // Debug Access
         this.notificationStore = notificationStore;
 
         // UI Managers
@@ -102,9 +98,6 @@ export class AppController {
     async init() {
         if (this._initialized) return;
         this._initialized = true;
-
-        console.log('%c [AppController] Initializing v1146... ', 'background: #222; color: #a49393; font-weight: bold;');
-
         // v1146: FAIL-SAFE: If auth doesn't respond within 5s, force-enable the login button.
         // This prevents the "Initializing..." loop if Firebase fails or hangs on certain networks/devices.
         setTimeout(() => {
@@ -124,7 +117,6 @@ export class AppController {
 
         // AUTO HEALTH CHECK: Run 8s after boot (allows data to load)
         setTimeout(() => {
-            console.log('%c[AppController] Running post-boot health check...', 'color: #4fc3f7');
             runHealthCheck();
         }, 8000);
 
@@ -136,7 +128,6 @@ export class AppController {
         // Initialize Pull to Refresh (PWA support) - REBOOT MODE
         const ptr = new PullToRefresh({
             onRefresh: async () => {
-                console.log('[AppController] Rebooting app via Pull-to-Refresh...');
                 // Short delay to allow the "refreshing" animation to be seen
                 await new Promise(resolve => setTimeout(resolve, 800));
                 window.location.reload();
@@ -2134,8 +2125,6 @@ export class AppController {
                 // Note: Direct navigation to specific stock codes is not supported via public deep links.
                 const encodedTarget = encodeURIComponent(link.href);
                 const deepLink = `https://commsecau.page.link/?link=${encodedTarget}&apn=au.com.commsec.android`;
-
-                console.log('[AppController] Intercepted CommSec Link:', deepLink);
                 window.open(deepLink, '_blank', 'noopener,noreferrer');
                 return;
             }
@@ -2151,8 +2140,6 @@ export class AppController {
                 const cleanUrl = link.href.replace(/^https?:\/\//, '');
                 const fallback = encodeURIComponent(link.href);
                 const intentUrl = `intent://${cleanUrl}#Intent;scheme=https;package=au.com.selfwealth.mobilev2;S.browser_fallback_url=${fallback};end`;
-
-                console.log('[AppController] Launching SelfWealth Intent (v2):', intentUrl);
                 window.open(intentUrl, '_blank', 'noopener,noreferrer');
                 return;
             }
@@ -3088,8 +3075,6 @@ export class AppController {
             const target = e.target;
             if (!target) return;
 
-            // Debug Log
-
 
             // Sidebar: Download Data
             const downloadBtn = target.closest(`#${IDS.DOWNLOAD_DATA_BTN || 'btn-download-data'}`);
@@ -3513,5 +3498,3 @@ export class AppController {
     }
 }
 
-// Global Exposure for Console Debugging
-window.AppController = AppController;

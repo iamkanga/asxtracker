@@ -335,7 +335,6 @@ export class BriefingUI {
                     if (el) {
                         if (result && result.ok && result.text) {
                             const modelName = result.model || 'Gemini 3 Flash';
-                            console.log(`%c [${modelName}] Daily Briefing Recieved`, 'color: #00ff00; font-weight: bold;');
                             // Process markdown-ish bolding and fix remaining asterisks
                             const formatted = result.text
                                 .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
@@ -537,7 +536,6 @@ export class BriefingUI {
                     if (heroCard) {
                         if (result && result.ok && result.text) {
                             const modelName = result.model || 'Gemini 3 Flash';
-                            console.log(`%c [${modelName}] Portfolio Roast Recieved`, 'color: #00ff00; font-weight: bold;');
                             heroCard.innerHTML = `<div style="padding: 12px; font-size: 0.85em; line-height: 1.5; color: #fff; text-align: left;">${result.text.replace(/\n/g, '<br>')}</div>`;
                             heroCard.style.background = 'linear-gradient(135deg, #1a0505 0%, #4a0d0d 100%)';
                         } else {
@@ -561,8 +559,6 @@ export class BriefingUI {
             if (e) e.preventDefault();
             const query = askInput.value.trim();
             if (!query) return;
-
-            console.log('[BriefingUI] %c ASKING GEMINI DIRECTLY: ' + query, 'color: #00ff00; font-weight: bold;');
             ToastManager.info('Asking AI...');
             askInput.value = '';
 

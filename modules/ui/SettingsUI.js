@@ -1381,7 +1381,7 @@ export class SettingsUI {
             if (kangaroo) {
                 // Open Notifications Logic
                 // Only if visible (opacity > 0.2 approx, or class status-on/always-on)
-                const isVisible = kangaroo.classList.contains('status-on') || kangaroo.classList.contains(CSS_CLASSES.ALWAYS_ON) || getComputedStyle(kangaroo).opacity > 0.5;
+                const isVisible = kangaroo.classList.contains(CSS_CLASSES.STATUS_ON) || kangaroo.classList.contains(CSS_CLASSES.ALWAYS_ON) || getComputedStyle(kangaroo).opacity > 0.5;
 
                 if (isVisible) {
                     // Dispatch standard Open Event
@@ -1393,27 +1393,27 @@ export class SettingsUI {
             // A. Alert/Monitoring Pill Selectors
             const pill = e.target.closest('.pill-segment-badge, .pill-segment-email, .pill-segment-override, .movers-pill-selector span, .hilo-pill-selector span, .personal-pill-selector span, .pill-segment-badge-scope');
             if (pill) {
-                const isBadgeScope = pill.classList.contains('pill-segment-badge-scope');
+                const isBadgeScope = pill.classList.contains(CSS_CLASSES.PILL_SEGMENT_BADGE_SCOPE);
                 const val = isBadgeScope ? pill.dataset.value : (pill.dataset.value === 'true');
                 const container = pill.parentElement;
                 let targetId = null;
                 let contextMsg = 'Setting saved';
 
-                if (pill.classList.contains('pill-segment-badge')) {
+                if (pill.classList.contains(CSS_CLASSES.PILL_SEGMENT_BADGE)) {
                     targetId = 'toggle-pref-showBadges';
                     contextMsg = val ? 'Badges Enabled' : 'Badges Disabled';
                     // NOTE: _executeSave will sync to AppState, no need for manual set here if we save immediate.
                 }
-                else if (pill.classList.contains('pill-segment-badge-scope')) {
+                else if (pill.classList.contains(CSS_CLASSES.PILL_SEGMENT_BADGE_SCOPE)) {
                     targetId = IDS.PREF_BADGE_SCOPE;
                     contextMsg = 'Badge Scope updated';
                     // Auto-Save handles sync.
                 }
-                else if (pill.classList.contains('pill-segment-email')) {
+                else if (pill.classList.contains(CSS_CLASSES.PILL_SEGMENT_EMAIL)) {
                     targetId = 'toggle-pref-dailyEmail';
                     contextMsg = val ? 'Daily Email Enabled' : 'Daily Email Disabled';
                 }
-                else if (pill.classList.contains('pill-segment-override')) {
+                else if (pill.classList.contains(CSS_CLASSES.PILL_SEGMENT_OVERRIDE)) {
                     targetId = IDS.PREF_EXCLUDE_PORTFOLIO;
                     contextMsg = val ? 'Override Enabled' : 'Override Disabled';
                 }

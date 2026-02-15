@@ -224,10 +224,7 @@ export class CashViewRenderer {
                 </button>
             </div>
         `;
-
-        // DEBUG LOGGING
         if (asset.category === 'other') {
-            console.log(`[CashViewRenderer] Rendering 'Other': ${asset.name}, Color: ${asset.color}, Border: ${card.style.borderLeftColor}`);
         }
 
         // Eye Button Event

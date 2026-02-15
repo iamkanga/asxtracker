@@ -213,7 +213,6 @@ export class UserStore {
             });
 
             const docRef = await addDoc(sharesRef, dataToSave);
-            // console.log(`UserStore: Added share ${shareData.code} (ID: ${docRef.id})`);
             return docRef.id;
         } catch (e) {
             this._handleWriteError(e, 'addShare');
@@ -357,7 +356,6 @@ export class UserStore {
                 updatedAt: serverTimestamp()
             });
         } catch (e) {
-            // console.warn("UserStore: Sort update failed (possibly permission logic).", e);
         }
     }
 

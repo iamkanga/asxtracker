@@ -171,7 +171,6 @@ export class AiSummaryUI {
 
             if (result && result.ok && result.text) {
                 const modelName = result.model || 'Gemini 3 Flash';
-                console.log(`%c [${modelName}] Response Recieved`, 'color: #00ff00; font-weight: bold;');
                 this._updateContent(modal, result.text, modelName);
                 // Save to Daily Cache
                 AppState.saveGeminiSummary(symbol, questionId, result.text);

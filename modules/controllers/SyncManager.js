@@ -19,17 +19,13 @@ export const SyncManager = {
         // 1. Determine Mode Based on Detected Type
         let syncData;
         if (reportType === 'HOLDINGS') {
-            console.log('[SyncManager] Holdings Report detected. Updating Quantities Only.');
             syncData = CsvParserService.getHoldingsData(rows);
         } else {
-            console.log('[SyncManager] Trades Report detected. Updating Full Trade Data.');
             syncData = CsvParserService.getLatestPurchases(rows);
         }
 
         // 2. Search across ALL shares in AppState (not just Portfolio)
         const allShares = AppState.data.shares || [];
-        console.log(`[SyncManager] Searching across ${allShares.length} total user shares for matches.`);
-
         const matches = [];
         const ignored = []; // Array of { code, reason }
         const newShares = [];
@@ -76,8 +72,6 @@ export const SyncManager = {
                 });
             }
         });
-
-        console.log(`[SyncManager] Simulation Result: ${matches.length} Matches, ${newShares.length} New, ${ignored.length} Ignored.`);
         return { matches, newShares, ignored, reportType };
     }
 };

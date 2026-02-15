@@ -26,8 +26,6 @@ export class MarketIndexController {
                 if (this.sidebarBtn) this.sidebarBtn.addEventListener('click', () => this.openModal());
             }, 1000);
         }
-
-        console.log('[MarketIndexController] Ready. Binding events.');
         this.bindEvents();
     }
 
@@ -98,7 +96,6 @@ export class MarketIndexController {
         // Filter out dismissed items
         const visibleAlerts = (alerts || []).filter(a => !notificationStore.dismissedAnnouncements.has(a.id || `${a.code}-${a.timestamp}`));
 
-        console.log('[MarketIndexController] Rendering alerts:', alerts); // DEBUG
 
         if (visibleAlerts.length === 0) {
             this.listContainer.innerHTML = `

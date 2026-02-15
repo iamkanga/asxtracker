@@ -132,7 +132,6 @@ export const SecurityUI = {
             setTimeout(() => {
                 // Ensure modal is still valid/attached
                 if (document.getElementById(IDS.SECURITY_UNLOCK_MODAL)) {
-                    console.log("SecurityUI: Auto-triggering Biometrics...");
                     options.onBiometric();
                 }
             }, 500);

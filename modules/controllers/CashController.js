@@ -154,8 +154,6 @@ export class CashController {
         // Fetch Name
         const asset = (AppState.data.cash || []).find(a => String(a.id) === id);
         const name = asset ? asset.name : 'Asset';
-
-        console.log(`Asset ${id} visibility toggled: ${isHidden ? 'HIDDEN' : 'VISIBLE'} `);
         ToastManager.success(isHidden ? `${name} hidden.` : `${name} visible.`);
 
         this.refreshView();

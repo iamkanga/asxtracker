@@ -776,7 +776,7 @@ export class WatchlistUI {
 
             // Clean up lines
             const rows = container.querySelectorAll(`.${CSS_CLASSES.WATCHLIST_ITEM}`);
-            rows.forEach(r => r.classList.remove('drag-over', 'drag-over-bottom'));
+            rows.forEach(r => r.classList.remove(CSS_CLASSES.DRAG_OVER, CSS_CLASSES.DRAG_OVER_BOTTOM));
         });
 
         container.addEventListener('dragover', (e) => {
@@ -790,14 +790,14 @@ export class WatchlistUI {
 
             // Visual Line Logic
             const rows = [...container.querySelectorAll(`.${CSS_CLASSES.WATCHLIST_ITEM}:not(.${CSS_CLASSES.DRAGGING})`)];
-            rows.forEach(r => r.classList.remove('drag-over', 'drag-over-bottom'));
+            rows.forEach(r => r.classList.remove(CSS_CLASSES.DRAG_OVER, CSS_CLASSES.DRAG_OVER_BOTTOM));
 
             if (afterElement == null) {
                 const lastRow = rows[rows.length - 1];
-                if (lastRow) lastRow.classList.add('drag-over-bottom');
+                if (lastRow) lastRow.classList.add(CSS_CLASSES.DRAG_OVER_BOTTOM);
                 container.appendChild(this._draggedWatchlistItem);
             } else {
-                afterElement.classList.add('drag-over');
+                afterElement.classList.add(CSS_CLASSES.DRAG_OVER);
                 container.insertBefore(this._draggedWatchlistItem, afterElement);
             }
         });

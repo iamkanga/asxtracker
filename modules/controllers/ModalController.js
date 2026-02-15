@@ -155,8 +155,6 @@ export class ModalController {
             // This ensures that if we are recovering a share that lost its ID (Ghost),
             // or adding a share that is already in a watchlist array, the boxes are checked.
             if (stockCode) {
-                // console.log('[ModalController] Pre-fill Scan for Ghost Memberships:', stockCode);
-
                 // 1. Find explicit share documents (Legacy & Mixed Schema)
                 const matchingShares = AppState.data.shares.filter(s => (s.shareName || '').toUpperCase() === stockCode.toUpperCase());
 

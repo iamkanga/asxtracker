@@ -119,9 +119,6 @@ export const CsvParserService = {
         if (bestMap.quantity !== undefined && bestMap.date === undefined) {
             reportType = 'HOLDINGS';
         }
-
-        console.log(`[CsvParserService] Header found at line ${headerIndex}. Type: ${reportType}. Map:`, bestMap);
-
         const rawHeaders = this._splitLine(lines[headerIndex], delimiter).map(h => h.trim().replace(/^"|"$/g, ''));
 
         // 3. PARSE ROWS USING MAP

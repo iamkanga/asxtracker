@@ -294,14 +294,14 @@ export class FavoriteLinksUI {
 
             // Visual Line Logic
             const rows = [...container.querySelectorAll(`.${CSS_CLASSES.FAVORITE_MANAGE_ROW}:not(.${CSS_CLASSES.DRAGGING})`)];
-            rows.forEach(r => r.classList.remove('drag-over', 'drag-over-bottom'));
+            rows.forEach(r => r.classList.remove(CSS_CLASSES.DRAG_OVER, CSS_CLASSES.DRAG_OVER_BOTTOM));
 
             if (afterElement == null) {
                 const lastRow = rows[rows.length - 1];
-                if (lastRow) lastRow.classList.add('drag-over-bottom');
+                if (lastRow) lastRow.classList.add(CSS_CLASSES.DRAG_OVER_BOTTOM);
                 container.appendChild(this._draggedItem);
             } else {
-                afterElement.classList.add('drag-over');
+                afterElement.classList.add(CSS_CLASSES.DRAG_OVER);
                 container.insertBefore(this._draggedItem, afterElement);
             }
         });
@@ -317,7 +317,7 @@ export class FavoriteLinksUI {
             }
             this._draggedItem = null;
             const rows = container.querySelectorAll(`.${CSS_CLASSES.FAVORITE_MANAGE_ROW}`);
-            rows.forEach(r => r.classList.remove('drag-over', 'drag-over-bottom'));
+            rows.forEach(r => r.classList.remove(CSS_CLASSES.DRAG_OVER, CSS_CLASSES.DRAG_OVER_BOTTOM));
         });
     }
 

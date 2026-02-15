@@ -3,6 +3,7 @@
  * Handles mobile keyboard interactions with modals to keep headers sticky/visible.
  * Uses the visualViewport API to detect keyboard open/close on mobile devices.
  */
+import { CSS_CLASSES } from './AppConstants.js';
 
 class KeyboardModalHandler {
     static _instance = null;
@@ -40,7 +41,7 @@ class KeyboardModalHandler {
         }
 
         // Add CSS class to modal for styling hooks
-        modal.classList.add('keyboard-aware-modal');
+        modal.classList.add(CSS_CLASSES.KEYBOARD_AWARE_MODAL);
 
         // Bind focus/blur events on inputs to help with timing
         const inputs = modal.querySelectorAll('input, textarea');
@@ -61,8 +62,8 @@ class KeyboardModalHandler {
         }
 
         if (this._activeModal) {
-            this._activeModal.classList.remove('keyboard-aware-modal');
-            this._activeModal.classList.remove('keyboard-open');
+            this._activeModal.classList.remove(CSS_CLASSES.KEYBOARD_AWARE_MODAL);
+            this._activeModal.classList.remove(CSS_CLASSES.KEYBOARD_OPEN);
             this._activeModal = null;
         }
 
@@ -105,8 +106,8 @@ class KeyboardModalHandler {
         if (!this._activeModal) return;
 
         // Add class for CSS hooks
-        this._activeModal.classList.add('keyboard-open');
-        document.body.classList.add('keyboard-visible');
+        this._activeModal.classList.add(CSS_CLASSES.KEYBOARD_OPEN);
+        document.body.classList.add(CSS_CLASSES.KEYBOARD_VISIBLE);
 
         // Get modal content element
         const modalContent = this._activeModal.querySelector('.modal-content');
@@ -138,8 +139,8 @@ class KeyboardModalHandler {
         if (!this._activeModal) return;
 
         // Remove class
-        this._activeModal.classList.remove('keyboard-open');
-        document.body.classList.remove('keyboard-visible');
+        this._activeModal.classList.remove(CSS_CLASSES.KEYBOARD_OPEN);
+        document.body.classList.remove(CSS_CLASSES.KEYBOARD_VISIBLE);
 
         // Reset modal content styles
         const modalContent = this._activeModal.querySelector('.modal-content');

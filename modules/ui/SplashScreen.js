@@ -54,7 +54,6 @@ export class SplashScreen {
         // Apply new state
         logo.classList.add(state);
         this.currentState = state;
-        // console.log(`SplashScreen: State -> ${state}`);
     }
 
     _handleAnimationEnd(e) {
@@ -91,7 +90,6 @@ export class SplashScreen {
     }
 
     _triggerExitAnim() {
-        // console.log('SplashScreen: Triggering Exit...');
         this._setState(CSS_CLASSES.SPLASH_EXIT);
 
         // Fallback safety in case animationend misses (V47: Optimized for smoother release)
