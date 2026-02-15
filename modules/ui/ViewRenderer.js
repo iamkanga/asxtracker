@@ -66,7 +66,7 @@ export class ViewRenderer {
             const substitutedUrl = LinkHelper.replacePlaceholders(finalLink.url, stock);
 
             return `
-                <a href="${substitutedUrl}" target="_blank" class="research-link-btn">
+                <a href="${substitutedUrl}" target="_blank" rel="noopener noreferrer" class="research-link-btn">
                     <img src="${faviconUrl}" class="link-favicon" alt="">
                     <div class="link-info-stack">
                         <span class="link-name">${finalLink.displayName || finalLink.name}</span>
@@ -855,7 +855,7 @@ export class ViewRenderer {
                     <div class="${CSS_CLASSES.MODAL_HEADER}">
                         <div class="${CSS_CLASSES.MODAL_HEADER_LEFT} ${CSS_CLASSES.FLEX_1}">
                             <div class="${CSS_CLASSES.TEXT_LEFT} ${CSS_CLASSES.W_FULL}">
-                                <a href="https://gemini.google.com/app" target="_blank" id="gemini-header-link" role="link" aria-label="Ask AI Deep Dive" style="text-decoration: none; color: inherit; display: block; -webkit-touch-callout: default !important; user-select: none !important; position: relative; z-index: 10; margin: -10px; padding: 10px;">
+                                <a href="https://gemini.google.com/app" target="_blank" rel="noopener noreferrer" id="gemini-header-link" role="link" aria-label="Ask AI Deep Dive" style="text-decoration: none; color: inherit; display: block; -webkit-touch-callout: default !important; user-select: none !important; position: relative; z-index: 10; margin: -10px; padding: 10px;">
                                     <div class="${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.ALIGN_CENTER} ${CSS_CLASSES.JUSTIFY_START} ${CSS_CLASSES.GAP_0}">
                                         <div class="card-code-pill" style="background: none; border: none; padding: 0; gap: 8px; display: inline-flex; align-items: center;">
                                             <img src="https://files.marketindex.com.au/xasx/96x96-png/${stock.code.toLowerCase()}.png" class="favicon-icon" style="width: 24px; height: 24px;" onerror="this.src='${KANGAROO_ICON_SRC}'" alt="">
@@ -973,7 +973,7 @@ export class ViewRenderer {
                     } catch (e) { }
                     const faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=64`;
                     return `
-                                                <a href="${url}" target="_blank" class="${CSS_CLASSES.ICON_BTN_GHOST}" title="Open ${stock.shareRegistry}" style="padding: 0; display: flex; align-items: center;" onclick="event.stopPropagation()">
+                                                <a href="${url}" target="_blank" rel="noopener noreferrer" class="${CSS_CLASSES.ICON_BTN_GHOST}" title="Open ${stock.shareRegistry}" style="padding: 0; display: flex; align-items: center;" onclick="event.stopPropagation()">
                                                     <img src="${faviconUrl}" style="width: 24px; height: 24px; border-radius: 4px;" alt="${stock.shareRegistry}">
                                                 </a>
                                             `;
@@ -1040,7 +1040,7 @@ export class ViewRenderer {
 
                                 <!-- Sharesight Link (Bottom Right) -->
                                 <div style="position: absolute; bottom: 12px; right: 12px; z-index: 10;">
-                                    <a href="https://portfolio.sharesight.com/${stock.shareSightCode ? `holdings/${stock.shareSightCode}` : ''}" target="_blank" class="${CSS_CLASSES.ICON_BTN_GHOST}" title="Open in Sharesight" style="padding: 0; display: flex;" onclick="event.stopPropagation()">
+                                    <a href="https://portfolio.sharesight.com/${stock.shareSightCode ? `holdings/${stock.shareSightCode}` : ''}" target="_blank" rel="noopener noreferrer" class="${CSS_CLASSES.ICON_BTN_GHOST}" title="Open in Sharesight" style="padding: 0; display: flex;" onclick="event.stopPropagation()">
                                         <img src="https://www.google.com/s2/favicons?domain=sharesight.com&sz=64" style="width: 22px; height: 22px; border-radius: 4px; opacity: 0.8;" alt="Sharesight">
                                     </a>
                                 </div>
@@ -1329,7 +1329,7 @@ export class ViewRenderer {
                         const faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
 
                         return `
-                            <a href="${substitutedUrl}" target="_blank" class="research-link-btn">
+                            <a href="${substitutedUrl}" target="_blank" rel="noopener noreferrer" class="research-link-btn">
                                 <img src="${faviconUrl}" class="link-favicon" alt="">
                                 <div class="link-info-stack">
                                     <span class="link-name">${substitutedName}</span>
@@ -1510,7 +1510,7 @@ export class ViewRenderer {
             <div class="${CSS_CLASSES.MODAL_OVERLAY}"></div>
                 <div class="${CSS_CLASSES.MODAL_CONTENT} ${CSS_CLASSES.MODAL_CONTENT_MEDIUM} ${CSS_CLASSES.RESEARCH_MODAL_CONTENT}">
                     <div class="${CSS_CLASSES.MODAL_HEADER}">
-                        <a href="https://gemini.google.com/app" target="_blank" id="gemini-research-link" role="link" aria-label="Ask AI Deep Dive" style="text-decoration: none; color: inherit; display: block; -webkit-touch-callout: default !important; user-select: text !important; position: relative; z-index: 10;">
+                        <a href="https://gemini.google.com/app" target="_blank" rel="noopener noreferrer" id="gemini-research-link" role="link" aria-label="Ask AI Deep Dive" style="text-decoration: none; color: inherit; display: block; -webkit-touch-callout: default !important; user-select: text !important; position: relative; z-index: 10;">
                             <div>
                                 <div class="${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.ALIGN_CENTER} ${CSS_CLASSES.JUSTIFY_START} ${CSS_CLASSES.GAP_0}">
                                     <h2 class="${CSS_CLASSES.MODAL_TITLE}" style="margin-bottom: 0;">${stock.code}</h2>

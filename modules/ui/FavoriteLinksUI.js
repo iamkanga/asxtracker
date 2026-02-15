@@ -214,7 +214,7 @@ export class FavoriteLinksUI {
             }
 
             return `
-                <a href="${link.url}" target="_blank" class="${CSS_CLASSES.FAVORITE_LINK_CARD}">
+                <a href="${link.url}" target="_blank" rel="noopener noreferrer" class="${CSS_CLASSES.FAVORITE_LINK_CARD}">
                     <img src="${iconSrc}" alt="" class="link-favicon">
                     <span class="link-text">${link.name}</span>
                 </a>

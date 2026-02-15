@@ -15,6 +15,7 @@ import { ToastManager } from './ToastManager.js';
 import { LinkHelper } from '../utils/LinkHelper.js';
 import { getBestShareMatch } from '../data/DataProcessor.js';
 import { SettingsUI } from './SettingsUI.js';
+import { StateAuditor } from '../state/StateAuditor.js';
 
 export class NotificationUI {
 
@@ -59,9 +60,11 @@ export class NotificationUI {
             }, 1000);
 
             // DATA UPDATE SYNC: Ensure badge updates when new price data arrives
-            document.addEventListener(EVENTS.DATA_UPDATE, () => {
-                setTimeout(syncBadge, 500); // Allow Store time to process
-            });
+            if (StateAuditor && typeof StateAuditor.on === 'function') {
+                StateAuditor.on('DATA_UPDATED', () => {
+                    setTimeout(syncBadge, 500); // Allow Store time to process
+                });
+            }
 
             // Listen for updates from the Store (Unified Event Bus)
             document.addEventListener(EVENTS.NOTIFICATION_UPDATE, (e) => {
@@ -1557,7 +1560,7 @@ export class NotificationUI {
         let smartAlertBtn = '';
         // ALWAYS SHOW if we have a code (Relaxed threshold from 2.0%)
         if (code) {
-            smartAlertBtn = `<a href="https://gemini.google.com/app" target="_blank" class="btn-smart-alert" role="link" aria-label="Ask AI Deep Dive" title="Ask AI Why" data-symbol="${code}" data-change="${(changePct || 0).toFixed(2)}" data-sector="${sector || ''}" style="border:none; background:none; cursor:pointer; font-size:1.1rem; color: #9c27b0; position: absolute; bottom: 6px; right: 6px; z-index: 10; text-decoration: none; -webkit-touch-callout: default !important; user-select: auto !important;">
+            smartAlertBtn = `<a href="https://gemini.google.com/app" target="_blank" rel="noopener noreferrer" class="btn-smart-alert" role="link" aria-label="Ask AI Deep Dive" title="Ask AI Why" data-symbol="${code}" data-change="${(changePct || 0).toFixed(2)}" data-sector="${sector || ''}" style="border:none; background:none; cursor:pointer; font-size:1.1rem; color: #9c27b0; position: absolute; bottom: 6px; right: 6px; z-index: 10; text-decoration: none; -webkit-touch-callout: default !important; user-select: auto !important;">
             <img src="gemini-icon.png" style="width: 20px; height: 20px; vertical-align: middle; pointer-events: none;">
             </a>`;
         }

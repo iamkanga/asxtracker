@@ -309,7 +309,7 @@ export class SearchDiscoveryUI {
                 <!-- Main Header Info -->
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem;">
                     <div style="flex: 1;">
-                        <a href="https://gemini.google.com/app" target="_blank" id="gemini-discovery-link" role="link" aria-label="Ask AI Deep Dive" style="text-decoration: none; color: inherit; display: block; -webkit-touch-callout: default !important; user-select: auto !important;">
+                        <a href="https://gemini.google.com/app" target="_blank" rel="noopener noreferrer" id="gemini-discovery-link" role="link" aria-label="Ask AI Deep Dive" style="text-decoration: none; color: inherit; display: block; -webkit-touch-callout: default !important; user-select: auto !important;">
                             <div style="display: flex; flex-direction: column; gap: 4px;">
                                 <div style="display: flex; align-items: center; gap: 8px;">
                                     <div class="card-code-pill" style="background: none; border: none; padding: 0; gap: 8px; display: inline-flex; align-items: center;">

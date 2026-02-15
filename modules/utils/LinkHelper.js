@@ -222,9 +222,9 @@ export class LinkHelper {
 
         if (isAndroid) {
             const intentUrl = `intent://gemini.google.com/app#Intent;scheme=https;package=com.google.android.apps.bard;S.browser_fallback_url=${encodeURIComponent(targetUrl)};end`;
-            window.open(intentUrl, '_blank');
+            window.open(intentUrl, '_blank', 'noopener,noreferrer');
         } else {
-            window.open(targetUrl, '_blank');
+            window.open(targetUrl, '_blank', 'noopener,noreferrer');
         }
     }
 
@@ -277,7 +277,7 @@ export class LinkHelper {
             const intentUrl = `intent://${cleanUrl}#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=${fallback};end`;
 
             console.log('[LinkHelper] Launching in App Browser (Intent):', intentUrl);
-            window.open(intentUrl, '_blank');
+            window.open(intentUrl, '_blank', 'noopener,noreferrer');
         } else {
             // iOS / Desktop : Standard cross-origin open
             // Browsers like Safari handle this automatically for PWAs by showing a "Done" button.

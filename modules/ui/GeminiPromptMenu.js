@@ -129,11 +129,11 @@ export class GeminiPromptMenu {
                 // 2. NAVIGATION (Trigger App Launch on Android via Intent)
                 if (isAndroid) {
                     const intentUrl = `intent://gemini.google.com/app#Intent;scheme=https;package=com.google.android.apps.bard;S.browser_fallback_url=${encodeURIComponent(targetUrl)};end`;
-                    window.open(intentUrl, '_blank');
+                    window.open(intentUrl, '_blank', 'noopener,noreferrer');
                 } else if (isMobile) {
-                    window.open(targetUrl, '_blank');
+                    window.open(targetUrl, '_blank', 'noopener,noreferrer');
                 } else {
-                    window.open(targetUrl, '_blank');
+                    window.open(targetUrl, '_blank', 'noopener,noreferrer');
                 }
 
                 setTimeout(() => this.close(), 300);
@@ -427,9 +427,9 @@ export class GeminiPromptMenu {
         // 2. Navigation
         if (isAndroid) {
             const intentUrl = `intent://gemini.google.com/app#Intent;scheme=https;package=com.google.android.apps.bard;S.browser_fallback_url=${encodeURIComponent(targetUrl)};end`;
-            window.open(intentUrl, '_blank');
+            window.open(intentUrl, '_blank', 'noopener,noreferrer');
         } else {
-            window.open(targetUrl, '_blank');
+            window.open(targetUrl, '_blank', 'noopener,noreferrer');
         }
 
         setTimeout(() => this.close(), 300);

@@ -99,12 +99,23 @@ export class AppController {
         // this.init(); // Removed: Deferred to main.js (DOMContentLoaded) to ensure DOM is ready
     }
 
-    /**
-     * Initialization Entry Point
-     */
     async init() {
         if (this._initialized) return;
         this._initialized = true;
+
+        console.log('%c [AppController] Initializing v1146... ', 'background: #222; color: #a49393; font-weight: bold;');
+
+        // v1146: FAIL-SAFE: If auth doesn't respond within 5s, force-enable the login button.
+        // This prevents the "Initializing..." loop if Firebase fails or hangs on certain networks/devices.
+        setTimeout(() => {
+            if (this._initialized && !document.body.classList.contains(CSS_CLASSES.LOGGED_IN)) {
+                const btn = document.getElementById(IDS.SPLASH_SIGN_IN_BTN);
+                if (btn && btn.disabled) {
+                    console.warn('[AppController] Auth timed out or failed to initialize. Force-enabling Login button fallback.');
+                    this._setSignInLoadingState(false);
+                }
+            }
+        }, 5000);
 
         // STATE AUDITOR: Enable diagnostic monitoring (non-invasive)
         StateAuditor.enable();
@@ -245,6 +256,10 @@ export class AppController {
                 if (this.headerLayout) {
                     this.headerLayout.updateConnectionStatus(false, AppState.health.status);
                 }
+
+                // v1145: CRITICAL: Enable the sign-in button once we confirm user is logged out.
+                // This resolves the "Initializing..." loop on splash screen.
+                this._setSignInLoadingState(false);
             }
         });
 
@@ -2124,7 +2139,7 @@ export class AppController {
                 const deepLink = `https://commsecau.page.link/?link=${encodedTarget}&apn=au.com.commsec.android`;
 
                 console.log('[AppController] Intercepted CommSec Link:', deepLink);
-                window.open(deepLink, '_blank', 'noreferrer');
+                window.open(deepLink, '_blank', 'noopener,noreferrer');
                 return;
             }
 
@@ -2141,7 +2156,7 @@ export class AppController {
                 const intentUrl = `intent://${cleanUrl}#Intent;scheme=https;package=au.com.selfwealth.mobilev2;S.browser_fallback_url=${fallback};end`;
 
                 console.log('[AppController] Launching SelfWealth Intent (v2):', intentUrl);
-                window.open(intentUrl, '_blank', 'noreferrer');
+                window.open(intentUrl, '_blank', 'noopener,noreferrer');
                 return;
             }
 

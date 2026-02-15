@@ -29,11 +29,11 @@ export const DASHBOARD_SYMBOLS = [
 export const BRIEFING_BLACKLIST = [
     'FBR'
 ];
-export const DASHBOARD_LINKS = {
+export const DASHBOARD_LINKS = Object.freeze({
     'NICKEL': 'https://au.finance.yahoo.com/quote/NICKEL=F',
     'TIO=F': 'https://www.marketindex.com.au/commodities',
     'YAP=F': 'https://m.au.investing.com/portfolio/portfolioPage/?portfolioid=MjM3ZGM8YzxlMmFuNG9jZg=='
-};
+});
 export const PORTFOLIO_ID = 'portfolio';
 export const SEARCH_WATCHLIST_ID = 'search';
 
@@ -459,23 +459,23 @@ export const USER_MESSAGES = {
     DATA_WIPED: 'All data has been deleted.'
 };
 
-export const RESEARCH_LINKS_TEMPLATE = [
-    { displayName: 'Yahoo Finance', url: 'https://au.finance.yahoo.com/quote/${code}.AX', description: 'Financial news, data and stock quotes.' },
-    { displayName: 'Google Finance', url: 'https://www.google.com/finance/quote/${code}:ASX', description: 'Real-time stock quotes and financial news.' },
-    { displayName: 'ASX Official', url: 'https://www2.asx.com.au/markets/company/${code}', description: 'Official ASX company page and data.' },
-    { displayName: 'Market Index', url: 'https://www.marketindex.com.au/asx/${code}', description: 'ASX stock market data and insights.' },
-    { displayName: 'Market Announcements', url: 'https://www.marketindex.com.au/asx/${code}/announcements', description: 'Latest company announcements and filings.' },
-    { displayName: 'Investing.com', url: 'https://au.investing.com/search/?q=${code}', description: 'Stock quotes and financial news.' },
-    { displayName: 'MarketWatch', url: 'https://www.marketwatch.com/investing/stock/${code}?countrycode=au&mod=search_symbol', description: 'Stock market news and financial information.' },
-    { displayName: 'Small Caps', url: 'https://smallcaps.com.au/stocks/asx-${code}#overview', description: 'News on ASX listed small cap companies.' },
-    { displayName: 'Listcorp', url: 'https://www.listcorp.com/asx/${code_lower}#news', description: 'Company information and investor relations.' },
-    { displayName: 'HotCopper', url: 'https://hotcopper.com.au/asx/${code}/', description: 'Australias largest stock market forum.' },
-    { displayName: 'CommSec', url: 'https://www2.commsec.com.au/quotes/summary?stockCode=${code}&exchangeCode=ASX', description: 'Online stockbroking and investment platform.' },
-    { displayName: 'Rask Media', url: 'https://www.raskmedia.com.au/asx/${code}/', description: 'Investment news and financial education.' },
-    { displayName: 'TradingView', url: 'https://www.tradingview.com/symbols/ASX-${code}/', description: 'Charting platform and social network.' },
-    { displayName: 'Google News', url: 'https://www.google.com/search?q=${code}+ASX&tbm=nws', description: 'Latest news headlines for this stock.' },
-    { displayName: 'Motley Fool', url: 'https://www.fool.com.au/tickers/asx-${code}/', description: 'Investing news and stock analysis.' }
-];
+export const RESEARCH_LINKS_TEMPLATE = Object.freeze([
+    Object.freeze({ displayName: 'Yahoo Finance', url: 'https://au.finance.yahoo.com/quote/${code}.AX', description: 'Financial news, data and stock quotes.' }),
+    Object.freeze({ displayName: 'Google Finance', url: 'https://www.google.com/finance/quote/${code}:ASX', description: 'Real-time stock quotes and financial news.' }),
+    Object.freeze({ displayName: 'ASX Official', url: 'https://www2.asx.com.au/markets/company/${code}', description: 'Official ASX company page and data.' }),
+    Object.freeze({ displayName: 'Market Index', url: 'https://www.marketindex.com.au/asx/${code}', description: 'ASX stock market data and insights.' }),
+    Object.freeze({ displayName: 'Market Announcements', url: 'https://www.marketindex.com.au/asx/${code}/announcements', description: 'Latest company announcements and filings.' }),
+    Object.freeze({ displayName: 'Investing.com', url: 'https://au.investing.com/search/?q=${code}', description: 'Stock quotes and financial news.' }),
+    Object.freeze({ displayName: 'MarketWatch', url: 'https://www.marketwatch.com/investing/stock/${code}?countrycode=au&mod=search_symbol', description: 'Stock market news and financial information.' }),
+    Object.freeze({ displayName: 'Small Caps', url: 'https://smallcaps.com.au/stocks/asx-${code}#overview', description: 'News on ASX listed small cap companies.' }),
+    Object.freeze({ displayName: 'Listcorp', url: 'https://www.listcorp.com/asx/${code_lower}#news', description: 'Company information and investor relations.' }),
+    Object.freeze({ displayName: 'HotCopper', url: 'https://hotcopper.com.au/asx/${code}/', description: 'Australias largest stock market forum.' }),
+    Object.freeze({ displayName: 'CommSec', url: 'https://www2.commsec.com.au/quotes/summary?stockCode=${code}&exchangeCode=ASX', description: 'Online stockbroking and investment platform.' }),
+    Object.freeze({ displayName: 'Rask Media', url: 'https://www.raskmedia.com.au/asx/${code}/', description: 'Investment news and financial education.' }),
+    Object.freeze({ displayName: 'TradingView', url: 'https://www.tradingview.com/symbols/ASX-${code}/', description: 'Charting platform and social network.' }),
+    Object.freeze({ displayName: 'Google News', url: 'https://www.google.com/search?q=${code}+ASX&tbm=nws', description: 'Latest news headlines for this stock.' }),
+    Object.freeze({ displayName: 'Motley Fool', url: 'https://www.fool.com.au/tickers/asx-${code}/', description: 'Investing news and stock analysis.' })
+]);
 
 export const GEMINI_PROMPTS = {
     STOCK: [
@@ -497,12 +497,12 @@ export const GEMINI_PROMPTS = {
 
 export const REGISTRY_OPTIONS = ['Computershare', 'MUFG', 'Boardroom', 'Automic'];
 
-export const REGISTRY_LINKS = {
+export const REGISTRY_LINKS = Object.freeze({
     'Computershare': 'https://www-au.computershare.com/Investor/#Home',
     'MUFG': 'https://au.investorcentre.mpms.mufg.com/',
     'Boardroom': 'https://www.investorserve.com.au/',
     'Automic': 'https://portal.automic.com.au/investor/home'
-};
+});
 
 export const CASH_CATEGORIES = [
     { id: 'other', label: 'Add New Category' },
