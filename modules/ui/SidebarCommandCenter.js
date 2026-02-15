@@ -222,6 +222,9 @@ export class SidebarCommandCenter {
             else currentThemeName = 'Strong';
         }
 
+        const watchlistCount = (AppState.data.watchlists || []).length;
+        const shareCount = (AppState.data.shares || []).length;
+
         this.container.innerHTML = `
             <div class="command-center-inner">
                 <!-- Market Sentiment Tile (Triggers Daily Brief) -->
@@ -310,9 +313,11 @@ export class SidebarCommandCenter {
                     </div>
 
                     <!-- Layout Footer: Notification Count & Auth -->
-                    <div class="command-center-footer" style="margin-top: 24px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.05);">
-                        <div style="font-size: 0.75rem; color: var(--text-muted); opacity: 0.8; margin-bottom: 12px; text-align: center;">
-                            Notifications: <span style="color: var(--color-accent); font-weight:600;">${notifCount}</span>
+                    <div class="command-center-footer" style="margin-top: 24px; padding-top: 16px;">
+                        <div style="font-size: 0.75rem; color: var(--text-muted); opacity: 0.8; margin-bottom: 12px; text-align: center; display: flex; align-items: center; justify-content: center; gap: 12px;">
+                            <span>Watchlists <span style="color: var(--color-accent); font-weight:600;">${watchlistCount}</span></span>
+                            <span>Shares <span style="color: var(--color-accent); font-weight:600;">${shareCount}</span></span>
+                            <span>Notifications <span style="color: var(--color-accent); font-weight:600;">${notifCount}</span></span>
                         </div>
 
                         ${AppState.user ? `
