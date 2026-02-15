@@ -575,11 +575,13 @@ export class BriefingUI {
                 };
 
                 const { DataService } = await import('../data/DataService.js');
+                const { AiSummaryUI } = await import('./AiSummaryUI.js');
+                AiSummaryUI.showLoading('ASX', 'AI Market Assistant');
+
                 const ds = new DataService();
                 const result = await ds.askGemini('chat', query, context);
 
                 if (result && result.ok && result.text) {
-                    const { AiSummaryUI } = await import('./AiSummaryUI.js');
                     AiSummaryUI.showResult('AI Market Assistant', 'ASX', result.text, result.model);
                 } else {
                     const err = (result && result.error) ? result.error : 'Backend Error';

@@ -1207,11 +1207,15 @@ export class ViewRenderer {
                     const sector = stock.sector || '';
 
                     ToastManager.show(`${UI_LABELS.ASKING_GEMINI} ${symbol}...`, 'info');
-                    import('../data/DataService.js').then(({ DataService }) => {
+                    Promise.all([
+                        import('../data/DataService.js'),
+                        import('./AiSummaryUI.js')
+                    ]).then(([{ DataService }, { AiSummaryUI }]) => {
+                        AiSummaryUI.showLoading(symbol, UI_LABELS.AI_INSIGHT_FOR);
                         const ds = new DataService();
                         ds.askGemini('explain', '', { symbol, change, sector }).then(res => {
                             if (res.ok) {
-                                alert(`${UI_LABELS.AI_INSIGHT_FOR} ${symbol}:\n\n${res.text}`);
+                                AiSummaryUI.showResult(UI_LABELS.AI_INSIGHT_FOR, symbol, res.text, res.model);
                             } else {
                                 ToastManager.show(`${UI_LABELS.ANALYSIS_FAILED} ` + (res.error || 'Unknown error'), 'error');
                             }
@@ -1626,11 +1630,15 @@ export class ViewRenderer {
                     const sector = stock.sector || '';
 
                     ToastManager.show(`${UI_LABELS.ASKING_GEMINI} ${symbol}...`, 'info');
-                    import('../data/DataService.js').then(({ DataService }) => {
+                    Promise.all([
+                        import('../data/DataService.js'),
+                        import('./AiSummaryUI.js')
+                    ]).then(([{ DataService }, { AiSummaryUI }]) => {
+                        AiSummaryUI.showLoading(symbol, UI_LABELS.AI_INSIGHT_FOR);
                         const ds = new DataService();
                         ds.askGemini('explain', '', { symbol, change, sector }).then(res => {
                             if (res.ok) {
-                                alert(`${UI_LABELS.AI_INSIGHT_FOR} ${symbol}:\n\n${res.text}`);
+                                AiSummaryUI.showResult(UI_LABELS.AI_INSIGHT_FOR, symbol, res.text, res.model);
                             } else {
                                 ToastManager.show(`${UI_LABELS.ANALYSIS_FAILED} ` + (res.error || 'Unknown error'), 'error');
                             }

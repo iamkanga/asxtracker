@@ -123,8 +123,11 @@ export class LinkHelper {
 
     /**
      * Binds Gemini interaction to an element.
+     * @param {HTMLElement} el The element to bind to
+     * @param {Function} getPrompt Callback returning the prompt text or array
+     * @param {Function} [onTap] Optional callback for short-tap (e.g. internal AI)
      */
-    static bindGeminiInteraction(el, getPrompt) {
+    static bindGeminiInteraction(el, getPrompt, onTap = null) {
         if (!el) return;
 
         let pressTimer = null;
@@ -140,15 +143,13 @@ export class LinkHelper {
                 // Trigger LONG PRESS behavior: Always External
                 const quickSummaryOn = AppState.preferences.oneTapResearch !== false;
                 if (quickSummaryOn) {
-                    this.onShowIntelligence(e, getPrompt, true);
+                    this.onShowIntelligence(e, getPrompt, true); // Force External
                 } else {
                     const result = getPrompt();
                     const targetUrl = el.getAttribute('href') || 'https://gemini.google.com/app';
                     if (Array.isArray(result)) {
                         GeminiPromptMenu.show(e, result, null, targetUrl, true);
                     } else {
-                        // One-tap straight to PWA (handled by click fallback if timer cleared, 
-                        // but since we found it's a long press, we do it here and prevent click)
                         this._openExternal(result, targetUrl);
                     }
                 }
@@ -178,6 +179,11 @@ export class LinkHelper {
             e.stopPropagation();
 
             // Short Tap Behavior
+            if (onTap) {
+                onTap(e);
+                return;
+            }
+
             const quickSummaryOn = AppState.preferences.oneTapResearch !== false;
 
             if (quickSummaryOn) {

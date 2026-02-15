@@ -18,21 +18,17 @@ export class AiSummaryUI {
     }
 
     static async show(symbol, questionId) {
-        // Dismiss other modals for clean focus (track for restoration)
-        this._dismissOthers();
-
         const template = AI_DEFAULT_TEMPLATES.find(t => t.id === questionId) || AI_DEFAULT_TEMPLATES[0];
         const userPrompt = (AppState.preferences.aiPromptTemplates || {})[questionId];
         const activePromptTemplate = userPrompt || template.text;
 
-        const modal = this._renderModal(symbol, template.label);
-        document.body.appendChild(modal);
+        // 1. Show Loading immediately
+        this.showLoading(symbol, template.label);
 
-        // Animate Swipe Up
-        requestAnimationFrame(() => modal.classList.add('show'));
-
-        // Check Cache
+        // 2. Check Cache
         const cached = AppState.getGeminiSummary(symbol, questionId);
+        const modal = document.getElementById(IDS.AI_SUMMARY_MODAL);
+
         if (cached) {
             this._updateContent(modal, cached, 'Cached Analysis');
         } else {
@@ -41,14 +37,32 @@ export class AiSummaryUI {
     }
 
     /**
-     * Show a custom result (like a chat answer) in the AI Bottom Sheet.
+     * Shows the Bottom Sheet immediately in a 'thinking' state.
+     * Use this before an async AI call to show the "Actioning" UI right away.
      */
-    static showResult(title, symbol, text) {
+    static showLoading(symbol, title = 'AI Market Insight') {
         this._dismissOthers();
         const modal = this._renderModal(symbol, title);
         document.body.appendChild(modal);
         requestAnimationFrame(() => modal.classList.add('show'));
-        this._updateContent(modal, text, 'Direct AI Response');
+        return modal;
+    }
+
+    /**
+     * Show a custom result (like a chat answer) in the AI Bottom Sheet.
+     */
+    static showResult(title, symbol, text, modelName = 'Gemini 3 Flash') {
+        let modal = document.getElementById(IDS.AI_SUMMARY_MODAL);
+
+        // If modal doesn't exist, create it (fallback)
+        if (!modal) {
+            this._dismissOthers();
+            modal = this._renderModal(symbol, title);
+            document.body.appendChild(modal);
+            requestAnimationFrame(() => modal.classList.add('show'));
+        }
+
+        this._updateContent(modal, text, modelName);
     }
 
     static _dismissOthers() {
