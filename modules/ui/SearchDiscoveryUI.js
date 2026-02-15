@@ -308,19 +308,19 @@ export class SearchDiscoveryUI {
                 <!-- Main Header Info -->
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem;">
                     <div style="flex: 1;">
-                        <a href="https://gemini.google.com/app" target="_blank" rel="noopener noreferrer" id="gemini-discovery-link" role="link" aria-label="Ask AI Deep Dive" style="text-decoration: none; color: inherit; display: block; -webkit-touch-callout: default !important; user-select: auto !important;">
-                            <div style="display: flex; flex-direction: column; gap: 4px;">
-                                <div style="display: flex; align-items: center; gap: 8px;">
+                        <div style="display: flex; flex-direction: column; gap: 4px;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <a href="https://gemini.google.com/app" target="_blank" rel="noopener noreferrer" id="gemini-discovery-link" role="link" aria-label="Ask AI Deep Dive" style="text-decoration: none; color: inherit; display: inline-flex; align-items: center; -webkit-touch-callout: default !important; user-select: auto !important; position: relative; z-index: 10; padding: 4px; margin: -4px;">
                                     <div class="card-code-pill" style="background: none; border: none; padding: 0; gap: 8px; display: inline-flex; align-items: center;">
                                         <img src="https://files.marketindex.com.au/xasx/96x96-png/${stock.code.toLowerCase()}.png" class="favicon-icon" style="width: 24px; height: 24px;" onerror="this.src='${KANGAROO_ICON_SRC}'" alt="">
                                         <h2 style="font-size: 1.8rem; font-weight: 800; margin: 0; line-height: 1; letter-spacing: -0.5px; color: var(--text-color);">${stock.code}</h2>
                                     </div>
                                     <span style="display: inline-block; width: 1.5ch;"></span>
                                     <img src="gemini-icon.png" style="width: 20px; height: 20px; pointer-events: none; vertical-align: middle;">
-                                </div>
-                                <span style="font-size: 0.95rem; color: var(--text-muted); font-weight: 500; opacity: 0.9;">${stock.name}</span>
+                                </a>
                             </div>
-                        </a>
+                            <span style="font-size: 0.95rem; color: var(--text-muted); font-weight: 500; opacity: 0.9;">${stock.name}</span>
+                        </div>
                         ${renderBadges(stock)}
                     </div>
                     <div style="text-align: right;">
@@ -430,28 +430,7 @@ export class SearchDiscoveryUI {
         if (geminiLink) {
             LinkHelper.bindGeminiInteraction(
                 geminiLink,
-                () => `Summarize the latest technical and fundamental developments for ${stock.code} on the ASX. Focus on recent price action, volume, and any relevant news or upcoming announcements. Provide a comprehensive outlook.`,
-                () => {
-                    const symbol = stock.code;
-                    const change = stock.change || 0;
-                    const sector = stock.sector || '';
-
-                    ToastManager.show(`${UI_LABELS.ASKING_GEMINI} ${symbol}...`, 'info');
-                    Promise.all([
-                        import('../data/DataService.js'),
-                        import('./AiSummaryUI.js')
-                    ]).then(([{ DataService }, { AiSummaryUI }]) => {
-                        AiSummaryUI.showLoading(symbol, UI_LABELS.AI_INSIGHT_FOR);
-                        const ds = new DataService();
-                        ds.askGemini('explain', '', { symbol, change, sector }).then(res => {
-                            if (res.ok) {
-                                AiSummaryUI.showResult(UI_LABELS.AI_INSIGHT_FOR, symbol, res.text, res.model);
-                            } else {
-                                ToastManager.show(`${UI_LABELS.ANALYSIS_FAILED} ` + (res.error || 'Unknown error'), 'error');
-                            }
-                        });
-                    });
-                }
+                () => `Summarize the latest technical and fundamental developments for ${stock.code} on the ASX. Focus on recent price action, volume, and any relevant news or upcoming announcements. Provide a comprehensive outlook.`
             );
         }
 

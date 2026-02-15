@@ -335,11 +335,9 @@ export class BriefingUI {
                     if (el) {
                         if (result && result.ok && result.text) {
                             const modelName = result.model || 'Gemini 3 Flash';
-                            // Process markdown-ish bolding and fix remaining asterisks
-                            const formatted = result.text
-                                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                                .replace(/(^|[^\*])\*([^\*]+)\*([^\*]|$)/g, '$1<em>$2</em>$3')
-                                .replace(/\*/g, ''); // Sweep remaining asterisks
+                            // Process markdown-ish bolding, headers, and spacing via shared UI utility
+                            const { AiSummaryUI } = await import('./AiSummaryUI.js');
+                            const formatted = AiSummaryUI._formatMarkdown(result.text, 'ASX');
                             el.innerHTML = formatted;
                             el.style.animation = 'fadeIn 0.5s ease-in';
                         } else {
@@ -535,8 +533,9 @@ export class BriefingUI {
 
                     if (heroCard) {
                         if (result && result.ok && result.text) {
-                            const modelName = result.model || 'Gemini 3 Flash';
-                            heroCard.innerHTML = `<div style="padding: 12px; font-size: 0.85em; line-height: 1.5; color: #fff; text-align: left;">${result.text.replace(/\n/g, '<br>')}</div>`;
+                            const { AiSummaryUI } = await import('./AiSummaryUI.js');
+                            const formattedHtml = AiSummaryUI._formatMarkdown(result.text, 'Portfolio');
+                            heroCard.innerHTML = `<div style="padding: 12px; font-size: 0.85em; line-height: 1.5; color: #fff; text-align: left;">${formattedHtml}</div>`;
                             heroCard.style.background = 'linear-gradient(135deg, #1a0505 0%, #4a0d0d 100%)';
                         } else {
                             const err = result ? result.error : 'Unknown';

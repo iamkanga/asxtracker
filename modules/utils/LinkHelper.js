@@ -2,7 +2,7 @@
 import { ToastManager } from '../ui/ToastManager.js';
 import { GeminiPromptMenu } from '../ui/GeminiPromptMenu.js';
 import { AppState } from '../state/AppState.js';
-import { AI_DEFAULT_TEMPLATES, EVENTS } from './AppConstants.js';
+import { AI_DEFAULT_TEMPLATES, EVENTS, UI_LABELS } from './AppConstants.js';
 
 /**
  * LinkHelper.js
@@ -89,10 +89,12 @@ export class LinkHelper {
         const result = getPrompt();
         let symbol = 'ASX';
         let checkText = '';
+        let customPrompts = null;
 
         if (typeof result === 'string') {
             checkText = result;
         } else if (Array.isArray(result) && result.length > 0) {
+            customPrompts = result;
             checkText = typeof result[0] === 'string' ? result[0] : (result[0].text || '');
         }
 
@@ -103,10 +105,15 @@ export class LinkHelper {
             }
         }
 
-        const intelligencePrompts = AI_DEFAULT_TEMPLATES.map(t => ({
+        // Use Passed Prompts if they are rich templates, else fallback to Standard AI Templates
+        const baseTemplates = (customPrompts && customPrompts.length > 0 && customPrompts[0].label)
+            ? customPrompts
+            : AI_DEFAULT_TEMPLATES;
+
+        const intelligencePrompts = baseTemplates.map(t => ({
             label: t.label,
             icon: t.icon,
-            internal: true,
+            internal: t.internal !== undefined ? t.internal : (!!t.id), // If it has an ID, it's a standard internal template
             questionId: t.id,
             // Populate text for external copying (Gemini PWA mode)
             text: LinkHelper.replacePlaceholders(t.text, { code: symbol })
@@ -114,9 +121,30 @@ export class LinkHelper {
 
         GeminiPromptMenu.show(e, intelligencePrompts, (selected) => {
             if (selected.internal && !forceExternal) {
-                document.dispatchEvent(new CustomEvent(EVENTS.SHOW_AI_SUMMARY, {
-                    detail: { symbol, questionId: selected.questionId }
-                }));
+                // If it has a questionId, route through the standard Summary UI (which has caching/skeletons)
+                if (selected.questionId) {
+                    document.dispatchEvent(new CustomEvent(EVENTS.SHOW_AI_SUMMARY, {
+                        detail: { symbol, questionId: selected.questionId }
+                    }));
+                } else {
+                    // It's a custom prompt (like from GEMINI_PROMPTS.STOCK)
+                    // We route it as a 'explain' query but with the specific text
+                    ToastManager.info(`${UI_LABELS.ASKING_GEMINI} ${symbol}...`);
+                    Promise.all([
+                        import('../data/DataService.js'),
+                        import('../ui/AiSummaryUI.js')
+                    ]).then(([{ DataService }, { AiSummaryUI }]) => {
+                        AiSummaryUI.showLoading(symbol, selected.label);
+                        const ds = new DataService();
+                        ds.askGemini('explain', selected.text, { symbol }).then(res => {
+                            if (res.ok) {
+                                AiSummaryUI.showResult(selected.label, symbol, res.text, res.model);
+                            } else {
+                                ToastManager.error(`AI Error: ${res.error || 'Failed'}`);
+                            }
+                        });
+                    });
+                }
             }
         }, 'https://gemini.google.com/app', forceExternal);
     }

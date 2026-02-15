@@ -196,24 +196,12 @@ export class AiSummaryUI {
         const contentEl = modal.querySelector('#ai-summary-content');
         if (!contentEl) return;
 
-        // Process markdown-ish bolding, numerical lists and bullet points
-        let html = text
-            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-            .replace(/^\d+\.\s+(.*?)$/gm, '<li>$1</li>') // Numerical lists
-            .replace(/^\*\s+(.*?)$/gm, '<li>$1</li>')     // Bullet lists
-            .replace(/\n\n/g, '</p><p>')
-            .replace(/\n/g, '<br>')
-            .replace(/\*/g, ''); // Sweep stray asterisks
-
-        // Wrap consecutive <li> into <ul> if we found any
-        if (html.includes('<li>')) {
-            // Very basic wrapping - better to just let CSS handle the spacing
-        }
+        const formattedHtml = this._formatMarkdown(text);
 
         contentEl.innerHTML = `
             <div style="animation: fadeIn 0.6s ease-out forwards;">
                 <div class="ai-text-body">
-                    <p>${html}</p>
+                    ${formattedHtml}
                 </div>
                 <div style="margin-top: 30px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; opacity: 0.5; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;">
                     <span><i class="fas fa-microchip"></i> Powered by ${modelName.split('/').pop()}</span>
@@ -221,5 +209,78 @@ export class AiSummaryUI {
                 </div>
             </div>
         `;
+    }
+
+    /**
+     * Converts AI markdown-style output into structured, elegant HTML.
+     */
+    static _formatMarkdown(text, symbol = '') {
+        if (!text) return '';
+
+        let html = text;
+
+        // 1. Branding & Identity Cleanup (User: Remove "AU ASX")
+        html = html.replace(/AU\s*ASX/gi, 'ASX');
+
+        // 2. Symbol & Structural Cleaning (User: Remove hashtags, brackets, vertical lines)
+        // We replace vertical lines with clean bullets and strip brackets
+        html = html.replace(/\|/g, ' • ');
+        html = html.replace(/[\[\]]/g, '');
+
+        // 3. Symbol Cleaning (Remove AI's repetitive prefixes like "AMP 1." or "AMP.AX")
+        if (symbol) {
+            const baseSymbol = symbol.replace('.AX', '');
+            const escaped = baseSymbol.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const prefixRegex = new RegExp(`(?:${escaped}(?:\\.AX)?\\s*)?(\\d+\\.)\\s*`, 'gi');
+            html = html.replace(prefixRegex, '$1 ');
+        }
+
+        // 4. Pre-process Bold
+        html = html.replace(/\*\*\*(.*?)\*\*\*/g, '<strong>$1</strong>');
+        html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+
+        // 5. Process Headers (#, ##, ###) - Much more robust
+        // Matches headers even with leading/trailing spaces or multiple hashtags
+        html = html.replace(/^\s*(#+)\s*(.*?)\s*$/gm, (match, hashes, title) => {
+            const level = hashes.length;
+            const cls = level === 1 ? 'ai-header-1' : (level === 2 ? 'ai-header-2' : 'ai-header-3');
+            const tag = level === 1 ? 'h2' : (level === 2 ? 'h3' : 'h4');
+            // Extract title and strip any trailing symbols/metadata
+            const cleanTitle = title.trim();
+            return `<${tag} class="${cls}">${cleanTitle}</${tag}>`;
+        });
+
+        // 6. Process Numerical Lists
+        html = html.replace(/^\d+\.\s+(.*?)$/gm, '<li class="ai-list-item-num" style="margin-bottom: 8px; list-style: decimal; margin-left: 20px; padding-left: 4px;">$1</li>');
+
+        // 7. Process Bullet Lists
+        html = html.replace(/^[*\-]\s+(.*?)$/gm, '<li class="ai-list-item-bullet" style="margin-bottom: 8px; list-style: disc; margin-left: 20px; padding-left: 4px;">$1</li>');
+
+        // 8. Wrap <li> groups in <ul> or <ol>
+        html = html.replace(/(<li class="ai-list-item-(num|bullet)".*?>.*?<\/li>\s*)+/gs, (match) => {
+            const isNum = match.includes('ai-list-item-num');
+            const tag = isNum ? 'ol' : 'ul';
+            return `<${tag} style="margin-bottom: 16px; padding-left: 0; list-style-position: outside;">${match}</${tag}>`;
+        });
+
+        // 9. Paragraphs
+        const blocks = html.split(/\n\n+/);
+        html = blocks.map(block => {
+            const trimmed = block.trim();
+            if (!trimmed) return '';
+
+            // If it's already a tag we handled, return as is
+            if (trimmed.startsWith('<h') || trimmed.startsWith('<ul') || trimmed.startsWith('<ol') || trimmed.startsWith('<li')) {
+                return trimmed;
+            }
+
+            return `<p style="margin-bottom: 16px; line-height: 1.6;">${trimmed.replace(/\n/g, '<br>')}</p>`;
+        }).join('');
+
+        // 10. NUCLEAR CLEANUP: Remove any remaining hashes (#) or asterisks (*)
+        // This ensures stray markdown characters never reach the UI.
+        html = html.replace(/[#\*]+/g, '');
+
+        return html;
     }
 }

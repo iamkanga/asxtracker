@@ -549,25 +549,6 @@ export class NotificationUI {
                 return `Summarize the latest technical and fundamental developments for ${symbol} on the ASX. Focus on recent price action, volume, and any relevant news or upcoming announcements. Provide a comprehensive outlook.`;
             };
 
-            const handleShortPress = (smartBtn) => {
-                const { symbol, change, sector } = smartBtn.dataset;
-                ToastManager.show(`${UI_LABELS.ASKING_GEMINI} ${symbol}...`, 'info');
-                Promise.all([
-                    import('../data/DataService.js'),
-                    import('./AiSummaryUI.js')
-                ]).then(([{ DataService }, { AiSummaryUI }]) => {
-                    AiSummaryUI.showLoading(symbol, UI_LABELS.AI_INSIGHT_FOR);
-                    const ds = new DataService();
-                    ds.askGemini('explain', '', { symbol, change, sector }).then(res => {
-                        if (res.ok) {
-                            AiSummaryUI.showResult(UI_LABELS.AI_INSIGHT_FOR, symbol, res.text, res.model);
-                        } else {
-                            ToastManager.show(`${UI_LABELS.ANALYSIS_FAILED} ` + (res.error || 'Unknown error'), 'error');
-                        }
-                    });
-                });
-            };
-
             // Delegate Gemini Interaction
             list.addEventListener('pointerdown', (e) => {
                 const smartBtn = e.target.closest('.btn-smart-alert');
@@ -575,8 +556,7 @@ export class NotificationUI {
                     smartBtn.dataset.geminiBound = 'true';
                     LinkHelper.bindGeminiInteraction(
                         smartBtn,
-                        () => getPrompt(smartBtn),
-                        () => handleShortPress(smartBtn)
+                        () => getPrompt(smartBtn)
                     );
                     // Re-trigger the event for this instance since it's already down
                     const downEvt = new PointerEvent('pointerdown', e);

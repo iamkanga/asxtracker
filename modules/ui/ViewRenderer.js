@@ -855,17 +855,17 @@ export class ViewRenderer {
                     <div class="${CSS_CLASSES.MODAL_HEADER}">
                         <div class="${CSS_CLASSES.MODAL_HEADER_LEFT} ${CSS_CLASSES.FLEX_1}">
                             <div class="${CSS_CLASSES.TEXT_LEFT} ${CSS_CLASSES.W_FULL}">
-                                <a href="https://gemini.google.com/app" target="_blank" rel="noopener noreferrer" id="gemini-header-link" role="link" aria-label="Ask AI Deep Dive" style="text-decoration: none; color: inherit; display: block; -webkit-touch-callout: default !important; user-select: none !important; position: relative; z-index: 10; margin: -10px; padding: 10px;">
-                                    <div class="${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.ALIGN_CENTER} ${CSS_CLASSES.JUSTIFY_START} ${CSS_CLASSES.GAP_0}">
+                                <div class="${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.ALIGN_CENTER} ${CSS_CLASSES.JUSTIFY_START}">
+                                    <a href="https://gemini.google.com/app" target="_blank" rel="noopener noreferrer" id="gemini-header-link" role="link" aria-label="Ask AI Deep Dive" style="text-decoration: none; color: inherit; display: inline-flex; align-items: center; -webkit-touch-callout: default !important; user-select: auto !important; position: relative; z-index: 10; padding: 4px; margin: -4px;">
                                         <div class="card-code-pill" style="background: none; border: none; padding: 0; gap: 8px; display: inline-flex; align-items: center;">
                                             <img src="https://files.marketindex.com.au/xasx/96x96-png/${stock.code.toLowerCase()}.png" class="favicon-icon" style="width: 24px; height: 24px;" onerror="this.src='${KANGAROO_ICON_SRC}'" alt="">
                                             <h1 class="${CSS_CLASSES.MODAL_TITLE} ${CSS_CLASSES.DISPLAY_TITLE} ${CSS_CLASSES.MB_0} ${CSS_CLASSES.TEXT_LEFT} ${CSS_CLASSES.MODAL_TITLE_AUTO}">${stock.code}</h1>
                                         </div>
-                                        <span style="display: inline-block; width: 2ch;"></span>
+                                        <span style="display: inline-block; width: 1.5ch;"></span>
                                         <img src="gemini-icon.png" style="width: 20px; height: 20px; pointer-events: none; vertical-align: middle;">
-                                    </div>
-                                    <div class="${CSS_CLASSES.MODAL_SUBTITLE} ${CSS_CLASSES.TEXT_LEFT}" style="margin-top: 4px; font-weight: 500; opacity: 0.9;">${stock.name || 'ASX Share'}</div>
-                                </a>
+                                    </a>
+                                </div>
+                                <div class="${CSS_CLASSES.MODAL_SUBTITLE} ${CSS_CLASSES.TEXT_LEFT}" style="margin-top: 4px; font-weight: 500; opacity: 0.9;">${stock.name || 'ASX Share'}</div>
                                 ${stock.starRating > 0 ? `
                                     <div class="${CSS_CLASSES.STAR_RATING} ${CSS_CLASSES.MT_TINY}" style="justify-content: flex-start;">
                                         ${Array.from({ length: stock.starRating }, () => `
@@ -1200,28 +1200,7 @@ export class ViewRenderer {
                 () => GEMINI_PROMPTS.STOCK.map(p => ({
                     ...p,
                     text: LinkHelper.replacePlaceholders(p.text, stock)
-                })),
-                () => {
-                    const symbol = stock.code;
-                    const change = stock.change || stock.dayChangeValue || 0;
-                    const sector = stock.sector || '';
-
-                    ToastManager.show(`${UI_LABELS.ASKING_GEMINI} ${symbol}...`, 'info');
-                    Promise.all([
-                        import('../data/DataService.js'),
-                        import('./AiSummaryUI.js')
-                    ]).then(([{ DataService }, { AiSummaryUI }]) => {
-                        AiSummaryUI.showLoading(symbol, UI_LABELS.AI_INSIGHT_FOR);
-                        const ds = new DataService();
-                        ds.askGemini('explain', '', { symbol, change, sector }).then(res => {
-                            if (res.ok) {
-                                AiSummaryUI.showResult(UI_LABELS.AI_INSIGHT_FOR, symbol, res.text, res.model);
-                            } else {
-                                ToastManager.show(`${UI_LABELS.ANALYSIS_FAILED} ` + (res.error || 'Unknown error'), 'error');
-                            }
-                        });
-                    });
-                }
+                }))
             );
         }
 
@@ -1511,16 +1490,16 @@ export class ViewRenderer {
             <div class="${CSS_CLASSES.MODAL_OVERLAY}"></div>
                 <div class="${CSS_CLASSES.MODAL_CONTENT} ${CSS_CLASSES.MODAL_CONTENT_MEDIUM} ${CSS_CLASSES.RESEARCH_MODAL_CONTENT}">
                     <div class="${CSS_CLASSES.MODAL_HEADER}">
-                        <a href="https://gemini.google.com/app" target="_blank" rel="noopener noreferrer" id="gemini-research-link" role="link" aria-label="Ask AI Deep Dive" style="text-decoration: none; color: inherit; display: block; -webkit-touch-callout: default !important; user-select: text !important; position: relative; z-index: 10;">
-                            <div>
-                                <div class="${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.ALIGN_CENTER} ${CSS_CLASSES.JUSTIFY_START} ${CSS_CLASSES.GAP_0}">
+                        <div style="display: flex; flex-direction: column; gap: 2px;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <a href="https://gemini.google.com/app" target="_blank" rel="noopener noreferrer" id="gemini-research-link" role="link" aria-label="Ask AI Deep Dive" style="text-decoration: none; color: inherit; display: inline-flex; align-items: center; -webkit-touch-callout: default !important; user-select: text !important; position: relative; z-index: 10; padding: 4px; margin: -4px;">
                                     <h2 class="${CSS_CLASSES.MODAL_TITLE}" style="margin-bottom: 0;">${stock.code}</h2>
                                     <span style="display: inline-block; width: 2.5ch;"></span>
                                     <img src="gemini-icon.png" style="width: 18px; height: 18px; pointer-events: none; vertical-align: middle;">
-                                </div>
-                                <div class="${CSS_CLASSES.MODAL_SUBTITLE}" style="margin-top: 2px;">${stock.name}</div>
+                                </a>
                             </div>
-                        </a>
+                            <div class="${CSS_CLASSES.MODAL_SUBTITLE}" style="margin-top: 2px;">${stock.name}</div>
+                        </div>
                         <div class="${CSS_CLASSES.MODAL_ACTIONS}">
                             <button class="${CSS_CLASSES.MODAL_ACTION_BTN} ${CSS_CLASSES.DELETE_BTN} ${CSS_CLASSES.HIDDEN}" title="Delete">
                                 <i class="fas ${UI_ICONS.DELETE}"></i>
@@ -1617,31 +1596,7 @@ export class ViewRenderer {
         if (geminiLink) {
             LinkHelper.bindGeminiInteraction(
                 geminiLink,
-                () => GEMINI_PROMPTS.STOCK.map(p => ({
-                    ...p,
-                    text: LinkHelper.replacePlaceholders(p.text, stock)
-                })),
-                () => {
-                    const symbol = stock.code;
-                    const change = stock.change || stock.dayChangeValue || 0;
-                    const sector = stock.sector || '';
-
-                    ToastManager.show(`${UI_LABELS.ASKING_GEMINI} ${symbol}...`, 'info');
-                    Promise.all([
-                        import('../data/DataService.js'),
-                        import('./AiSummaryUI.js')
-                    ]).then(([{ DataService }, { AiSummaryUI }]) => {
-                        AiSummaryUI.showLoading(symbol, UI_LABELS.AI_INSIGHT_FOR);
-                        const ds = new DataService();
-                        ds.askGemini('explain', '', { symbol, change, sector }).then(res => {
-                            if (res.ok) {
-                                AiSummaryUI.showResult(UI_LABELS.AI_INSIGHT_FOR, symbol, res.text, res.model);
-                            } else {
-                                ToastManager.show(`${UI_LABELS.ANALYSIS_FAILED} ` + (res.error || 'Unknown error'), 'error');
-                            }
-                        });
-                    });
-                }
+                () => `Summarize the latest technical and fundamental developments for ${stock.code} on the ASX. Focus on recent price action, volume, and any relevant news or upcoming announcements. Provide a comprehensive outlook.`
             );
         }
 
