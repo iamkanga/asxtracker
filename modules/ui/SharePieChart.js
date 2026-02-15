@@ -1,5 +1,5 @@
 import { formatCurrency, formatPercent } from '../utils/formatters.js';
-import { CSS_CLASSES, UI_ICONS, PORTFOLIO_ID } from '../utils/AppConstants.js';
+import { CSS_CLASSES, UI_ICONS, PORTFOLIO_ID, EVENTS } from '../utils/AppConstants.js';
 import { AppState } from '../state/AppState.js';
 import { navManager } from '../utils/NavigationManager.js';
 import { ColorHelper } from '../utils/ColorHelper.js';
@@ -240,13 +240,13 @@ export class SharePieChart {
      * Attaches interactivity to the pie slices.
      */
     _attachInteractivity(modal, total) {
-        const slices = modal.querySelectorAll('.pie-slice');
         const labelEl = modal.querySelector('#share-pie-center-label');
         const valueEl = modal.querySelector('#share-pie-center-value');
         const subEl = modal.querySelector('#share-pie-center-sub');
-
-        const defaultLabel = "Market Value";
+        const defaultLabel = 'Market Value';
         const defaultValue = formatCurrency(total);
+
+        this._activeId = null; // Track current active asset for double-tap/click
 
         const allInteractive = modal.querySelectorAll('.pie-slice, .interactive-row');
 
@@ -294,23 +294,26 @@ export class SharePieChart {
             };
 
             const onLeave = () => {
-                labelEl.textContent = defaultLabel;
-                labelEl.style.color = 'var(--text-muted)';
+                // Only reset if the element is not the currently active one
+                if (this._activeId !== label) {
+                    labelEl.textContent = defaultLabel;
+                    labelEl.style.color = 'var(--text-muted)';
 
-                valueEl.textContent = defaultValue;
-                valueEl.style.fontSize = '1.1rem';
-                valueEl.style.color = '#fff';
+                    valueEl.textContent = defaultValue;
+                    valueEl.style.fontSize = '1.1rem';
+                    valueEl.style.color = '#fff';
 
-                subEl.style.opacity = '0';
-                subEl.style.transform = 'translateY(5px)';
+                    subEl.style.opacity = '0';
+                    subEl.style.transform = 'translateY(5px)';
 
-                if (el.classList.contains('interactive-row')) {
-                    el.style.background = 'transparent';
-                    // Reset the corresponding pie slice
-                    const slice = modal.querySelector(`.pie-slice[data-id="${label}"]`);
-                    if (slice) {
-                        slice.style.filter = 'none';
-                        slice.style.transform = 'scale(1)';
+                    if (el.classList.contains('interactive-row')) {
+                        el.style.background = 'transparent';
+                        // Reset the corresponding pie slice
+                        const slice = modal.querySelector(`.pie-slice[data-id="${label}"]`);
+                        if (slice) {
+                            slice.style.filter = 'none';
+                            slice.style.transform = 'scale(1)';
+                        }
                     }
                 }
             };
@@ -318,8 +321,18 @@ export class SharePieChart {
             el.addEventListener('mouseenter', onEnter);
             el.addEventListener('mouseleave', onLeave);
 
-            // Click to scroll and highlight
+            // Click to scroll and highlight; Second click to open details
             el.addEventListener('click', () => {
+                // If already active, open stock details
+                if (this._activeId === label) {
+                    document.dispatchEvent(new CustomEvent(EVENTS.ASX_CODE_CLICK, { detail: { code: label } }));
+                    return;
+                }
+
+                // Set active ID
+                this._activeId = label;
+                onEnter();
+
                 if (el.classList.contains('pie-slice')) {
                     const row = modal.querySelector(`.interactive-row[data-id="${label}"]`);
                     if (row) {
@@ -331,8 +344,8 @@ export class SharePieChart {
                         row.style.background = 'rgba(255,255,255,0.2)';
 
                         setTimeout(() => {
-                            // If still hovering, keep hover color, else reset
-                            if (row.matches(':hover')) {
+                            // If still active/hovering, keep hover color, else reset
+                            if (this._activeId === label) {
                                 row.style.background = 'rgba(255,255,255,0.08)';
                             } else {
                                 row.style.background = 'transparent';
