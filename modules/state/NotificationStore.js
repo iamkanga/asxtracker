@@ -41,6 +41,10 @@ export class NotificationStore {
         this.isReady = false; // LOGIC HARDENING: Race condition guard
         this._notificationDebounceTimer = null; // DEBOUNCE: Timer for notification updates
         this.dismissedAnnouncements = new Set(); // TRACK: Dismissed Market Index alert IDs
+
+        // --- CACHE: Memoization for expensive alert computations ---
+        this._globalAlertsCache = null;
+        this._localAlertsCache = null;
     }
 
     /**
@@ -184,6 +188,7 @@ export class NotificationStore {
     updateLivePrices(prices) {
         // AppState.livePrices is already updated by AppController before calling this.
         // We just need to trigger a recalculation/notification.
+        this._invalidateCache();
         this._notifyCountChange();
     }
 
@@ -255,6 +260,7 @@ export class NotificationStore {
 
             this.lastUpdated = new Date();
 
+            this._invalidateCache();
             // Dispatch Event to Update Badge
             this._notifyCountChange();
 
@@ -540,6 +546,7 @@ export class NotificationStore {
                 this.pinnedAlerts = [];
                 this.scannerRules = { up: {}, down: {} };
             }
+            this._invalidateCache();
             this._notifyDataChange();
         });
     }
@@ -586,6 +593,7 @@ export class NotificationStore {
      * Filter Logic: Matches userId.
      */
     getLocalAlerts() {
+        if (this._localAlertsCache) return this._localAlertsCache;
         if (!this.userId) return [];
 
         // 1. Filter today's hits for this user
@@ -665,7 +673,9 @@ export class NotificationStore {
         });
 
         // 2. Apply Filters (Rules, Muted, Pinned)
-        return this.filterLocalHits(verifiedHits, rules, mutedCodes, this.pinnedAlerts);
+        const result = this.filterLocalHits(verifiedHits, rules, mutedCodes, this.pinnedAlerts);
+        this._localAlertsCache = result;
+        return result;
     }
 
     /**
@@ -1137,6 +1147,7 @@ export class NotificationStore {
     }
 
     getGlobalAlerts(bypassStrict = false) {
+        if (!bypassStrict && this._globalAlertsCache) return this._globalAlertsCache;
         // 1. Get Base Global Data (Backend)
         // Check availability. If < 20 items (was 5), assume backend failure/sparse => Trigger Hydration
         let rawGlobalUp = this.scanData.globalMovers.up || [];
@@ -1467,10 +1478,13 @@ export class NotificationStore {
         if (hilo.low && Array.isArray(hilo.low)) hilo.low.sort(sortHilo);
 
 
-        return {
+        const result = {
             movers: { up: movers.up || [], down: movers.down || [] },
             hilo: { high: hilo.high || [], low: hilo.low || [] }
         };
+
+        if (!bypassStrict) this._globalAlertsCache = result;
+        return result;
     }
 
     /**
@@ -1729,6 +1743,14 @@ export class NotificationStore {
         return this.scannerRules;
     }
 
+    /**
+     * Centralized Cache Invalidation: Clears memoized alert computations.
+     */
+    _invalidateCache() {
+        this._globalAlertsCache = null;
+        this._localAlertsCache = null;
+    }
+
     getDataTimestamp() {
         return this.dataTimestamp;
     }
@@ -1741,6 +1763,7 @@ export class NotificationStore {
     }
 
     _notifyDataChange() {
+        this._invalidateCache();
         this.listeners.forEach(cb => cb());
         this._notifyCountChange();
     }
@@ -2004,7 +2027,11 @@ export class NotificationStore {
                                 high52: high52,
                                 pct: pctChange,
                                 change: dolChange,
-                                t: this._getStableTimestamp(key)
+                                t: this._getStableTimestamp(key),
+                                hilo: {
+                                    high: high52,
+                                    low: low52
+                                }
                             });
                         }
                     }
@@ -2237,60 +2264,6 @@ export class NotificationStore {
         });
     }
 
-    /**
-     * DIAGNOSTIC: Probe GSCF Staleness Logic
-     * Run window.debugGSCF() in console to trigger.
-     */
-    debugGSCF_Probe() {
-        // 1. The Raw Data from Backend (Hardcoded for fidelity)
-        const rawZombie = {
-            code: "GSCF",
-            t: "2026-01-18T19:13:25.491Z",
-            intent: "52w-high",
-            live: 18.72,
-            target: null
-        };
-        // 2. Test _filterStale logic
-        const input = [rawZombie];
-        const filtered = this._filterStale(input);
-
-        if (filtered.length === 0) {
-        } else {
-        }
-
-        // 3. Check Current Store State
-        const currentHits = this.scanData.customHits || [];
-        const foundInStore = currentHits.find(h => h.code === "GSCF");
-
-        if (foundInStore) {
-        } else {
-        }
-    }
-
-    /**
-     * DIAGNOSTIC: Probe Dashboard Leak Logic (e.g. Currencies showing in 52w)
-     * Run window.debugDashboardLeak() in console to trigger.
-     */
-    debugDashboardLeak_Probe() {
-        const testCodes = ["XJO", "AUDUSD", "BTCUSD", "GSCF"];
-
-        testCodes.forEach(code => {
-            console.group(`Testing Code: ${code}`);
-
-            // 1. Check Function Existence
-            if (typeof this._isDashboardCode !== 'function') {
-                console.error("? CRITICAL: _isDashboardCode is NOT DEFINED.");
-                console.groupEnd();
-                return;
-            }
-
-            // 2. Check Logic
-            const result = this._isDashboardCode(code);
-            const status = result ? "? IDENTIFIED AS DASHBOARD (Blocked)" : "? FAILED (Allowed through)";
-            const color = result ? "color: #00ff00" : "color: #ff0000";
-            console.groupEnd();
-        });
-    }
 
     /**
      * Subscribes to the Market Index alerts stream in Firestore.

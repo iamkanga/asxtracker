@@ -51,13 +51,7 @@ export class NotificationUI {
 
             syncBadge();
 
-            // BRUTE FORCE POLLER: Retry every 1s for 15s to guarantee catch
-            let attempts = 0;
-            const poller = setInterval(() => {
-                attempts++;
-                syncBadge();
-                if (attempts >= 15) clearInterval(poller);
-            }, 1000);
+            syncBadge();
 
             // DATA UPDATE SYNC: Ensure badge updates when new price data arrives
             if (StateAuditor && typeof StateAuditor.on === 'function') {
@@ -299,36 +293,33 @@ export class NotificationUI {
 
             // 6. Inject Dismiss Icon (Kangaroo)
             try {
-                const response = await fetch('notification_icon.svg');
-                if (response.ok) {
-                    let svgContent = await response.text();
-                    svgContent = svgContent.replace(/width=".*?"/g, 'width="100%"').replace(/height=".*?"/g, 'height="100%"');
+                let svgContent = KANGAROO_ICON_SVG;
+                svgContent = svgContent.replace(/width=".*?"/g, 'width="100%"').replace(/height=".*?"/g, 'height="100%"');
 
-                    // 7. Inject Dismiss Icon with Better Styling
-                    const dismissWrapper = modal.querySelector(`.${CSS_CLASSES.DISMISS_ICON_WRAPPER}`);
-                    if (dismissWrapper) {
-                        dismissWrapper.innerHTML = svgContent;
-                        // Target the SVG directly to force size
-                        const svg = dismissWrapper.querySelector('svg');
-                        if (svg) {
-                            svg.style.width = '100%';
-                            svg.style.height = '100%';
-                            svg.style.display = 'block';
-                            svg.style.fill = 'var(--color-accent)'; /* Force fill on SVG */
-                        }
-                        // Fallback: Target all paths
-                        const paths = dismissWrapper.querySelectorAll('path');
-                        paths.forEach(p => p.style.fill = 'var(--color-accent)');
+                // 7. Inject Dismiss Icon with Better Styling
+                const dismissWrapper = modal.querySelector(`.${CSS_CLASSES.DISMISS_ICON_WRAPPER}`);
+                if (dismissWrapper) {
+                    dismissWrapper.innerHTML = svgContent;
+                    // Target the SVG directly to force size
+                    const svg = dismissWrapper.querySelector('svg');
+                    if (svg) {
+                        svg.style.width = '100%';
+                        svg.style.height = '100%';
+                        svg.style.display = 'block';
+                        svg.style.fill = 'var(--color-accent)'; /* Force fill on SVG */
                     }
+                    // Fallback: Target all paths
+                    const paths = dismissWrapper.querySelectorAll('path');
+                    paths.forEach(p => p.style.fill = 'var(--color-accent)');
+                }
 
-                    // 8. Initial Dismiss State (Sync with Store)
-                    if (notificationStore) {
-                        const counts = notificationStore.getBadgeCounts();
-                        this._updateDismissState(modal, counts.custom);
-                    }
+                // 8. Initial Dismiss State (Sync with Store)
+                if (notificationStore) {
+                    const counts = notificationStore.getBadgeCounts();
+                    this._updateDismissState(modal, counts.custom);
                 }
             } catch (e) {
-                console.warn('Failed to load Header SVG:', e);
+                console.warn('Failed to inject Header SVG:', e);
             }
         } catch (err) {
             console.error('[NotificationUI] CRITICAL FAILURE in showModal:', err);
