@@ -206,13 +206,23 @@ export function processShares(allShares, watchlistId, livePrices, sortConfig, hi
         let valA = a[field];
         let valB = b[field];
 
-        // Pre-process Date fields with fallbacks
+        // Pre-process Date fields with fallbacks & robust parsing
         if (field === 'entryDate' || field === 'purchaseDate') {
+            const parseDate = (dStr) => {
+                if (!dStr) return NaN;
+                if (typeof dStr !== 'string') return new Date(dStr).getTime();
+                if (dStr.includes('/')) {
+                    const p = dStr.split('/');
+                    if (p.length === 3) return new Date(`${p[2]}-${p[1]}-${p[0]}`).getTime();
+                }
+                return new Date(dStr).getTime();
+            };
+
             const actualA = valA || (field === 'entryDate' ? a.purchaseDate : a.entryDate);
             const actualB = valB || (field === 'entryDate' ? b.purchaseDate : b.entryDate);
 
-            const tA = new Date(actualA).getTime();
-            const tB = new Date(actualB).getTime();
+            const tA = parseDate(actualA);
+            const tB = parseDate(actualB);
             valA = isNaN(tA) ? null : tA;
             valB = isNaN(tB) ? null : tB;
         }

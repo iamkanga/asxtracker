@@ -180,6 +180,11 @@ export class AppController {
                 this._initialWatchlistRestored = true; // v1140: Mark immediately to prevent race
                 const savedId = AppState.preferences.lastWatchlistId || 'portfolio';
                 this.handleSwitchWatchlist(savedId, true);
+
+                // v1143: Run Data Health Check on first load to detect and repair Ghost items
+                setTimeout(() => {
+                    this.appService.performDataHealthCheck();
+                }, 2000); // 2s delay to allow other boot systems to settle
             }
 
             // Trigger UI Refresh if not locked

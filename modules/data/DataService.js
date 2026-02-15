@@ -67,7 +67,7 @@ export class DataService {
 
             } catch (error) {
                 if (error.name === 'AbortError') {
-                    console.error("DataService: Fetch timed out (8s limit).");
+                    console.error("DataService: Fetch timed out (20s limit).");
                 } else {
                     console.error("DataService Exception:", error);
                 }
@@ -394,11 +394,24 @@ export class DataService {
             console.warn('[DataService] Cache read error:', e);
         }
 
+        // RANGE HYGIENE: Yahoo Finance API expects 'mo' for months (1mo, 3mo, 6mo)
+        const rangeMap = {
+            '1m': '1mo',
+            '3m': '3mo',
+            '6m': '6mo'
+        };
+        const mappedRange = rangeMap[range] || range;
+
+        // TIMEOUT PROTECTION (20 Seconds)
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 20000);
+
         try {
             const user = AuthService.getCurrentUser();
             const userId = user ? user.uid : null;
 
             if (!userId) {
+                clearTimeout(timeoutId);
                 console.warn('DataService: fetchHistory called without logged-in user.');
                 return { ok: false, error: 'User not logged in' };
             }
@@ -407,15 +420,18 @@ export class DataService {
                 action: 'fetchHistory',
                 userId: userId,
                 code: code,
-                range: range
+                range: mappedRange
             };
 
             const response = await fetch(this.API_ENDPOINT, {
                 method: 'POST',
                 mode: 'cors',
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify(payload)
+                body: JSON.stringify(payload),
+                signal: controller.signal
             });
+
+            clearTimeout(timeoutId);
 
             if (!response.ok) {
                 return { ok: false, error: `HTTP ${response.status}` };
@@ -447,7 +463,12 @@ export class DataService {
 
             return json;
         } catch (err) {
-            console.error('DataService: History Fetch Exception:', err);
+            clearTimeout(timeoutId);
+            if (err.name === 'AbortError') {
+                console.error("DataService: fetchHistory timed out (20s limit).");
+            } else {
+                console.error('DataService: History Fetch Exception:', err);
+            }
             return { ok: false, error: err.message };
         }
     }

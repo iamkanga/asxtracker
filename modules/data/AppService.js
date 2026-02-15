@@ -520,4 +520,102 @@ export class AppService {
             console.error(`[AppService] CRITICAL FAILURE in onboarding data creation:`, error);
         }
     }
+
+    /**
+     * Performs a deep health check and repairs inconsistencies.
+     * Focus: Missing IDs (Ghost Shares) and Orphaned linkages.
+     */
+    async performDataHealthCheck() {
+        const user = AppState.user;
+        if (!user) return;
+
+        const shares = AppState.data.shares || [];
+        const watchlists = AppState.data.watchlists || [];
+
+        console.group('[AppService] 🔍 Data Health Check');
+
+        // 1. Repair Shares without IDs
+        const idless = shares.filter(s => !s.id);
+        if (idless.length > 0) {
+            console.warn(`[AppService] Found ${idless.length} shares without ID. Attempting recovery...`, idless.map(s => s.shareName));
+            for (const s of idless) {
+                const match = shares.find(other => other.id && other.shareName === s.shareName);
+                if (match) {
+                    console.log(`[AppService] Recovered ID for ${s.shareName}: ${match.id}`);
+                    s.id = match.id;
+                }
+            }
+        }
+
+        // 2. Identify Ghost Shares (codes in watchlists that aren't in shares)
+        const knownShareCodes = new Set(shares.map(s => (s.shareName || '').toUpperCase()));
+        const ghostsFound = [];
+
+        watchlists.forEach(w => {
+            if (w.stocks && Array.isArray(w.stocks)) {
+                w.stocks.forEach(code => {
+                    if (typeof code === 'string' && !knownShareCodes.has(code.toUpperCase())) {
+                        ghostsFound.push({ watchlist: w.name, code: code });
+                    }
+                });
+            }
+        });
+
+        if (ghostsFound.length > 0) {
+            const breakdown = ghostsFound.reduce((acc, g) => {
+                if (!acc[g.code]) acc[g.code] = [];
+                acc[g.code].push(g.watchlist);
+                return acc;
+            }, {});
+            console.warn(`[AppService] Found ${ghostsFound.length} Ghost Share references (no master document):`, breakdown);
+        } else {
+            console.log('[AppService] Health Check: All watchlist items have master documents.');
+        }
+
+        console.groupEnd();
+    }
+
+    /**
+     * Deep Scrub: Removes all Ghost references from all watchlists.
+     */
+    async repairGhostShares() {
+        const user = AppState.user;
+        if (!user) {
+            console.error('[AppService] No user session found for repair.');
+            return;
+        }
+
+        const shares = AppState.data.shares || [];
+        const watchlists = AppState.data.watchlists || [];
+        const knownCodes = new Set(shares.map(s => (s.shareName || '').toUpperCase()));
+
+        console.group('[AppService] 🧹 Deep Scrubbing Ghost Shares...');
+
+        let removedCount = 0;
+        for (const w of watchlists) {
+            if (w.stocks && Array.isArray(w.stocks)) {
+                // Must iterate backwards or use a copy when removing
+                const codesToScrub = w.stocks.filter(code =>
+                    typeof code === 'string' && !knownCodes.has(code.toUpperCase())
+                );
+
+                for (const code of codesToScrub) {
+                    console.log(`[AppService] Removing ghost "${code}" from list "${w.name}"`);
+                    await userStore.removeStock(user.uid, w.id, code);
+                    removedCount++;
+                }
+            }
+        }
+
+        console.log(`[AppService] Scrub complete. Removed ${removedCount} ghost references.`);
+        console.groupEnd();
+
+        // One-time refresh hint
+        if (removedCount > 0) {
+            alert(`Cleaned up ${removedCount} ghost references. Refreshing UI...`);
+            window.location.reload();
+        } else {
+            alert('No ghost shares found to clean.');
+        }
+    }
 }

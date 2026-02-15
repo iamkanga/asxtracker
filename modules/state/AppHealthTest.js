@@ -162,6 +162,33 @@ export function runHealthCheck() {
             const bad = (AppState.data.cash || []).filter(c => !c.name);
             return bad.length === 0 || `${bad.length} cash items missing name`;
         });
+
+        // v1146: Cross-reference Watchlists vs Master Shares
+        test('No Ghost Share references', () => {
+            const shares = AppState.data.shares || [];
+            const watchlists = AppState.data.watchlists || [];
+            const knownCodes = new Set(shares.map(s => (s.shareName || s.code || '').toUpperCase()));
+
+            const ghosts = [];
+            watchlists.forEach(w => {
+                if (w.stocks && Array.isArray(w.stocks)) {
+                    w.stocks.forEach(code => {
+                        if (code && !knownCodes.has(code.toUpperCase())) {
+                            ghosts.push(code.toUpperCase());
+                        }
+                    });
+                }
+            });
+
+            if (ghosts.length > 0) {
+                const unique = [...new Set(ghosts)];
+                console.warn(`[HealthCheck] Found ${unique.length} codes in watchlists without master documents:`, unique);
+                // Return true to treat as Warning, or a string to fail the test. 
+                // Given the user wants visibility, let's Fail it so they see it.
+                return `${unique.length} Ghosts: ${unique.join(', ')}`;
+            }
+            return true;
+        });
     }
 
     // ═══════════════════════════════════════
