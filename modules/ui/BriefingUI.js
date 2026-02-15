@@ -162,6 +162,8 @@ export class BriefingUI {
 
         const data = AppState.controller.calculateBriefingDigest();
         const { portfolio, highlights, marketSentiment } = data;
+        const counts = notificationStore.getBadgeCounts();
+        const annCount = counts.announcements || 0;
 
         // Helper to get index data safely
         const getIndexHtml = (code, fallbackCode) => {
@@ -221,8 +223,9 @@ export class BriefingUI {
                         </div>
 
                         <!-- Announcements Icon (Bullhorn) -->
-                        <div style="opacity: 1; cursor: pointer;" id="hero-announce-btn" title="Announcements">
+                        <div style="opacity: 1; cursor: pointer; position: relative;" id="hero-announce-btn" title="Announcements">
                             <i class="fas fa-bullhorn" style="font-size: 1.4rem; color: var(--color-accent);"></i>
+                            ${annCount > 0 ? `<span class="notification-badge" style="position: absolute; top: -2px; right: -2px; font-size: 0.7rem; color: var(--color-accent); font-weight: 800; z-index: 10;">${annCount}</span>` : ''}
                         </div>
 
                         <!-- Portfolio Icon (Coffee Color) -->

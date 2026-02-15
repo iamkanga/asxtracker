@@ -28,7 +28,6 @@ export class MarketIndexController {
         }
 
         console.log('[MarketIndexController] Ready. Binding events.');
-        this.dismissedIds = new Set(JSON.parse(localStorage.getItem('asx_market_stream_dismissed') || '[]'));
         this.bindEvents();
     }
 
@@ -76,8 +75,7 @@ export class MarketIndexController {
 
     dismissAlert(alertId) {
         if (!alertId) return;
-        this.dismissedIds.add(alertId);
-        localStorage.setItem('asx_market_stream_dismissed', JSON.stringify([...this.dismissedIds]));
+        notificationStore.dismissAnnouncement(alertId);
 
         const element = this.listContainer.querySelector(`.market-stream-item-wrapper:has([data-id="${alertId}"])`) ||
             this.listContainer.querySelector(`[data-id="${alertId}"]`);
@@ -90,12 +88,7 @@ export class MarketIndexController {
     }
 
     dismissAll() {
-        const currentAlerts = notificationStore.getMarketIndexAlerts() || [];
-        currentAlerts.forEach(a => {
-            const id = a.id || `${a.code}-${a.timestamp}`;
-            this.dismissedIds.add(id);
-        });
-        localStorage.setItem('asx_market_stream_dismissed', JSON.stringify([...this.dismissedIds]));
+        notificationStore.dismissAllAnnouncements();
         this.render([]); // Immediate empty state
     }
 
@@ -103,7 +96,7 @@ export class MarketIndexController {
         if (!this.listContainer) return;
 
         // Filter out dismissed items
-        const visibleAlerts = (alerts || []).filter(a => !this.dismissedIds.has(a.id || `${a.code}-${a.timestamp}`));
+        const visibleAlerts = (alerts || []).filter(a => !notificationStore.dismissedAnnouncements.has(a.id || `${a.code}-${a.timestamp}`));
 
         console.log('[MarketIndexController] Rendering alerts:', alerts); // DEBUG
 

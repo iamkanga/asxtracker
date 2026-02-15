@@ -73,6 +73,7 @@ export class NotificationUI {
                 if (modal && !modal.classList.contains(CSS_CLASSES.HIDDEN)) {
                     this._updateList(modal);
                     this._updateStatusBar(modal);
+                    this._updateHeaderBadges(modal);
                     if (notificationStore) {
                         const latestCounts = notificationStore.getBadgeCounts();
                         this._updateDismissState(modal, latestCounts.custom);
@@ -296,6 +297,7 @@ export class NotificationUI {
 
             // 4b. Update Status Bar (shows disabled monitors)
             this._updateStatusBar(modal);
+            this._updateHeaderBadges(modal);
 
             // 5. Show with animation
             // 5. Show with animation
@@ -391,7 +393,7 @@ export class NotificationUI {
                         <button id="${IDS.BTN_DAILY_BRIEFING}" title="${UI_LABELS.DAILY_BRIEFING_TITLE}" style="background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem;">
                             <i class="fas fa-coffee"></i>
                         </button>
-                        <button id="${IDS.BTN_ANNOUNCEMENTS}" title="${UI_LABELS.ANNOUNCEMENTS_TITLE}" style="background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem;">
+                        <button id="${IDS.BTN_ANNOUNCEMENTS}" title="${UI_LABELS.ANNOUNCEMENTS_TITLE}" style="background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem; position: relative;">
                             <i class="fas fa-bullhorn"></i>
                         </button>
                         <button id="${IDS.NOTIF_SETTINGS_BTN}" title="${UI_LABELS.NOTIFICATION_SETTINGS}" style="background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem;">
@@ -434,6 +436,27 @@ export class NotificationUI {
         // Navigation push handled by showModal to avoid double-pushing on creation.
 
         return modal;
+    }
+
+    static _updateHeaderBadges(modal) {
+        if (!modal || !notificationStore) return;
+        const announceBtn = modal.querySelector(`#${IDS.BTN_ANNOUNCEMENTS}`);
+        if (!announceBtn) return;
+
+        const counts = notificationStore.getBadgeCounts();
+        const annCount = counts.announcements || 0;
+
+        // Remove existing badge
+        const oldBadge = announceBtn.querySelector('.notification-badge');
+        if (oldBadge) oldBadge.remove();
+
+        if (annCount > 0) {
+            const badge = document.createElement('span');
+            badge.className = 'notification-badge';
+            badge.style.cssText = 'position: absolute; top: -2px; right: -2px; font-size: 0.7rem; color: var(--color-accent); font-weight: 800; z-index: 10;';
+            badge.textContent = annCount;
+            announceBtn.appendChild(badge);
+        }
     }
 
     static _close(modal) {

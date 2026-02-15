@@ -45,6 +45,7 @@ export class NotificationStore {
         this._hiloSeenSet = new Set(); // SUPPRESSION: Tracks 52-week alerts shown this session
         this.isReady = false; // LOGIC HARDENING: Race condition guard
         this._notificationDebounceTimer = null; // DEBOUNCE: Timer for notification updates
+        this.dismissedAnnouncements = new Set(); // TRACK: Dismissed Market Index alert IDs
     }
 
     /**
@@ -57,23 +58,33 @@ export class NotificationStore {
             this.userId = userId;
             this._loadLocalState();
 
+            // Load dismissed announcements from storage
+            try {
+                const stored = localStorage.getItem('asx_market_stream_dismissed');
+                if (stored) {
+                    const parsed = JSON.parse(stored);
+                    if (Array.isArray(parsed)) this.dismissedAnnouncements = new Set(parsed);
+                }
+            } catch (e) { /* ignore */ }
+
+            // Always subscribe to Market Index, even for guests
+            this._subscribeToMarketIndex();
+
             if (userId) {
                 this._subscribeToPinned(userId);
                 // Subscribe to Live Preferences (Rules)
                 this._subscribeToPreferences(userId);
-                // Subscribe to Market Index Stream
-                this._subscribeToMarketIndex();
 
                 // Fetch data implies a network call. We do this once on init.
                 await this.refreshDailyData();
 
-                // LOGIC HARDENING: Mark store as ready AFTER data is loaded
-                this.isReady = true;
-                document.dispatchEvent(new CustomEvent(EVENTS.NOTIFICATION_READY));
-
                 // Initial Rule Fetch (Redundant if subscription works fast, but safe)
                 await this.refreshScannerRules();
             }
+
+            // LOGIC HARDENING: Mark store as ready AFTER initial load logic
+            this.isReady = true;
+            document.dispatchEvent(new CustomEvent(EVENTS.NOTIFICATION_READY));
 
             // --- BIND TO LIVE DATA UPDATES (Event-Driven) ---
             // Replaces manual calls from AppController and dead legacy events.
@@ -1659,10 +1670,9 @@ export class NotificationStore {
      * These counts respect all active filters (Thresholds, Min Price, Sectors, Muting).
      */
     getPulseCounts() {
-        if (!this.userId) return { gainers: 0, losers: 0, highs: 0, lows: 0, custom: 0 };
-
-        const global = this.getGlobalAlerts();
-        const local = this.getLocalAlerts();
+        // Return empty structure for guests to avoid breaking badge logic
+        const global = this.userId ? this.getGlobalAlerts() : { movers: { up: [], down: [] }, hilo: { high: [], low: [] } };
+        const local = this.userId ? this.getLocalAlerts() : { pinned: [], fresh: [] };
 
         return {
             gainers: (global.movers?.up || []).length,
@@ -1680,8 +1690,6 @@ export class NotificationStore {
      * Computed: Badge Counts for Sidebar (Total) and Kangaroo (Custom Triggers).
      */
     getBadgeCounts() {
-        if (!this.userId) return { total: 0, custom: 0 };
-
         const thresholds = {
             total: this.lastViewed.total || 0,
             custom: this.lastViewed.custom || 0
@@ -1733,7 +1741,21 @@ export class NotificationStore {
             if (isNew) totalCount++;
         });
 
-        return { total: totalCount, custom: customCount };
+        // --- CALC ANNOUNCEMENTS COUNT ---
+        // Ensure we filter out any items that don't satisfy showing criteria OR are dismissed
+        const annCount = (this.marketIndexAlerts || [])
+            .filter(a => {
+                const id = a.id || `${a.code}-${a.timestamp}`;
+                return !this.dismissedAnnouncements.has(id);
+            })
+            .length;
+
+        if (this._lastReportedAnnCount !== annCount) {
+            console.log(`[NotificationStore] Badge Refresh -> Announcements: ${annCount}, Total: ${totalCount}`);
+            this._lastReportedAnnCount = annCount;
+        }
+
+        return { total: totalCount, custom: customCount, announcements: annCount };
     }
 
     getScannerRules() {
@@ -1770,11 +1792,35 @@ export class NotificationStore {
                 detail: {
                     count: counts.total,
                     totalCount: counts.total,
-                    customCount: counts.custom
+                    customCount: counts.custom,
+                    announcements: counts.announcements
                 }
             }));
             this._notificationDebounceTimer = null;
         }, 500); // 500ms debounce
+    }
+
+    /**
+     * Updates the dismissed announcements set and persists it.
+     */
+    dismissAnnouncement(alertId) {
+        if (!alertId) return;
+        this.dismissedAnnouncements.add(alertId);
+        localStorage.setItem('asx_market_stream_dismissed', JSON.stringify([...this.dismissedAnnouncements]));
+        this._notifyCountChange();
+    }
+
+    /**
+     * Dismisses all currently visible market index alerts.
+     */
+    dismissAllAnnouncements() {
+        if (!this.marketIndexAlerts) return;
+        this.marketIndexAlerts.forEach(a => {
+            const id = a.id || `${a.code}-${a.timestamp}`;
+            this.dismissedAnnouncements.add(id);
+        });
+        localStorage.setItem('asx_market_stream_dismissed', JSON.stringify([...this.dismissedAnnouncements]));
+        this._notifyCountChange();
     }
 
     /**
@@ -2313,7 +2359,7 @@ export class NotificationStore {
             // "artifacts/asx-watchlist-app/alerts_stream"
             // Note: APP_ID is "asx-watchlist-app" defined at top
             const streamRef = collection(db, "artifacts", APP_ID, "alerts_stream");
-            const q = query(streamRef, orderBy("timestamp", "desc"), limit(20));
+            const q = query(streamRef, limit(50));
 
             this.unsubscribeMarketIndex = onSnapshot(q, (snapshot) => {
                 const batches = [];
@@ -2331,16 +2377,35 @@ export class NotificationStore {
                         items = batch.items;
                     } else if (batch.latestAlerts && Array.isArray(batch.latestAlerts)) {
                         items = batch.latestAlerts;
+                    } else if (batch.title || batch.headline) {
+                        // V2: Document itself is the alert (Single Item Document)
+                        items = [batch];
                     }
 
                     // Pre-process items to ensure timestamp exists
                     items.forEach(item => {
-                        // Inherit Batch Timestamp if item missing it
-                        if (!item.timestamp && item.date) {
-                            item.timestamp = new Date(item.date).getTime();
-                        } else if (!item.timestamp && batch.timestamp) {
-                            item.timestamp = batch.timestamp;
+                        // 1. Resolve Timestamp to Numeric Number
+                        let t = item.timestamp || item.t || item.createdAt;
+
+                        // Handle Firestore Timestamps
+                        if (t && typeof t === 'object' && t.toMillis) t = t.toMillis();
+                        else if (t && typeof t === 'object' && t.seconds) t = t.seconds * 1000;
+                        else if (t && typeof t === 'string' || t instanceof Date) t = new Date(t).getTime();
+
+                        // Fallback to Batch Timestamp or Date string
+                        if (!t && item.date) t = new Date(item.date).getTime();
+                        if (!t && batch.timestamp) {
+                            const bt = batch.timestamp;
+                            t = (typeof bt === 'object' && bt.seconds) ? bt.seconds * 1000 : bt;
                         }
+
+                        // Ensure we have a valid number
+                        item.timestamp = (t && !isNaN(t)) ? Number(t) : Date.now();
+
+                        // 2. Ensure Code/ID
+                        if (!item.code) item.code = 'MARKET';
+                        if (!item.id) item.id = `${item.code}-${item.timestamp}`;
+
                         allAlerts.push(item);
                     });
                 });
@@ -2359,7 +2424,8 @@ export class NotificationStore {
                     }
                 }));
 
-                console.log(`[NotificationStore] Market Index Stream Updated: ${this.marketIndexAlerts.length} items.`);
+                console.log(`[NotificationStore] Market Index Stream Updated: ${this.marketIndexAlerts.length} items. Latest ID: ${this.marketIndexAlerts[0]?.id || 'NONE'}`);
+                this._notifyCountChange();
             }, (error) => {
                 console.error("[NotificationStore] Market Index Stream Error:", error);
             });
