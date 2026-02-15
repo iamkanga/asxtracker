@@ -439,24 +439,8 @@ export class NotificationUI {
     }
 
     static _updateHeaderBadges(modal) {
-        if (!modal || !notificationStore) return;
-        const announceBtn = modal.querySelector(`#${IDS.BTN_ANNOUNCEMENTS}`);
-        if (!announceBtn) return;
-
-        const counts = notificationStore.getBadgeCounts();
-        const annCount = counts.announcements || 0;
-
-        // Remove existing badge
-        const oldBadge = announceBtn.querySelector('.notification-badge');
-        if (oldBadge) oldBadge.remove();
-
-        if (annCount > 0) {
-            const badge = document.createElement('span');
-            badge.className = 'notification-badge';
-            badge.style.cssText = 'position: absolute; top: -2px; right: -2px; font-size: 0.7rem; color: var(--color-accent); font-weight: 800; z-index: 10;';
-            badge.textContent = annCount;
-            announceBtn.appendChild(badge);
-        }
+        // Count removed per user request. 
+        // Logic kept for potential future use or other badges.
     }
 
     static _close(modal) {
