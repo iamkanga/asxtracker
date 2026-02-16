@@ -90,6 +90,8 @@ export class NotificationStore {
             StateAuditor.on('PRICES_UPDATED', () => {
                 this._notifyCountChange();
             });
+
+
         } catch (err) {
             console.error('[NotificationStore] init() failed:', err);
             this.isReady = false; // Ensure we don't mark as ready on failure
@@ -122,7 +124,7 @@ export class NotificationStore {
                         personalEnabled: data.personalEnabled, // Capture Personal Toggle
                         excludePortfolio: prefs.excludePortfolio !== false, // Capture Override Toggle
                         activeFilters: Array.isArray(prefs.scanner?.activeFilters)
-                            ? prefs.scanner.activeFilters.map(f => f.toUpperCase())
+                            ? prefs.scanner.activeFilters.map(f => (f || '').toUpperCase())
                             : null // Preserve 'null' for "All Sectors"
                     };
 
@@ -1238,7 +1240,7 @@ export class NotificationStore {
 
         // Merge Local HiLo? (User didn't explicitly ask, but consistent).
         // Local Alerts includes 'hilo'.
-        const localHilo = (local.fresh || []).filter(item => item.intent === 'hilo' || item.intent.includes('hilo'));
+        const localHilo = (local.fresh || []).filter(item => (item.intent === 'hilo' || (item.intent && item.intent.includes('hilo'))));
         const localHigh = localHilo.filter(i => i.type === 'high');
         const localLow = localHilo.filter(i => i.type === 'low');
 
@@ -1320,7 +1322,7 @@ export class NotificationStore {
             // ALWAYS try live data FIRST (Truth Override)
             if (i.code && AppState.livePrices && AppState.livePrices instanceof Map) {
                 const code = String(i.code).toUpperCase();
-                const cleanCode = code.replace(/\.AX$/i, '').trim();
+                const cleanCode = (code || '').replace(/\.AX$/i, '').trim();
                 const live = AppState.livePrices.get(cleanCode) || AppState.livePrices.get(code);
 
                 if (live) {
@@ -1775,7 +1777,7 @@ export class NotificationStore {
      * Returns true if code should be excluded.
      */
     _isDashboardCode(code) {
-        if (!code) return false;
+        if (!code || typeof code !== 'string') return false;
 
         // 1. Exact Match against Blacklist
         // Includes: XJO, XAO, AUDUSD, AUD/USD
@@ -1784,7 +1786,7 @@ export class NotificationStore {
         // 2. Normalized Check (Strip non-alphanumeric)
         // Catches: AUD-USD -> AUDUSD
         // Note: 'AUD/USD' in blacklist ensures direct hit, but 'AUDUSD' in list handles normalize('AUD/USD')
-        const normalized = code.replace(/[^A-Za-z0-9]/g, '');
+        const normalized = (code || '').replace(/[^A-Za-z0-9]/g, '');
         if (DASHBOARD_SYMBOLS.includes(normalized)) return true;
 
         // 3. Common Index Prefixes/Suffixes
@@ -2308,7 +2310,7 @@ function normalizeHits(list, fallbackTime = null) {
     return list.map(item => {
         // Normalize Code: Strip .AX suffix and trim
         let rawCode = item.code || item.shareName || item.symbol || item.s || item.shareCode || '';
-        if (rawCode) rawCode = rawCode.toUpperCase().replace(/\.AX$/i, '').trim();
+        if (rawCode && typeof rawCode === 'string') rawCode = rawCode.toUpperCase().replace(/\.AX$/i, '').trim();
 
         const hit = {
             ...item,

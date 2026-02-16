@@ -228,7 +228,7 @@ export class AiSummaryUI {
         html = html.replace(/[\[\]]/g, '');
 
         // 3. Symbol Cleaning (Remove AI's repetitive prefixes like "AMP 1." or "AMP.AX")
-        if (symbol) {
+        if (symbol && typeof symbol === 'string') {
             const baseSymbol = symbol.replace('.AX', '');
             const escaped = baseSymbol.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             const prefixRegex = new RegExp(`(?:${escaped}(?:\\.AX)?\\s*)?(\\d+\\.)\\s*`, 'gi');

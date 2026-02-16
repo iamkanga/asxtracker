@@ -1681,7 +1681,10 @@ export class NotificationUI {
             const response = await fetch('notification_icon.svg');
             if (response.ok) {
                 let svgContent = await response.text();
-                svgContent = svgContent.replace(/width=".*?"/g, '').replace(/height=".*?"/g, '');
+                // Defensive Fix: Ensure svgContent is a string before calling replace
+                if (svgContent && typeof svgContent === 'string') {
+                    svgContent = svgContent.replace(/width=".*?"/g, '').replace(/height=".*?"/g, '');
+                }
 
                 const wrapper = bell.querySelector('.bell-icon-wrapper');
                 if (wrapper) wrapper.innerHTML = svgContent;

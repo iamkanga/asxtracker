@@ -3233,7 +3233,7 @@ export class AppController {
 
         portfolioItems.forEach(s => {
             const units = parseFloat(s.portfolioShares) || parseFloat(s.units) || 0;
-            const code = s.code || s.shareName || s.symbol || '???';
+            const code = String(s.code || s.shareName || s.symbol || '???');
             // Clean Code for map lookup
             const cleanCode = code.replace(/\.AX$/i, '').trim().toUpperCase();
 
@@ -3262,7 +3262,7 @@ export class AppController {
 
         // 2. Portfolio Highlights
         const pfMovers = portfolioItems.map(s => {
-            const cleanCode = (s.code || s.shareName || '').replace(/\.AX$/i, '').trim().toUpperCase();
+            const cleanCode = String(s.code || s.shareName || '').replace(/\.AX$/i, '').trim().toUpperCase();
             const data = livePrices.get(cleanCode);
             if (!data) return null;
             const code = cleanCode;
@@ -3287,7 +3287,7 @@ export class AppController {
         // 3. Watchlist Highlights
         const watchedCodes = new Set(shares.map(s => (s.code || s.shareName || s.symbol || '').toUpperCase()).filter(Boolean));
         const userMovers = Array.from(watchedCodes).map(rawCode => {
-            let cleanCode = rawCode.replace(/\.AX$/i, '').trim().toUpperCase();
+            let cleanCode = String(rawCode).replace(/\.AX$/i, '').trim().toUpperCase();
             const data = livePrices.get(cleanCode) || livePrices.get(rawCode);
             if (!data) return null;
             return {
@@ -3328,7 +3328,7 @@ export class AppController {
             const code = alert.code || alert.symbol;
             if (!code) return null;
 
-            const cleanCode = code.replace(/\.AX$/i, '').trim().toUpperCase();
+            const cleanCode = String(code).replace(/\.AX$/i, '').trim().toUpperCase();
             const data = livePrices.get(cleanCode);
             if (!data) return { ...alert, pctChange: alert.pct || 0 }; // Fallback
 

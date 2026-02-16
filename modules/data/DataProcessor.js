@@ -561,7 +561,7 @@ export function getASXCodesStatus(codes, livePrices) {
  */
 export function getBestShareMatch(shares, code) {
     if (!shares || !code) return null;
-    const cleanC = code.toUpperCase().replace(/\.AX$/i, '').trim();
+    const cleanC = String(code).toUpperCase().replace(/\.AX$/i, '').trim();
 
     const matches = shares.filter(s => {
         const sCode = (s.shareName || s.code || '').toUpperCase().replace(/\.AX$/i, '').trim();

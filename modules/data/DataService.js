@@ -230,8 +230,12 @@ export class DataService {
     async fetchAiSummary(symbol, questionId, promptTemplate) {
         try {
             // 1. Variable Replacement
-            const prompt = promptTemplate.replace(/\$\{code\}/g, symbol)
-                .replace(/\{\{STOCK\}\}/g, symbol);
+            // Hardened: Ensure promptTemplate and symbol are strings before manipulation
+            const safeTemplate = String(promptTemplate || '');
+            const safeSymbol = String(symbol || '');
+
+            const prompt = safeTemplate.replace(/\$\{code\}/g, safeSymbol)
+                .replace(/\{\{STOCK\}\}/g, safeSymbol);
 
             const user = AuthService.getCurrentUser();
             const userId = user ? user.uid : null;

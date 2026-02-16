@@ -17,7 +17,7 @@ export class LinkHelper {
      */
     static getGoogleFinanceUrl(symbol) {
         if (!symbol) return '';
-        const s = symbol.toUpperCase().trim();
+        const s = String(symbol).toUpperCase().trim();
 
         // 1. FOREX
         if (s.length === 6 && !s.includes('.') && !s.includes('=') && !s.includes('-')) {
@@ -61,7 +61,7 @@ export class LinkHelper {
      */
     static getYahooFinanceUrl(symbol) {
         if (!symbol) return '';
-        const s = symbol.toUpperCase().trim();
+        const s = String(symbol).toUpperCase().trim();
         let yahooSymbol = s;
         if (s === 'XJO') yahooSymbol = '^AXJO';
         if (s === 'XKO') yahooSymbol = '^AXKO';

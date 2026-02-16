@@ -13,6 +13,8 @@ console.log('%c [MAIN] ASX TRACKER v1146 ', 'background: #222; color: #bada55; f
 const app = new AppController();
 const splash = new SplashScreen();
 
+
+
 // Boot
 document.addEventListener('DOMContentLoaded', () => {
     // LOGIC HARDENING: Safety wrapper to prevent White Screen of Death
