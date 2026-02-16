@@ -825,6 +825,16 @@ export class ShareFormUI {
         trigger.addEventListener('click', (e) => {
             e.stopPropagation();
             dropdown.classList.toggle(CSS_CLASSES.SHOW);
+
+            // AUTO-SCROLL TO SELECTION
+            if (dropdown.classList.contains(CSS_CLASSES.SHOW)) {
+                const firstSelected = dropdown.querySelector(`.${CSS_CLASSES.WATCHLIST_ROW}.${CSS_CLASSES.SELECTED}`);
+                if (firstSelected) {
+                    setTimeout(() => {
+                        firstSelected.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                    }, 50); // Small delay for rendering
+                }
+            }
         });
 
         modal.addEventListener('click', () => dropdown.classList.remove(CSS_CLASSES.SHOW));
@@ -854,23 +864,11 @@ export class ShareFormUI {
                 cb.checked = !cb.checked;
                 row.classList.toggle(CSS_CLASSES.SELECTED, cb.checked);
 
-                // 3. TRIGGER UPDATE / TERMINAL ACTION
+                // 3. TRIGGER UPDATE / DIRTY CHECK
                 cb.dispatchEvent(new Event('change'));
 
-                // NEW: TERMINAL ACTION SUPPORT
-                // If unchecking Portfolio was confirmed, trigger save immediately
-                // to satisfy "that should be the end of it" and avoid redundant Save clicks.
-                if (!cb.checked && cb.value === PORTFOLIO_ID) {
-                    // Extract data (allowing empty watchlists via suppressToasts=true)
-                    const data = ShareFormUI._extractShareData(modal, true);
-                    if (data && modal._onSave) {
-                        // TERMINATE: Auto-Save
-                        modal._onSave(data);
-                        // Close modal immediately for UX
-                        modal.querySelector(`.${CSS_CLASSES.MODAL_CLOSE_BTN}`)?.click();
-                        return; // Stop further processing after terminal action
-                    }
-                }
+                // REMOVED: Immediate Auto-Save on Portfolio Deselection.
+                // User must now explicitly click Save, which is safer and standard behavior.
 
                 e.stopPropagation();
             });
@@ -919,7 +917,6 @@ export class ShareFormUI {
                 }
 
                 // Run Validation: This correctly handles enabling/disabling the Save button
-                // if they didn't trigger the terminal auto-save above.
                 ShareFormUI._validateForm(modal);
             });
 
