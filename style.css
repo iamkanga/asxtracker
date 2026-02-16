@@ -1966,10 +1966,10 @@ h1#dynamicWatchlistTitle.active {
     }
 }
 
-.sidebar:not(.collapsed) .sidebar-kangaroo-icon {
+/* Explicit Animation Class for JS Triggering */
+.sidebar-kangaroo-icon.kangaroo-animate {
     animation: kangaroo-hop 2.2s ease-in-out forwards;
-    animation-delay: 0.3s;
-    /* Wait for sidebar to finish sliding in */
+    /* Delay managed by JS or kept small */
 }
 
 /* Sidebar Extra Graphic (Fade-in after Kangaroo) */

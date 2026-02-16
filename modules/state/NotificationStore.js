@@ -57,6 +57,7 @@ export class NotificationStore {
             this.userId = userId;
             this._loadLocalState();
 
+
             // Load dismissed announcements from storage
             try {
                 const stored = localStorage.getItem('asx_market_stream_dismissed');
@@ -65,6 +66,15 @@ export class NotificationStore {
                     if (Array.isArray(parsed)) this.dismissedAnnouncements = new Set(parsed);
                 }
             } catch (e) { /* ignore */ }
+
+            // FIX: Load Cached Scanner Rules to prevent "Zero Notifications" on boot
+            // This ensures strictMode has valid rules to work with before Firestore connects.
+            try {
+                const cachedRules = localStorage.getItem('asx_scanner_rules_cache');
+                if (cachedRules) {
+                    this.scannerRules = JSON.parse(cachedRules);
+                }
+            } catch (e) { console.warn('[NotificationStore] Failed to load cached rules', e); }
 
             // Always subscribe to Market Index, even for guests
             this._subscribeToMarketIndex();
@@ -79,6 +89,32 @@ export class NotificationStore {
 
                 // Initial Rule Fetch (Redundant if subscription works fast, but safe)
                 await this.refreshScannerRules();
+
+                // FAILSAFE: If no rules loaded yet (first run after fix), try to grab from AppState immediately
+                // FIX: Check 'up' key specifically because constructor inits with { up: {}, down: {} }
+                if (!this.scannerRules || !this.scannerRules.up || Object.keys(this.scannerRules.up).length === 0) {
+                    // Safe access to AppState.preferences
+                    const prefs = AppState.preferences || {};
+                    if (prefs.scannerRules) {
+                        // We have rules in AppState but maybe subscription hasn't fired yet?
+                        // Force update local cache
+                        const data = AppState.preferences.scannerRules;
+                        this.scannerRules = {
+                            up: data.up || {},
+                            down: data.down || {},
+                            minPrice: (data.minPrice !== undefined) ? data.minPrice : null,
+                            hiloMinPrice: (data.hiloMinPrice !== undefined) ? data.hiloMinPrice : null,
+                            moversEnabled: data.moversEnabled,
+                            hiloEnabled: data.hiloEnabled,
+                            personalEnabled: data.personalEnabled,
+                            excludePortfolio: AppState.preferences.excludePortfolio !== false,
+                            activeFilters: Array.isArray(AppState.preferences.scanner?.activeFilters) ? AppState.preferences.scanner.activeFilters : null
+                        };
+                        try { localStorage.setItem('asx_scanner_rules_cache', JSON.stringify(this.scannerRules)); } catch (e) { }
+                        this._invalidateCache();
+                        this._notifyCountChange();
+                    }
+                }
             }
 
             // LOGIC HARDENING: Mark store as ready AFTER initial load logic
@@ -88,6 +124,7 @@ export class NotificationStore {
             // --- BIND TO LIVE DATA UPDATES (Event-Driven) ---
             // Replaces manual calls from AppController and dead legacy events.
             StateAuditor.on('PRICES_UPDATED', () => {
+                this._invalidateCache();
                 this._notifyCountChange();
             });
 
@@ -128,6 +165,12 @@ export class NotificationStore {
                             : null // Preserve 'null' for "All Sectors"
                     };
 
+                    // Persist to cache
+                    try {
+                        localStorage.setItem('asx_scanner_rules_cache', JSON.stringify(this.scannerRules));
+                    } catch (e) { /* ignore */ }
+
+                    this._invalidateCache();
                     this._notifyCountChange();
                 }
             });
@@ -284,7 +327,8 @@ export class NotificationStore {
                     // FIX: Preserve 'null' for "All Sectors" - null should NOT become empty array
                     activeFilters: (() => {
                         const raw = data.activeFilters ?? config.scanner?.activeFilters;
-                        return Array.isArray(raw) ? raw.map(f => f.toUpperCase()) : null;
+                        const final = Array.isArray(raw) ? raw.map(f => f.toUpperCase()) : null;
+                        return final;
                     })(),
                     excludePortfolio: config.excludePortfolio !== false, // Capture Override Toggle
                     hiloEnabled: data.hiloEnabled // Capture 52-Week Toggle
@@ -299,19 +343,31 @@ export class NotificationStore {
      * Internal helper to retrieve scanner rules from AppState for filtering.
      */
     getScannerRules() {
-        const rules = (AppState.preferences && AppState.preferences.scannerRules) ? AppState.preferences.scannerRules : {};
-        // Ensure robust return of all fields
-        return {
-            up: rules.up || {},
-            down: rules.down || {},
-            minPrice: (rules.minPrice !== undefined && rules.minPrice !== null) ? Number(rules.minPrice) : 0,
-            hiloMinPrice: (rules.hiloMinPrice !== undefined && rules.hiloMinPrice !== null) ? Number(rules.hiloMinPrice) : 0,
-            moversEnabled: rules.moversEnabled !== false,
-            hiloEnabled: rules.hiloEnabled !== false,
-            personalEnabled: rules.personalEnabled !== false,
-            excludePortfolio: AppState.preferences.excludePortfolio !== false,
-            activeFilters: this.scannerRules.activeFilters // Use the normalized one from store
+        // FIX: Reverting "Default Force" logic.
+        // Instead, rely on Internal Store State (this.scannerRules) which is populated by listener.
+        // AppState might be stale/empty on boot, but this.scannerRules is managed by refreshScannerRules.
+
+        const internal = this.scannerRules || {};
+        const external = (AppState.preferences && AppState.preferences.scannerRules) ? AppState.preferences.scannerRules : {};
+
+        // Primary: Internal Store > Fallback: AppState > Fallback: Empty
+        const up = internal.up || external.up || {};
+        const down = internal.down || external.down || {};
+
+        const finalRules = {
+            up: up,
+            down: down,
+            minPrice: (internal.minPrice !== undefined) ? internal.minPrice : ((external.minPrice !== undefined) ? Number(external.minPrice) : 0),
+            hiloMinPrice: (internal.hiloMinPrice !== undefined) ? internal.hiloMinPrice : ((external.hiloMinPrice !== undefined) ? Number(external.hiloMinPrice) : 0),
+            moversEnabled: internal.moversEnabled !== undefined ? internal.moversEnabled : (external.moversEnabled !== false),
+            hiloEnabled: internal.hiloEnabled !== undefined ? internal.hiloEnabled : (external.hiloEnabled !== false),
+            personalEnabled: internal.personalEnabled !== undefined ? internal.personalEnabled : (external.personalEnabled !== false),
+            personalEnabled: internal.personalEnabled !== undefined ? internal.personalEnabled : (external.personalEnabled !== false),
+            excludePortfolio: (AppState.preferences && AppState.preferences.excludePortfolio !== undefined) ? AppState.preferences.excludePortfolio !== false : true,
+            activeFilters: internal.activeFilters // Normalized in refreshScannerRules
         };
+
+        return finalRules;
     }
 
     /**
@@ -324,14 +380,21 @@ export class NotificationStore {
         const hasPct = (rules.percentThreshold !== undefined && rules.percentThreshold !== null);
         const hasDol = (rules.dollarThreshold !== undefined && rules.dollarThreshold !== null);
 
-        // FIX: STRICT MODE
-        // If User set everything to 0/None -> Disable alerts for this category.
-        // Assuming NULL means Disabled.
-        // EXCEPTION: If Override is ON, we must process list to find implicit items.
+        // FIX: STRICT MODE refinement
+        // If User set everything to 0/None (explicit null) -> Disable alerts.
+        // If thresholds are UNDEFINED (boot/loading), we must ALLOW alerts to pass (Fail Open).
         const overrideOn = rules.excludePortfolio !== false;
         if (strictMode && !overrideOn) {
-            const isDefined = (hasPct || hasDol);
-            if (!isDefined) return [];
+            const isExplicitlyDisabled = (rules.percentThreshold === null && rules.dollarThreshold === null);
+            const isUndefined = (rules.percentThreshold === undefined && rules.dollarThreshold === undefined);
+
+            // Block ONLY if explicitly disabled (null) OR if defined as 0/0 and we want to enforce it.
+            // But here we rely on 'hasPct/hasDol' to determine "Active" rules.
+            // If completely undefined (loading), DO NOT BLOCK.
+            if (!isUndefined) {
+                const isDefined = (hasPct || hasDol);
+                if (!isDefined) return [];
+            }
         }
 
         // Use Defaults for Comparison (0 if null/undefined)
@@ -1625,12 +1688,17 @@ export class NotificationStore {
      * Computed: Badge Counts for Sidebar (Total) and Kangaroo (Custom Triggers).
      */
     getBadgeCounts() {
+        const userId = this.userId;
         const thresholds = {
             total: this.lastViewed.total || 0,
             custom: this.lastViewed.custom || 0
         };
 
         const pulse = this.getPulseCounts();
+
+        const myHitsCount = (pulse._local.fresh || []).length;
+        const globalHitsCount = (pulse._global.movers?.up?.length || 0) + (pulse._global.movers?.down?.length || 0);
+
         const myHits = pulse._local.fresh || [];
         const globalHits = [
             ...(pulse._global.movers?.up || []),

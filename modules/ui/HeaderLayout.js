@@ -688,6 +688,20 @@ export class HeaderLayout {
             // Register with NavigationManager
             this._navActive = true;
             this._updateSidebarSettingsUI(); // Sync coloring state on open
+
+            // --- RESTORE KANGAROO ANIMATION (v1147) ---
+            const kangaroo = this.sidebar.querySelector('.sidebar-kangaroo-icon');
+            if (kangaroo) {
+                // Reset animation
+                kangaroo.classList.remove('kangaroo-animate');
+                // Force Reflow (Magic)
+                void kangaroo.offsetWidth;
+                // Trigger (with small delay to align with slide-in)
+                setTimeout(() => {
+                    kangaroo.classList.add('kangaroo-animate');
+                }, 300);
+            }
+
             navManager.pushState(() => {
                 if (this.sidebarState) {
                     this._navActive = false; // Prevent popStateSilently in next step

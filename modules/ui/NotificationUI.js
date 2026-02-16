@@ -126,10 +126,10 @@ export class NotificationUI {
             return; // Stop processing
         }
 
-        // REDESIGNED ICON DISMISSAL: If showBadges is false OR count is 0, hide the bell button ONLY.
-        // "Right when the user has no notifications the kangaroo is still jumping out That shouldn't happen"
-        // REINSTATEMENT FIX: Do NOT hide the container if showBadges is false. Keep it for long-press restoration.
-        if (!showBadges || validCount === 0) {
+        // REDESIGNED ICON DISMISSAL: If showBadges is false, hide the bell button.
+        // FIX: Previously hid if count === 0, which caused icon to vanish on boot before data loaded.
+        // User wants "Persistence": If I turned it ON, it stays ON, even if 0 notifications.
+        if (!showBadges) {
             // Container remains visible (but transparent/pointer-events only) so user can restore it.
             if (container) container.classList.remove(CSS_CLASSES.HIDDEN);
             bell.classList.add(CSS_CLASSES.HIDDEN);
@@ -156,15 +156,29 @@ export class NotificationUI {
             return;
         }
 
-        // KANGAROO VISIBILITY FIX: Always show the button/container (unless locked or all disabled)
-        // (Local override logic removed in favor of global 'showBadges' sync)
+        // KANGAROO VISIBILITY FIX (v1148): "If he doesn't hop out there's no notifications"
+        // Logic: Count > 0 -> Show + Hop. Count == 0 -> Hide.
+        // We removed the "Persistence" override because the user explicitly requested conditional visibility.
 
-        if (container) container.classList.remove(CSS_CLASSES.HIDDEN);
-        bell.classList.remove(CSS_CLASSES.HIDDEN);
-        // const currentScope = AppState?.preferences?.badgeScope || 'unknown';
-        // if (validCount > 0 && showBadges) {
-        // } else {
-        // }
+        const shouldShow = (validCount > 0 && showBadges);
+
+        if (shouldShow) {
+            // If previously hidden, we need to show and animate
+            if (bell.classList.contains(CSS_CLASSES.HIDDEN)) {
+                bell.classList.remove(CSS_CLASSES.HIDDEN);
+                container.classList.remove(CSS_CLASSES.HIDDEN);
+
+                // FORCE ANIMATION REPLAY
+                bell.style.animation = 'none';
+                void bell.offsetHeight; // Force reflow
+                bell.style.animation = ''; // Revert to CSS (hopIn)
+            }
+        } else {
+            // No notifications -> No Kangaroo
+            bell.classList.add(CSS_CLASSES.HIDDEN);
+            // Keep container visible for potential long-press discovery if desires
+            if (container) container.classList.remove(CSS_CLASSES.HIDDEN);
+        }
 
 
         this._prevCount = validCount;
@@ -511,10 +525,10 @@ export class NotificationUI {
                 const currentState = AppState.preferences.showBadges !== false;
                 const newState = !currentState;
 
-
-
                 // 2. Update Local State Immediately (Reactivity)
                 AppState.preferences.showBadges = newState;
+                // FIX: Persist to LocalStorage immediately so it survives Hard Reload
+                localStorage.setItem('ASX_NEXT_showBadges', newState);
 
                 // 3. Persist to Cloud via DataService (Dynamic Import)
                 try {
@@ -1607,6 +1621,8 @@ export class NotificationUI {
                 // 1. Update State First
                 if (AppState.preferences) {
                     AppState.preferences.showBadges = newPref;
+                    // FIX: Persist to LocalStorage immediately so it survives Hard Reload
+                    localStorage.setItem('ASX_NEXT_showBadges', newPref);
 
                     import('../data/AppService.js').then(({ AppService }) => {
                         const service = new AppService();
@@ -1676,7 +1692,7 @@ export class NotificationUI {
             }));
         });
 
-        // 3. Fetch and Inline SVG to allow Color Styling
+        // 3. KANGAROO RESTORED (v1149): Revert to original SVG file
         try {
             const response = await fetch('notification_icon.svg');
             if (response.ok) {
