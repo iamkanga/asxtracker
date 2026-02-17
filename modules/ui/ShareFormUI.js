@@ -497,6 +497,9 @@ export class ShareFormUI {
         modal.id = IDS.ADD_SHARE_MODAL;
         modal.className = `${CSS_CLASSES.MODAL} ${CSS_CLASSES.HIDDEN}`;
 
+        // FIX: Ensure Edit Modal is on top of Stock Details (21000)
+        modal.style.setProperty('z-index', '22000', 'important');
+
         // Determine Title: If we have shareData and are recovering (implied by content), call it "Edit Share"
         // Logic: Add Mode usually implies no shareData.id. 
         // But Ghost Shares also have no ID.
