@@ -128,6 +128,12 @@ export class NotificationStore {
                 this._notifyCountChange();
             });
 
+            // FIX: Listen for Data Updates (e.g. User edits Target Price) -> Trigger Re-calc
+            StateAuditor.on('DATA_UPDATED', () => {
+                this._invalidateCache();
+                this._notifyCountChange();
+            });
+
 
         } catch (err) {
             console.error('[NotificationStore] init() failed:', err);
@@ -794,7 +800,10 @@ export class NotificationStore {
                 }
 
                 // If practically zero movement, BLOCK IT.
-                if (Math.abs(checkPct) === 0 && Math.abs(checkAmt) === 0) {
+                // FIX: EXEMPT Personal Targets from this check. Users want to know if their target is hit, even if price is static.
+                const isTarget = (hit.intent === 'target' || hit.intent === 'target-hit');
+
+                if (!isTarget && Math.abs(checkPct) === 0 && Math.abs(checkAmt) === 0) {
                     return false;
                 }
             }
@@ -1922,8 +1931,6 @@ export class NotificationStore {
                     const absChange = Math.abs(dolChange);
                     const absPct = Math.abs(pctChange);
 
-                    // UNIVERSAL LOGIC:
-                    // Volume is missing for some stocks (AKP, IPC), so we cannot use it to prove "Activity".
                     // "Zombie" definition simplifies to "Static Price" (No movement today).
                     // Logic from User: "If zero Price movement... it must have hit its Low or high the previous day... ignore it."
                     const isStatic = (absChange === 0 && absPct === 0);
@@ -1941,6 +1948,8 @@ export class NotificationStore {
                         isPhantom = true;
                         console.warn(`[NotificationStore] Phantom Hit Detected & Blocked: ${code} (Repo ${pctChange}% vs Calc ${calcPct}%)`);
                     }
+
+
 
                     // --- DEEP TRACE FOR GAP PARADOX REMOVED ---
 
@@ -1993,15 +2002,17 @@ export class NotificationStore {
 
                     // 2. PRICE TARGETS
                     const targetPrice = Number(share.targetPrice || 0);
-                    if (targetPrice > 0 && !isStatic && !isPhantom) {
+                    // FIX: Allow Static stocks (0% move) to trigger Personal Targets (e.g. "Buy below $X")
+                    // We only block Phantom/Bad Data here.
+                    if (targetPrice > 0 && !isPhantom) {
                         const direction = share.targetDirection || 'below';
                         let hit = false;
-                        const prev = Number(liveData.prevClose || 0);
+                        // Condition Check: Simply check if CURRENT price satisfies the target.
+                        // Removed "Crossing" logic (prev < target) so it alerts even if it started the day active.
+                        const tolerance = 0.0001;
 
-                        // STRICTOR CHECK: Only trigger if price REACHES/CROSSES the target today.
-                        // If it was already below/above target yesterday, it's a persistent state, not a "new hit".
-                        if (direction === 'above' && price >= (targetPrice - 0.0001) && (prev < targetPrice || prev === 0)) hit = true;
-                        if (direction === 'below' && price <= (targetPrice + 0.0001) && (prev > targetPrice || prev === 0)) hit = true;
+                        if (direction === 'above' && price >= (targetPrice - tolerance)) hit = true;
+                        if (direction === 'below' && price <= (targetPrice + tolerance)) hit = true;
 
                         if (hit) {
                             const key = `${code}-target-${direction}`;
@@ -2117,10 +2128,10 @@ export class NotificationStore {
 
     /**
      * Returns a stable timestamp for a given alert key for the duration of the session.
-     * If the key is seen for the first time, it returns Date.now() and caches it.
-     * @param {string} key - Unique identifier for the alert (e.g. "BHP-target-above")
-     * @returns {string} ISO Date String
-     */
+    * If the key is seen for the first time, it returns Date.now() and caches it.
+    * @param {string} key - Unique identifier for the alert (e.g. "BHP-target-above")
+    * @returns {string} ISO Date String
+    */
     _getStableTimestamp(key) {
         if (!this.alertTimestampCache.has(key)) {
             // New Alert: Cache current time
