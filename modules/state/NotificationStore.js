@@ -1885,7 +1885,15 @@ export class NotificationStore {
             // Normalized Check (Redundant if helper is good, but keeping safe)
             // if (DASHBOARD_SYMBOLS.includes(code.replace(/[^A-Za-z0-9]/g, ''))) return;
 
-            const liveData = AppState.livePrices.get(code);
+            let liveData = AppState.livePrices.get(code);
+            // Fallback: Try appending .AX if not found (Common with Yahoo Data)
+            if (!liveData && !code.includes('.')) {
+                liveData = AppState.livePrices.get(code + '.AX');
+            }
+            // Fallback: Try stripping .AX if not found
+            if (!liveData && code.endsWith('.AX')) {
+                liveData = AppState.livePrices.get(code.replace('.AX', ''));
+            }
 
             if (code && liveData) {
                 // EXCLUDE DASHBOARD SYMBOLS (Double Check)
