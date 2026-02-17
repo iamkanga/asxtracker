@@ -178,6 +178,30 @@ export class NotificationStore {
 
                     this._invalidateCache();
                     this._notifyCountChange();
+
+                    // --- SYNC DISMISSAL STATE (From Cloud to Device) ---
+                    // 1. Alert Dismissal (Last Viewed Timestamp)
+                    if (prefs.lastViewedAlerts) {
+                        const cloudTime = Number(prefs.lastViewedAlerts);
+                        if (cloudTime > this.lastViewed.total) {
+                            this.lastViewed.total = cloudTime;
+                            localStorage.setItem(`${STORAGE_KEYS.NOTIFICATIONS_VIEWED}_total`, cloudTime);
+                        }
+                    }
+
+                    // 2. Announcement Dismissal (Dismissed IDs)
+                    if (Array.isArray(prefs.dismissedMarketAlerts)) {
+                        let changed = false;
+                        prefs.dismissedMarketAlerts.forEach(id => {
+                            if (!this.dismissedAnnouncements.has(id)) {
+                                this.dismissedAnnouncements.add(id);
+                                changed = true;
+                            }
+                        });
+                        if (changed) {
+                            localStorage.setItem('asx_market_stream_dismissed', JSON.stringify([...this.dismissedAnnouncements]));
+                        }
+                    }
                 }
             });
         } catch (err) {
@@ -221,6 +245,20 @@ export class NotificationStore {
         }
 
         this._notifyCountChange();
+
+        // SYNC: Persist to Firestore if User is logged in
+        // Only sync 'total' (Sidebar) dismissal as that is the primary "Read All" action
+        if (this.userId && source === 'total') {
+            try {
+                const prefRef = doc(db, `artifacts/${APP_ID}/users/${this.userId}/preferences/config`);
+                await setDoc(prefRef, {
+                    lastViewedAlerts: now,
+                    updatedAt: new Date()
+                }, { merge: true });
+            } catch (e) {
+                console.error('[NotificationStore] Failed to sync read status:', e);
+            }
+        }
     }
 
     // ...
@@ -1818,17 +1856,29 @@ export class NotificationStore {
     /**
      * Updates the dismissed announcements set and persists it.
      */
-    dismissAnnouncement(alertId) {
+    async dismissAnnouncement(alertId) {
         if (!alertId) return;
         this.dismissedAnnouncements.add(alertId);
         localStorage.setItem('asx_market_stream_dismissed', JSON.stringify([...this.dismissedAnnouncements]));
         this._notifyCountChange();
+
+        // SYNC: Persist to Firestore
+        if (this.userId) {
+            try {
+                const prefRef = doc(db, `artifacts/${APP_ID}/users/${this.userId}/preferences/config`);
+                await updateDoc(prefRef, {
+                    dismissedMarketAlerts: arrayUnion(alertId)
+                });
+            } catch (e) {
+                console.warn('[NotificationStore] Failed to sync announcement dismissal:', e);
+            }
+        }
     }
 
     /**
      * Dismisses all currently visible market index alerts.
      */
-    dismissAllAnnouncements() {
+    async dismissAllAnnouncements() {
         if (!this.marketIndexAlerts) return;
         this.marketIndexAlerts.forEach(a => {
             const id = a.id || `${a.code}-${a.timestamp}`;
@@ -1836,6 +1886,24 @@ export class NotificationStore {
         });
         localStorage.setItem('asx_market_stream_dismissed', JSON.stringify([...this.dismissedAnnouncements]));
         this._notifyCountChange();
+
+        // SYNC: Persist to Firestore (Bulk)
+        if (this.userId) {
+            try {
+                const prefRef = doc(db, `artifacts/${APP_ID}/users/${this.userId}/preferences/config`);
+                // Use arrayUnion for each item to be safe, or just merge the whole set if we trust it.
+                // Firestore arrayUnion accepts varargs.
+                const ids = this.marketIndexAlerts.map(a => a.id || `${a.code}-${a.timestamp}`);
+
+                if (ids.length > 0) {
+                    await updateDoc(prefRef, {
+                        dismissedMarketAlerts: arrayUnion(...ids)
+                    });
+                }
+            } catch (e) {
+                console.warn('[NotificationStore] Failed to sync announcement dismissal (Bulk):', e);
+            }
+        }
     }
 
     /**
