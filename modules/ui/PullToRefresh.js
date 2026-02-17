@@ -99,7 +99,7 @@ export class PullToRefresh {
 
         const iconWrap = document.createElement('div');
         iconWrap.className = 'ptr-icon-wrap';
-        iconWrap.innerHTML = '<i class="fas fa-arrow-down"></i>';
+        iconWrap.innerHTML = '<i class="fas fa-chevron-down"></i>';
 
         this.indicator.appendChild(iconWrap);
         this.container.prepend(this.indicator);
@@ -155,7 +155,7 @@ export class PullToRefresh {
                 if (!this.hasTriggered) {
                     this.hasTriggered = true;
                     this.indicator.classList.add('active');
-                    this.iconWrap.innerHTML = '<i class="fas fa-arrow-up"></i>';
+                    this.iconWrap.innerHTML = '<i class="fas fa-chevron-up"></i>';
 
                     // Haptic feedback for "Ready to Refresh"
                     if ('vibrate' in navigator) navigator.vibrate(15);
@@ -164,7 +164,7 @@ export class PullToRefresh {
                 if (this.hasTriggered) {
                     this.hasTriggered = false;
                     this.indicator.classList.remove('active');
-                    this.iconWrap.innerHTML = '<i class="fas fa-arrow-down"></i>';
+                    this.iconWrap.innerHTML = '<i class="fas fa-chevron-down"></i>';
                 }
             }
         } else {
@@ -231,7 +231,7 @@ export class PullToRefresh {
         // Cleanup after animation
         setTimeout(() => {
             if (this.iconWrap) {
-                this.iconWrap.innerHTML = '<i class="fas fa-arrow-down"></i>';
+                this.iconWrap.innerHTML = '<i class="fas fa-chevron-down"></i>';
                 this.iconWrap.style.transform = 'rotate(0deg) scale(0.8)';
             }
             this.isRefreshing = false;

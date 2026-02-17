@@ -119,6 +119,12 @@ export class ViewRenderer {
             this.renderSummary(summaryMetrics, data);
         }
 
+        // 2b. Render Day Change Bar (Single Column Views)
+        // Inserted for both Portfolio (after Summary) and Watchlists (at top)
+        // We render it here. For desktop table views, we might need to hide it via CSS if it's "Single Column Only"
+        // But for now, we'll render it and let layout handle it.
+        this.renderDayChangeBar(data);
+
         switch (mode) {
             case VIEW_MODES.TABLE:
                 this.container.classList.add(CSS_CLASSES.VIEW_TABLE);
@@ -137,6 +143,67 @@ export class ViewRenderer {
                 this.container.classList.add(CSS_CLASSES.VIEW_TABLE);
                 this.renderTable(data);
         }
+    }
+
+    renderDayChangeBar(data) {
+        if (!data || data.length === 0) return;
+
+        // Calculate Counts
+        let up = 0;
+        let down = 0;
+        let neutral = 0;
+
+        data.forEach(item => {
+            const change = item.dayChangePercent || 0;
+            if (change > 0) up++;
+            else if (change < 0) down++;
+            else neutral++;
+        });
+
+        const bar = document.createElement('div');
+        bar.className = 'day-change-bar';
+
+        // Minimalist Styling (User Request: Fit in original gap, no background/borders)
+        Object.assign(bar.style, {
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: '0 12px', // Zero vertical padding
+            width: '100%',
+            maxWidth: '600px',
+            margin: '0 auto', // Zero margin to restore original gap feel
+            background: 'none', // Transparent
+            border: 'none',
+            fontSize: '0.7rem', // Smaller font for 15px height
+            lineHeight: '15px', // Match height for centering
+            opacity: '0.9',
+            height: '15px', // Requested 15px
+            overflow: 'hidden' // Ensure no spill
+        });
+
+        // HTML Structure
+        // Left: Up (Green) [Count] [Arrow]
+        // Center: Neutral (Coffee) [Count] (No text)
+        // Right: Down (Red) [Count] [Arrow]
+
+        const iconStyle = 'margin-left: 4px; font-size: 0.8em;';
+        const textStyle = 'font-weight: 700; display: flex; align-items: center;';
+
+        bar.innerHTML = `
+            <div class="${CSS_CLASSES.TEXT_POSITIVE}" style="${textStyle} justify-content: flex-start;">
+                ${up} <i class="fas ${UI_ICONS.CHEVRON_DOWN} fa-rotate-180" style="${iconStyle}"></i>
+            </div>
+            
+            <div class="${CSS_CLASSES.TEXT_COFFEE}" style="${textStyle} justify-content: center;">
+                ${neutral}
+            </div>
+            
+            <div class="${CSS_CLASSES.TEXT_NEGATIVE}" style="${textStyle} justify-content: flex-end;">
+                ${down} <i class="fas ${UI_ICONS.CHEVRON_DOWN}" style="${iconStyle}"></i>
+            </div>
+        `;
+
+        this.container.appendChild(bar);
     }
 
     /**
