@@ -2360,9 +2360,26 @@ export class NotificationStore {
                     });
                 });
 
+                // FIX: Deduplicate Items based on Content Signature (Code + Time)
+                // This protects against the backend script sending the same email in multiple batches.
+                const uniqueMap = new Map();
+                allAlerts.forEach(item => {
+                    // Create a robust signature. If exact timestamp matches, it's a dupe.
+                    // We can also add headline check if paranoid, but code+time is usually enough for email alerts.
+                    // Using ID is safest if ID is deterministic.
+                    const sig = item.id || `${item.code}|${item.timestamp}`;
+
+                    // If collision, keep the one with more data or just the first one?
+                    // Newest batch usually processed last? actually batches order is not guaranteed here.
+                    // Let's just keep the first one encountered.
+                    if (!uniqueMap.has(sig)) {
+                        uniqueMap.set(sig, item);
+                    }
+                });
+
                 // Sort by timestamp descending (newest first)
                 // Filter out invalid items just in case
-                this.marketIndexAlerts = allAlerts
+                this.marketIndexAlerts = Array.from(uniqueMap.values())
                     .filter(item => item && item.timestamp)
                     .sort((a, b) => b.timestamp - a.timestamp);
 
