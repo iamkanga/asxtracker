@@ -23,15 +23,16 @@ export class CashAssetUI {
     _getUsedColors(excludeCategoryId = null) {
         const usedMap = new Map();
         const normExclude = (excludeCategoryId || '').toLowerCase().trim();
+        const isExcludingDraft = normExclude.startsWith('user_') || normExclude === 'other';
 
         // 1. Scan Category Themes (Registry) - ABSOLUTE SOURCE OF TRUTH
         const themedCategories = new Set();
         (AppState.preferences.userCategories || []).forEach(c => {
             if (c.id) {
                 const normId = c.id.toLowerCase().trim();
+                themedCategories.add(normId);
                 if (c.color) {
                     const colorVal = c.color.toLowerCase().trim();
-                    themedCategories.add(normId);
                     if (normId !== normExclude) {
                         usedMap.set(colorVal, { id: c.id, label: c.label || c.id });
                     }
@@ -39,14 +40,19 @@ export class CashAssetUI {
             }
         });
 
-        // 2. Scan Assets (Fallback for categories without themes)
+        // 2. Scan Assets (Historical fallback if category theme is missing)
         (AppState.data.cash || []).forEach(a => {
             if (a.color && a.category) {
                 const normId = a.category.toLowerCase().trim();
 
-                // Only consider asset color if the category DOES NOT have a global theme
-                // and it's not the category we are currently editing
-                if (!themedCategories.has(normId) && normId !== normExclude) {
+                // DYNAMIC EXCLUSION:
+                // If we are editing 'other' or a 'user_...' category, 
+                // we MUST ignore all assets already in 'other' OR assets that might
+                // have already inherited the brand new user_... ID we are typing.
+                const shouldIgnoreAsset = (normId === normExclude) ||
+                    (isExcludingDraft && (normId === 'other' || normId.startsWith('user_')));
+
+                if (!shouldIgnoreAsset && !themedCategories.has(normId)) {
                     const colorVal = a.color.toLowerCase().trim();
                     if (!usedMap.has(colorVal)) {
                         const catObj = [...CASH_CATEGORIES, ...(AppState.preferences.userCategories || [])].find(c => c.id === a.category);
@@ -66,7 +72,10 @@ export class CashAssetUI {
 
         for (const [id, color] of Object.entries(standardColors)) {
             const normId = id.toLowerCase().trim();
-            if (activeCategoryIds.has(id) && !themedCategories.has(normId) && normId !== normExclude) {
+            const shouldIgnoreStandard = (normId === normExclude) ||
+                (isExcludingDraft && (normId === 'other' || normId.startsWith('user_')));
+
+            if (activeCategoryIds.has(id) && !themedCategories.has(normId) && !shouldIgnoreStandard) {
                 const colorVal = color.toLowerCase().trim();
                 if (!usedMap.has(colorVal)) {
                     const catObj = CASH_CATEGORIES.find(c => c.id === id);
@@ -152,7 +161,9 @@ export class CashAssetUI {
         modal.id = this.modalId;
         modal.className = `${CSS_CLASSES.MODAL} ${CSS_CLASSES.HIDDEN}`;
 
-        const startColor = asset ? (asset.color || this._pickInitialColor(asset.name, asset.id, this.selectedCategory)) : this._pickInitialColor('', null, 'cash');
+        // PRIORITY: Use Category Theme color if it exists, otherwise use asset's explicit color or pick one
+        const userCatTheme = (AppState.preferences.userCategories || []).find(c => c && c.id === this.selectedCategory);
+        const startColor = userCatTheme?.color || (asset ? asset.color : null) || this._pickInitialColor(asset?.name || '', asset?.id, this.selectedCategory);
         modal.dataset.selectedColor = startColor;
         modal.dataset.selectedCategory = this.selectedCategory;
         if (isEdit) modal.dataset.editingAssetId = asset.id;
@@ -252,15 +263,17 @@ export class CashAssetUI {
                 const sourceCat = isTaken ? usedMap.get(c.toLowerCase().trim()) : null;
 
                 return `
-                    <div class="color-swatch-item ${isTaken ? 'is-taken' : 'cursor-pointer hover:scale-110 active:scale-95'}" 
+                    <div class="color-swatch-item cursor-pointer hover:scale-110 active:scale-95" 
                          data-color="${c}" 
                          data-is-taken="${isTaken}"
                          title="${isTaken ? 'Used by: ' + (sourceCat.label || sourceCat.id) : 'Available'}"
-                         style="width: 28px; height: 28px; border-radius: 50%; background-color: ${c}; position: relative; border: 2px solid ${isSelected ? '#fff' : 'rgba(255,255,255,0.1)'}; box-shadow: ${isSelected ? '0 0 0 2px var(--color-accent)' : 'none'}; transition: all 0.2s ease;">
-                        ${isSelected ? '<i class="fas fa-check" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 10px; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.5);"></i>' : ''}
+                         style="width: 28px; height: 28px; border-radius: 50%; background-color: ${c}; position: relative; border: 2px solid ${isSelected ? '#fff' : 'rgba(255,255,255,0.1)'}; box-shadow: ${isSelected ? '0 0 0 2px var(--color-accent)' : 'none'}; transition: all 0.2s ease; opacity: ${isTaken ? '0.85' : '1'};">
+                        ${isSelected ? '<i class="fas fa-check" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 10px; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.5); z-index: 2;"></i>' : ''}
                         ${isTaken ? `
-                            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(45deg); width: 100%; height: 2px; background: rgba(0,0,0,0.7); box-shadow: 0 0 2px rgba(255,255,255,0.8);"></div>
-                            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); width: 100%; height: 2px; background: rgba(0,0,0,0.7); box-shadow: 0 0 2px rgba(255,255,255,0.8);"></div>
+                            <div class="swatch-cross" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;">
+                                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(45deg); width: 80%; height: 2px; background: rgba(0,0,0,0.8); box-shadow: 0 0 1px rgba(255,255,255,0.5);"></div>
+                                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); width: 80%; height: 2px; background: rgba(0,0,0,0.8); box-shadow: 0 0 1px rgba(255,255,255,0.5);"></div>
+                            </div>
                         ` : ''}
                     </div>
                 `;

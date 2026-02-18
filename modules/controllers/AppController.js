@@ -1182,6 +1182,10 @@ export class AppController {
                 if (JSON.stringify(remoteCats) !== JSON.stringify(AppState.preferences.userCategories)) {
                     AppState.preferences.userCategories = remoteCats;
                     localStorage.setItem(STORAGE_KEYS.USER_CATEGORIES, JSON.stringify(remoteCats));
+
+                    // Apply new themes to current data immediately
+                    AppState.cascadeCategoryColors();
+
                     needsRender = true;
                 }
             }
@@ -1300,24 +1304,32 @@ export class AppController {
                     this.handleSecurityLock();
                 }
 
-                // 2. PWA Silent Resume (Stale Data Refresh)
-                // Threshold: 15 Minutes (900,000ms)
-                const STALE_THRESHOLD = 15 * 60 * 1000;
-                const timeDiff = this._lastBackgroundTime ? (now - this._lastBackgroundTime) : 0;
+                if (this._lastBackgroundTime) {
+                    const STALE_THRESHOLD = 15 * 60 * 1000;
+                    const timeDiff = now - this._lastBackgroundTime;
 
-                if (this._lastBackgroundTime && (timeDiff > STALE_THRESHOLD)) {
-                    // Detect if we should mark as stale after long sleep
-                    if (timeDiff > (6 * 60 * 60 * 1000)) { // 6 hours
-                        AppState.health.status = 'stale';
-                        if (this.headerLayout) this.headerLayout.updateConnectionStatus(true, 'stale');
+                    // SMART RESUME: If away for 1-15 mins, silent catch-up refresh
+                    if (timeDiff > (1 * 60 * 1000) && timeDiff <= STALE_THRESHOLD) {
+                        this._refreshAllPrices(AppState.data.shares || []);
                     }
 
-                    // User Feedback: Confirm data is fresh
-                    ToastManager.show('Welcome Back - Refreshing Data...', 'refresh');
+                    // TRADITIONAL RESUME: If away for > 15 minutes
+                    if (timeDiff > STALE_THRESHOLD) {
+                        // Mark as stale for long sleeps (> 6 hours)
+                        if (timeDiff > (6 * 60 * 60 * 1000)) {
+                            AppState.health.status = 'stale';
+                            if (this.headerLayout) this.headerLayout.updateConnectionStatus(true, 'stale');
+                        }
 
-                    // Trigger Refresh AND Reset Timer
+                        // User Feedback
+                        ToastManager.show('Welcome Back - Refreshing Data...', 'refresh');
+
+                        // Full Refresh
+                        this._refreshAllPrices(AppState.data.shares || [], true);
+                    }
+
+                    // Reset Timer
                     this._lastBackgroundTime = 0;
-                    this._refreshAllPrices(AppState.data.shares || [], true);
                 }
             }
         });
@@ -1352,9 +1364,10 @@ export class AppController {
         }
 
         // 2. DRIFT/WAKE DETECTION
-        // If the gap since last check is significantly more than 30s, browser was likely sleeping
+        // If the gap since last check is significantly more than 30s, browser was likely sleeping.
+        // We align this with the 15-minute stale threshold to prevent premature orange alerts.
         const tickGap = now - this._lastHealthTick;
-        if (tickGap > 45000) { // 15s leeway over the 30s interval
+        if (tickGap > 15 * 60 * 1000) { // 15 Minutes
             newStatus = 'stale';
         }
         this._lastHealthTick = now;

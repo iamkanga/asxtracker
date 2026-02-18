@@ -300,6 +300,22 @@ export const AppState = {
         this._triggerSync();
     },
 
+    /**
+     * Cascades global category theme colors down to individual assets in memory.
+     * This ensures the UI remains consistent even if individual asset documents
+     * have old/overridden color values in Firestore.
+     */
+    cascadeCategoryColors() {
+        if (!this.data.cash || !this.preferences.userCategories) return;
+
+        this.data.cash.forEach(asset => {
+            const theme = this.preferences.userCategories.find(c => c.id === asset.category);
+            if (theme && theme.color) {
+                asset.color = theme.color;
+            }
+        });
+    },
+
     _triggerSync() {
         if (this.onPersistenceUpdate && typeof this.onPersistenceUpdate === 'function') {
             const payload = {
@@ -553,13 +569,7 @@ export const AppState = {
         this.preferences.userCategories = cats;
 
         // 2. Cascade Color change to all assets in this category (Consistency)
-        if (categoryObj.color && this.data.cash) {
-            this.data.cash.forEach(asset => {
-                if (asset.category === categoryObj.id) {
-                    asset.color = categoryObj.color;
-                }
-            });
-        }
+        this.cascadeCategoryColors();
 
         localStorage.setItem(STORAGE_KEYS.USER_CATEGORIES, JSON.stringify(cats));
         this._triggerSync();
@@ -570,12 +580,30 @@ export const AppState = {
         if (index === -1) return;
 
         this.preferences.userCategories.splice(index, 1);
+
+        // Clear color from assets in this category so they release their claim
+        if (this.data.cash) {
+            this.data.cash.forEach(asset => {
+                if (asset.category === categoryId) {
+                    delete asset.color;
+                }
+            });
+        }
+
         localStorage.setItem(STORAGE_KEYS.USER_CATEGORIES, JSON.stringify(this.preferences.userCategories));
         this._triggerSync();
     },
 
     clearAllUserCategories() {
         this.preferences.userCategories = [];
+
+        // Clear all asset color overrides
+        if (this.data.cash) {
+            this.data.cash.forEach(asset => {
+                delete asset.color;
+            });
+        }
+
         localStorage.setItem(STORAGE_KEYS.USER_CATEGORIES, JSON.stringify([]));
         this._triggerSync();
     },

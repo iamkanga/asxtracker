@@ -221,26 +221,30 @@ export class UserStore {
     }
 
     /**
-     * Strips undefined values from an object to prevent Firestore errors.
+     * Strips redundant 'id' from the top-level object to prevent Firestore duplication,
+     * but PRESERVES it for nested objects where 'id' is a semantic key (like category themes).
      * @param {Object} data 
+     * @param {boolean} isNested - internal recursion flag
      * @returns {Object}
      */
-    _sanitizeData(data) {
-        if (data === undefined) return null; // Convert top-level undefined to null
+    _sanitizeData(data, isNested = false) {
+        if (data === undefined) return null;
         if (data === null || typeof data !== 'object') return data;
 
         if (Array.isArray(data)) {
-            return data.map(item => this._sanitizeData(item));
+            return data.map(item => this._sanitizeData(item, true));
         }
 
         const sanitized = {};
         Object.keys(data).forEach(key => {
-            // FIX (Directive 045): Aggressively strip 'id' from internal data to prevent Firestore collision
-            if (key === 'id') return;
+            // ONLY strip 'id' if we are at the top level of a document save.
+            // If we are inside an array or a nested object, the 'id' is likely 
+            // a critical identifier (e.g. for User Categories or Stock IDs).
+            if (!isNested && key === 'id') return;
 
             const value = data[key];
             if (value !== undefined) {
-                sanitized[key] = this._sanitizeData(value);
+                sanitized[key] = this._sanitizeData(value, true);
             }
         });
         return sanitized;

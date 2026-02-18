@@ -208,7 +208,6 @@ export class CashViewRenderer {
             </div>
             <div class="cash-grid-name">
                 ${asset.name}
-                ${asset.category === 'other' ? `<span style="font-size: 9px; color: #aaa; margin-left: 5px;">[${asset.color || 'NO-CLR'}]</span>` : ''}
             </div>
             <div class="cash-grid-balance ${asset.balance > 0 ? CSS_CLASSES.CASH_VALUE_POSITIVE : asset.balance < 0 ? CSS_CLASSES.CASH_VALUE_NEGATIVE : ''}" 
                  style="${asset.balance === 0 ? 'color: var(--color-accent);' : ''}">

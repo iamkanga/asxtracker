@@ -38,10 +38,9 @@ export const PORTFOLIO_ID = 'portfolio';
 export const SEARCH_WATCHLIST_ID = 'search';
 
 export const ASSET_CUSTOM_COLORS = [
-    '#FF0000', '#0000FF', '#00FF00', '#FFFF00', '#FF00FF', '#00FFFF',
-    '#FF8000', '#8000FF', '#FF0080', '#008080', '#000080', '#800000',
-    '#808000', '#008000', '#C0C0C0', '#603000',
-    '#00D2FF', '#7B2FF7', '#FFD700', '#FF4D4D', '#2ECC71', '#E67E22'
+    '#FF6347', '#800000', '#E67E22', '#F4A460', '#FFD700', '#808000',
+    '#2ECC71', '#008000', '#008080', '#00D2FF', '#4169E1', '#000080',
+    '#7B2FF7', '#EE82EE', '#FF1493', '#603000', '#C0C0C0'
 ];
 
 export const WATCHLIST_MODES = {
