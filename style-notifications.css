@@ -2575,7 +2575,7 @@ input:checked+.slider:before {
     left: 0;
     width: 100vw;
     height: 100vh;
-    z-index: 99999 !important;
+    z-index: 20000 !important;
     display: flex !important;
     justify-content: center;
     align-items: center;

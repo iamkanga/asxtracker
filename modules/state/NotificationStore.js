@@ -41,6 +41,7 @@ export class NotificationStore {
         this.isReady = false; // LOGIC HARDENING: Race condition guard
         this._notificationDebounceTimer = null; // DEBOUNCE: Timer for notification updates
         this.dismissedAnnouncements = new Set(); // TRACK: Dismissed Market Index alert IDs
+        this.readAnnouncements = new Set(); // TRACK: Tapped Market Index alert IDs (ghosted)
 
         // --- CACHE: Memoization for expensive alert computations ---
         this._globalAlertsCache = null;
@@ -64,6 +65,11 @@ export class NotificationStore {
                 if (stored) {
                     const parsed = JSON.parse(stored);
                     if (Array.isArray(parsed)) this.dismissedAnnouncements = new Set(parsed);
+                }
+                const storedRead = localStorage.getItem('asx_market_stream_read');
+                if (storedRead) {
+                    const parsedRead = JSON.parse(storedRead);
+                    if (Array.isArray(parsedRead)) this.readAnnouncements = new Set(parsedRead);
                 }
             } catch (e) { /* ignore */ }
 
@@ -1787,11 +1793,11 @@ export class NotificationStore {
         });
 
         // --- CALC ANNOUNCEMENTS COUNT ---
-        // Ensure we filter out any items that don't satisfy showing criteria OR are dismissed
+        // Ensure we filter out any items that don't satisfy showing criteria OR are dismissed/read
         const annCount = (this.marketIndexAlerts || [])
             .filter(a => {
                 const id = a.id || `${a.code}-${a.timestamp}`;
-                return !this.dismissedAnnouncements.has(id);
+                return !this.dismissedAnnouncements.has(id) && !this.readAnnouncements.has(id);
             })
             .length;
 
@@ -1871,6 +1877,29 @@ export class NotificationStore {
                 });
             } catch (e) {
                 console.warn('[NotificationStore] Failed to sync announcement dismissal:', e);
+            }
+        }
+    }
+
+    /**
+     * Marks an announcement as read explicitly.
+     */
+    async markAnnouncementRead(alertId) {
+        if (!alertId) return;
+        if (this.readAnnouncements.has(alertId)) return; // Already read
+        this.readAnnouncements.add(alertId);
+        localStorage.setItem('asx_market_stream_read', JSON.stringify([...this.readAnnouncements]));
+        this._notifyCountChange();
+
+        // SYNC: Optional Firestore sync depending on desired cross-device behaviour
+        if (this.userId) {
+            try {
+                const prefRef = doc(db, `artifacts/${APP_ID}/users/${this.userId}/preferences/config`);
+                await updateDoc(prefRef, {
+                    readMarketAlerts: arrayUnion(alertId)
+                });
+            } catch (e) {
+                // Not fatal
             }
         }
     }
@@ -2383,7 +2412,7 @@ export class NotificationStore {
             // "artifacts/asx-watchlist-app/alerts_stream"
             // Note: APP_ID is "asx-watchlist-app" defined at top
             const streamRef = collection(db, "artifacts", APP_ID, "alerts_stream");
-            const q = query(streamRef, limit(50));
+            const q = query(streamRef, orderBy('timestamp', 'desc'), limit(50));
 
             this.unsubscribeMarketIndex = onSnapshot(q, (snapshot) => {
                 const batches = [];

@@ -42,6 +42,28 @@ export class BriefingUI {
                 }
             });
         }
+
+        modal._notifHandler = () => {
+            if (document.body.contains(modal) && !modal.classList.contains(CSS_CLASSES.HIDDEN)) {
+                this._updateBadges(modal);
+            }
+        };
+        document.addEventListener(EVENTS.NOTIFICATION_UPDATE, modal._notifHandler);
+    }
+
+    static _updateBadges(modal) {
+        if (!notificationStore) return;
+        const counts = notificationStore.getBadgeCounts();
+
+        const annBadge = modal.querySelector('#briefing-announcement-badge');
+        if (annBadge) {
+            if (counts.announcements > 0) {
+                annBadge.textContent = counts.announcements > 99 ? '99+' : counts.announcements;
+                annBadge.style.display = 'flex';
+            } else {
+                annBadge.style.display = 'none';
+            }
+        }
     }
 
     static _renderModal() {
@@ -222,9 +244,10 @@ export class BriefingUI {
                             <i class="fas fa-heartbeat" style="font-size: 1.4rem; color: var(--color-accent);"></i>
                         </div>
 
-                        <!-- Announcements Icon (Bullhorn) -->
-                        <div style="opacity: 1; cursor: pointer; position: relative;" id="hero-announce-btn" title="Announcements">
-                            <i class="fas fa-bullhorn" style="font-size: 1.4rem; color: var(--color-accent);"></i>
+                        <!-- Announcements Icon (Newspaper) -->
+                        <div style="opacity: 1; cursor: pointer; position: relative; display: flex; align-items: center; gap: 2px;" id="hero-announce-btn" title="Announcements">
+                            <i class="fas fa-newspaper" style="font-size: 1.4rem; color: var(--color-accent);"></i>
+                            <span id="briefing-announcement-badge" style="color: var(--color-accent); font-size: 0.7rem; font-weight: 700; line-height: 1; display: none;"></span>
                         </div>
 
                         <!-- Portfolio Icon (Coffee Color) -->
@@ -289,6 +312,9 @@ export class BriefingUI {
                     });
                 };
             }
+
+            // Initialize Badges right after HTML is injected
+            this._updateBadges(modal);
 
             heroCard.querySelector('#hero-briefcase-btn').onclick = (e) => {
                 e.stopPropagation(); // Prevent card click
@@ -639,6 +665,11 @@ export class BriefingUI {
         if (modal._priceUnsub) {
             modal._priceUnsub();
             modal._priceUnsub = null;
+        }
+
+        if (modal._notifHandler) {
+            document.removeEventListener(EVENTS.NOTIFICATION_UPDATE, modal._notifHandler);
+            modal._notifHandler = null;
         }
 
         modal.classList.add(CSS_CLASSES.HIDDEN);

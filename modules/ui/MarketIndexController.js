@@ -45,7 +45,7 @@ export class MarketIndexController {
             }
         });
 
-        // Event Delegation for Dismiss Buttons
+        // Event Delegation for Dismiss Buttons and Code Pills
         this.listContainer.addEventListener('click', (e) => {
             const dismissBtn = e.target.closest('.stream-dismiss-btn');
             if (dismissBtn) {
@@ -53,6 +53,32 @@ export class MarketIndexController {
                 e.stopPropagation();
                 const alertId = dismissBtn.dataset.id;
                 this.dismissAlert(alertId);
+                return;
+            }
+
+            // If user clicks the code pill, spawn the stock details modal but leave the announcements modal open underneath.
+            // When they close the stock details modal, they will be right back here.
+            const codePill = e.target.closest('.code-pill');
+            if (codePill) {
+                e.preventDefault();
+                e.stopPropagation();
+                const code = codePill.dataset.code;
+                if (code) {
+                    document.dispatchEvent(new CustomEvent(EVENTS.ASX_CODE_CLICK, { detail: { code } }));
+                }
+                return; // Do not mark as read when just viewing the security
+            }
+
+            // Mark visually as tapped/read ONLY if the main body link is clicked
+            const bodyLink = e.target.closest('a.market-stream-item');
+            if (bodyLink) {
+                const wrapper = bodyLink.closest('.market-stream-item-wrapper');
+                const alertId = wrapper?.dataset.alertId;
+                if (wrapper && alertId) {
+                    notificationStore.markAnnouncementRead(alertId);
+                    wrapper.style.opacity = '0.5';
+                    wrapper.style.filter = 'grayscale(30%)';
+                }
             }
         });
 
@@ -118,9 +144,20 @@ export class MarketIndexController {
                     : date.toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
             }
 
-            const isCompany = alert.code && alert.code !== 'UNKNOWN';
+            // Extract ASX Code from Title if the provided code is missing, UNKNOWN, or just generic 'ASX'
+            let extractedCode = alert.code;
+            if ((!extractedCode || extractedCode === 'UNKNOWN' || extractedCode === 'ASX' || extractedCode === 'MARKET') && (alert.title || alert.headline)) {
+                const text = alert.title || alert.headline;
+                // Target titles starting with exactly 3-4 uppercase letters, e.g., "BHP - Announcement..." or "[RIO] ..."
+                const match = text.match(/^\[?([A-Z]{3,4})\]?\b/);
+                if (match) {
+                    extractedCode = match[1];
+                }
+            }
+
+            const isCompany = extractedCode && extractedCode !== 'UNKNOWN' && extractedCode !== 'ASX' && extractedCode !== 'MARKET';
             const badgeClass = isCompany ? 'badge-company' : 'badge-report';
-            const badgeText = isCompany ? alert.code : 'MARKET';
+            const badgeText = isCompany ? extractedCode : 'MARKET';
 
             // Phase 2: Link logic. 
             // Ideally links to local PDF viewer or external if provided.
@@ -128,19 +165,29 @@ export class MarketIndexController {
             const href = alert.link || '#';
             const target = alert.link ? '_blank' : '_self';
 
+            const isRead = notificationStore.readAnnouncements?.has(id);
+            const opacityStyle = isRead ? 'opacity: 0.5; filter: grayscale(30%);' : '';
+
             return `
-                <div class="market-stream-item-wrapper" style="position: relative; transition: all 0.3s ease;">
+                <div class="market-stream-item-wrapper" data-alert-id="${id}" style="position: relative; transition: all 0.3s ease; ${opacityStyle}">
                     <a href="${href}" target="${target}" class="market-stream-item">
                         <div class="stream-meta">
                             <span class="stream-badge ${badgeClass}">${badgeText}</span>
                             <span class="stream-time">${dateStr}</span>
                         </div>
                         <div class="stream-title" style="color: var(--text-color);">${alert.title || alert.headline}</div>
-                        <div class="stream-footer">
+                        <div class="stream-footer" style="padding-bottom: 4px;">
                             <span class="stream-source"><i class="fas fa-rss"></i> Market Index</span>
                             <i class="fas fa-external-link-alt" style="font-size: 0.7rem; opacity: 0.4; color: var(--color-accent);"></i>
                         </div>
                     </a>
+                    
+                    ${isCompany ? `
+                    <button class="code-pill" data-code="${extractedCode}" style="position: absolute; bottom: 8px; left: 16px; z-index: 10; border: 1px solid rgba(var(--color-accent-rgb, 100, 150, 255), 0.4); border-radius: 4px; background: rgba(30, 30, 30, 0.9); color: var(--color-accent, #6496ff); padding: 4px 10px; font-size: 0.75rem; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.2);" title="View ${extractedCode} Details">
+                        <i class="fas fa-search-dollar"></i> View ${extractedCode}
+                    </button>
+                    ` : ''}
+
                     <button class="stream-dismiss-btn" data-id="${id}" title="Dismiss"
                         style="position: absolute; top: 12px; right: 12px; background: transparent; border: none; color: var(--text-muted); cursor: pointer; padding: 5px; z-index: 5; opacity: 0.3; transition: opacity 0.2s;">
                         <i class="fas fa-times" style="font-size: 0.8rem;"></i>

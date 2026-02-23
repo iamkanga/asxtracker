@@ -255,8 +255,8 @@ export class SidebarCommandCenter {
                             <i class="fas fa-calculator command-icon"></i>
                         </button>
                         <button class="command-grid-item" id="nav-announcements" title="Announcements" style="position: relative;">
-                            <i class="fas fa-bullhorn command-icon"></i>
-                            ${this.annCount > 0 ? `<span class="notification-badge" style="position: absolute; top: 8px; right: 5px; font-size: 0.7rem; color: var(--color-accent); display: flex; align-items: center; justify-content: center; font-weight: 800; z-index: 10;">${this.annCount}</span>` : ''}
+                            <i class="fas fa-newspaper command-icon"></i>
+                            ${this.annCount > 0 ? `<span class="notification-badge" style="position: absolute; top: 6px; right: 12px; font-size: 0.7rem; color: var(--color-accent); display: flex; align-items: center; justify-content: center; font-weight: 700; z-index: 10;">${this.annCount}</span>` : ''}
                         </button>
                         <button class="command-grid-item" id="nav-visuals" title="Visual Style">
                             <i class="fas fa-palette command-icon"></i>

@@ -391,8 +391,9 @@ export class NotificationUI {
                         <button id="${IDS.BTN_DAILY_BRIEFING}" title="${UI_LABELS.DAILY_BRIEFING_TITLE}" style="background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem;">
                             <i class="fas fa-coffee"></i>
                         </button>
-                        <button id="${IDS.BTN_ANNOUNCEMENTS}" title="${UI_LABELS.ANNOUNCEMENTS_TITLE}" style="background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem; position: relative;">
-                            <i class="fas fa-bullhorn"></i>
+                        <button id="${IDS.BTN_ANNOUNCEMENTS}" title="${UI_LABELS.ANNOUNCEMENTS_TITLE}" style="background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem; display: flex; align-items: center; gap: 2px;">
+                            <i class="fas fa-newspaper"></i>
+                            <span id="notif-announcement-badge" class="${CSS_CLASSES.HIDDEN}" style="color: inherit; font-size: 0.7rem; font-weight: 700; line-height: 1;">0</span>
                         </button>
                         <button id="${IDS.NOTIF_SETTINGS_BTN}" title="${UI_LABELS.NOTIFICATION_SETTINGS}" style="background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem;">
                             <i class="fas ${UI_ICONS.PEN}"></i>
@@ -437,8 +438,20 @@ export class NotificationUI {
     }
 
     static _updateHeaderBadges(modal) {
-        // Count removed per user request. 
-        // Logic kept for potential future use or other badges.
+        if (!notificationStore) return;
+        const counts = notificationStore.getBadgeCounts();
+
+        const annBadge = modal.querySelector('#notif-announcement-badge');
+        if (annBadge) {
+            if (counts.announcements > 0) {
+                annBadge.textContent = counts.announcements > 99 ? '99+' : counts.announcements;
+                annBadge.classList.remove(CSS_CLASSES.HIDDEN);
+                annBadge.style.display = 'flex';
+            } else {
+                annBadge.classList.add(CSS_CLASSES.HIDDEN);
+                annBadge.style.display = 'none';
+            }
+        }
     }
 
     static _close(modal) {
