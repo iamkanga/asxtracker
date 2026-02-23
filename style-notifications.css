@@ -2638,11 +2638,13 @@ input:checked+.slider:before {
     transition: all 0.3s ease;
 }
 
-.market-stream-item-wrapper.is-read {
+.market-stream-item-wrapper.is-read .market-stream-item {
     opacity: 0.35 !important;
     filter: grayscale(80%) !important;
-    pointer-events: auto;
-    /* Ensure still clickable if needed */
+}
+
+.market-stream-item-wrapper.is-read .stream-dismiss-btn {
+    opacity: 0.2 !important;
 }
 
 .market-stream-item {

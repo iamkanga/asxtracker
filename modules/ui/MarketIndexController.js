@@ -65,9 +65,12 @@ export class MarketIndexController {
                 // Add class for persistence
                 wrapper.classList.add('is-read');
 
-                // Force immediate visual ghosting (Fallback if CSS class is being stubborn)
-                wrapper.style.opacity = '0.35';
-                wrapper.style.filter = 'grayscale(80%)';
+                // Force immediate visual ghosting on the LINK ONLY (Fallback if CSS class is being stubborn)
+                const bodyLink = wrapper.querySelector('.market-stream-item');
+                if (bodyLink) {
+                    bodyLink.style.opacity = '0.35';
+                    bodyLink.style.filter = 'grayscale(80%)';
+                }
             }
         });
 
