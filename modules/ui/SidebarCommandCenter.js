@@ -256,7 +256,7 @@ export class SidebarCommandCenter {
                         </button>
                         <button class="command-grid-item" id="nav-announcements" title="Announcements" style="position: relative;">
                             <i class="fas fa-newspaper command-icon"></i>
-                            ${this.annCount > 0 ? `<span class="notification-badge" style="position: absolute; top: 6px; right: 12px; font-size: 0.7rem; color: var(--color-accent); display: flex; align-items: center; justify-content: center; font-weight: 700; z-index: 10;">${this.annCount}</span>` : ''}
+                            ${this.annCount > 0 ? `<span class="notification-badge" style="position: absolute; top: 8px; right: 14px; font-size: 0.65rem; color: var(--color-accent); display: flex; align-items: center; justify-content: center; font-weight: 500; z-index: 10;">${this.annCount}</span>` : ''}
                         </button>
                         <button class="command-grid-item" id="nav-visuals" title="Visual Style">
                             <i class="fas fa-palette command-icon"></i>
@@ -277,14 +277,14 @@ export class SidebarCommandCenter {
                     <div class="command-grid icon-only-grid">
                         <button class="command-grid-item" id="act-add" title="${addLabel}" style="position: relative;">
                             <i class="fas fa-plus-circle command-icon"></i>
-                            ${shareCount > 0 ? `<span class="notification-badge" style="position: absolute; top: 8px; right: 8px; font-size: 0.7rem; color: var(--color-accent); display: flex; align-items: center; justify-content: center; font-weight: 800; z-index: 10;">${shareCount}</span>` : ''}
+                            ${shareCount > 0 ? `<span class="notification-badge" style="position: absolute; top: 8px; right: 8px; font-size: 0.65rem; color: var(--color-accent); display: flex; align-items: center; justify-content: center; font-weight: 500; z-index: 10;">${shareCount}</span>` : ''}
                         </button>
                         <button class="command-grid-item" id="act-search" title="Search ASX Symbols">
                             <i class="fas fa-search command-icon"></i>
                         </button>
                         <button class="command-grid-item" id="act-create-wl" title="New Watchlist" style="position: relative;">
                             <i class="fas fa-folder-plus command-icon"></i>
-                            ${watchlistCount > 0 ? `<span class="notification-badge" style="position: absolute; top: 8px; right: 14px; font-size: 0.7rem; color: var(--color-accent); display: flex; align-items: center; justify-content: center; font-weight: 800; z-index: 10;">${watchlistCount}</span>` : ''}
+                            ${watchlistCount > 0 ? `<span class="notification-badge" style="position: absolute; top: 8px; right: 12px; font-size: 0.65rem; color: var(--color-accent); display: flex; align-items: center; justify-content: center; font-weight: 500; z-index: 10;">${watchlistCount}</span>` : ''}
                         </button>
                         <button class="command-grid-item" id="act-edit-wl" title="Edit Watchlist">
                             <div class="composite-icon">
@@ -297,7 +297,7 @@ export class SidebarCommandCenter {
                             <span class="command-icon" style="display: flex; align-items: center; justify-content: center; width: 3.5rem; height: 3.5rem;">
                                 ${kangarooSVG}
                             </span>
-                            ${notifCount > 0 ? `<span class="notification-badge" style="position: absolute; top: 28px; right: 8px; font-size: 0.7rem; color: var(--color-accent); display: flex; align-items: center; justify-content: center; font-weight: 800; z-index: 10;">${notifCount}</span>` : ''}
+                            ${notifCount > 0 ? `<span class="notification-badge" style="position: absolute; top: 26px; right: 8px; font-size: 0.65rem; color: var(--color-accent); display: flex; align-items: center; justify-content: center; font-weight: 500; z-index: 10;">${notifCount}</span>` : ''}
                         </button>
                         <button class="command-grid-item" id="act-alert-config" title="Alert Settings">
                             <div class="composite-icon">

@@ -45,40 +45,52 @@ export class MarketIndexController {
             }
         });
 
-        // Event Delegation for Dismiss Buttons and Code Pills
+        // Use pointerdown to capture the "read" intent before navigation occurs
+        this.listContainer.addEventListener('pointerdown', (e) => {
+            const wrapper = e.target.closest('.market-stream-item-wrapper');
+            if (!wrapper) return;
+
+            const alertId = wrapper.getAttribute('data-alert-id');
+            if (!alertId) return;
+
+            // 1. If we hit a button, we don't treat the whole card as "read" yet
+            if (e.target.closest('.stream-dismiss-btn') || e.target.closest('.code-pill')) {
+                return;
+            }
+
+            // 2. Mark as Read
+            if (alertId && !notificationStore.readAnnouncements.has(alertId)) {
+                notificationStore.markAnnouncementRead(alertId);
+
+                // Add class for persistence
+                wrapper.classList.add('is-read');
+
+                // Force immediate visual ghosting (Fallback if CSS class is being stubborn)
+                wrapper.style.opacity = '0.35';
+                wrapper.style.filter = 'grayscale(80%)';
+            }
+        });
+
+        // Click handler for buttons (since they need preventDefault/stopPropagation)
         this.listContainer.addEventListener('click', (e) => {
             const dismissBtn = e.target.closest('.stream-dismiss-btn');
             if (dismissBtn) {
                 e.preventDefault();
-                e.stopPropagation();
-                const alertId = dismissBtn.dataset.id;
+                e.stopImmediatePropagation();
+                const alertId = dismissBtn.dataset.id || dismissBtn.closest('.market-stream-item-wrapper')?.getAttribute('data-alert-id');
                 this.dismissAlert(alertId);
                 return;
             }
 
-            // If user clicks the code pill, spawn the stock details modal but leave the announcements modal open underneath.
-            // When they close the stock details modal, they will be right back here.
             const codePill = e.target.closest('.code-pill');
             if (codePill) {
                 e.preventDefault();
-                e.stopPropagation();
+                e.stopImmediatePropagation();
                 const code = codePill.dataset.code;
                 if (code) {
                     document.dispatchEvent(new CustomEvent(EVENTS.ASX_CODE_CLICK, { detail: { code } }));
                 }
-                return; // Do not mark as read when just viewing the security
-            }
-
-            // Mark visually as tapped/read ONLY if the main body link is clicked
-            const bodyLink = e.target.closest('a.market-stream-item');
-            if (bodyLink) {
-                const wrapper = bodyLink.closest('.market-stream-item-wrapper');
-                const alertId = wrapper?.dataset.alertId;
-                if (wrapper && alertId) {
-                    notificationStore.markAnnouncementRead(alertId);
-                    wrapper.style.opacity = '0.5';
-                    wrapper.style.filter = 'grayscale(30%)';
-                }
+                return;
             }
         });
 
@@ -166,10 +178,10 @@ export class MarketIndexController {
             const target = alert.link ? '_blank' : '_self';
 
             const isRead = notificationStore.readAnnouncements?.has(id);
-            const opacityStyle = isRead ? 'opacity: 0.5; filter: grayscale(30%);' : '';
+            const readClass = isRead ? 'is-read' : '';
 
             return `
-                <div class="market-stream-item-wrapper" data-alert-id="${id}" style="position: relative; transition: all 0.3s ease; ${opacityStyle}">
+                <div class="market-stream-item-wrapper ${readClass}" data-alert-id="${id}">
                     <a href="${href}" target="${target}" class="market-stream-item">
                         <div class="stream-meta">
                             <span class="stream-badge ${badgeClass}">${badgeText}</span>
@@ -187,7 +199,6 @@ export class MarketIndexController {
                         <i class="fas fa-search-dollar"></i> View ${extractedCode}
                     </button>
                     ` : ''}
-
                     <button class="stream-dismiss-btn" data-id="${id}" title="Dismiss"
                         style="position: absolute; top: 12px; right: 12px; background: transparent; border: none; color: var(--text-muted); cursor: pointer; padding: 5px; z-index: 5; opacity: 0.3; transition: opacity 0.2s;">
                         <i class="fas fa-times" style="font-size: 0.8rem;"></i>

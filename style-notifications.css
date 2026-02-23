@@ -2633,14 +2633,26 @@ input:checked+.slider:before {
     padding: 0;
 }
 
+.market-stream-item-wrapper {
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.market-stream-item-wrapper.is-read {
+    opacity: 0.35 !important;
+    filter: grayscale(80%) !important;
+    pointer-events: auto;
+    /* Ensure still clickable if needed */
+}
+
 .market-stream-item {
-    padding: 16px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    background: #000000;
-    transition: background 0.2s;
-    cursor: pointer;
-    text-decoration: none;
     display: block;
+    padding: 16px;
+    background: #000000;
+    text-decoration: none;
+    cursor: pointer;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    transition: background 0.2s;
 }
 
 .market-stream-item:last-child {

@@ -245,9 +245,9 @@ export class BriefingUI {
                         </div>
 
                         <!-- Announcements Icon (Newspaper) -->
-                        <div style="opacity: 1; cursor: pointer; position: relative; display: flex; align-items: center; gap: 2px;" id="hero-announce-btn" title="Announcements">
+                        <div style="opacity: 1; cursor: pointer; position: relative; display: flex; align-items: center; gap: 1px;" id="hero-announce-btn" title="Announcements">
                             <i class="fas fa-newspaper" style="font-size: 1.4rem; color: var(--color-accent);"></i>
-                            <span id="briefing-announcement-badge" style="color: var(--color-accent); font-size: 0.7rem; font-weight: 700; line-height: 1; display: none;"></span>
+                            <span id="briefing-announcement-badge" style="color: var(--color-accent); font-size: 0.65rem; font-weight: 500; line-height: 1; display: none;"></span>
                         </div>
 
                         <!-- Portfolio Icon (Coffee Color) -->

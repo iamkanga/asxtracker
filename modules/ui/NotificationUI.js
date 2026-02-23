@@ -391,9 +391,9 @@ export class NotificationUI {
                         <button id="${IDS.BTN_DAILY_BRIEFING}" title="${UI_LABELS.DAILY_BRIEFING_TITLE}" style="background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem;">
                             <i class="fas fa-coffee"></i>
                         </button>
-                        <button id="${IDS.BTN_ANNOUNCEMENTS}" title="${UI_LABELS.ANNOUNCEMENTS_TITLE}" style="background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem; display: flex; align-items: center; gap: 2px;">
+                        <button id="${IDS.BTN_ANNOUNCEMENTS}" title="${UI_LABELS.ANNOUNCEMENTS_TITLE}" style="background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem; display: flex; align-items: center; gap: 1px;">
                             <i class="fas fa-newspaper"></i>
-                            <span id="notif-announcement-badge" class="${CSS_CLASSES.HIDDEN}" style="color: inherit; font-size: 0.7rem; font-weight: 700; line-height: 1;">0</span>
+                            <span id="notif-announcement-badge" class="${CSS_CLASSES.HIDDEN}" style="color: inherit; font-size: 0.65rem; font-weight: 500; line-height: 1;">0</span>
                         </button>
                         <button id="${IDS.NOTIF_SETTINGS_BTN}" title="${UI_LABELS.NOTIFICATION_SETTINGS}" style="background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem;">
                             <i class="fas ${UI_ICONS.PEN}"></i>
