@@ -343,35 +343,39 @@ export class DashboardViewRenderer {
      */
     _isMarketOpen(code) {
         const now = new Date();
-        const sydneyParts = new Intl.DateTimeFormat('en-GB', {
-            timeZone: 'Australia/Sydney',
-            hour: 'numeric', minute: 'numeric', weekday: 'short', hour12: false
-        }).formatToParts(now);
-
-        const getPart = (type) => sydneyParts.find(p => p.type === type).value;
-        const day = getPart('weekday'); // Mon, Tue, Wed, Thu, Fri, Sat, Sun
-        const hour = parseInt(getPart('hour'));
-        const minute = parseInt(getPart('minute'));
         // Use UTC to ensure it works regardless of User's local timezone
         const utcDay = now.getUTCDay(); // 0-6 (Sun-Sat)
         const utcHours = now.getUTCHours();
         const utcMins = now.getUTCMinutes();
         const utcTotal = utcHours * 60 + utcMins;
 
+        // Use Sydney time for ASX-related checks
+        const sydneyParts = new Intl.DateTimeFormat('en-GB', {
+            timeZone: 'Australia/Sydney',
+            hour: 'numeric', minute: 'numeric', weekday: 'short', hour12: false
+        }).formatToParts(now);
+        const getPart = (type) => sydneyParts.find(p => p.type === type).value;
+        const sydHour = parseInt(getPart('hour'));
+        const sydMin = parseInt(getPart('minute'));
+        const sydTotal = sydHour * 60 + sydMin;
+        const sydDay = getPart('weekday'); // Mon-Sun
+        const isSydWeekend = (sydDay === 'Sat' || sydDay === 'Sun');
+
         // 1. CRYPTO (Always Open)
         if (code.includes('BTC') || code.includes('ETH')) return true;
 
-        // 2. ASX (Sydney 10:00-16:00 AEDT -> UTC 23:00-05:00)
-        if (code.includes('.AX') || code.includes('^AXJO') || code.includes('^AORD')) {
-            // ASX is active roughly 23:00 UTC (day before) to 05:00 UTC (today)
-            // Saturday/Sunday in Sydney (Fri/Sat 23:00 UTC to Sun/Mon 05:00 UTC)
-            if (utcDay === 6 || utcDay === 0) return false;
-            return utcTotal >= (23 * 60) || utcTotal < (5 * 60 + 30);
+        // 2. ASX INDICES (Sydney 10:00-16:00)
+        // Covers: ^AXJO, ^AXKO, ^AORD, XJO, XKO, XAO, YAP=F (ASX SPI Futures follow ASX hours)
+        const ASX_CODES = ['^AXJO', '^AXKO', '^AORD', 'XJO', 'XKO', 'XAO'];
+        const isASX = code.includes('.AX') || ASX_CODES.includes(code) || code === 'YAP=F';
+        if (isASX) {
+            if (isSydWeekend) return false;
+            return sydTotal >= (10 * 60) && sydTotal < (16 * 60 + 10); // 10:00 - 16:10 (inc. closing auction)
         }
 
         // 3. UK & EUROPE (London/EU 08:00-16:30 UTC)
         if (code.includes('FTSE') || code.includes('STOXX') || code.includes('EU50')) {
-            if (utcDay === 0 || utcDay === 6) return false; // Weekend
+            if (utcDay === 0 || utcDay === 6) return false;
             return utcTotal >= (8 * 60) && utcTotal < (16 * 60 + 30);
         }
 
@@ -388,15 +392,21 @@ export class DashboardViewRenderer {
         }
 
         // 6. FOREX (24/5 -> Sunday 22:00 to Friday 22:00 UTC)
-        if (code.includes('=X')) {
+        // Covers: codes with =X suffix AND normalized codes like AUDUSD, AUDTHB, USDTHB
+        const FOREX_CODES = ['AUDUSD', 'AUDTHB', 'AUDGBP', 'AUDEUR', 'AUDJPY', 'AUDNZD', 'USDTHB'];
+        const isForex = code.includes('=X') || FOREX_CODES.includes(code);
+        if (isForex) {
             if (utcDay === 6) return false; // Saturday (Closed)
             if (utcDay === 0 && utcTotal < (22 * 60)) return false; // Sunday before open
             if (utcDay === 5 && utcTotal > (22 * 60)) return false; // Friday after close
             return true;
         }
 
-        // 7. FUTURES (23/5 Markets -> 23:00 Sun to 21:00 Fri UTC)
-        if (code.includes('=F') || code.includes('-F')) {
+        // 7. FUTURES & COMMODITIES (23/5 Markets -> 23:00 Sun to 21:00 Fri UTC)
+        // Covers: codes with =F suffix, legacy commodity codes (GCW00, SIW00, BZW00), NICKEL
+        const COMMODITY_CODES = ['GCW00', 'SIW00', 'BZW00', 'NICKEL'];
+        const isFutures = code.includes('=F') || code.includes('-F') || COMMODITY_CODES.includes(code);
+        if (isFutures) {
             if (utcDay === 6) return false; // Saturday (Closed)
             if (utcDay === 0 && utcTotal < (23 * 60)) return false; // Sun before open
             if (utcDay === 5 && utcTotal > (21 * 60)) return false; // Fri after close
@@ -405,11 +415,9 @@ export class DashboardViewRenderer {
             return true;
         }
 
-        // Default: Mon-Fri Business Hours (Local User Perspective)
-        const localDay = now.getDay();
-        const localHours = now.getHours();
-        if (localDay === 0 || localDay === 6) return false;
-        return localHours >= 9 && localHours < 17;
+        // Default: Use Sydney business hours as fallback (NOT user's local timezone)
+        if (isSydWeekend) return false;
+        return sydTotal >= (10 * 60) && sydTotal < (16 * 60);
     }
 
     /**
