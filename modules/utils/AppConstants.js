@@ -416,7 +416,9 @@ export const UI_ICONS = {
     PIN: 'fa-thumbtack',
     COG: 'fa-cog',
     MARK_READ: 'fa-check-double',
-    SYNC: 'fa-sync-alt'
+    SYNC: 'fa-sync-alt',
+    ANNOUNCEMENTS: 'fa-satellite-dish',
+    CALCULATOR: 'fa-calculator'
 };
 
 export const HTML_TEMPLATES = {

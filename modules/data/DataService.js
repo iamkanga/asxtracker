@@ -521,8 +521,28 @@ export class DataService {
             console.warn("DataService: API returned completely empty data payload. This may indicate a temporary backend error.");
         }
 
-        // FULL NORMALIZATION: Both 'prices' and 'dashboard' should be in the Map
-        const allItems = [...items, ...dashboardData];
+        // Premarket Zeroing Logic: 
+        // Between 7:00 AM (Reset) and 10:00 AM (Market Open) Sydney time on trading days,
+        // we force the watchlist to show 0.00% by treating Yesterday's Price as the baseline.
+        const nowSydney = new Date(new Date().toLocaleString("en-US", { timeZone: "Australia/Sydney" }));
+        const day = nowSydney.getDay();
+        const hr = nowSydney.getHours();
+
+        // Is it a weekday (Mon-Fri) and in the 7-10am window?
+        const isTradingDay = day >= 1 && day <= 5;
+        const isPremarket = (hr >= 7 && hr < 10);
+
+        // Optional: Add basic Holiday check for consistency with NotificationStore
+        const isHoliday = ((m, d) => {
+            if (m === 1 && d === 1) return true;  // New Year
+            if (m === 1 && d === 26) return true; // Australia Day
+            if (m === 4 && d === 25) return true; // ANZAC Day
+            if (m === 12 && d === 25) return true; // Christmas
+            if (m === 12 && d === 26) return true; // Boxing Day
+            return false;
+        })(nowSydney.getMonth() + 1, nowSydney.getDate());
+
+        const shouldZero = isTradingDay && isPremarket && !isHoliday;
 
         allItems.forEach(item => {
             // ROBUST KEY LOOKUP: Support both ASXCode (API Standard) and code (Normalized)
@@ -531,15 +551,14 @@ export class DataService {
             // Skip invalid entries after normalization
             if (!code || code === 'UNDEFINED') return;
 
-            // DIAGNOSTIC (One-Time): Check for Day High/Low keys AND VALUES
-            // if (code === 'ANZ' || code === 'WOW') {
-            // }
-
-            // Skip invalid entries after normalization
-            if (!code) return;
-
             const live = parseFloat(item.LivePrice || item.live || 0);
-            const prevClose = parseFloat(item.PrevClose || item.prevClose || 0);
+            let prevClose = parseFloat(item.PrevClose || item.prevClose || 0);
+
+            // APPLIED PRE-MARKET ZEROING: 
+            // If we are in the clean-slate window, Yesterday's Price becomes the starting point.
+            if (shouldZero && live > 0) {
+                prevClose = live;
+            }
 
             // Ensure numbers are valid
             const isLiveValid = !isNaN(live);
@@ -557,18 +576,15 @@ export class DataService {
             // Set the map key using the strictly normalized code
             normalizedPrices.set(code, {
                 code: code,
-                name: item.name || item.CompanyName || item.companyName || '', // Support both casings
+                name: item.name || item.CompanyName || item.companyName || '',
                 live: isLiveValid ? live : 0,
                 prevClose: isPrevValid ? prevClose : 0,
-                // ROBUST NORMALIZATION: Check multiple casing variants from API/Sheet for 52-WEEK data ONLY
-                // FIX: Remove fallback to daily .High/.Low which causes false 52W alerts
                 high: parseFloat(item.H52 || item.High52 || item.high52 || item.high_52 || item.high || 0),
                 low: parseFloat(item.L52 || item.Low52 || item.low52 || item.low_52 || item.low || 0),
                 pe: parseFloat(item.PE || item.pe || 0),
                 volume: parseInt(item.Volume || 0),
                 change: change,
                 pctChange: pctChange,
-                // NEW METADATA (Enriched)
                 sector: item.Sector || item.sector || '',
                 industry: item.Industry || item.industry || '',
                 type: item.Type || item.type || 'Share',

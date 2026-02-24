@@ -387,21 +387,21 @@ export class NotificationUI {
                 
                 <div class="${CSS_CLASSES.MODAL_HEADER}">
                     <h2 class="${CSS_CLASSES.MODAL_TITLE}">${UI_LABELS.NOTIFICATIONS_TITLE}</h2>
-                    <div style="margin-left: auto; display: flex; gap: 15px; align-items: center;">
-                        <button id="${IDS.BTN_DAILY_BRIEFING}" title="${UI_LABELS.DAILY_BRIEFING_TITLE}" style="background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem;">
+                    <div style="margin-left: auto; display: flex; gap: 8px; align-items: center;">
+                        <button id="${IDS.BTN_DAILY_BRIEFING}" title="${UI_LABELS.DAILY_BRIEFING_TITLE}" style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem;">
                             <i class="fas fa-coffee"></i>
                         </button>
-                        <button id="${IDS.BTN_ANNOUNCEMENTS}" title="${UI_LABELS.ANNOUNCEMENTS_TITLE}" style="background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem; display: flex; align-items: center; gap: 1px;">
-                            <i class="fas fa-newspaper"></i>
-                            <span id="notif-announcement-badge" class="${CSS_CLASSES.HIDDEN}" style="color: inherit; font-size: 0.65rem; font-weight: 500; line-height: 1;">0</span>
+                        <button id="${IDS.BTN_ANNOUNCEMENTS}" title="${UI_LABELS.ANNOUNCEMENTS_TITLE}" style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem; position: relative;">
+                            <i class="fas ${UI_ICONS.ANNOUNCEMENTS}"></i>
+                            <span id="notif-announcement-badge" class="${CSS_CLASSES.HIDDEN}" style="position: absolute; top: 4px; right: 4px; color: inherit; font-size: 0.65rem; font-weight: 500; line-height: 1;">0</span>
                         </button>
-                        <button id="${IDS.NOTIF_SETTINGS_BTN}" title="${UI_LABELS.NOTIFICATION_SETTINGS}" style="background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem;">
+                        <button id="${IDS.NOTIF_SETTINGS_BTN}" title="${UI_LABELS.NOTIFICATION_SETTINGS}" style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem;">
                             <i class="fas ${UI_ICONS.PEN}"></i>
                         </button>
-                        <button id="${IDS.NOTIF_MARK_READ_BTN}" title="${UI_LABELS.DISMISS_BADGE}" style="background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem;">
-                             <div class="${CSS_CLASSES.DISMISS_ICON_WRAPPER}" style="width: 32px; height: 32px; display: inline-block;"></div>
+                        <button id="${IDS.NOTIF_MARK_READ_BTN}" title="${UI_LABELS.DISMISS_BADGE}" style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem;">
+                             <div class="${CSS_CLASSES.DISMISS_ICON_WRAPPER}" style="width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;"></div>
                         </button>
-                        <button class="${CSS_CLASSES.MODAL_CLOSE_BTN}" title="${UI_LABELS.CLOSE}">
+                        <button class="${CSS_CLASSES.MODAL_CLOSE_BTN}" title="${UI_LABELS.CLOSE}" style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;">
                             <i class="fas ${UI_ICONS.CLOSE}"></i>
                         </button>
                     </div>

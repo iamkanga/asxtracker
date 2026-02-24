@@ -237,21 +237,21 @@ export class BriefingUI {
                     </div>
 
                     <!-- Right: Actions (Market Pulse, Announcements & Portfolio) -->
-                    <div style="display: flex; gap: 16px; align-items: center;">
+                    <div style="display: flex; gap: 8px; align-items: center;">
                         
                         <!-- Market Pulse Icon (Coffee Color) -->
-                        <div style="opacity: 1; cursor: pointer;" id="hero-pulse-btn" title="Market Pulse">
+                        <div style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; cursor: pointer; opacity: 1;" id="hero-pulse-btn" title="Market Pulse">
                             <i class="fas fa-heartbeat" style="font-size: 1.4rem; color: var(--color-accent);"></i>
                         </div>
 
-                        <!-- Announcements Icon (Newspaper) -->
-                        <div style="opacity: 1; cursor: pointer; position: relative; display: flex; align-items: center; gap: 1px;" id="hero-announce-btn" title="Announcements">
-                            <i class="fas fa-newspaper" style="font-size: 1.4rem; color: var(--color-accent);"></i>
-                            <span id="briefing-announcement-badge" style="color: var(--color-accent); font-size: 0.65rem; font-weight: 500; line-height: 1; display: none;"></span>
+                        <!-- Announcements Icon (Satellite Dish) -->
+                        <div style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative; opacity: 1;" id="hero-announce-btn" title="Announcements">
+                            <i class="fas ${UI_ICONS.ANNOUNCEMENTS}" style="font-size: 1.4rem; color: var(--color-accent);"></i>
+                            <span id="briefing-announcement-badge" style="position: absolute; top: 4px; right: 4px; color: var(--color-accent); font-size: 0.65rem; font-weight: 500; line-height: 1; display: none;"></span>
                         </div>
 
                         <!-- Portfolio Icon (Coffee Color) -->
-                        <div style="opacity: 1; cursor: pointer;" id="hero-briefcase-btn" title="View Portfolio">
+                        <div style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; cursor: pointer; opacity: 1;" id="hero-briefcase-btn" title="View Portfolio">
                             <i class="fas fa-briefcase" style="font-size: 1.4rem; color: var(--color-accent);"></i>
                         </div>
                     </div>

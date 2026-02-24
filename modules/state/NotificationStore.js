@@ -2353,13 +2353,49 @@ export class NotificationStore {
     _filterStale(list) {
         if (!Array.isArray(list)) return [];
         const now = Date.now();
-        const limit = 24 * 60 * 60 * 1000; // 24 Hours
+
+        // Financial Day Reset: 7:00 AM Sydney Time
+        // Alerts older than this are considered "Yesterday's News" and are dumped.
+        const nowSydney = new Date(new Date().toLocaleString("en-US", { timeZone: "Australia/Sydney" }));
+
+        let resetDate = new Date(nowSydney);
+        resetDate.setHours(7, 0, 0, 0);
+
+        // If before 7 AM, the reset belongs to the previous day
+        if (nowSydney < resetDate) {
+            resetDate.setDate(resetDate.getDate() - 1);
+        }
+
+        // Keep stepping back if it's a weekend or fixed public holiday
+        const isWeekend = (d) => d.getDay() === 0 || d.getDay() === 6;
+        const isHoliday = (d) => {
+            const m = d.getMonth() + 1;
+            const day = d.getDate();
+            if (m === 1 && day === 1) return true;  // New Year
+            if (m === 1 && day === 26) return true; // Australia Day
+            if (m === 4 && day === 25) return true; // ANZAC Day
+            if (m === 12 && day === 25) return true; // Christmas
+            if (m === 12 && day === 26) return true; // Boxing Day
+            return false;
+        };
+
+        while (isWeekend(resetDate) || isHoliday(resetDate)) {
+            resetDate.setDate(resetDate.getDate() - 1);
+        }
+
+        const lastReset = resetDate.getTime();
+        // Convert Sydney Epoch back to Local/UTC relative epoch
+        const diffToSydney = nowSydney.getTime() - now;
+        const resetThreshold = lastReset - diffToSydney;
 
         return list.filter(item => {
             const timeVal = item.t || item.timestamp || item.createdAt;
-
             const hitTime = this._parseTimestamp(timeVal);
-            const isFresh = (now - hitTime) < limit;
+
+            // Fresh if it happened AFTER the most recent trading day's 7 AM reset.
+            // We removed the strict 24h limit to allow alerts to survive weekends/holidays.
+            const isFresh = hitTime >= resetThreshold;
+
 
             // PERSISTENCE GUARD: Manual target hits have strict RULES:
             // 1. MUST currently meet the target (Condition Check).

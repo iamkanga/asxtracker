@@ -251,12 +251,12 @@ export class SidebarCommandCenter {
                 <div class="command-section">
                     <h4 class="command-section-title">UTILITIES</h4>
                     <div class="command-grid icon-only-grid">
-                        <button class="command-grid-item" id="nav-calculator" title="Calculators">
-                            <i class="fas fa-calculator command-icon"></i>
-                        </button>
                         <button class="command-grid-item" id="nav-announcements" title="Announcements" style="position: relative;">
-                            <i class="fas fa-newspaper command-icon"></i>
+                            <i class="fas ${UI_ICONS.ANNOUNCEMENTS} command-icon"></i>
                             ${this.annCount > 0 ? `<span class="notification-badge" style="position: absolute; top: 8px; right: 14px; font-size: 0.65rem; color: var(--color-accent); display: flex; align-items: center; justify-content: center; font-weight: 500; z-index: 10;">${this.annCount}</span>` : ''}
+                        </button>
+                        <button class="command-grid-item" id="nav-calculator" title="Calculators">
+                            <i class="fas ${UI_ICONS.CALCULATOR} command-icon"></i>
                         </button>
                         <button class="command-grid-item" id="nav-visuals" title="Visual Style">
                             <i class="fas fa-palette command-icon"></i>
