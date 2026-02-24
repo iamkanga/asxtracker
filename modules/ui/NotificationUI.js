@@ -396,7 +396,7 @@ export class NotificationUI {
                         </button>
                         <button id="${IDS.BTN_ANNOUNCEMENTS}" title="${UI_LABELS.ANNOUNCEMENTS_TITLE}" style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem; position: relative;">
                             <i class="fas ${UI_ICONS.ANNOUNCEMENTS}"></i>
-                            <span id="notif-announcement-badge" class="${CSS_CLASSES.HIDDEN}" style="position: absolute; top: 4px; right: 4px; color: inherit; font-size: 0.65rem; font-weight: 500; line-height: 1;">0</span>
+                            <span id="notif-announcement-badge" class="${CSS_CLASSES.HIDDEN}" style="position: absolute; top: 4px; left: 26px; color: inherit; font-size: 0.65rem; font-weight: 500; line-height: 1;">0</span>
                         </button>
                         <button id="${IDS.NOTIF_SETTINGS_BTN}" title="${UI_LABELS.NOTIFICATION_SETTINGS}" style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem;">
                             <i class="fas ${UI_ICONS.PEN}"></i>
