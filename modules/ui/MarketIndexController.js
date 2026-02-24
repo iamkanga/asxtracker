@@ -1,6 +1,7 @@
 import { notificationStore } from '../state/NotificationStore.js';
 import { EVENTS } from '../utils/AppConstants.js';
 import { navManager } from '../utils/NavigationManager.js';
+import { LinkHelper } from '../utils/LinkHelper.js';
 
 export class MarketIndexController {
     constructor() {
@@ -19,6 +20,10 @@ export class MarketIndexController {
             setTimeout(() => this.init(), 500); // Retry
             return;
         }
+
+        // Prevent duplicate initialization
+        if (this._initialized) return;
+        this._initialized = true;
 
         // Sidebar button is optional as it may be rendered dynamically by SidebarCommandCenter
         if (!this.sidebarBtn) {
@@ -39,64 +44,57 @@ export class MarketIndexController {
         // Close on overlay click
         this.modal.querySelector('.modal-overlay')?.addEventListener('click', () => this.closeModal());
 
-        // Listen for Data Updates
+        // Listen for Data Updates (New Alerts)
         document.addEventListener(EVENTS.MARKET_INDEX_UPDATED, (e) => {
             if (!this.modal.classList.contains('hidden')) {
                 this.render(e.detail.alerts);
             }
         });
 
-        // Click handler for everything (since they need preventDefault/stopPropagation or marking as read)
-        this.listContainer.addEventListener('click', (e) => {
-            // Priority 1: Handled buttons
-            const dismissBtn = e.target.closest('.stream-dismiss-btn');
-            if (dismissBtn) {
-                e.preventDefault();
-                e.stopImmediatePropagation();
-                const alertId = dismissBtn.dataset.id || dismissBtn.closest('.market-stream-item-wrapper')?.getAttribute('data-alert-id');
-                this.dismissAlert(alertId);
-                return;
-            }
-
-            const codePill = e.target.closest('.code-pill');
-            if (codePill) {
-                e.preventDefault();
-                e.stopImmediatePropagation();
-                const code = codePill.dataset.code;
-                if (code) {
-                    document.dispatchEvent(new CustomEvent(EVENTS.ASX_CODE_CLICK, { detail: { code } }));
-                }
-                return;
-            }
-
-            // Priority 2: Body Click (Mark as Read)
-            // We look for the main link or the wrapper itself
-            const link = e.target.closest('.market-stream-item');
-            const wrapper = e.target.closest('.market-stream-item-wrapper');
-
-            if (link || wrapper) {
-                const targetWrapper = wrapper || link.closest('.market-stream-item-wrapper');
-                if (!targetWrapper) return;
-
-                const alertId = targetWrapper.getAttribute('data-alert-id');
-                if (alertId && !notificationStore.readAnnouncements.has(alertId)) {
-                    notificationStore.markAnnouncementRead(alertId);
-
-                    // Add class for persistence and visual feedback
-                    targetWrapper.classList.add('is-read');
-
-                    // Force immediate visual ghosting on the LINK ONLY
-                    const bodyLink = targetWrapper.querySelector('.market-stream-item');
-                    if (bodyLink) {
-                        bodyLink.style.opacity = '0.35';
-                        bodyLink.style.filter = 'grayscale(80%)';
+        // Listen for State Updates (Mark as Read / Sync)
+        document.addEventListener(EVENTS.NOTIFICATION_UPDATE, () => {
+            // Update read classes in place instead of full re-render
+            // This prevents destroying the DOM elements while the user is clicking them!
+            if (this.modal && !this.modal.classList.contains('hidden') && this.listContainer) {
+                const wrappers = this.listContainer.querySelectorAll('.market-stream-item-wrapper');
+                wrappers.forEach(wrapper => {
+                    const id = wrapper.getAttribute('data-alert-id');
+                    if (id && notificationStore.readAnnouncements.has(id)) {
+                        wrapper.classList.add('is-read');
                     }
-                }
+                });
             }
         });
 
         // Clear All Logic
         document.getElementById('stream-clear-all')?.addEventListener('click', () => this.dismissAll());
+    }
+
+    /**
+     * Internal helper to mark an announcement as read and update UI.
+     */
+    markAsRead(alertId, wrapperElement) {
+        if (!alertId) return;
+
+        // Persist to Store if not already there
+        if (!notificationStore.readAnnouncements.has(alertId)) {
+            notificationStore.markAnnouncementRead(alertId);
+        }
+
+        // Immediate Visual Feedback
+        if (wrapperElement) {
+            wrapperElement.classList.add('is-read');
+            // Direct Style Injection (Bulletproof against CSS caching / tab switching delays)
+            const bodyLink = wrapperElement.querySelector('.market-stream-item');
+            if (bodyLink) {
+                bodyLink.style.opacity = '0.35';
+                bodyLink.style.filter = 'grayscale(80%)';
+            }
+            const dismissBtn = wrapperElement.querySelector('.stream-dismiss-btn');
+            if (dismissBtn) {
+                dismissBtn.style.opacity = '0.2';
+            }
+        }
     }
 
     openModal() {
@@ -198,10 +196,12 @@ export class MarketIndexController {
 
             const isRead = notificationStore.readAnnouncements?.has(id);
             const readClass = isRead ? 'is-read' : '';
+            const readStyle1 = isRead ? 'opacity: 0.35; filter: grayscale(80%);' : '';
+            const readStyle2 = isRead ? 'opacity: 0.2;' : 'opacity: 0.3;';
 
             return `
                 <div class="market-stream-item-wrapper ${readClass}" data-alert-id="${id}">
-                    <a href="${href}" target="${target}" class="market-stream-item">
+                    <a href="${href}" target="${target}" class="market-stream-item" style="${readStyle1}">
                         <div class="stream-meta">
                             <span class="stream-badge ${badgeClass}">${badgeText}</span>
                             <span class="stream-time">${dateStr}</span>
@@ -219,7 +219,7 @@ export class MarketIndexController {
                     </button>
                     ` : ''}
                     <button class="stream-dismiss-btn" data-id="${id}" title="Dismiss"
-                        style="position: absolute; top: 12px; right: 12px; background: transparent; border: none; color: var(--text-muted); cursor: pointer; padding: 5px; z-index: 5; opacity: 0.3; transition: opacity 0.2s;">
+                        style="position: absolute; top: 12px; right: 12px; background: transparent; border: none; color: var(--text-muted); cursor: pointer; padding: 5px; z-index: 5; transition: opacity 0.2s; ${readStyle2}">
                         <i class="fas fa-times" style="font-size: 0.8rem;"></i>
                     </button>
                 </div>
@@ -227,6 +227,42 @@ export class MarketIndexController {
         }).join('');
 
         this.listContainer.innerHTML = html;
+
+        // Explicit Direct Bindings 
+        const wrappers = this.listContainer.querySelectorAll('.market-stream-item-wrapper');
+        wrappers.forEach(wrapper => {
+            const alertId = wrapper.getAttribute('data-alert-id');
+            const codePill = wrapper.querySelector('.code-pill');
+            const dismissBtn = wrapper.querySelector('.stream-dismiss-btn');
+
+            // Use pointerdown to catch the interaction *before* the native click navigates away.
+            // This guarantees the UI paints the ghosting state instantly.
+            wrapper.addEventListener('pointerdown', (e) => {
+                // Ignore if clicking a button (buttons handle their own logic with stopPropagation)
+                if (e.target.closest('button')) return;
+
+                // User touched/clicked the main announcement area
+                this.markAsRead(alertId, wrapper);
+            });
+
+            if (codePill) {
+                codePill.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    // DO NOT mark as read here. User is just opening stock details, not reading announcement.
+                    const code = codePill.dataset.code;
+                    if (code) document.dispatchEvent(new CustomEvent(EVENTS.ASX_CODE_CLICK, { detail: { code } }));
+                });
+            }
+
+            if (dismissBtn) {
+                dismissBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.dismissAlert(alertId);
+                });
+            }
+        });
     }
 }
 

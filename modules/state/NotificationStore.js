@@ -208,6 +208,24 @@ export class NotificationStore {
                             localStorage.setItem('asx_market_stream_dismissed', JSON.stringify([...this.dismissedAnnouncements]));
                         }
                     }
+
+                    // 3. Announcement Read State (Read IDs)
+                    let syncReadChanged = false;
+                    if (Array.isArray(prefs.readMarketAlerts)) {
+                        prefs.readMarketAlerts.forEach(id => {
+                            if (!this.readAnnouncements.has(id)) {
+                                this.readAnnouncements.add(id);
+                                syncReadChanged = true;
+                            }
+                        });
+                        if (syncReadChanged) {
+                            localStorage.setItem('asx_market_stream_read', JSON.stringify([...this.readAnnouncements]));
+                        }
+                    }
+
+                    if (syncReadChanged) {
+                        this._notifyCountChange();
+                    }
                 }
             });
         } catch (err) {
@@ -2487,7 +2505,15 @@ export class NotificationStore {
 
                         // 2. Ensure Code/ID
                         if (!item.code) item.code = 'MARKET';
-                        if (!item.id) item.id = `${item.code}-${item.timestamp}`;
+
+                        // FIX: If ID is missing, generate a STABLE one based on content if possible
+                        if (!item.id) {
+                            const title = item.title || item.headline || item.desc || '';
+                            const safeTitle = title.replace(/[^a-zA-Z0-9]/g, '').substring(0, 32);
+                            // If timestamp is truly stable from backend, use it. Otherwise use title hash.
+                            const tsPart = (t && !isNaN(t)) ? t : safeTitle;
+                            item.id = `${item.code}-${tsPart}`;
+                        }
 
                         allAlerts.push(item);
                     });
