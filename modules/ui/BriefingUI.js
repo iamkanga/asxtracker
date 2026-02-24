@@ -49,6 +49,14 @@ export class BriefingUI {
             }
         };
         document.addEventListener(EVENTS.NOTIFICATION_UPDATE, modal._notifHandler);
+
+        // Register with NavigationManager for Back Button support
+        modal._navActive = true;
+        navManager.pushState(() => {
+            if (document.body.contains(modal) && !modal.classList.contains(CSS_CLASSES.HIDDEN)) {
+                this._close(modal);
+            }
+        });
     }
 
     static _updateBadges(modal) {

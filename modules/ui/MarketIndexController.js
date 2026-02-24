@@ -1,5 +1,6 @@
 import { notificationStore } from '../state/NotificationStore.js';
 import { EVENTS } from '../utils/AppConstants.js';
+import { navManager } from '../utils/NavigationManager.js';
 
 export class MarketIndexController {
     constructor() {
@@ -45,37 +46,9 @@ export class MarketIndexController {
             }
         });
 
-        // Use pointerdown to capture the "read" intent before navigation occurs
-        this.listContainer.addEventListener('pointerdown', (e) => {
-            const wrapper = e.target.closest('.market-stream-item-wrapper');
-            if (!wrapper) return;
-
-            const alertId = wrapper.getAttribute('data-alert-id');
-            if (!alertId) return;
-
-            // 1. If we hit a button, we don't treat the whole card as "read" yet
-            if (e.target.closest('.stream-dismiss-btn') || e.target.closest('.code-pill')) {
-                return;
-            }
-
-            // 2. Mark as Read
-            if (alertId && !notificationStore.readAnnouncements.has(alertId)) {
-                notificationStore.markAnnouncementRead(alertId);
-
-                // Add class for persistence
-                wrapper.classList.add('is-read');
-
-                // Force immediate visual ghosting on the LINK ONLY (Fallback if CSS class is being stubborn)
-                const bodyLink = wrapper.querySelector('.market-stream-item');
-                if (bodyLink) {
-                    bodyLink.style.opacity = '0.35';
-                    bodyLink.style.filter = 'grayscale(80%)';
-                }
-            }
-        });
-
-        // Click handler for buttons (since they need preventDefault/stopPropagation)
+        // Click handler for everything (since they need preventDefault/stopPropagation or marking as read)
         this.listContainer.addEventListener('click', (e) => {
+            // Priority 1: Handled buttons
             const dismissBtn = e.target.closest('.stream-dismiss-btn');
             if (dismissBtn) {
                 e.preventDefault();
@@ -95,6 +68,31 @@ export class MarketIndexController {
                 }
                 return;
             }
+
+            // Priority 2: Body Click (Mark as Read)
+            // We look for the main link or the wrapper itself
+            const link = e.target.closest('.market-stream-item');
+            const wrapper = e.target.closest('.market-stream-item-wrapper');
+
+            if (link || wrapper) {
+                const targetWrapper = wrapper || link.closest('.market-stream-item-wrapper');
+                if (!targetWrapper) return;
+
+                const alertId = targetWrapper.getAttribute('data-alert-id');
+                if (alertId && !notificationStore.readAnnouncements.has(alertId)) {
+                    notificationStore.markAnnouncementRead(alertId);
+
+                    // Add class for persistence and visual feedback
+                    targetWrapper.classList.add('is-read');
+
+                    // Force immediate visual ghosting on the LINK ONLY
+                    const bodyLink = targetWrapper.querySelector('.market-stream-item');
+                    if (bodyLink) {
+                        bodyLink.style.opacity = '0.35';
+                        bodyLink.style.filter = 'grayscale(80%)';
+                    }
+                }
+            }
         });
 
         // Clear All Logic
@@ -103,14 +101,32 @@ export class MarketIndexController {
 
     openModal() {
         if (!this.modal) return;
+
+        // v1149: Prevent double-opening if already visible
+        if (!this.modal.classList.contains('hidden')) return;
+
         this.modal.classList.remove('hidden');
         document.body.style.overflow = 'hidden';
         this.render(notificationStore.getMarketIndexAlerts());
+
+        // Register with NavigationManager for Back Button support
+        navManager.pushState(() => {
+            if (this.modal && !this.modal.classList.contains('hidden')) {
+                this.closeModal(true);
+            }
+        });
     }
 
-    closeModal() {
+    closeModal(fromNav = false) {
+        if (!this.modal || this.modal.classList.contains('hidden')) return;
+
         this.modal.classList.add('hidden');
         document.body.style.overflow = '';
+
+        // If closed via UI (X button) instead of Back Button, sync the browser history
+        if (!fromNav) {
+            navManager.popStateSilently();
+        }
     }
 
     dismissAlert(alertId) {

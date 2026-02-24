@@ -858,7 +858,11 @@ export class ViewRenderer {
     renderStockDetailsModal(stock) {
         this._currentDetailsStock = stock;
         const existingModal = document.getElementById(IDS.STOCK_DETAILS_MODAL);
-        if (existingModal) existingModal.remove();
+        if (existingModal) {
+            // HISTORY SAFETY: If current details modal is already in stack, clear it before pushing new one
+            if (existingModal._navActive) navManager.popStateSilently();
+            existingModal.remove();
+        }
 
         // FAILSAFE: Resolve Name if missing (e.g. from partial updates)
         if (!stock.name) {
@@ -1232,12 +1236,11 @@ export class ViewRenderer {
                                 </div>
                                 <div class="research-links-grid">
                                     ${links.map(link => {
-                const finalLink = typeof link === 'string' ? { name: link, url: link } : link;
                 let hostname = '';
                 try {
-                    hostname = new URL(finalLink.url).hostname;
+                    hostname = new URL(link.url).hostname;
                 } catch (e) {
-                    console.warn('Invalid URL for favicon:', finalLink.url);
+                    // console.warn('Invalid URL for favicon:', link.url);
                 }
 
                 // Fix for SelfWealth: Use DuckDuckGo icons
@@ -1246,14 +1249,12 @@ export class ViewRenderer {
                     faviconUrl = 'https://icons.duckduckgo.com/ip3/selfwealth.com.au.ico';
                 }
 
-                const substitutedUrl = (finalLink.url || '').replace(/\${code}/gi, stock.code);
-
                 return `
-                    <a href="${substitutedUrl}" target="_blank" rel="noopener noreferrer external" class="research-link-btn" onclick="event.stopPropagation();">
+                    <a href="${link.url}" target="_blank" rel="noopener noreferrer external" class="research-link-btn" onclick="event.stopPropagation();">
                         <img src="${faviconUrl}" class="link-favicon" alt="">
                         <div class="link-info-stack">
-                            <span class="link-name">${finalLink.displayName || finalLink.name}</span>
-                            <span class="link-desc">${finalLink.description || ''}</span>
+                            <span class="link-name">${link.displayName}</span>
+                            <span class="link-desc">${link.description || ''}</span>
                         </div>
                     </a>
                 `;
@@ -1284,6 +1285,9 @@ export class ViewRenderer {
         const close = () => {
             modal.classList.add(CSS_CLASSES.HIDDEN);
             setTimeout(() => modal.remove(), 300);
+
+            // CLEANUP: Always remove specialized listeners
+            window.removeEventListener(EVENTS.RESEARCH_LINKS_UPDATED, researchUpdateHandler);
 
             // Remove from history stack if closed manually
             if (modal._navActive) {
@@ -1366,23 +1370,26 @@ export class ViewRenderer {
         const researchUpdateHandler = () => {
             if (document.contains(modal)) {
                 // Determine new links
-                const newLinks = AppState.preferences.researchLinks && AppState.preferences.researchLinks.length > 0
+                const rawLinks = AppState.preferences.researchLinks && AppState.preferences.researchLinks.length > 0
                     ? AppState.preferences.researchLinks
                     : RESEARCH_LINKS_TEMPLATE;
 
                 const grid = modal.querySelector('.research-links-grid');
                 if (grid) {
-                    grid.innerHTML = newLinks.map(link => {
+                    grid.innerHTML = rawLinks.map(link => {
                         const finalLink = typeof link === 'string' ? { displayName: 'Link', url: link } : link;
 
-                        // Robust substitution for both URL and Display Name
-                        const codeRegex = /\$(?:\{code\}|\(code\)|code)/gi;
-                        const substitutedUrl = (finalLink.url || '').replace(codeRegex, stock.code);
-                        const substitutedName = (finalLink.displayName || finalLink.name || 'Link').replace(codeRegex, stock.code);
+                        // Robust substitution using LinkHelper (Consistent with Render)
+                        const substitutedUrl = LinkHelper.replacePlaceholders(finalLink.url, stock);
+                        const substitutedName = LinkHelper.replacePlaceholders(finalLink.displayName || finalLink.name || 'Link', stock);
 
                         let hostname = '';
                         try { hostname = new URL(substitutedUrl).hostname; } catch (e) { }
-                        const faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
+
+                        let faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
+                        if (hostname.includes('selfwealth')) {
+                            faviconUrl = 'https://icons.duckduckgo.com/ip3/selfwealth.com.au.ico';
+                        }
 
                         return `
                             <a href="${substitutedUrl}" target="_blank" rel="noopener noreferrer" class="research-link-btn">
@@ -1634,6 +1641,53 @@ export class ViewRenderer {
                 </div>
         `;
 
+        // AUTO-REFRESH RESEARCH SECTION
+        const researchUpdateHandler = () => {
+            if (document.contains(modal)) {
+                const rawLinks = AppState.preferences.researchLinks && AppState.preferences.researchLinks.length > 0
+                    ? AppState.preferences.researchLinks
+                    : RESEARCH_LINKS_TEMPLATE;
+
+                const grid = modal.querySelector('.research-links-grid');
+                if (grid) {
+                    grid.innerHTML = rawLinks.map(link => {
+                        const finalLink = typeof link === 'string' ? { displayName: 'Link', url: link } : link;
+
+                        // Robust substitution
+                        let substitutedUrl = LinkHelper.replacePlaceholders(finalLink.url, stock);
+                        const substitutedName = LinkHelper.replacePlaceholders(finalLink.displayName || finalLink.name || 'Link', stock);
+
+                        // CommSec Deep Link Fix
+                        if (substitutedUrl.includes('commsec.com.au') && !substitutedUrl.includes('page.link')) {
+                            const encodedTarget = encodeURIComponent(substitutedUrl);
+                            substitutedUrl = `https://commsecau.page.link/?link=${encodedTarget}&apn=au.com.commsec.android`;
+                        }
+
+                        let hostname = '';
+                        try { hostname = new URL(substitutedUrl).hostname; } catch (e) { }
+
+                        let faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
+                        if (hostname.includes('selfwealth')) {
+                            faviconUrl = 'https://icons.duckduckgo.com/ip3/selfwealth.com.au.ico';
+                        }
+
+                        return `
+                            <a href="${substitutedUrl}" target="_blank" rel="noopener noreferrer external" class="research-link-btn">
+                                <img src="${faviconUrl}" class="link-favicon" alt="">
+                                <div class="link-info-stack">
+                                    <span class="link-name">${substitutedName}</span>
+                                    <span class="link-desc">${finalLink.description || ''}</span>
+                                </div>
+                            </a>
+                        `;
+                    }).join('');
+                }
+            } else {
+                window.removeEventListener(EVENTS.RESEARCH_LINKS_UPDATED, researchUpdateHandler);
+            }
+        };
+        window.addEventListener(EVENTS.RESEARCH_LINKS_UPDATED, researchUpdateHandler);
+
         // Bind Events
         modal.querySelector('#research-discovery-tools-title').addEventListener('click', () => {
             const event = new CustomEvent('REQUEST_RESEARCH_LINKS_MANAGE', {
@@ -1646,6 +1700,9 @@ export class ViewRenderer {
         const close = () => {
             modal.classList.add(CSS_CLASSES.HIDDEN);
             setTimeout(() => modal.remove(), 300);
+
+            // CLEANUP: Specialized handle
+            window.removeEventListener(EVENTS.RESEARCH_LINKS_UPDATED, researchUpdateHandler);
 
             // Remove from history stack if closed manually
             if (modal._navActive) {

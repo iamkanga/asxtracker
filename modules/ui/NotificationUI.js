@@ -254,6 +254,9 @@ export class NotificationUI {
         const briefingModal = document.getElementById(IDS.DAILY_BRIEFING_MODAL);
         this._briefingRestorable = (briefingModal && this._restorableModals.includes(briefingModal));
 
+        // Capture hidden state BEFORE removing class to ensure we push history correctly
+        const wasHidden = !modal || modal.classList.contains(CSS_CLASSES.HIDDEN);
+
         if (modal) {
             // If already open, just ensure it's visible and update list if needed
             modal.classList.remove(CSS_CLASSES.HIDDEN);
@@ -271,8 +274,8 @@ export class NotificationUI {
             });
         }
 
-        // Push State (Only if not already visible to avoid double-pushing history)
-        if (!modal || modal.classList.contains(CSS_CLASSES.HIDDEN)) {
+        // Push State (Only if it was hidden to avoid double-pushing history)
+        if (wasHidden) {
             navManager.pushState(() => {
                 this._close(modal);
             });

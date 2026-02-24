@@ -266,15 +266,6 @@ export class SettingsUI {
             </div>
         `;
 
-        // Navigation Hook
-        modal._navActive = true;
-        navManager.pushState(() => {
-            if (modal.parentElement) {
-                modal._navActive = false;
-                modal.querySelector(`.${CSS_CLASSES.MODAL_CLOSE_BTN}`).click();
-            }
-        });
-
         return modal;
     }
 

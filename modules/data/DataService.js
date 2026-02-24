@@ -544,7 +544,7 @@ export class DataService {
 
         const shouldZero = isTradingDay && isPremarket && !isHoliday;
 
-        allItems.forEach(item => {
+        items.forEach(item => {
             // ROBUST KEY LOOKUP: Support both ASXCode (API Standard) and code (Normalized)
             const code = String(item.ASXCode || item.code || '').trim().toUpperCase();
 
