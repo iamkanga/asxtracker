@@ -81,19 +81,16 @@ export class MarketIndexController {
             notificationStore.markAnnouncementRead(alertId);
         }
 
-        // Immediate Visual Feedback
+        // Immediate Visual Feedback (Direct & Class-based)
         if (wrapperElement) {
             wrapperElement.classList.add('is-read');
-            // Direct Style Injection (Bulletproof against CSS caching / tab switching delays)
             const bodyLink = wrapperElement.querySelector('.market-stream-item');
             if (bodyLink) {
                 bodyLink.style.opacity = '0.35';
                 bodyLink.style.filter = 'grayscale(80%)';
             }
             const dismissBtn = wrapperElement.querySelector('.stream-dismiss-btn');
-            if (dismissBtn) {
-                dismissBtn.style.opacity = '0.2';
-            }
+            if (dismissBtn) dismissBtn.style.opacity = '0.2';
         }
     }
 
@@ -131,9 +128,7 @@ export class MarketIndexController {
         if (!alertId) return;
         notificationStore.dismissAnnouncement(alertId);
 
-        const element = this.listContainer.querySelector(`.market-stream-item-wrapper:has([data-id="${alertId}"])`) ||
-            this.listContainer.querySelector(`[data-id="${alertId}"]`);
-
+        const element = this.listContainer.querySelector(`.market-stream-item-wrapper[data-alert-id="${alertId}"]`);
         if (element) {
             element.style.transform = 'translateX(100%)';
             element.style.opacity = '0';
@@ -177,20 +172,14 @@ export class MarketIndexController {
             let extractedCode = alert.code;
             if ((!extractedCode || extractedCode === 'UNKNOWN' || extractedCode === 'ASX' || extractedCode === 'MARKET') && (alert.title || alert.headline)) {
                 const text = alert.title || alert.headline;
-                // Target titles starting with exactly 3-4 uppercase letters, e.g., "BHP - Announcement..." or "[RIO] ..."
                 const match = text.match(/^\[?([A-Z]{3,4})\]?\b/);
-                if (match) {
-                    extractedCode = match[1];
-                }
+                if (match) extractedCode = match[1];
             }
 
             const isCompany = extractedCode && extractedCode !== 'UNKNOWN' && extractedCode !== 'ASX' && extractedCode !== 'MARKET';
             const badgeClass = isCompany ? 'badge-company' : 'badge-report';
             const badgeText = isCompany ? extractedCode : 'MARKET';
 
-            // Phase 2: Link logic. 
-            // Ideally links to local PDF viewer or external if provided.
-            // For now, use the link from data (which is Gmail link currently).
             const href = alert.link || '#';
             const target = alert.link ? '_blank' : '_self';
 
@@ -228,33 +217,72 @@ export class MarketIndexController {
 
         this.listContainer.innerHTML = html;
 
-        // Explicit Direct Bindings 
+        // --- BULLETPROOF TAP & NAVIGATION BINDINGS ---
+        // We use direct bindings here using a Smart Tap strategy (Touch + Distance)
+        // to deliver instant feedback WITHOUT breaking native iOS/PWA link behavior.
         const wrappers = this.listContainer.querySelectorAll('.market-stream-item-wrapper');
         wrappers.forEach(wrapper => {
             const alertId = wrapper.getAttribute('data-alert-id');
+            const link = wrapper.querySelector('.market-stream-item');
             const codePill = wrapper.querySelector('.code-pill');
             const dismissBtn = wrapper.querySelector('.stream-dismiss-btn');
 
-            // Use pointerdown to catch the interaction *before* the native click navigates away.
-            // This guarantees the UI paints the ghosting state instantly.
-            wrapper.addEventListener('pointerdown', (e) => {
-                // Ignore if clicking a button (buttons handle their own logic with stopPropagation)
-                if (e.target.closest('button')) return;
+            // 1. SMART TAP (Link Ghosting)
+            if (link) {
+                let startX = 0, startY = 0;
+                let isScrolling = false;
 
-                // User touched/clicked the main announcement area
-                this.markAsRead(alertId, wrapper);
-            });
+                const handleTouchStart = (e) => {
+                    if (e.target.closest('.code-pill') || e.target.closest('.stream-dismiss-btn')) return;
+                    isScrolling = false;
+                    startX = e.touches ? e.touches[0].clientX : e.clientX;
+                    startY = e.touches ? e.touches[0].clientY : e.clientY;
+                };
 
+                const handleTouchEnd = (e) => {
+                    if (e.target.closest('.code-pill') || e.target.closest('.stream-dismiss-btn')) return;
+                    if (isScrolling) return;
+
+                    const endX = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
+                    const endY = e.changedTouches ? e.changedTouches[0].clientY : e.clientY;
+
+                    // If finger moved more than 15px, it's a scroll or swipe, NOT a tap.
+                    if (Math.abs(endX - startX) > 15 || Math.abs(endY - startY) > 15) {
+                        return;
+                    }
+
+                    // 👉 DELIBERATE TAP DETECTED 👈
+                    // Update visual state instantly.
+                    // Because we do this on touchend (before the synthesized click), the browser 
+                    // will paint the ghosting state correctly before the native tab transition occurs.
+                    this.markAsRead(alertId, wrapper);
+                };
+
+                // Bind Touch (Mobile) and Mouse fallback (Desktop)
+                link.addEventListener('touchstart', handleTouchStart, { passive: true });
+                link.addEventListener('touchmove', () => { isScrolling = true; }, { passive: true });
+                link.addEventListener('touchend', handleTouchEnd);
+
+                // Desktop fallback for visual feedback
+                link.addEventListener('mousedown', handleTouchStart);
+                link.addEventListener('mouseup', handleTouchEnd);
+
+                // We leave the native 'click' event completely ALONE.
+                // We do NOT call preventDefault(). The browser naturally sees the <a target="_blank"> 
+                // and executes the safest, most trusted new-tab intent possible.
+            }
+
+            // 2. VIEW ASX BUTTON
             if (codePill) {
                 codePill.addEventListener('click', (e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    // DO NOT mark as read here. User is just opening stock details, not reading announcement.
                     const code = codePill.dataset.code;
                     if (code) document.dispatchEvent(new CustomEvent(EVENTS.ASX_CODE_CLICK, { detail: { code } }));
                 });
             }
 
+            // 3. DISMISS BUTTON
             if (dismissBtn) {
                 dismissBtn.addEventListener('click', (e) => {
                     e.preventDefault();
@@ -264,6 +292,7 @@ export class MarketIndexController {
             }
         });
     }
+
 }
 
 // Singleton for easy import in main.js
