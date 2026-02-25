@@ -556,7 +556,12 @@ export class DataService {
 
             // APPLIED PRE-MARKET ZEROING: 
             // If we are in the clean-slate window, Yesterday's Price becomes the starting point.
-            if (shouldZero && live > 0) {
+            // EXEMPTION: Dashboard assets (Indices, Crypto, Currencies, Commodities) should NOT be zeroed,
+            // as they often trade 24/7 or have different hours.
+            const type = item.Type || item.type || 'Share';
+            const isDashboard = ['Index', 'Currency', 'Crypto', 'Commodity'].includes(type);
+
+            if (shouldZero && live > 0 && !isDashboard) {
                 prevClose = live;
             }
 
