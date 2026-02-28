@@ -419,153 +419,105 @@ export class PortfolioChartUI {
         });
     }
 
-    async loadData() {
+    async _loadData() {
         const loading = document.getElementById('portfolio-chart-loading');
         if (loading) loading.style.display = 'flex';
 
         try {
-            const rawShares = (AppState.data.shares || []).filter(s => s && s.shareName);
+            const rawShares = AppState.data.shares || [];
             const rawCash = AppState.data.cash || [];
+            if (!AppState.user?.uid) return;
 
-            // 1. Calculate Timestep start for filtering the visible window
+            // 1. Fetch Recorded History Snapshots (The "Real" Way)
+            const snapshots = await userStore.getHistorySnapshots(AppState.user.uid);
             const startTs = this._getRangeStartTs();
 
-            // 2. Prepare Source Components
-            const cashByCat = {};
-            rawCash.forEach(item => {
-                if (item.category === 'shares') return;
-                const bal = parseFloat(item.balance || 0);
-                const catId = item.category || 'cash';
-                cashByCat[catId] = (cashByCat[catId] || 0) + bal;
-            });
-
-            // 3. Fetch Shares History (For ALL shares in portfolio)
-            const results = await Promise.all(rawShares.map(s => this.dataService.fetchHistory(s.shareName, this.range)));
-            const allTimestamps = new Set();
-            const shareHistories = [];
-
-            results.forEach((res, i) => {
-                const s = rawShares[i];
-                const map = new Map();
-                if (res && res.ok && Array.isArray(res.data)) {
-                    res.data.forEach(d => {
-                        if (d.time >= startTs) {
-                            allTimestamps.add(d.time);
-                            map.set(d.time, d.close);
-                        }
-                    });
-                }
-
-                // Purchase Date logic
-                let purchaseTs = 0;
-                if (s.purchaseDate || s.entryDate) {
-                    const dateStr = s.purchaseDate || s.entryDate;
-                    let d;
-                    if (dateStr.includes('/')) {
-                        const p = dateStr.split('/');
-                        d = new Date(`${p[2]}-${p[1]}-${p[0]}`);
-                    } else {
-                        d = new Date(dateStr);
-                    }
-                    if (!isNaN(d.getTime())) purchaseTs = Math.floor(d.getTime() / 1000);
-                }
-
-                shareHistories.push({
-                    units: parseFloat(s.portfolioShares || 0),
-                    purchaseTs: purchaseTs,
-                    data: map,
-                    code: s.shareName
-                });
-            });
-
-            // 4. Inject Historical Data Timestamps (Cash/Super Anchors)
-            Object.keys(cashByCat).forEach(cid => {
-                const history = AppState.preferences.historicalData?.[cid];
-                if (history && Array.isArray(history)) {
-                    history.forEach(p => {
-                        if (p.time >= startTs) allTimestamps.add(p.time);
-                    });
-                }
-            });
-
-            // Fallback Timeline
-            let sortedTimes = Array.from(allTimestamps).sort((a, b) => a - b);
-            if (sortedTimes.length === 0) {
-                const now = Math.floor(Date.now() / 1000);
-                for (let i = 30; i >= 0; i--) sortedTimes.push(now - (i * 86400));
-            }
-
-            // Inject Live Price
-            const nowTs = Math.floor(Date.now() / 1000);
-            const liveMap = new Map();
-            let hasLiveUpdates = false;
-            rawShares.forEach(s => {
-                const priceData = AppState.livePrices.get(s.shareName);
-                if (priceData && priceData.live > 0) {
-                    liveMap.set(s.shareName, priceData.live);
-                    hasLiveUpdates = true;
-                    // Also update the map for each history
-                    const sh = shareHistories.find(h => h.code === s.shareName);
-                    if (sh) sh.data.set(nowTs, priceData.live);
-                }
-            });
-
-            if (nowTs >= startTs) {
-                const lastTs = sortedTimes[sortedTimes.length - 1] || 0;
-                if (nowTs - lastTs > 3600) sortedTimes.push(nowTs);
-            }
-
-            const totalData = [], superData = [], sharesData = [];
+            // 2. Prepare Data Series
+            const totalData = [];
+            const superData = [];
+            const sharesData = [];
+            const cashData = [];
             const catBuffers = {};
-            Object.keys(cashByCat).forEach(cid => catBuffers[cid] = []);
 
-            // Last known prices for interpolation
-            const lastPrices = shareHistories.map(sh => liveMap.get(sh.code) || 0);
+            // 3. Process Snapshots
+            // Snapshots are indexed by timestamp. We sort and filter by visible window.
+            const sortedSnapshots = snapshots
+                .filter(s => s.time >= startTs)
+                .sort((a, b) => a.time - b.time);
 
-            // 5. Loop through timeline and calculate sources
-            sortedTimes.forEach(time => {
-                let daySharesValue = 0;
-                let daySuperValue = 0;
-                let dayTotalCash = 0;
+            sortedSnapshots.forEach(s => {
+                const time = Number(s.time);
+                totalData.push({ time, value: s.total });
+                sharesData.push({ time, value: s.shares });
+                superData.push({ time, value: s.super });
+                cashData.push({ time, value: s.cash || 0 });
 
-                // A. Shares
-                shareHistories.forEach((sh, idx) => {
-                    if (sh.purchaseTs > 0 && time < sh.purchaseTs) return;
-                    if (sh.data.has(time)) {
-                        lastPrices[idx] = sh.data.get(time);
-                    }
-                    const val = lastPrices[idx] * sh.units;
-                    daySharesValue += val;
-
-                    // Super Check
-                    const watchlists = AppState.data.watchlists || [];
-                    const isSuper = watchlists.some(w =>
-                        w.name?.toLowerCase().includes('super') &&
-                        w.items?.some(i => i.code === sh.code)
-                    );
-                    if (isSuper) daySuperValue += val;
-                });
-
-                // B. Cash
-                Object.keys(cashByCat).forEach(cid => {
-                    const histVal = this._getHistoricalValue(cid, time, cashByCat[cid]);
-                    if (cid === 'super') daySuperValue += histVal;
-                    dayTotalCash += histVal;
-                    if (catBuffers[cid]) catBuffers[cid].push({ time, value: histVal });
-                });
-
-                const dayTotalValue = daySharesValue + dayTotalCash;
-                totalData.push({ time, value: dayTotalValue });
-                superData.push({ time, value: daySuperValue });
-                sharesData.push({ time, value: daySharesValue });
+                // Categories
+                if (s.categories) {
+                    Object.keys(s.categories).forEach(cid => {
+                        if (!catBuffers[cid]) catBuffers[cid] = [];
+                        catBuffers[cid].push({ time, value: s.categories[cid] });
+                    });
+                }
             });
 
-            // 6. Push to Series
+            // 4. Inject "LIVE" Point (Current State)
+            // This ensures the graph always ends on the most recent known values
+            const nowTs = Math.floor(Date.now() / 1000);
+
+            // Calculate Current Totals
+            let liveSharesVal = 0;
+            let liveSuperVal = 0;
+            let liveCashVal = 0;
+            const liveCatVals = {};
+
+            // Identify Super Watchlist
+            const watchlists = AppState.data.watchlists || [];
+            const superWatchlist = watchlists.find(w => (w.name || '').toLowerCase().includes('super'));
+            const superWatchlistId = superWatchlist ? superWatchlist.id : null;
+
+            rawShares.forEach(s => {
+                const units = parseFloat(s.portfolioShares || s.units || 0);
+                const priceData = AppState.livePrices.get(s.shareName);
+                const price = priceData?.live || 0;
+                const val = units * price;
+                if (val <= 0) return;
+
+                liveSharesVal += val;
+                const isSuper = (superWatchlistId && (s.watchlistIds || []).includes(superWatchlistId));
+                if (isSuper) liveSuperVal += val;
+            });
+
+            rawCash.forEach(c => {
+                const bal = parseFloat(c.balance || 0);
+                const cid = c.category || 'other';
+                liveCashVal += bal;
+                if (cid === 'super') liveSuperVal += bal;
+                liveCatVals[cid] = (liveCatVals[cid] || 0) + bal;
+            });
+
+            const liveTotalVal = liveSharesVal + liveCashVal;
+
+            // Only add live point if it's newer than the last snapshot OR if no snapshots exist
+            const lastSnapTs = sortedSnapshots.length > 0 ? sortedSnapshots[sortedSnapshots.length - 1].time : 0;
+            if (nowTs > lastSnapTs + 300) { // 5 min grace
+                totalData.push({ time: nowTs, value: liveTotalVal });
+                sharesData.push({ time: nowTs, value: liveSharesVal });
+                superData.push({ time: nowTs, value: liveSuperVal });
+                cashData.push({ time: nowTs, value: liveCashVal });
+
+                Object.keys(liveCatVals).forEach(cid => {
+                    if (!catBuffers[cid]) catBuffers[cid] = [];
+                    catBuffers[cid].push({ time: nowTs, value: liveCatVals[cid] });
+                });
+            }
+
+            // 5. Push to Series
             if (this.series.total) this.series.total.setData(totalData);
             if (this.series.super) this.series.super.setData(superData);
             if (this.series.shares) this.series.shares.setData(sharesData);
 
-            // 7. Breakdown Series
+            // 6. Breakdown Series
             Object.keys(catBuffers).forEach((catId, idx) => {
                 if (!this.categorySeries[catId]) {
                     this.categorySeries[catId] = this.chart.addLineSeries({
@@ -578,8 +530,8 @@ export class PortfolioChartUI {
                 this.categorySeries[catId].setData(catBuffers[catId]);
             });
 
-            // 8. Markers
-            if (hasLiveUpdates && totalData.length > 0 && this.series.total) {
+            // 7. Markers
+            if (totalData.length > 0 && this.series.total) {
                 this.series.total.setMarkers([{
                     time: totalData[totalData.length - 1].time,
                     position: 'aboveBar',

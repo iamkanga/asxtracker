@@ -175,8 +175,9 @@ export class AppController {
             // === GLOBAL PRICE SEEDING (DEBOUNCED) ===
             // v1137: Retain 800ms debounce to avoid rapid fetch on every Firestore chunk
             if (this._bootSeedTimer) clearTimeout(this._bootSeedTimer);
-            this._bootSeedTimer = setTimeout(() => {
-                this._refreshAllPrices(AppState.data.shares || []);
+            this._bootSeedTimer = setTimeout(async () => {
+                await this._refreshAllPrices(AppState.data.shares || []);
+                this._checkSnapshotNecessity();
             }, 800);
 
             // === WATCHLIST RESTORATION (First Run Only) ===
@@ -3496,6 +3497,34 @@ export class AppController {
         setTimeout(() => {
             SecurityUI.renderSecuritySettings(this.securityController);
         }, 150);
+    }
+
+    /**
+     * Records a portfolio snapshot if none has been taken recently.
+     * Fulfills User Request: "Keep it recorded on usage" / "Usage recorded".
+     */
+    async _checkSnapshotNecessity() {
+        if (!AppState.user || !AppState.user.uid) return;
+
+        // Record snapshot if it's a new day or > 4 hours since last usage record.
+        const lastSnap = localStorage.getItem(STORAGE_KEYS.LAST_SNAPSHOT_TIME);
+        const now = Date.now();
+        const fourHours = 4 * 60 * 60 * 1000;
+
+        if (!lastSnap || (now - parseInt(lastSnap)) > fourHours) {
+            console.log('[AppController] User activity detected. Syncing background portfolio snapshot...');
+            try {
+                // Triggering async without awaiting to avoid UI blocking
+                this.dataService.recordSnapshot().then(res => {
+                    if (res && res.ok) {
+                        localStorage.setItem(STORAGE_KEYS.LAST_SNAPSHOT_TIME, now.toString());
+                        console.log('[AppController] Snapshot recorded successfully.');
+                    }
+                });
+            } catch (e) {
+                console.warn('[AppController] Snapshot trigger failed (passive):', e);
+            }
+        }
     }
 }
 

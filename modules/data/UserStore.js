@@ -625,6 +625,20 @@ export class UserStore {
     }
 
     /**
+     * Fetches recorded portfolio history snapshots.
+     * @param {string} userId 
+     */
+    async getHistorySnapshots(userId) {
+        if (!userId) return [];
+        const ref = collection(db, `artifacts/${APP_ID}/users/${userId}/history`);
+        const q = query(ref); // Newest first is handled by UI sorting if needed
+        const snap = await getDocs(q);
+        const results = [];
+        snap.forEach(doc => results.push(doc.data()));
+        return results;
+    }
+
+    /**
      * Generic document addition with metadata.
      */
     async addDocument(userId, collectionName, data) {

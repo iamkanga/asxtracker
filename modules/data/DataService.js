@@ -182,6 +182,33 @@ export class DataService {
     }
 
     /**
+     * Triggers a portfolio history snapshot on the backend.
+     */
+    async recordSnapshot() {
+        try {
+            const user = AuthService.getCurrentUser();
+            const userId = user ? user.uid : null;
+            if (!userId) return { ok: false, error: 'No user authenticated' };
+
+            const payload = {
+                action: 'recordSnapshot',
+                userId: userId
+            };
+
+            const response = await fetch(this.API_ENDPOINT, {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) return { ok: false, error: `HTTP ${response.status}` };
+            return await response.json();
+        } catch (err) {
+            console.error('[DataService] Snapshot Trigger Fail:', err);
+            return { ok: false, error: err.message };
+        }
+    }
+
+    /**
      * Ask Gemini (Smart Alerts or Market Chat).
      * @param {string} mode 'explain' | 'chat'
      * @param {string} query User question (for chat)
