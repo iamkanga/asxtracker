@@ -2,14 +2,14 @@ import { formatCurrency, formatPercent } from '../utils/formatters.js';
 import { UI_ICONS, CSS_CLASSES, IDS, EVENTS, CASH_CATEGORIES } from '../utils/AppConstants.js';
 import { AppState } from '../state/AppState.js';
 import { navManager } from '../utils/NavigationManager.js';
-import { DataService } from '../data/DataService.js';
+import { DataService, userStore } from '../data/DataService.js';
 
 /**
  * PortfolioChartUI
  * Handles the historical trend chart for the entire portfolio.
  * Implements "Backfill" logic to simulate history based on current holdings.
  * NOW INCLUDES: Cash & Asset integration with category breakdowns.
- * v1047: Corrected property names (portfolioShares/AvgPrice) and Purchase Date logic.
+ * v1151: Fixed double-counting of portfolio shares in total wealth.
  */
 export class PortfolioChartUI {
     static async show() {
@@ -419,7 +419,7 @@ export class PortfolioChartUI {
         });
     }
 
-    async _loadData() {
+    async loadData() {
         const loading = document.getElementById('portfolio-chart-loading');
         if (loading) loading.style.display = 'flex';
 
@@ -441,12 +441,19 @@ export class PortfolioChartUI {
 
             // 3. Process Snapshots
             // Snapshots are indexed by timestamp. We sort and filter by visible window.
+            const getSnapTs = (snap) => {
+                if (snap.time) return Number(snap.time);
+                if (snap.date) return Math.floor(new Date(snap.date).getTime() / 1000);
+                if (snap.timestamp) return Math.floor(new Date(snap.timestamp).getTime() / 1000);
+                return 0;
+            };
+
             const sortedSnapshots = snapshots
-                .filter(s => s.time >= startTs)
-                .sort((a, b) => a.time - b.time);
+                .filter(s => getSnapTs(s) >= startTs)
+                .sort((a, b) => getSnapTs(a) - getSnapTs(b));
 
             sortedSnapshots.forEach(s => {
-                const time = Number(s.time);
+                const time = getSnapTs(s);
                 totalData.push({ time, value: s.total });
                 sharesData.push({ time, value: s.shares });
                 superData.push({ time, value: s.super });
@@ -476,11 +483,45 @@ export class PortfolioChartUI {
             const superWatchlist = watchlists.find(w => (w.name || '').toLowerCase().includes('super'));
             const superWatchlistId = superWatchlist ? superWatchlist.id : null;
 
+            // Deduplicate shares by ticker to match DataProcessor logic
+            const dedupedSharesMap = new Map();
             rawShares.forEach(s => {
-                const units = parseFloat(s.portfolioShares || s.units || 0);
-                const priceData = AppState.livePrices.get(s.shareName);
+                if (AppState.hiddenAssets.has(String(s.id))) return;
+                const units = parseFloat(s.portfolioShares) || parseFloat(s.units) || 0;
+                if (units <= 0) return;
+
+                const lookupKey = String(s.shareName || s.code || '').trim().toUpperCase();
+                const existing = dedupedSharesMap.get(lookupKey);
+                if (existing) {
+                    existing.units += units;
+                    // Merge watchlist IDs for super check
+                    if (s.watchlistIds) {
+                        existing.watchlistIds = [...new Set([...(existing.watchlistIds || []), ...s.watchlistIds])];
+                    }
+                } else {
+                    dedupedSharesMap.set(lookupKey, {
+                        units,
+                        watchlistIds: s.watchlistIds || (s.watchlistId ? [s.watchlistId] : []),
+                        shareName: lookupKey
+                    });
+                }
+            });
+
+            dedupedSharesMap.forEach(s => {
+                const lookupKey = s.shareName;
+                let priceData = AppState.livePrices.get(lookupKey);
+
+                // Fallback: Try appending .AX if not found
+                if (!priceData && !lookupKey.includes('.')) {
+                    priceData = AppState.livePrices.get(lookupKey + '.AX');
+                }
+                // Fallback: Try stripping .AX if not found
+                if (!priceData && lookupKey.endsWith('.AX')) {
+                    priceData = AppState.livePrices.get(lookupKey.replace('.AX', ''));
+                }
+
                 const price = priceData?.live || 0;
-                const val = units * price;
+                const val = s.units * price;
                 if (val <= 0) return;
 
                 liveSharesVal += val;
@@ -489,6 +530,14 @@ export class PortfolioChartUI {
             });
 
             rawCash.forEach(c => {
+                // Filter out hidden cash to match CashController logic
+                if (AppState.hiddenAssets.has(String(c.id))) return;
+
+                // CRITICAL FIX: Exclude 'shares' category from cash summation in the chart.
+                // Reasoning: The chart already calculates 'liveSharesVal' from the actual stock collection (rawShares).
+                // Users often have a 'Shares' asset in their cash list as a placeholder/duplicate.
+                if (c.category === 'shares') return;
+
                 const bal = parseFloat(c.balance || 0);
                 const cid = c.category || 'other';
                 liveCashVal += bal;
@@ -499,8 +548,9 @@ export class PortfolioChartUI {
             const liveTotalVal = liveSharesVal + liveCashVal;
 
             // Only add live point if it's newer than the last snapshot OR if no snapshots exist
-            const lastSnapTs = sortedSnapshots.length > 0 ? sortedSnapshots[sortedSnapshots.length - 1].time : 0;
-            if (nowTs > lastSnapTs + 300) { // 5 min grace
+            const lastSnapUnix = sortedSnapshots.length > 0 ? getSnapTs(sortedSnapshots[sortedSnapshots.length - 1]) : 0;
+
+            if (nowTs > lastSnapUnix + 300) { // 5 min grace
                 totalData.push({ time: nowTs, value: liveTotalVal });
                 sharesData.push({ time: nowTs, value: liveSharesVal });
                 superData.push({ time: nowTs, value: liveSuperVal });

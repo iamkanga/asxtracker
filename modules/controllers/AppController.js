@@ -359,7 +359,7 @@ export class AppController {
 
         document.addEventListener(EVENTS.OPEN_PORTFOLIO_CHART, () => {
             // Lazy import to keep boot fast
-            import('../ui/PortfolioChartUI.js?v=1114').then(module => {
+            import('../ui/PortfolioChartUI.js?v=1151').then(module => {
                 module.PortfolioChartUI.show();
             });
         });
