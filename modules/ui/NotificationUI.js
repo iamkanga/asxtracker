@@ -391,12 +391,9 @@ export class NotificationUI {
                 <div class="${CSS_CLASSES.MODAL_HEADER}">
                     <h2 class="${CSS_CLASSES.MODAL_TITLE}">${UI_LABELS.NOTIFICATIONS_TITLE}</h2>
                     <div style="margin-left: auto; display: flex; gap: 8px; align-items: center;">
-                        <button id="${IDS.BTN_DAILY_BRIEFING}" title="${UI_LABELS.DAILY_BRIEFING_TITLE}" style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem;">
-                            <i class="fas fa-coffee"></i>
-                        </button>
                         <button id="${IDS.BTN_ANNOUNCEMENTS}" title="${UI_LABELS.ANNOUNCEMENTS_TITLE}" style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem; position: relative;">
                             <i class="fas ${UI_ICONS.ANNOUNCEMENTS}"></i>
-                            <span id="notif-announcement-badge" class="${CSS_CLASSES.HIDDEN}" style="position: absolute; top: 4px; left: 26px; color: inherit; font-size: 0.65rem; font-weight: 500; line-height: 1;">0</span>
+                            <span id="notif-announcement-badge" class="${CSS_CLASSES.BADGE} ${CSS_CLASSES.HIDDEN}" style="position: absolute; top: 4px; left: 24px; color: var(--color-accent); font-size: 0.65rem; font-weight: 700; background: var(--bg-color); border: 1px solid rgba(var(--color-accent-rgb), 0.3); border-radius: 50%; padding: 2px; min-width: 14px; height: 14px; display: flex; align-items: center; justify-content: center;">0</span>
                         </button>
                         <button id="${IDS.NOTIF_SETTINGS_BTN}" title="${UI_LABELS.NOTIFICATION_SETTINGS}" style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; background: none; border: none; cursor: pointer; color: var(--color-accent); font-size: 1.2rem;">
                             <i class="fas ${UI_ICONS.PEN}"></i>
@@ -503,15 +500,6 @@ export class NotificationUI {
         const closeHandler = () => this._close(modal);
         if (closeBtn) closeBtn.addEventListener('click', closeHandler);
         if (overlay) overlay.addEventListener('click', closeHandler);
-
-        // Daily Briefing Button
-        const briefingBtn = modal.querySelector(`#${IDS.BTN_DAILY_BRIEFING}`);
-        if (briefingBtn) {
-            briefingBtn.addEventListener('click', () => {
-
-                BriefingUI.show();
-            });
-        }
 
         // Announcements Button
         const announceBtn = modal.querySelector(`#${IDS.BTN_ANNOUNCEMENTS}`);
