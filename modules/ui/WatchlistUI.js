@@ -251,23 +251,24 @@ export class WatchlistUI {
         if (!titleSpan) return;
 
         let baseTitle = UI_LABELS.WATCHLIST_LABEL;
-        const currentId = AppState.watchlist.id || PORTFOLIO_ID;
+        // Normalize currentId to uppercase for robust comparisons
+        const currentId = (AppState.watchlist.id || PORTFOLIO_ID).toUpperCase();
         const customNames = AppState.preferences.customWatchlistNames || {};
 
-        if (customNames[currentId]) {
-            baseTitle = customNames[currentId];
+        if (customNames[currentId] || customNames[currentId.toLowerCase()]) {
+            baseTitle = customNames[currentId] || customNames[currentId.toLowerCase()];
         } else {
-            if (AppState.watchlist.type === 'cash') {
+            if (AppState.watchlist.type === 'cash' || currentId === CASH_WATCHLIST_ID) {
                 baseTitle = WATCHLIST_NAMES.CASH;
-            } else if (AppState.watchlist.id === DASHBOARD_WATCHLIST_ID) {
+            } else if (currentId === DASHBOARD_WATCHLIST_ID) {
                 baseTitle = WATCHLIST_NAMES.DASHBOARD;
             } else {
-                if (AppState.watchlist.id === ALL_SHARES_ID) {
+                if (currentId === ALL_SHARES_ID) {
                     baseTitle = WATCHLIST_NAMES.ALL_SHARES;
-                } else if (!AppState.watchlist.id || AppState.watchlist.id === PORTFOLIO_ID) {
+                } else if (currentId === PORTFOLIO_ID.toUpperCase()) {
                     baseTitle = WATCHLIST_NAMES.PORTFOLIO;
                 } else {
-                    const list = (AppState.data.watchlists || []).find(w => w.id === AppState.watchlist.id);
+                    const list = (AppState.data.watchlists || []).find(w => w.id.toUpperCase() === currentId);
                     baseTitle = list ? list.name : UI_LABELS.WATCHLIST_LABEL;
                 }
             }
@@ -287,8 +288,17 @@ export class WatchlistUI {
         // Logic: Dominant sentiment color starts on the Left.
         // Found in index.html: <header id="appHeader" class="app-header">
         const header = document.getElementById('appHeader');
+        const countsEl = document.getElementById(IDS.HEADER_MOVEMENT_COUNTS);
+
+        // --- PRE-CLEARANCE ---
+        // Always reset counts/background at start of check
+        if (countsEl) {
+            countsEl.innerHTML = '';
+            countsEl.classList.add(CSS_CLASSES.HIDDEN);
+        }
+
         if (header) {
-            if (AppState.watchlist.type === 'cash') {
+            if (AppState.watchlist.type === 'cash' || currentId === CASH_WATCHLIST_ID) {
                 header.style.background = ''; // Reset for cash
             } else {
                 // 1. Identify Target Shares (or Codes) based on View
@@ -297,21 +307,22 @@ export class WatchlistUI {
                 let targetItems = [];
                 const allShares = AppState.data.shares || [];
 
-                if (currentId === PORTFOLIO_ID || currentId === 'PORTFOLIO') {
-                    // Portfolio: Use full share objects where owned > 0
-                    targetItems = allShares.filter(s => (parseFloat(s.owned) || 0) > 0);
+                if (currentId === PORTFOLIO_ID.toUpperCase()) {
+                    // Portfolio: Use full share objects where owned/units > 0
+                    targetItems = allShares.filter(s => (parseFloat(s.portfolioShares) || parseFloat(s.units) || parseFloat(s.owned) || 0) > 0);
                 } else if (currentId === ALL_SHARES_ID) {
                     // All Shares: Use all available share objects
                     targetItems = allShares;
                 } else if (currentId === DASHBOARD_WATCHLIST_ID) {
                     targetItems = (AppState.data.dashboard || []).map(d => (typeof d === 'string' ? { code: d } : d));
                 } else {
-                    // Custom Watchlist
-                    const wList = (AppState.data.watchlists || []).find(w => w.id === currentId);
-                    if (wList && wList.stocks) {
-                        // Map directly to objects with 'code' property for consistent processing
-                        targetItems = wList.stocks.map(c => ({ code: (c || '').toUpperCase() }));
-                    }
+                    // Custom Watchlist: Resolve shares linked to this ID via share documents.
+                    // This matches the UserStore.getWatchlistData logic for consistency.
+                    targetItems = allShares.filter(s => {
+                        const watchlistIds = Array.isArray(s.watchlistIds) ? s.watchlistIds : [];
+                        const legacyId = s.watchlistId;
+                        return watchlistIds.some(id => String(id).toUpperCase() === currentId) || (legacyId && String(legacyId).toUpperCase() === currentId);
+                    });
                 }
 
                 // 2. Count Sentiment
@@ -410,6 +421,35 @@ export class WatchlistUI {
                         rgba(${leftColor}, calc(var(--gradient-strength, 0.6) * 0.8)) ${stopSolid}%, 
                         rgba(20, 20, 20, 1) ${dominantPct}%, 
                         rgba(${rightColor}, var(--gradient-strength, 0.6)) 100%)`;
+                }
+
+                // --- RENDER MOVEMENT COUNTS (User Request) ---
+                if (countsEl) {
+                    // Only show counts on actual stock watchlists — not Dashboard or Cash
+                    const isExcludedView = (
+                        currentId === DASHBOARD_WATCHLIST_ID ||
+                        currentId === CASH_WATCHLIST_ID
+                    );
+                    const totalItems = targetItems.length;
+
+                    if (totalItems > 0 && !isExcludedView) {
+                        countsEl.classList.remove(CSS_CLASSES.HIDDEN);
+
+                        // Use metrics for neutralCount if available
+                        const finalNeutralCount = (metrics && typeof metrics.neutralCount === 'number') ? metrics.neutralCount : (targetItems.length - (gainerCount + loserCount));
+
+                        countsEl.innerHTML = `
+                            <span class="${CSS_CLASSES.TEXT_POSITIVE}" style="display: flex; align-items: center; gap: 4px;">
+                                ${gainerCount} <i class="fas ${UI_ICONS.CHEVRON_DOWN} fa-rotate-180" style="font-size: 0.7em;"></i>
+                            </span>
+                            <span class="${CSS_CLASSES.TEXT_COFFEE}" style="display: flex; align-items: center; justify-content: center; min-width: 20px; margin: 0 15px;">
+                                ${finalNeutralCount}
+                            </span>
+                            <span class="${CSS_CLASSES.TEXT_NEGATIVE}" style="display: flex; align-items: center; gap: 4px;">
+                                ${loserCount} <i class="fas ${UI_ICONS.CHEVRON_DOWN}" style="font-size: 0.7em;"></i>
+                            </span>
+                        `;
+                    }
                 }
             }
         }

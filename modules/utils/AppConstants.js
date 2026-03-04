@@ -1429,6 +1429,8 @@ export const IDS = {
     BTN_EDIT_SHARE: 'btn-edit-share',
     BTN_DELETE_SHARE: 'btn-delete-share',
 
+    HEADER_MOVEMENT_COUNTS: 'header-movement-counts',
+
     // Search Discovery
     DISCOVERY_MODAL: 'discovery-modal',
     DISCOVERY_SEARCH_INPUT: 'discoverySearchInput',

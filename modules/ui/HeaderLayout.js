@@ -113,12 +113,13 @@ export class HeaderLayout {
                     <div id="${IDS.ASX_TOGGLE}" class="${CSS_CLASSES.ASX_TOGGLE_TEXT}" role="button" aria-pressed="false">ASX Codes&nbsp;<i class="fas ${UI_ICONS.CARET_DOWN} ${CSS_CLASSES.TEXT_COFFEE}"></i></div>
                     <div id="${IDS.DASHBOARD_REORDER_TOGGLE}" class="${CSS_CLASSES.DASHBOARD_TIME_REF} hidden" role="button"></div>
                  </div>
-                 <div class="${CSS_CLASSES.CONTROLS_RIGHT}">
+                 <div class="${CSS_CLASSES.CONTROLS_RIGHT} header-sort-and-counts">
                     <button id="${IDS.SORT_PICKER_BTN}" class="${CSS_CLASSES.HEADER_ACTION_BTN} ${CSS_CLASSES.APP_TITLE_COMPACT}" aria-label="Sort Shares">
                         <i class="fas ${UI_ICONS.SORT_AMOUNT_DOWN}"></i> Sort
                     </button>
+                    <div id="${IDS.HEADER_MOVEMENT_COUNTS}" class="header-movement-counts"></div>
                  </div>
-                 <div style="grid-column: 3; justify-self: end; display: flex; align-items: flex-end;">
+                 <div style="grid-column: 3; justify-self: end; display: flex; align-items: center;">
                     <div id="connection-status" class="hidden" title="Live Prices Active - Login to Save">
                         <div class="status-dot"></div>
                         <span>Read Only</span>
