@@ -1781,6 +1781,7 @@ body.dark-theme .toast-title {
 .widget-dashboard-name {
     color: var(--text-color, #fff);
     font-weight: 500;
+    font-size: 1.05rem;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1792,7 +1793,7 @@ body.dark-theme .toast-title {
     text-align: right;
     font-weight: 700;
     color: var(--text-color, #fff);
-    font-size: 0.95rem;
+    font-size: 1.10rem;
     padding: 0 8px;
 }
 
@@ -1800,7 +1801,7 @@ body.dark-theme .toast-title {
     min-width: 60px;
     text-align: right;
     font-weight: 600;
-    font-size: 0.72rem;
+    font-size: 0.83rem;
 }
 
 /* Mobile Tweaks */

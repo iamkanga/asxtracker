@@ -193,7 +193,7 @@ export class WidgetPanel {
 
         let html = `
             <div class="${CSS_CLASSES.WIDGET_HEADER} ${trendClass}">
-                <h3 class="${CSS_CLASSES.WIDGET_TITLE}">Quick Glance</h3>
+                <h3 class="${CSS_CLASSES.WIDGET_TITLE}">Summary Cards</h3>
                 <div class="widget-header-actions">
                     <button class="widget-settings-btn" id="widget-settings-trigger" title="Widget Settings">
                         <i class="fas fa-cog"></i>
@@ -342,13 +342,15 @@ export class WidgetPanel {
 
         return `
             <div class="widget-stat-grid">
-                <div class="widget-stat-item">
-                    <label class="${dayClass}">Day Change</label>
-                    <span class="value ${dayClass}">${daySign}${formatCurrency(Math.abs(totalDayChange))}</span>
-                </div>
-                <div class="widget-stat-item">
-                    <label class="${dayClass}">Day Return</label>
-                    <span class="value ${dayClass}">${daySign}${totalPct.toFixed(2)}%</span>
+                <div class="widget-stat-row" style="justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 12px; margin-bottom: 12px;">
+                    <div class="widget-stat-item" style="align-items: flex-start;">
+                        <label class="${dayClass}">Day Change</label>
+                        <span class="value ${dayClass}">${daySign}${formatCurrency(Math.abs(totalDayChange))}</span>
+                    </div>
+                    <div class="widget-stat-item" style="align-items: flex-end; text-align: right;">
+                        <label class="${dayClass}">Day Return</label>
+                        <span class="value ${dayClass}">${daySign}${totalPct.toFixed(2)}%</span>
+                    </div>
                 </div>
                 <div class="widget-stat-row" style="margin-top: 6px;">
                     <div class="widget-stat-item widget-stat-small">
@@ -488,7 +490,7 @@ export class WidgetPanel {
                 const url = DASHBOARD_LINKS[code] || LinkHelper.getFinanceUrl(code);
 
                 return `
-                    <div class="widget-notification-item" style="cursor: pointer;" onclick="if('${code}' !== '???') window.open('${url}', '_blank', 'noopener,noreferrer')">
+                    <div class="widget-notification-item" style="cursor: pointer;" onclick="if('${code}' !== '???') document.dispatchEvent(new CustomEvent('${EVENTS.ASX_CODE_CLICK}', { detail: { code: '${code}' } }))">
                         <span class="code ${signClass}">${code}</span>
                         <span class="message">${message}</span>
                     </div>
@@ -532,18 +534,43 @@ export class WidgetPanel {
     }
 
     _renderTopMovers() {
-        const holdings = this._getPortfolioHoldings().filter(h => h.price > 0);
-        if (!holdings.length) return `<div class="widget-empty">No holdings with live data.</div>`;
+        // Find movers across all watchlists based on notification logic
+        const local = notificationStore?.getLocalAlerts?.() || { pinned: [], fresh: [] };
+        const allAlerts = [...(local.pinned || []), ...(local.fresh || [])];
 
-        const sorted = [...holdings].sort((a, b) => Math.abs(b.pctChange) - Math.abs(a.pctChange)).slice(0, 5);
+        let movers = allAlerts.filter(a => {
+            const intent = (a.intent || '').toLowerCase();
+            return intent === 'mover' || intent === 'up' || intent === 'down';
+        });
+
+        if (!movers.length) return `<div class="widget-empty">No significant movers.</div>`;
+
+        // Sort by pure percentage change magnitude
+        const sorted = movers.sort((a, b) => {
+            const pctA = Math.abs(Number(a.pct || a.pctChange || a.dayChangePercent || 0));
+            const pctB = Math.abs(Number(b.pct || b.pctChange || b.dayChangePercent || 0));
+            return pctB - pctA;
+        }).slice(0, 5);
+
         return sorted.map(h => {
-            const pctClass = h.pctChange >= 0 ? 'text-up' : 'text-down';
-            const pctSign = h.pctChange >= 0 ? '+' : '';
+            const code = h.code || h.shareCode || '???';
+            // Live price if available
+            let price = h.price || 0;
+            let pct = Number(h.pct || h.pctChange || h.dayChangePercent || 0);
+
+            if (AppState.livePrices?.has(code)) {
+                const live = AppState.livePrices.get(code);
+                price = Number(live.live || live.price || price);
+                pct = Number(live.dayChangePercent ?? live.pctChange ?? live.pct ?? pct);
+            }
+
+            const pctClass = pct >= 0 ? 'text-up' : 'text-down';
+            const pctSign = pct >= 0 ? '+' : '';
             return `
-                <div class="widget-holding-row" style="cursor: pointer;" onclick="document.dispatchEvent(new CustomEvent('${EVENTS.ASX_CODE_CLICK}', { detail: { code: '${h.code}' } }))">
-                    <span class="code">${h.code}</span>
-                    <span class="value">${formatCurrency(h.price)}</span>
-                    <span class="change ${pctClass}">${pctSign}${h.pctChange.toFixed(2)}%</span>
+                <div class="widget-holding-row" style="cursor: pointer;" onclick="document.dispatchEvent(new CustomEvent('${EVENTS.ASX_CODE_CLICK}', { detail: { code: '${code}' } }))">
+                    <span class="code">${code}</span>
+                    <span class="value">${formatCurrency(price)}</span>
+                    <span class="change ${pctClass}">${pctSign}${pct.toFixed(2)}%</span>
                 </div>
             `;
         }).join('');
