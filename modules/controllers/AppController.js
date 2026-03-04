@@ -686,13 +686,23 @@ export class AppController {
     }
 
     _handleQuickNav(detail) {
-        // detail might indicate if it was a forced open (e.g. from settings, though unlikely)
-        const config = AppState.preferences.quickNav;
+        // If an explicit config is passed (e.g. from the Widget panel), use it.
+        // Otherwise, fallback to the user's saved quick nav preference.
+        let config = detail;
+        if (!config || !config.watchlistId) {
+            config = AppState.preferences.quickNav;
+        }
 
         if (!config) {
             // No config set? Open modal to create one
             this.quickNavUI.show();
             return;
+        }
+
+        // Gracefully close widget panel if it is open during navigation
+        const widgetEl = document.getElementById('widget-panel');
+        if (widgetEl && !widgetEl.classList.contains('widget-hidden')) {
+            document.dispatchEvent(new CustomEvent(EVENTS.WIDGET_TOGGLE));
         }
 
         const { watchlistId, sortField, sortDirection } = config;
@@ -706,7 +716,11 @@ export class AppController {
         const currentSort = AppState.sortConfig;
         const isSameSort = currentSort.field === sortField && currentSort.direction === sortDirection;
 
-        if (isSameWatchlist && isSameSort) {
+        // Only open the edit modal if we used the user's saved preference and we're already there.
+        // If we clicked from a widget, we just want to navigate.
+        const isUserPreference = (config === AppState.preferences.quickNav);
+
+        if (isSameWatchlist && isSameSort && isUserPreference) {
             // Already there -> Open Modal to Edit/Clear
             this.quickNavUI.show();
         } else {

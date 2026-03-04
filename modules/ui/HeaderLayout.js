@@ -11,7 +11,7 @@ import { StateAuditor } from '../state/StateAuditor.js';
 import { EVENTS, UI_ICONS, IDS, WATCHLIST_NAMES, ALL_SHARES_ID, PORTFOLIO_ID, CASH_WATCHLIST_ID, DASHBOARD_WATCHLIST_ID, STORAGE_KEYS } from '../utils/AppConstants.js';
 import { navManager } from '../utils/NavigationManager.js';
 import { GeneralSettingsUI } from './GeneralSettingsUI.js';
-import { SidebarCommandCenter } from './SidebarCommandCenter.js?v=1080';
+import { SidebarCommandCenter } from './SidebarCommandCenter.js?v=1152';
 import { VisualSettingsHUD } from './VisualSettingsHUD.js';
 
 export class HeaderLayout {

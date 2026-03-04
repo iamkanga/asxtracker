@@ -193,6 +193,12 @@ export const AppState = {
                 const stored = localStorage.getItem(STORAGE_KEYS.GEMINI_SUMMARIES);
                 return stored ? JSON.parse(stored) : {};
             } catch (e) { return {}; }
+        })(),
+        widgetConfig: (() => {
+            try {
+                const stored = localStorage.getItem(STORAGE_KEYS.WIDGET_CONFIG);
+                return stored ? JSON.parse(stored) : null;
+            } catch (e) { return null; }
         })()
     },
 
@@ -359,7 +365,8 @@ export const AppState = {
                 accentOpacity: this.preferences.accentOpacity || '1',
                 cardChartOpacity: this.preferences.cardChartOpacity ?? 1.0,
                 oneTapResearch: this.preferences.oneTapResearch || false,
-                aiPromptTemplates: this.preferences.aiPromptTemplates || {}
+                aiPromptTemplates: this.preferences.aiPromptTemplates || {},
+                widgetConfig: this.preferences.widgetConfig || null
             };
             this.onPersistenceUpdate(payload);
         } else {

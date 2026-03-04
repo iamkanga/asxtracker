@@ -264,6 +264,12 @@ export class SidebarCommandCenter {
                         <button class="command-grid-item" id="nav-favorites" title="Favorite Links">
                             <i class="fas fa-link command-icon"></i>
                         </button>
+                        <button class="command-grid-item" id="nav-widgets" title="Quick Widget">
+                            <i class="fas fa-th-large command-icon"></i>
+                        </button>
+                        <button class="command-grid-item" id="nav-market-pulse" title="Market Pulse">
+                            <i class="fas fa-heartbeat command-icon"></i>
+                        </button>
                     </div>
                     <!-- Theme Status Text -->
                     <div style="text-align: center; margin-top: 8px; font-size: 0.75rem; color: var(--text-muted); opacity: 0.8;">
@@ -405,6 +411,16 @@ export class SidebarCommandCenter {
             case 'nav-favorites':
                 this._closeSidebar();
                 document.dispatchEvent(new CustomEvent(EVENTS.OPEN_FAVORITE_LINKS));
+                break;
+
+            case 'nav-widgets':
+                this._closeSidebar();
+                document.dispatchEvent(new CustomEvent(EVENTS.WIDGET_TOGGLE));
+                break;
+
+            case 'nav-market-pulse':
+                this._closeSidebar();
+                document.dispatchEvent(new CustomEvent(EVENTS.OPEN_MARKET_PULSE));
                 break;
 
             case 'nav-reload':

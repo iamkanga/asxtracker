@@ -101,7 +101,8 @@ export const STORAGE_KEYS = {
     GEMINI_SUMMARIES: 'ASX_NEXT_geminiSummaries',
     VIEW_MODE: 'ASX_NEXT_viewMode', // Global fallback/Legacy
     VIEW_CONFIGS: 'ASX_NEXT_viewConfigs', // Per-watchlist Map
-    LAST_SNAPSHOT_TIME: 'ASX_NEXT_lastSnapshotTime'
+    LAST_SNAPSHOT_TIME: 'ASX_NEXT_lastSnapshotTime',
+    WIDGET_CONFIG: 'ASX_NEXT_widgetConfig'
 };
 
 export const EVENTS = {
@@ -176,7 +177,9 @@ export const EVENTS = {
     OPEN_PORTFOLIO_CHART: 'open-portfolio-chart',
     SHOW_AI_SUMMARY: 'show-ai-summary',
     OPEN_CREATE_WATCHLIST: 'open-create-watchlist',
-    OPEN_EDIT_WATCHLIST: 'open-edit-watchlist'
+    OPEN_EDIT_WATCHLIST: 'open-edit-watchlist',
+    WIDGET_TOGGLE: 'widget-toggle',
+    WIDGET_CONFIG_CHANGED: 'widget-config-changed'
 };
 
 export const SORT_OPTIONS = {
@@ -798,6 +801,16 @@ export const CSS_CLASSES = {
     // Cash View Card Structure
     CASH_EYE_BTN: 'cash-eye-btn',
     LINK_PORTFOLIO_CHECKBOX: 'link-portfolio-checkbox',
+
+    // Widget Specific
+    WIDGET_PANEL: 'widget-panel',
+    WIDGET_SECTION: 'widget-section',
+    WIDGET_HEADER: 'widget-header',
+    WIDGET_CONTENT: 'widget-content',
+    WIDGET_TITLE: 'widget-title',
+    WIDGET_CONFIG_MODAL: 'widget-config-modal',
+    WIDGET_MODULE_ROW: 'widget-module-row',
+    WIDGET_DRAG_HANDLE: 'widget-drag-handle',
 
     // Utility Buttons
     ICON_BTN_GHOST: 'icon-btn-ghost',
