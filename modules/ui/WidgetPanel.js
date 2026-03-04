@@ -83,19 +83,22 @@ export class WidgetPanel {
         if (!isHidden) {
             document.body.appendChild(this.container);
             this.container.className = 'widget-panel';
+
+            const isMobile = window.innerWidth <= 540;
+            const panelWidth = isMobile ? '100vw' : '380px';
+
             this.container.style.cssText = `
                 display: flex !important;
                 visibility: visible !important;
                 opacity: 1 !important;
                 position: fixed !important;
                 top: 60px !important;
-                right: 0 !important;
-                left: auto !important;
-                width: 380px !important;
+                ${isMobile ? 'left: 0 !important; right: 0 !important;' : 'right: 0 !important; left: auto !important;'}
+                width: ${panelWidth} !important;
                 height: calc(100vh - 60px) !important;
                 background: var(--modal-content-bg, var(--card-bg, #1a1a2e)) !important;
                 z-index: 20000 !important;
-                border-left: 1px solid rgba(255,255,255,0.08) !important;
+                border-left: ${isMobile ? 'none' : '1px solid rgba(255,255,255,0.08)'} !important;
                 box-shadow: -10px 0 50px rgba(0,0,0,0.8) !important;
                 pointer-events: all !important;
                 transform: translateX(0) !important;
@@ -122,8 +125,15 @@ export class WidgetPanel {
         console.log('[WidgetPanel] Starting render...');
         const config = AppState.preferences?.widgetConfig || this._getDefaultConfig();
 
+        // Compute portfolio day change direction for header gradient (matches portfolio title bar)
+        const holdings = this._getPortfolioHoldings().filter(h => h.price > 0);
+        const totalDayChange = holdings.reduce((acc, h) => acc + h.dayChangeValue, 0);
+        const trendClass = holdings.length > 0
+            ? (totalDayChange >= 0 ? 'trend-up-bg' : 'trend-down-bg')
+            : '';
+
         let html = `
-            <div class="${CSS_CLASSES.WIDGET_HEADER}">
+            <div class="${CSS_CLASSES.WIDGET_HEADER} ${trendClass}">
                 <h3 class="${CSS_CLASSES.WIDGET_TITLE}">Quick Glance</h3>
                 <div class="widget-header-actions">
                     <button class="widget-settings-btn" id="widget-settings-trigger" title="Widget Settings">
@@ -134,7 +144,7 @@ export class WidgetPanel {
                     </button>
                 </div>
             </div>
-            <div class="widget-scroll-container">
+            <div class="${CSS_CLASSES.WIDGET_CONTENT} widget-scroll-container ${trendClass}">
         `;
 
         config.forEach(item => {
