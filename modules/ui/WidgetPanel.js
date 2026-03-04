@@ -52,6 +52,7 @@ const CURRENCY_SYMBOLS = new Set([
 export class WidgetPanel {
     constructor() {
         this.container = null;
+        this.overlay = null;
         this.isInitialized = false;
     }
 
@@ -61,8 +62,35 @@ export class WidgetPanel {
         console.log('[WidgetPanel] Initializing with container:', container);
         this.container.classList.add(CSS_CLASSES.WIDGET_PANEL);
         this.container.classList.add('widget-hidden');
+
+        this._setupOverlay();
+
         this.isInitialized = true;
         this._bindEvents();
+    }
+
+    _setupOverlay() {
+        if (this.overlay) return;
+        this.overlay = document.createElement('div');
+        this.overlay.id = 'widget-overlay';
+        this.overlay.className = CSS_CLASSES.MODAL_OVERLAY;
+        this.overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(2px);
+            -webkit-backdrop-filter: blur(2px);
+            z-index: 19999;
+            display: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: auto;
+        `;
+        this.overlay.onclick = () => this.toggle();
+        document.body.appendChild(this.overlay);
     }
 
     _bindEvents() {
@@ -81,6 +109,14 @@ export class WidgetPanel {
         console.log('[WidgetPanel] Toggle State:', isHidden ? 'HIDDEN' : 'VISIBLE');
 
         if (!isHidden) {
+            // OPENING
+            if (this.overlay) {
+                this.overlay.style.display = 'block';
+                requestAnimationFrame(() => {
+                    this.overlay.style.opacity = '1';
+                });
+            }
+
             document.body.appendChild(this.container);
             this.container.className = 'widget-panel';
 
@@ -106,6 +142,16 @@ export class WidgetPanel {
             `;
             this.render();
         } else {
+            // CLOSING
+            if (this.overlay) {
+                this.overlay.style.opacity = '0';
+                setTimeout(() => {
+                    if (this.container.classList.contains('widget-hidden')) {
+                        this.overlay.style.display = 'none';
+                    }
+                }, 300);
+            }
+
             this.container.style.transform = 'translateX(100%)';
             setTimeout(() => {
                 if (this.container.classList.contains('widget-hidden')) {
