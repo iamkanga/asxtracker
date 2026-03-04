@@ -9,8 +9,9 @@
  */
 import { AppState } from '../state/AppState.js';
 import { notificationStore } from '../state/NotificationStore.js';
-import { CSS_CLASSES, IDS, EVENTS, UI_ICONS, DASHBOARD_SYMBOLS, CASH_WATCHLIST_ID } from '../utils/AppConstants.js';
+import { CSS_CLASSES, IDS, EVENTS, UI_ICONS, DASHBOARD_SYMBOLS, DASHBOARD_LINKS, CASH_WATCHLIST_ID } from '../utils/AppConstants.js';
 import { formatCurrency, formatPercent } from '../utils/formatters.js';
+import { LinkHelper } from '../utils/LinkHelper.js';
 
 export const WIDGET_MODULES = [
     { id: 'day_performance', label: 'Day Performance', description: "Today's portfolio gain/loss detail", icon: 'fa-calendar-day', renderer: '_renderDayPerformance', default: true },
@@ -438,8 +439,10 @@ export class WidgetPanel {
             const pctSign = pct >= 0 ? '+' : '';
             const priceStr = this._formatDashboardPrice(code, price);
 
+            const url = DASHBOARD_LINKS[code] || LinkHelper.getFinanceUrl(code);
+
             return `
-                <div class="widget-dashboard-row" style="cursor: pointer;" onclick="document.dispatchEvent(new CustomEvent('${EVENTS.ASX_CODE_CLICK}', { detail: { code: '${code}' } }))">
+                <div class="widget-dashboard-row" style="cursor: pointer;" onclick="window.open('${url}', '_blank', 'noopener,noreferrer')">
                     <div class="widget-dashboard-label">
                         <div class="analog-clock-hook" data-code="${code}" style="width:14px; height:14px; display:inline-block; vertical-align:middle; margin-right:6px;"></div>
                         <span class="widget-dashboard-name">${name}</span>
@@ -470,8 +473,10 @@ export class WidgetPanel {
                 const pct = Number(a.pct || a.pctChange || a.dayChangePercent || 0);
                 const signClass = pct >= 0 ? 'text-up' : 'text-down';
                 const code = a.code || '???';
+                const url = DASHBOARD_LINKS[code] || LinkHelper.getFinanceUrl(code);
+
                 return `
-                    <div class="widget-notification-item" style="cursor: pointer;" onclick="if('${code}' !== '???') document.dispatchEvent(new CustomEvent('${EVENTS.ASX_CODE_CLICK}', { detail: { code: '${code}' } }))">
+                    <div class="widget-notification-item" style="cursor: pointer;" onclick="if('${code}' !== '???') window.open('${url}', '_blank', 'noopener,noreferrer')">
                         <span class="code ${signClass}">${code}</span>
                         <span class="message">${message}</span>
                     </div>
@@ -503,8 +508,10 @@ export class WidgetPanel {
         const pct = Number(xjo.pctChange || 0);
         const changeClass = pct >= 0 ? 'text-up' : 'text-down';
         const sign = pct >= 0 ? '+' : '';
+        const url = DASHBOARD_LINKS['^AXJO'] || LinkHelper.getFinanceUrl('^AXJO');
+
         return `
-            <div class="widget-market-row">
+            <div class="widget-market-row" style="cursor: pointer;" onclick="window.open('${url}', '_blank', 'noopener,noreferrer')">
                 <span>ASX 200</span>
                 <span class="value">${Number(xjo.live || 0).toLocaleString('en-AU', { maximumFractionDigits: 1 })}</span>
                 <span class="change ${changeClass}">${sign}${pct.toFixed(2)}%</span>

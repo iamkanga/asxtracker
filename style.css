@@ -1790,9 +1790,9 @@ body.dark-theme .toast-title {
 .widget-dashboard-price {
     min-width: 70px;
     text-align: right;
-    font-weight: 600;
+    font-weight: 700;
     color: var(--text-color, #fff);
-    font-size: 0.8rem;
+    font-size: 0.95rem;
     padding: 0 8px;
 }
 
@@ -1800,7 +1800,7 @@ body.dark-theme .toast-title {
     min-width: 60px;
     text-align: right;
     font-weight: 600;
-    font-size: 0.78rem;
+    font-size: 0.72rem;
 }
 
 /* Mobile Tweaks */

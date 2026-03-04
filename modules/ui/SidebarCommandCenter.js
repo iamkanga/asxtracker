@@ -267,7 +267,7 @@ export class SidebarCommandCenter {
                             <i class="fas fa-link command-icon"></i>
                         </button>
                         <button class="command-grid-item" id="nav-widgets" title="Quick Widget">
-                            <i class="fas fa-th-large command-icon"></i>
+                            <i class="fas ${UI_ICONS.WIDGET} command-icon"></i>
                         </button>
                         <button class="command-grid-item" id="nav-market-pulse" title="Market Pulse">
                             <i class="fas fa-heartbeat command-icon"></i>

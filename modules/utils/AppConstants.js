@@ -414,6 +414,7 @@ export const UI_ICONS = {
     // Carousel Navigation
     CHEVRON_LEFT: 'fa-chevron-left',
     CHEVRON_RIGHT: 'fa-chevron-right',
+    WIDGET: 'fa-chart-pie',
 
     // New Icons
     BELL: 'fa-bell',
