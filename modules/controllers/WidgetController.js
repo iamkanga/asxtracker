@@ -217,9 +217,7 @@ export class WidgetController {
                     id: row.dataset.id,
                     visible: row.querySelector('.widget-module-toggle')?.checked || false
                 }));
-
-                AppState.preferences.widgetConfig = newConfig;
-                if (AppState.triggerSync) AppState.triggerSync();
+                AppState.saveWidgetConfig(newConfig);
 
                 document.dispatchEvent(new CustomEvent(EVENTS.WIDGET_CONFIG_CHANGED));
                 modal.remove();
@@ -352,8 +350,7 @@ export class WidgetController {
                     if (cb.checked) selected.push(cb.dataset.code);
                 });
 
-                AppState.preferences.widgetDashboardItems = selected;
-                if (AppState.triggerSync) AppState.triggerSync();
+                AppState.saveWidgetDashboardItems(selected);
 
                 document.dispatchEvent(new CustomEvent(EVENTS.WIDGET_CONFIG_CHANGED));
                 modal.remove();

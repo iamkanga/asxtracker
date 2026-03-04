@@ -426,7 +426,6 @@ export class WidgetPanel {
                 const code = a.code || '???';
                 return `
                     <div class="widget-notification-item" style="cursor: pointer;" onclick="if('${code}' !== '???') document.dispatchEvent(new CustomEvent('${EVENTS.ASX_CODE_CLICK}', { detail: { code: '${code}' } }))">
-                        <div class="analog-clock-hook" data-code="${code}" style="width:14px; height:14px; display:inline-block; vertical-align:middle; margin-right:6px;"></div>
                         <span class="code ${signClass}">${code}</span>
                         <span class="message">${message}</span>
                     </div>
@@ -460,7 +459,6 @@ export class WidgetPanel {
         const sign = pct >= 0 ? '+' : '';
         return `
             <div class="widget-market-row">
-                <div class="analog-clock-hook" data-code="^AXJO" style="width:14px; height:14px; display:inline-block; vertical-align:middle; margin-right:6px;"></div>
                 <span>ASX 200</span>
                 <span class="value">${Number(xjo.live || 0).toLocaleString('en-AU', { maximumFractionDigits: 1 })}</span>
                 <span class="change ${changeClass}">${sign}${pct.toFixed(2)}%</span>
@@ -478,7 +476,6 @@ export class WidgetPanel {
             const pctSign = h.pctChange >= 0 ? '+' : '';
             return `
                 <div class="widget-holding-row" style="cursor: pointer;" onclick="document.dispatchEvent(new CustomEvent('${EVENTS.ASX_CODE_CLICK}', { detail: { code: '${h.code}' } }))">
-                    <div class="analog-clock-hook" data-code="${h.code}" style="width:14px; height:14px; display:inline-block; vertical-align:middle; margin-right:6px;"></div>
                     <span class="code">${h.code}</span>
                     <span class="value">${formatCurrency(h.price)}</span>
                     <span class="change ${pctClass}">${pctSign}${h.pctChange.toFixed(2)}%</span>
@@ -499,7 +496,6 @@ export class WidgetPanel {
             const pctSign = h.pctChange >= 0 ? '+' : '';
             return `
                 <div class="widget-holding-row" style="cursor: pointer;" onclick="document.dispatchEvent(new CustomEvent('${EVENTS.ASX_CODE_CLICK}', { detail: { code: '${h.code}' } }))">
-                    <div class="analog-clock-hook" data-code="${h.code}" style="width:14px; height:14px; display:inline-block; vertical-align:middle; margin-right:6px;"></div>
                     <span class="code">${h.code}</span>
                     <span class="value">${formatCurrency(h.value)}</span>
                     <span class="change ${pctClass}">${pctSign}${h.pctChange.toFixed(2)}%</span>
@@ -639,6 +635,62 @@ export class WidgetPanel {
         }
         if (isSydWeekend) return false;
         return sydTotal >= (10 * 60) && sydTotal < (16 * 60);
+    }
+
+    /**
+     * Binds a long-hold trigger to an element to open the widget panel.
+     * Replaces the old Market Pulse behavior on specific elements.
+     * @param {HTMLElement} element 
+     */
+    static bindTrigger(element) {
+        if (!element) return;
+
+        let pressTimer;
+        let hasTriggered = false;
+        const LONG_PRESS_DURATION = 600; // Consistent with other app long-presses
+
+        const startHandler = (e) => {
+            hasTriggered = false;
+            if (e.target.closest('button') || e.target.closest('a')) return;
+
+            pressTimer = setTimeout(() => {
+                hasTriggered = true;
+                if (navigator.vibrate) navigator.vibrate(50);
+
+                // Trigger the widget panel
+                document.dispatchEvent(new CustomEvent(EVENTS.WIDGET_TOGGLE));
+            }, LONG_PRESS_DURATION);
+        };
+
+        const cancelHandler = () => {
+            if (pressTimer) {
+                clearTimeout(pressTimer);
+                pressTimer = null;
+            }
+        };
+
+        const clickBlocker = (e) => {
+            if (hasTriggered) {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                hasTriggered = false;
+                return false;
+            }
+        };
+
+        // UI Feedback & Prevents browser default menus
+        element.style.userSelect = 'none';
+        element.style.webkitUserSelect = 'none';
+        element.style.webkitTouchCallout = 'none';
+        element.style.touchAction = 'manipulation';
+
+        element.addEventListener('mousedown', startHandler);
+        element.addEventListener('touchstart', startHandler, { passive: true });
+        element.addEventListener('mouseup', cancelHandler);
+        element.addEventListener('mouseleave', cancelHandler);
+        element.addEventListener('touchend', cancelHandler);
+        element.addEventListener('touchmove', cancelHandler);
+        element.addEventListener('click', clickBlocker, true);
     }
 }
 

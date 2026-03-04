@@ -102,7 +102,8 @@ export const STORAGE_KEYS = {
     VIEW_MODE: 'ASX_NEXT_viewMode', // Global fallback/Legacy
     VIEW_CONFIGS: 'ASX_NEXT_viewConfigs', // Per-watchlist Map
     LAST_SNAPSHOT_TIME: 'ASX_NEXT_lastSnapshotTime',
-    WIDGET_CONFIG: 'ASX_NEXT_widgetConfig'
+    WIDGET_CONFIG: 'ASX_NEXT_widgetConfig',
+    WIDGET_DASHBOARD_ITEMS: 'ASX_NEXT_widgetDashboardItems'
 };
 
 export const EVENTS = {

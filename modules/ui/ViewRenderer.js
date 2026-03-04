@@ -8,7 +8,7 @@
 import { formatCurrency, formatPercent, formatFriendlyDate } from '../utils/formatters.js';
 import { AppState } from '../state/AppState.js';
 import { SORT_OPTIONS, UI_ICONS, UI_LABELS, USER_MESSAGES, RESEARCH_LINKS_TEMPLATE, CSS_CLASSES, IDS, EVENTS, SUMMARY_TYPES, STORAGE_KEYS, PORTFOLIO_ID, KANGAROO_ICON_SRC, KANGAROO_ICON_SVG, VIEW_MODES, FALLBACK_SECTOR_MAP, GEMINI_PROMPTS, REGISTRY_LINKS } from '../utils/AppConstants.js?v=1030';
-import { SnapshotUI } from './SnapshotUI.js';
+import { WidgetPanel } from './WidgetPanel.js';
 import { LinkHelper } from '../utils/LinkHelper.js';
 import { ToastManager } from './ToastManager.js';
 
@@ -779,10 +779,10 @@ export class ViewRenderer {
             });
         });
 
-        // TRIGGER BINDING: Portfolio Value Card -> Market Pulse
+        // TRIGGER BINDING: Portfolio Value Card -> Widget Panel (Long hold)
         const valueCard = container.querySelector(`[data-type="${SUMMARY_TYPES.VALUE}"]`);
         if (valueCard) {
-            SnapshotUI.bindTrigger(valueCard);
+            WidgetPanel.bindTrigger(valueCard);
         }
 
         // 3. Inject (Prepend to main container)

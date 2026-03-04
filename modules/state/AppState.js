@@ -199,6 +199,12 @@ export const AppState = {
                 const stored = localStorage.getItem(STORAGE_KEYS.WIDGET_CONFIG);
                 return stored ? JSON.parse(stored) : null;
             } catch (e) { return null; }
+        })(),
+        widgetDashboardItems: (() => {
+            try {
+                const stored = localStorage.getItem(STORAGE_KEYS.WIDGET_DASHBOARD_ITEMS);
+                return stored ? JSON.parse(stored) : null;
+            } catch (e) { return null; }
         })()
     },
 
@@ -352,7 +358,6 @@ export const AppState = {
                 dailyEmail: this.preferences.dailyEmail || false,
                 alertEmailRecipients: this.preferences.alertEmailRecipients || '',
                 gradientStrength: this.preferences.gradientStrength ?? 0.25,
-                gradientStrength: this.preferences.gradientStrength ?? 0.25,
                 viewMode: this.viewMode || 'TABLE',
                 viewConfigs: this.preferences.viewConfigs || {},
                 customWatchlistNames: this.preferences.customWatchlistNames || {},
@@ -366,7 +371,8 @@ export const AppState = {
                 cardChartOpacity: this.preferences.cardChartOpacity ?? 1.0,
                 oneTapResearch: this.preferences.oneTapResearch || false,
                 aiPromptTemplates: this.preferences.aiPromptTemplates || {},
-                widgetConfig: this.preferences.widgetConfig || null
+                widgetConfig: this.preferences.widgetConfig || null,
+                widgetDashboardItems: this.preferences.widgetDashboardItems || null
             };
             this.onPersistenceUpdate(payload);
         } else {
@@ -637,6 +643,18 @@ export const AppState = {
         if (!this.preferences.customWatchlistNames) this.preferences.customWatchlistNames = {};
         this.preferences.customWatchlistNames[id] = name;
         localStorage.setItem(STORAGE_KEYS.CUSTOM_WATCHLIST_NAMES, JSON.stringify(this.preferences.customWatchlistNames));
+        this._triggerSync();
+    },
+
+    saveWidgetConfig(config) {
+        this.preferences.widgetConfig = config;
+        localStorage.setItem(STORAGE_KEYS.WIDGET_CONFIG, JSON.stringify(config));
+        this._triggerSync();
+    },
+
+    saveWidgetDashboardItems(items) {
+        this.preferences.widgetDashboardItems = items;
+        localStorage.setItem(STORAGE_KEYS.WIDGET_DASHBOARD_ITEMS, JSON.stringify(items));
         this._triggerSync();
     },
 
