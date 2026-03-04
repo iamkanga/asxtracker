@@ -54,18 +54,6 @@ export class WidgetController {
             return { ...m, visible: userPref ? userPref.visible : m.default };
         });
 
-        // Sort by user's preferred order
-        if (config.length) {
-            allModules.sort((a, b) => {
-                const idxA = config.findIndex(c => c.id === a.id);
-                const idxB = config.findIndex(c => c.id === b.id);
-                if (idxA === -1 && idxB === -1) return 0;
-                if (idxA === -1) return 1;
-                if (idxB === -1) return -1;
-                return idxA - idxB;
-            });
-        }
-
         // Build module rows using app's square-radio-wrapper pattern
         const moduleRows = allModules.map(mod => `
             <div class="widget-config-row" data-id="${mod.id}">

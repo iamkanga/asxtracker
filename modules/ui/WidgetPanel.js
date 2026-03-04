@@ -15,12 +15,12 @@ import { LinkHelper } from '../utils/LinkHelper.js';
 
 export const WIDGET_MODULES = [
     { id: 'day_performance', label: 'Day Performance', description: "Today's portfolio gain/loss detail", icon: 'fa-calendar-day', renderer: '_renderDayPerformance', default: true },
-    { id: 'portfolio_summary', label: 'Portfolio Summary', description: 'Total wealth with shares vs cash breakdown', icon: 'fa-wallet', renderer: '_renderPortfolioSummary', default: true },
-    { id: 'top_holdings', label: 'Top Holdings', description: 'Your largest positions by value', icon: 'fa-trophy', renderer: '_renderTopHoldings', default: false },
     { id: 'dashboard_snapshot', label: 'Dashboard Snapshot', description: 'Live indexes, currencies & commodities', icon: 'fa-globe', renderer: '_renderDashboardSnapshot', default: true },
+    { id: 'portfolio_summary', label: 'Portfolio Summary', description: 'Total wealth with shares vs cash breakdown', icon: 'fa-wallet', renderer: '_renderPortfolioSummary', default: true },
+    { id: 'cash_breakdown', label: 'Cash & Assets', description: 'Breakdown of non-share assets', icon: 'fa-piggy-bank', renderer: '_renderCashBreakdown', default: false },
     { id: 'notifications', label: 'Latest Alerts', description: 'Most recent price alerts & notifications', icon: 'fa-bell', renderer: '_renderNotifications', default: true },
     { id: 'top_movers', label: 'Biggest Movers', description: 'Top daily % movers in your portfolio', icon: 'fa-bolt', renderer: '_renderTopMovers', default: false },
-    { id: 'cash_breakdown', label: 'Cash & Assets', description: 'Breakdown of non-share assets', icon: 'fa-piggy-bank', renderer: '_renderCashBreakdown', default: false },
+    { id: 'top_holdings', label: 'Top Holdings', description: 'Your largest positions by value', icon: 'fa-trophy', renderer: '_renderTopHoldings', default: false },
     { id: 'watchlist_summary', label: 'Watchlists', description: 'Quick view of your watchlists', icon: 'fa-list', renderer: '_renderWatchlistSummary', default: false },
     { id: 'market_snapshot', label: 'Market Snapshot', description: 'ASX 200 index overview', icon: 'fa-chart-line', renderer: '_renderMarketSnapshot', default: false }
 ];
@@ -206,10 +206,13 @@ export class WidgetPanel {
             <div class="${CSS_CLASSES.WIDGET_CONTENT} widget-scroll-container ${trendClass}">
         `;
 
-        config.forEach(item => {
-            if (!item.visible) return;
-            const module = WIDGET_MODULES.find(m => m.id === item.id);
-            if (module && typeof this[module.renderer] === 'function') {
+        WIDGET_MODULES.forEach(module => {
+            const userPref = config.find(c => c.id === module.id);
+            const isVisible = userPref ? userPref.visible : module.default;
+
+            if (!isVisible) return;
+
+            if (typeof this[module.renderer] === 'function') {
                 const headerActions = module.id === 'dashboard_snapshot'
                     ? `<i class="fas fa-pen widget-dashboard-edit-btn" title="Edit Selection" onclick="document.dispatchEvent(new CustomEvent('open-widget-dashboard-picker'))" style="margin-left: auto; cursor: pointer; opacity: 0.7; font-size: 0.8rem;"></i>`
                     : '';
@@ -475,9 +478,17 @@ export class WidgetPanel {
             const local = notificationStore?.getLocalAlerts?.() || { pinned: [], fresh: [] };
             const allAlerts = [...(local.pinned || []), ...(local.fresh || [])];
 
+            const filteredAlerts = allAlerts.filter(a => {
+                const intent = (a.intent || '').toLowerCase();
+                const code = (a.code || '').toUpperCase();
+                // Block 'movers' so they only show in Biggest Movers module
+                // Block 'brief' or 'morning' strings explicitly if they pop up
+                return intent !== 'mover' && intent !== 'up' && intent !== 'down' && intent !== 'brief' && !code.includes('MORNING');
+            });
+
             // Prioritize hit targets and show all targets + up to 4 other alerts
-            const targets = allAlerts.filter(a => (a.intent || '').toLowerCase() === 'target');
-            const others = allAlerts.filter(a => (a.intent || '').toLowerCase() !== 'target').slice(0, 4);
+            const targets = filteredAlerts.filter(a => (a.intent || '').toLowerCase() === 'target');
+            const others = filteredAlerts.filter(a => (a.intent || '').toLowerCase() !== 'target').slice(0, 4);
             const alerts = [...targets, ...others];
 
             if (!alerts.length) return `<div class="widget-empty">No active alerts.</div>`;
@@ -626,7 +637,6 @@ export class WidgetPanel {
         if (!userWatchlists.length) return `<div class="widget-empty">No custom watchlists.</div>`;
 
         return userWatchlists.slice(0, 5).map(w => {
-            const icon = w.icon || 'fa-list';
             const count = allShares.filter(s => {
                 if (Array.isArray(s.watchlistIds)) return s.watchlistIds.includes(w.id);
                 return s.watchlistId === w.id;
@@ -635,7 +645,6 @@ export class WidgetPanel {
             return `
                 <div class="widget-holding-row" style="cursor: pointer;" onclick="document.dispatchEvent(new CustomEvent('${EVENTS.REQUEST_QUICK_NAV}', { detail: { watchlistId: '${w.id}', sortField: 'pctChange', sortDirection: 'desc' } }))">
                     <span class="code" style="display:flex; align-items:center; gap:8px;">
-                        <i class="fas ${icon}" style="font-size:0.75rem; color:var(--color-accent); width:16px; text-align:center;"></i>
                         ${w.name}
                     </span>
                     <span class="value" style="color:var(--text-muted); font-size:0.8rem;">${count} stock${count !== 1 ? 's' : ''}</span>
