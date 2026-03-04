@@ -174,6 +174,7 @@ export class WidgetPanel {
         this.container.innerHTML = html;
 
         this._bindUIActions();
+        this._initClocks(); // Initialize market status clocks
 
         if (!AppState.data?.shares?.length && !AppState.data?.cash?.length) {
             this.container.innerHTML += `<div class="widget-empty-prompt">Add assets to populate your widget.</div>`;
@@ -394,6 +395,7 @@ export class WidgetPanel {
             return `
                 <div class="widget-dashboard-row" style="cursor: pointer;" onclick="document.dispatchEvent(new CustomEvent('${EVENTS.ASX_CODE_CLICK}', { detail: { code: '${code}' } }))">
                     <div class="widget-dashboard-label">
+                        <div class="analog-clock-hook" data-code="${code}" style="width:14px; height:14px; display:inline-block; vertical-align:middle; margin-right:6px;"></div>
                         <span class="widget-dashboard-name">${name}</span>
                     </div>
                     <span class="widget-dashboard-price">${priceStr}</span>
@@ -424,6 +426,7 @@ export class WidgetPanel {
                 const code = a.code || '???';
                 return `
                     <div class="widget-notification-item" style="cursor: pointer;" onclick="if('${code}' !== '???') document.dispatchEvent(new CustomEvent('${EVENTS.ASX_CODE_CLICK}', { detail: { code: '${code}' } }))">
+                        <div class="analog-clock-hook" data-code="${code}" style="width:14px; height:14px; display:inline-block; vertical-align:middle; margin-right:6px;"></div>
                         <span class="code ${signClass}">${code}</span>
                         <span class="message">${message}</span>
                     </div>
@@ -457,6 +460,7 @@ export class WidgetPanel {
         const sign = pct >= 0 ? '+' : '';
         return `
             <div class="widget-market-row">
+                <div class="analog-clock-hook" data-code="^AXJO" style="width:14px; height:14px; display:inline-block; vertical-align:middle; margin-right:6px;"></div>
                 <span>ASX 200</span>
                 <span class="value">${Number(xjo.live || 0).toLocaleString('en-AU', { maximumFractionDigits: 1 })}</span>
                 <span class="change ${changeClass}">${sign}${pct.toFixed(2)}%</span>
@@ -474,6 +478,7 @@ export class WidgetPanel {
             const pctSign = h.pctChange >= 0 ? '+' : '';
             return `
                 <div class="widget-holding-row" style="cursor: pointer;" onclick="document.dispatchEvent(new CustomEvent('${EVENTS.ASX_CODE_CLICK}', { detail: { code: '${h.code}' } }))">
+                    <div class="analog-clock-hook" data-code="${h.code}" style="width:14px; height:14px; display:inline-block; vertical-align:middle; margin-right:6px;"></div>
                     <span class="code">${h.code}</span>
                     <span class="value">${formatCurrency(h.price)}</span>
                     <span class="change ${pctClass}">${pctSign}${h.pctChange.toFixed(2)}%</span>
@@ -494,6 +499,7 @@ export class WidgetPanel {
             const pctSign = h.pctChange >= 0 ? '+' : '';
             return `
                 <div class="widget-holding-row" style="cursor: pointer;" onclick="document.dispatchEvent(new CustomEvent('${EVENTS.ASX_CODE_CLICK}', { detail: { code: '${h.code}' } }))">
+                    <div class="analog-clock-hook" data-code="${h.code}" style="width:14px; height:14px; display:inline-block; vertical-align:middle; margin-right:6px;"></div>
                     <span class="code">${h.code}</span>
                     <span class="value">${formatCurrency(h.value)}</span>
                     <span class="change ${pctClass}">${pctSign}${h.pctChange.toFixed(2)}%</span>
@@ -548,6 +554,91 @@ export class WidgetPanel {
                 </div>
             `;
         }).join('');
+    }
+
+    /**
+     * initializes analog clocks for all rows.
+     */
+    _initClocks() {
+        // Cleanup old clocks
+        if (this.rowClocks) {
+            this.rowClocks.forEach(c => c.destroy());
+        }
+        this.rowClocks = [];
+
+        import('./AnalogClock.js').then(({ AnalogClock }) => {
+            const clockHooks = this.container.querySelectorAll('.analog-clock-hook');
+            clockHooks.forEach(el => {
+                const code = el.dataset.code;
+                if (!code) return;
+                const isOpen = this._isMarketOpen(code);
+                const clock = new AnalogClock(el, isOpen);
+                clock.init();
+                this.rowClocks.push(clock);
+            });
+        });
+    }
+
+    /**
+     * Approximates market status for dashboard symbols.
+     * @private
+     */
+    _isMarketOpen(code) {
+        const now = new Date();
+        const utcDay = now.getUTCDay();
+        const utcHours = now.getUTCHours();
+        const utcMins = now.getUTCMinutes();
+        const utcTotal = utcHours * 60 + utcMins;
+
+        const sydneyParts = new Intl.DateTimeFormat('en-GB', {
+            timeZone: 'Australia/Sydney',
+            hour: 'numeric', minute: 'numeric', weekday: 'short', hour12: false
+        }).formatToParts(now);
+        const getPart = (type) => sydneyParts.find(p => p.type === type).value;
+        const sydHour = parseInt(getPart('hour'));
+        const sydMin = parseInt(getPart('minute'));
+        const sydTotal = sydHour * 60 + sydMin;
+        const sydDay = getPart('weekday');
+        const isSydWeekend = (sydDay === 'Sat' || sydDay === 'Sun');
+
+        // Market Logic
+        if (code.includes('BTC') || code.includes('ETH')) return true;
+        const isASX = code.includes('.AX') || ['^AXJO', '^AXKO', '^AORD', 'XJO', 'XKO', 'XAO', 'YAP=F'].includes(code);
+        if (isASX) {
+            if (isSydWeekend) return false;
+            return sydTotal >= (10 * 60) && sydTotal < (16 * 60 + 10);
+        }
+        if (code.includes('FTSE') || code.includes('STOXX') || code.includes('EU50')) {
+            if (utcDay === 0 || utcDay === 6) return false;
+            return utcTotal >= (8 * 60) && utcTotal < (16 * 60 + 30);
+        }
+        if (code.includes('HSI') || code.includes('N225')) {
+            if (utcDay === 0 || utcDay === 6) return false;
+            return utcTotal >= (0 * 60 + 30) && utcTotal < (8 * 60);
+        }
+        if (['INX', '.DJI', '.IXIC', '^GSPC', '^DJI', '^IXIC', '^VIX'].includes(code)) {
+            if (utcDay === 0 || utcDay === 6) return false;
+            return utcTotal >= (14 * 60 + 30) && utcTotal < (21 * 60);
+        }
+        const FOREX_CODES = ['AUDUSD', 'AUDTHB', 'AUDGBP', 'AUDEUR', 'AUDJPY', 'AUDNZD', 'USDTHB'];
+        const isForex = code.includes('=X') || FOREX_CODES.includes(code);
+        if (isForex) {
+            if (utcDay === 6) return false;
+            if (utcDay === 0 && utcTotal < (22 * 60)) return false;
+            if (utcDay === 5 && utcTotal > (22 * 60)) return false;
+            return true;
+        }
+        const COMMODITY_CODES = ['GCW00', 'SIW00', 'BZW00', 'NICKEL'];
+        const isFutures = code.includes('=F') || code.includes('-F') || COMMODITY_CODES.includes(code);
+        if (isFutures) {
+            if (utcDay === 6) return false;
+            if (utcDay === 0 && utcTotal < (23 * 60)) return false;
+            if (utcDay === 5 && utcTotal > (21 * 60)) return false;
+            if (utcTotal >= (21 * 60) && utcTotal < (22 * 60)) return false;
+            return true;
+        }
+        if (isSydWeekend) return false;
+        return sydTotal >= (10 * 60) && sydTotal < (16 * 60);
     }
 }
 
