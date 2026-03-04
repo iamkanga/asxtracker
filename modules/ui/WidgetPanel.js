@@ -74,23 +74,26 @@ export class WidgetPanel {
         if (this.overlay) return;
         this.overlay = document.createElement('div');
         this.overlay.id = 'widget-overlay';
-        this.overlay.className = CSS_CLASSES.MODAL_OVERLAY;
         this.overlay.style.cssText = `
             position: fixed;
             top: 0;
             left: 0;
             width: 100vw;
             height: 100vh;
-            background: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(2px);
-            -webkit-backdrop-filter: blur(2px);
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
             z-index: 19999;
             display: none;
             opacity: 0;
-            transition: opacity 0.3s ease;
+            transition: opacity 0.3s ease, visibility 0.3s;
             pointer-events: auto;
+            visibility: hidden;
         `;
-        this.overlay.onclick = () => this.toggle();
+        this.overlay.addEventListener('click', () => {
+            console.log('[WidgetPanel] Overlay clicked - closing panel');
+            this.toggle();
+        });
         document.body.appendChild(this.overlay);
     }
 
@@ -98,6 +101,13 @@ export class WidgetPanel {
         document.addEventListener(EVENTS.REFRESH_WATCHLIST, () => this.render());
         document.addEventListener(EVENTS.NOTIFICATION_UPDATE, () => this.render());
         document.addEventListener(EVENTS.WIDGET_CONFIG_CHANGED, () => this.render());
+
+        // Keyboard support (Escape to close)
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && this.container && !this.container.classList.contains('widget-hidden')) {
+                this.toggle();
+            }
+        });
     }
 
     toggle() {
@@ -115,6 +125,7 @@ export class WidgetPanel {
                 this.overlay.style.display = 'block';
                 requestAnimationFrame(() => {
                     this.overlay.style.opacity = '1';
+                    this.overlay.style.visibility = 'visible';
                 });
             }
 
@@ -146,6 +157,7 @@ export class WidgetPanel {
             // CLOSING
             if (this.overlay) {
                 this.overlay.style.opacity = '0';
+                this.overlay.style.visibility = 'hidden';
                 setTimeout(() => {
                     if (this.container.classList.contains('widget-hidden')) {
                         this.overlay.style.display = 'none';
