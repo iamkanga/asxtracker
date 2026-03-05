@@ -1,0 +1,343 @@
+/* --- Modals (General) --- */
+.modal-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7) !important;
+    backdrop-filter: blur(2px);
+    z-index: 1 !important;
+}
+
+.modal {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: auto !important;
+    height: auto !important;
+    z-index: 20000 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    pointer-events: none;
+    /* Hidden modals must not capture clicks */
+    flex-direction: column !important;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s, visibility 0.2s;
+}
+
+.modal:not(.hidden) {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    /* Only visible modals capture events */
+}
+
+.modal-content {
+    position: relative;
+    z-index: 2 !important;
+    max-height: 90vh;
+    overflow-y: auto;
+    margin: 0 !important;
+    width: 95% !important;
+    max-width: 500px;
+    background-color: var(--modal-content-bg);
+    border-radius: 0;
+    border: none !important;
+    /* GLOBAL MODAL BORDER REMOVAL */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    padding: 0;
+    /* Handled by children mainly */
+}
+
+/* Watchlist Edit Icons */
+.delete-watchlist-btn {
+    margin-left: 12px;
+    color: #ff6b6b;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: color 0.2s;
+}
+
+.delete-watchlist-btn:hover {
+    color: #ff4c4c;
+}
+
+.hidden-tick-icon {
+    margin-left: 8px;
+    font-size: 0.8em;
+    color: var(--color-accent);
+}
+
+/* Modal Headers */
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    /* Restored Modern UI Padding */
+    border-bottom: none;
+    /* Removed faint line */
+    margin-bottom: 0;
+    width: 100%;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Explicit Border Removal for Investment Card */
+.preview-row-main,
+.preview-row-sub,
+.price-preview-panel {
+    border: none !important;
+    border-bottom: none !important;
+    border-top: none !important;
+}
+
+.modal-header-left {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    text-align: left;
+    gap: 0;
+    /* Strict zero gap */
+}
+
+.flex-column {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Specific H1 Override to kill browser defaults */
+h1.modal-title,
+.modal-title {
+    margin: 0;
+    margin-block-start: 0;
+    /* Strict Reset */
+    margin-block-end: 0;
+    /* Strict Reset */
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    text-align: left;
+    width: 100%;
+    gap: 10px;
+    line-height: 0.8;
+    /* Aggressively Tight currently 0.9 */
+    font-weight: 700;
+}
+
+.display-title {
+    font-size: 1.5rem;
+}
+
+.modal-subtitle {
+    font-size: 0.95rem;
+    color: var(--text-muted);
+    line-height: 1.0;
+    margin: 0;
+    font-weight: 500;
+}
+
+/* Force Stock Details Title to behave like a standard block to allow tight stacking */
+/* Final Resolution: Structural Block Flow */
+/* Spacing Adjustments for Stock Details */
+#stock-details-modal .modal-body {
+    padding-top: 0 !important;
+}
+
+#stock-details-modal .share-detail-sections {
+    margin-top: 5px !important;
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+}
+
+.modal-body h2,
+.modal-body h3 {
+    margin-top: 20px;
+    margin-bottom: 12px;
+}
+
+/* Remove heading margins inside detail cards for tighter spacing */
+.detail-card h2,
+.detail-card h3 {
+    margin-top: 0 !important;
+    margin-bottom: 12px !important;
+}
+
+.detail-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 8px;
+    width: 100%;
+}
+
+.detail-card-header h3 {
+    margin-bottom: 0 !important;
+}
+
+.modal-close-btn {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--primary-color);
+    padding: 0;
+    line-height: 1;
+    transition: color 0.2s;
+}
+
+.modal-close-btn:hover {
+    color: var(--text-color);
+}
+
+.modal-body {
+    padding: 20px;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    /* iOS/Android momentum scrolling */
+}
+
+/* Ensure accordion items align below fixed header when scrolled */
+.accordion-item {
+    scroll-margin-top: 0;
+    /* Align to top of scrollable area */
+}
+
+/* Modal Footer */
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 16px 20px;
+    border-top: 1px solid var(--border-color);
+}
+
+/* Small Modal Variant */
+.modal-content-small {
+    max-width: 400px;
+}
+
+/* Medium Modal Variant */
+.modal-content-medium {
+    max-width: 600px;
+}
+
+/* Large Modal Variant (Taller) */
+.modal-content-large {
+    max-width: 600px;
+    min-height: 70vh;
+    /* Taller functional area */
+    display: flex;
+    flex-direction: column;
+}
+
+/* Button Styles */
+.btn-primary {
+    background-color: var(--primary-color);
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 0;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s, background-color 0.2s;
+}
+
+.btn-primary:hover {
+    opacity: 0.9;
+}
+
+.btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-secondary {
+    background-color: transparent;
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    padding: 10px 20px;
+    border-radius: 0;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.btn-secondary:hover {
+    background-color: var(--bg-color);
+}
+
+/* Modal Header Actions (Icon-based like Add Cash modal) */
+.modal-header-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+}
+
+.modal-action-btn {
+    background: none;
+    border: none;
+    font-size: 1.25rem;
+    cursor: pointer;
+    color: var(--accent-color);
+    padding: 4px;
+    transition: color 0.2s, opacity 0.2s;
+}
+
+.modal-action-btn:hover {
+    color: var(--primary-color);
+}
+
+.modal-action-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.modal-action-btn.delete-btn {
+    color: var(--color-negative);
+}
+
+.modal-action-btn.delete-btn:hover {
+    opacity: 0.7;
+}
+
+/* Dark Themed Input (matching Add Cash modal) */
+.standard-input {
+    width: 100%;
+    padding: 12px;
+    background-color: #222;
+    /* Dark Theme Requirement */
+    border: 1px solid var(--border-color);
+    border-radius: 0;
+    font-size: 1rem;
+    color: #eee;
+    /* Light Text for Dark Input */
+    outline: none;
+    box-sizing: border-box;
+}
+
+.standard-input::placeholder {
+    color: #999;
+}
+
+.standard-input:focus {
+    border-color: var(--primary-color);
+}

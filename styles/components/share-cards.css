@@ -1,0 +1,385 @@
+/* --- Share Cards (Mobile/Compact/Snapshot/Portfolio) --- */
+.mobile-share-cards {
+    display: grid;
+    gap: 12px;
+    padding: 10px 0;
+    /* Vertical only: side padding from #content-container */
+    width: 100%;
+    box-sizing: border-box;
+    grid-template-columns: 1fr;
+    /* Mobile Default: Stacked */
+}
+
+/* Portfolio Table View (Desktop Grid) */
+
+
+/* Desktop override for other grid views if needed */
+/* Removed redundant media query for portfolio-grid */
+
+/* Compact View: 2 Columns */
+.view-compact .mobile-share-cards,
+.compact-view .mobile-share-cards {
+    grid-template-columns: repeat(2, 1fr);
+}
+
+/* Snapshot View: 3 Columns, Standardized Spacing (no-spill) */
+.view-snapshot .mobile-share-cards,
+.snapshot-view .mobile-share-cards {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    justify-content: stretch;
+}
+
+.view-snapshot .share-card,
+.snapshot-view .share-card {
+    padding: 10px 8px !important;
+}
+
+.view-snapshot .card-code,
+.snapshot-view .card-code,
+.view-snapshot .card-price,
+.snapshot-view .card-price {
+    font-size: 1.05rem !important;
+}
+
+.view-snapshot .change-value,
+.snapshot-view .change-value,
+.view-snapshot .card-change-col,
+.snapshot-view .card-change-col {
+    font-size: 0.75rem !important;
+}
+
+.share-card {
+    background: var(--card-bg);
+    padding: 16px;
+    border-radius: 0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: flex-start;
+    position: relative;
+    text-align: left;
+    transition: transform 0.2s, opacity 0.3s;
+    border: 2px solid transparent !important;
+    /* Force full border */
+    box-sizing: border-box;
+}
+
+/* --- Balanced 2-Row Unified Overhaul --- */
+.share-card.unified-layout {
+    height: 74px;
+    /* Reduced from 88px */
+    padding: 8px 14px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.card-main-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.card-left-col {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 2px;
+    flex: 2;
+}
+
+.card-right-col {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: center;
+    flex: 1.2;
+    text-align: right;
+    gap: 0px;
+}
+
+.card-row-utility {
+    display: flex;
+    justify-content: flex-start;
+    gap: 12px;
+    align-items: center;
+    height: 20px;
+    margin-top: 2px;
+    padding-top: 0;
+}
+
+.card-code-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0;
+    background: transparent;
+    border: none !important;
+    border-radius: 0;
+    font-weight: 700;
+    font-size: 1.15rem;
+    color: #ffffff;
+}
+
+/* Favicon base styling moved to consolidated section at bottom */
+
+.utility-slot {
+    display: flex;
+    align-items: center;
+    font-size: 0.82rem;
+    color: var(--color-accent);
+    opacity: 0.8;
+    font-weight: 600;
+}
+
+.card-change-stack {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: -2px;
+}
+
+.utility-slot.has-content {
+    opacity: 0.9;
+    /* Reduced ghosting for better visibility */
+}
+
+.utility-icon {
+    margin-right: 5px;
+    font-size: 0.9rem;
+    color: inherit !important;
+    /* Force heritage over global trend overrides */
+    opacity: 1;
+    /* Opacity handled by parent slot */
+}
+
+.share-card.trend-up {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+}
+
+.share-card.trend-down {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+}
+
+.share-card.trend-neutral {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+}
+
+.share-card.ghosted {
+    opacity: 0.85;
+    /* Increased for readability */
+    filter: saturate(0.2);
+    background: linear-gradient(135deg, #1e1e1e 0%, #121212 100%) !important;
+    border: 2px dashed rgba(255, 255, 255, 0.15) !important;
+    box-shadow: none !important;
+    transform: scale(0.99);
+    transition: all 0.3s ease;
+}
+
+.share-card.ghosted:hover {
+    opacity: 1;
+    transform: scale(1);
+    background: linear-gradient(135deg, #252525 0%, #181818 100%) !important;
+}
+
+/* Stock Code remains Full Strength for identification */
+.share-card.ghosted .card-code {
+    color: #ffffff !important;
+    opacity: 1 !important;
+}
+
+.share-card.ghosted .card-price,
+.share-card.ghosted .change-value,
+.share-card.ghosted .change-percent,
+.share-card.ghosted .detail-label,
+.share-card.ghosted .detail-value {
+    color: var(--text-muted) !important;
+    opacity: 0.7;
+}
+
+.share-card.ghosted .visibility-toggle-btn {
+    pointer-events: auto !important;
+}
+
+.share-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+}
+
+.card-header-row {
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+.card-code {
+    font-size: 1.3rem;
+    color: var(--text-inverse);
+    background: transparent !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    flex: 1;
+    text-align: left;
+    font-weight: 500;
+}
+
+.card-price {
+    font-size: 1.3rem;
+    color: var(--text-color);
+    flex: 2;
+    text-align: center;
+    font-weight: 500;
+}
+
+.card-change-col {
+    line-height: 1.1;
+    flex: 1;
+    text-align: right;
+}
+
+.unified-layout .card-price {
+    font-size: 1.15rem;
+    color: var(--text-color);
+    flex: none;
+    text-align: right;
+    font-weight: 700;
+}
+
+.unified-layout .card-change-col {
+    line-height: 1.1;
+    flex: none;
+    text-align: right;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.change-value {
+    font-weight: 500;
+}
+
+.card-body-section {
+    border-top: 1px solid rgba(255, 255, 255, 0.05) !important;
+    padding-top: 2px;
+}
+
+.detail-row {
+    display: flex;
+    width: 100%;
+    margin-bottom: 0px;
+    padding: 0 !important;
+    /* Architectural Fix: Remove global vertical padding in card context */
+}
+
+.detail-label {
+    font-size: 1rem;
+    color: var(--text-muted);
+}
+
+.detail-value {
+    font-size: 1rem;
+    color: var(--text-inverse);
+}
+
+.detail-value.positive {
+    color: var(--color-positive) !important;
+}
+
+.detail-value.negative {
+    color: var(--color-negative) !important;
+}
+
+.detail-value.neutral {
+    color: var(--color-accent) !important;
+}
+
+.visibility-toggle-btn {
+    color: var(--accent-color);
+    font-size: 1.1rem;
+    opacity: 0.6;
+    transition: opacity 0.2s, transform 0.2s;
+}
+
+.visibility-toggle-btn:hover {
+    opacity: 1;
+    transform: scale(1.1);
+}
+
+.portfolio-visibility-btn {
+    position: absolute;
+    bottom: 2px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-accent) !important;
+    opacity: 0.4;
+    padding: 0;
+    margin: 0;
+}
+
+.portfolio-visibility-btn i {
+    font-size: 0.85rem;
+}
+
+.portfolio-visibility-btn:hover {
+    opacity: 1;
+}
+
+/* Removed old card styles */
+.share-card[data-view='compact'] .chevron-icon {
+    display: block !important;
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    font-size: 1.4rem;
+}
+
+.share-card.trend-up .chevron-icon {
+    color: var(--color-positive);
+}
+
+.share-card.trend-down .chevron-icon {
+    color: var(--color-negative);
+}
+
+.share-card.trend-neutral .chevron-icon {
+    color: var(--color-accent);
+}
+
+/* Snapshot Footer */
+.snapshot-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    margin-top: 5px;
+    font-size: 0.9em;
+}
+
+/* --- Table Styles --- */
+.share-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--card-bg);
+}
+
+.share-table th,
+.share-table td {
+    padding: 12px;
+    text-align: left;
+}
+
+.share-table th {
+    background-color: var(--bg-color);
+    font-weight: 600;
+    color: var(--text-color);
+}

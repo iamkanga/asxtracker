@@ -1,0 +1,153 @@
+/* --- Watchlist Dropdown (Header) --- */
+.watchlist-trigger {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 0;
+    background-color: #fff;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    min-height: 42px;
+    user-select: none;
+}
+
+.watchlist-trigger:hover {
+    border-color: #bbb;
+}
+
+.watchlist-trigger-text {
+    color: var(--text-color);
+    font-size: 0.95rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.watchlist-trigger-icon {
+    color: #666;
+    font-size: 0.8rem;
+}
+
+.watchlist-dropdown {
+    border: 1px solid #ddd;
+    border-top: none;
+    border-radius: 0;
+    background-color: var(--card-bg);
+    max-height: 200px;
+    overflow-y: auto;
+    display: none;
+    border-top: 1px solid #eee;
+    margin-top: 4px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.watchlist-dropdown.show {
+    display: block;
+}
+
+.watchlist-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 15px;
+    border-bottom: 1px solid #f1f1f1;
+    cursor: pointer;
+    transition: background-color 0.1s;
+}
+
+.watchlist-row:last-child {
+    border-bottom: none;
+}
+
+.watchlist-row:hover {
+    background-color: var(--border-light);
+}
+
+.watchlist-name {
+    font-size: 0.95rem;
+    color: var(--text-color);
+    font-weight: 500;
+}
+
+.radio-check {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #ccc;
+    border-radius: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    transition: all 0.2s;
+}
+
+.watchlist-row.selected .radio-check {
+    border-color: var(--primary-color);
+    background-color: var(--card-bg);
+}
+
+.watchlist-row.selected .radio-check::after {
+    content: '';
+    width: 10px;
+    height: 10px;
+    background-color: var(--primary-color);
+    border-radius: 0;
+    display: block;
+}
+
+.watchlist-row input[type="checkbox"] {
+    display: none;
+}
+
+.watchlist-selector {
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 12px;
+    background-color: transparent;
+    border: none;
+    border-radius: 0;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-color);
+    cursor: pointer;
+    gap: 8px;
+    transition: color 0.2s;
+}
+
+/* NOTE: #sortPickerBtn defined in Header Buttons section */
+
+/* Update Portfolio Title Bar (Watchlist Selector) */
+.watchlist-selector.trend-up-bg {
+    background: linear-gradient(to right, var(--color-positive-light), var(--card-bg) 50%, var(--card-bg)) !important;
+}
+
+.watchlist-selector.trend-down-bg {
+    background: linear-gradient(to right, var(--color-negative-light), var(--card-bg) 50%, var(--card-bg)) !important;
+}
+
+.watchlist-selector:hover,
+.watchlist-selector:focus,
+.watchlist-selector:active,
+.watchlist-selector.active {
+    outline: none;
+    background-color: transparent;
+    color: var(--primary-color) !important;
+}
+
+/* Dropdowns & Toggles (Restored) */
+.dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background-color: var(--card-bg);
+    min-width: 220px;
+    border: 1px solid var(--border-color);
+    border-radius: 0;
+    padding: 8px 0;
+    z-index: 2000;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
