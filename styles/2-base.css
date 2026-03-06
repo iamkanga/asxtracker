@@ -1,0 +1,64 @@
+/* -------------------------------------------------------------------------- */
+/*                                2. BASE & RESET                             */
+/* -------------------------------------------------------------------------- */
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+/* Text Sizing Utilities */
+.text-xxs {
+    font-size: 0.65rem !important;
+}
+
+.text-xs {
+    font-size: 0.75rem !important;
+}
+
+.text-sm {
+    font-size: 0.85rem !important;
+}
+
+.text-md {
+    font-size: 1rem !important;
+}
+
+.text-lg {
+    font-size: 1.2rem !important;
+}
+
+.text-xl {
+    font-size: 1.5rem !important;
+}
+
+.text-xxl {
+    font-size: 2rem !important;
+}
+
+.font-1-1-rem {
+    font-size: 1.1rem !important;
+}
+
+.font-700 {
+    font-weight: 700 !important;
+}
+
+.text-normal-case {
+    text-transform: none !important;
+}
+
+.whitespace-nowrap {
+    white-space: nowrap !important;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* Flexbox Utilities */
+.flex-row {
+    display: flex !important;
+    flex-direction: row !important;
+}

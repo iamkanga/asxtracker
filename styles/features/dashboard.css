@@ -1,0 +1,655 @@
+/* --- Dashboard --- */
+.dashboard-container {
+    display: flex;
+    flex-direction: column;
+    padding: 0 0 10px !important;
+    /* Spacing now strictly managed by #content-container */
+    gap: 8px;
+    max-width: 100% !important;
+    margin: 0 !important;
+}
+
+/* Modal Manual Sort Styles (Moved to Features) */
+.modal-reorder-title {
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.modal-reorder-title:hover {
+    color: var(--color-accent) !important;
+}
+
+.modal-reorder-controls {
+    display: none;
+    gap: 12px;
+    margin-left: auto;
+    padding-left: 10px;
+}
+
+.reorder-active .modal-reorder-controls {
+    display: flex;
+}
+
+.modal-reorder-btn {
+    background: none;
+    border: none;
+    color: var(--color-accent);
+    cursor: pointer;
+    padding: 8px;
+    font-size: 1.1rem;
+    transition: transform 0.1s, opacity 0.2s;
+}
+
+.modal-reorder-btn:hover {
+    opacity: 0.8;
+    transform: scale(1.1);
+}
+
+.modal-reorder-btn.disabled {
+    opacity: 0.2;
+    cursor: default;
+    pointer-events: none;
+}
+
+.reorder-active .watchlist-item,
+.reorder-active .sort-picker-row {
+    background-color: rgba(164, 147, 147, 0.05);
+}
+
+.reorder-active .ml-auto,
+.reorder-active .sort-picker-direction {
+    display: none !important;
+}
+
+
+.dashboard-row {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    padding: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-radius: 0;
+}
+
+.dashboard-cell-left,
+.dashboard-cell-right {
+    display: flex;
+    flex-direction: column;
+}
+
+.dashboard-cell-right {
+    align-items: flex-end;
+}
+
+.dashboard-item-name {
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--text-color);
+}
+
+.dashboard-item-sub {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.dashboard-item-price {
+    font-weight: 700;
+    font-size: 1.25rem;
+    color: var(--text-color);
+}
+
+.dashboard-item-change {
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+/* --- Empty State --- */
+.empty-state {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 60px 20px;
+    color: var(--text-muted);
+    font-size: 1.1rem;
+    text-align: center;
+    font-weight: 500;
+}
+
+.live-refresh-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px;
+    color: var(--color-accent);
+}
+
+/* Header Standardisation */
+.asx-toggle-text,
+.live-refresh-btn {
+    font-size: 0.9rem !important;
+    font-weight: 600;
+}
+
+/* Dashboard Specifics */
+.dashboard-row {
+    display: flex;
+    padding: 12px;
+    border-bottom: 1px solid var(--border-color);
+    border-left-width: 0;
+    overflow: visible !important;
+    /* Allow popouts */
+    border-left-style: none;
+    border-left-color: transparent;
+    align-items: center;
+    transition: all 0.2s ease;
+    position: relative;
+    /* Support absolute children */
+}
+
+/* -------------------------------------------------------------------------- */
+/*                          MINIMAL SEGMENTED CONTROL                         */
+/* -------------------------------------------------------------------------- */
+.segmented-control-minimal {
+    display: flex;
+    width: 100%;
+    gap: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    margin-bottom: 25px;
+}
+
+.segmented-control-minimal .segment {
+    flex: 1;
+    text-align: center;
+    padding: 15px 5px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    font-weight: 600;
+    position: relative;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.segmented-control-minimal .segment.active {
+    color: var(--color-accent);
+}
+
+.segmented-control-minimal .segment.active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 15%;
+    right: 15%;
+    height: 3px;
+    background: var(--color-accent);
+    box-shadow: 0 0 10px rgba(var(--color-accent-rgb), 0.4);
+    border-radius: 3px 3px 0 0;
+}
+
+.segmented-control-minimal .segment:not(.active):hover {
+    color: var(--text-color);
+}
+
+/* -------------------------------------------------------------------------- */
+/*                          GRADIENT INTENSITY CLASSES                         */
+/* -------------------------------------------------------------------------- */
+
+
+
+
+
+
+
+/* Sentiment Overrides using Box Shadow */
+
+.dashboard-grade-up {
+    background: linear-gradient(135deg,
+            rgba(0, 180, 0, var(--gradient-strength, 0.6)) 0%,
+            color-mix(in srgb, rgb(0, 180, 0) var(--gradient-tint, 0%), rgb(20, 20, 20)) 100%) !important;
+}
+
+.dashboard-grade-down {
+    background: linear-gradient(135deg,
+            rgba(180, 0, 0, var(--gradient-strength, 0.6)) 0%,
+            color-mix(in srgb, rgb(180, 0, 0) var(--gradient-tint, 0%), rgb(20, 20, 20)) 100%) !important;
+}
+
+.dashboard-grade-neutral {
+    background: linear-gradient(135deg,
+            rgba(var(--color-accent-rgb), var(--gradient-strength, 0.6)) 0%,
+            color-mix(in srgb, rgb(var(--color-accent-rgb)) var(--gradient-tint, 0%), rgb(20, 20, 20)) 100%) !important;
+}
+
+.dashboard-row.positive {
+    border-left-color: transparent;
+    /* Legacy fallback */
+    box-shadow: none !important;
+}
+
+.dashboard-row.negative {
+    border-left-color: transparent;
+    /* Legacy fallback */
+    box-shadow: none !important;
+}
+
+.dashboard-row.neutral {
+    border-left: 4px solid var(--color-accent) !important;
+    background: linear-gradient(135deg, rgba(var(--color-accent-rgb), var(--gradient-strength, 0.6)) 0%, var(--card-bg) 100%) !important;
+    box-shadow: none !important;
+}
+
+/* Clickable Dashboard Rows */
+.dashboard-row.clickable {
+    cursor: pointer;
+}
+
+.dashboard-row.clickable:hover {
+    background-color: rgba(var(--color-accent-rgb), 0.05);
+}
+
+body.dark-theme .dashboard-row.clickable:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* TABLE VIEW (1 COLUMN) */
+.dashboard-container.view-mode-table {
+    display: flex;
+    flex-direction: column;
+    padding-top: 0 !important;
+    margin-top: 0 !important;
+}
+
+.dashboard-container.view-mode-table .dashboard-row {
+    flex-direction: column;
+    align-items: stretch;
+    border-left-width: 0 !important;
+    /* Removed Left Border */
+    border-right-width: 0;
+}
+
+.dashboard-row-main {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    width: 100%;
+}
+
+.dashboard-container.view-mode-table .dashboard-item-name {
+    font-size: 1.2rem;
+    font-weight: 700;
+}
+
+.dashboard-container.view-mode-table .dashboard-item-price {
+    font-size: 1.2rem;
+    font-weight: 700;
+}
+
+/* COMPACT VIEW (2 COLUMNS) */
+.dashboard-container.view-mode-compact {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    padding: 0 !important;
+    /* Force Full Bleed */
+    margin: 0 !important;
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+
+.dashboard-container.view-mode-compact .dashboard-row {
+    padding: 12px;
+    border-left-width: 0 !important;
+    /* Removed Left Border */
+    border-right: none !important;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.dashboard-container.view-mode-compact .dashboard-item-name,
+.dashboard-container.view-mode-compact .dashboard-item-price {
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+.dashboard-container.view-mode-compact .dashboard-item-change {
+    font-size: 0.95rem;
+    /* Increased slightly to match prominence */
+    opacity: 0.9;
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+}
+
+/* SNAPSHOT VIEW (3 COLUMNS) */
+.dashboard-container.view-mode-snapshot {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    padding: 0 !important;
+    /* Force Full Bleed */
+    margin: 0 !important;
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+
+.dashboard-container.view-mode-snapshot .dashboard-row {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 12px 10px;
+    background: rgba(var(--color-accent-rgb), 0.02);
+    /* Strict "Square End" Fix using Box Shadow */
+    /* This copies the bulletproof technique from .view-table (lines 4621+) */
+    border-radius: 0 !important;
+    border: none !important;
+    /* Clear all native borders to prevent mitering */
+    border-bottom: 1px solid var(--border-color) !important;
+    /* Restore separator if needed, or keep none? Use 1px solid as per original context but keeping square */
+    /* Actually, user wanted "Side Borders... Ends shouldn't be rounded". */
+    /* Box Shadow is the safest way to render a square stripe on the left regardless of container */
+    /* Box Shadow is the safest way to render a square stripe on the left regardless of container */
+    box-shadow: none !important;
+    /* Default to neutral/accent, specific colors overridden below */
+    padding-left: 12px;
+    /* Ensure content doesn't overlap shadow */
+}
+
+
+
+.dashboard-grade-down {
+    background: linear-gradient(135deg,
+            rgba(180, 0, 0, var(--gradient-strength, 0.6)) 0%,
+            color-mix(in srgb, rgb(180, 0, 0) var(--gradient-tint, 0%), rgb(20, 20, 20)) 100%) !important;
+}
+
+.dashboard-grade-neutral {
+    background: linear-gradient(135deg,
+            rgba(var(--color-accent-rgb), var(--gradient-strength, 0.6)) 0%,
+            color-mix(in srgb, rgb(var(--color-accent-rgb)) var(--gradient-tint, 0%), rgb(20, 20, 20)) 100%) !important;
+}
+
+.dashboard-row.positive {
+    box-shadow: none !important;
+}
+
+.dashboard-container.view-mode-snapshot .dashboard-row.negative {
+    border-left: 4px solid var(--color-negative) !important;
+    background: linear-gradient(135deg, rgba(180, 0, 0, var(--gradient-strength, 0.6)) 0%, var(--card-bg) 100%) !important;
+    box-shadow: none !important;
+}
+
+.dashboard-container.view-mode-snapshot .dashboard-item-name,
+.dashboard-container.view-mode-snapshot .dashboard-item-price {
+    font-size: 0.95rem;
+    font-weight: 700;
+}
+
+.dashboard-container.view-mode-snapshot .dashboard-item-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    width: 100%;
+    display: block;
+}
+
+.dashboard-container.view-mode-snapshot .dashboard-item-change {
+    font-size: 0.9rem;
+    /* Match Compact change size for consistency */
+    opacity: 0.9;
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.dashboard-container .change-value,
+.dashboard-container .change-percent {
+    font-size: inherit !important;
+    /* Force identical sizing and override global mobile rules */
+}
+
+/* Vertical Stacking for Compact/Snapshot */
+.dashboard-row .vertical-stack {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    text-align: left;
+    width: 100%;
+}
+
+.dashboard-container.view-mode-compact .dashboard-row .vertical-stack,
+.dashboard-container.view-mode-snapshot .dashboard-row .vertical-stack {
+    width: 100%;
+}
+
+.dashboard-spark-rail-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    margin-top: 6px;
+    box-sizing: border-box;
+}
+
+.view-mode-table .dashboard-spark-rail-container {
+    margin-top: 10px;
+    padding-left: 0;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.dashboard-range-data-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 180px;
+    /* Data block anchoring from the right */
+    justify-content: flex-end;
+    flex: none;
+}
+
+.view-mode-table .range-low {
+    width: 65px;
+    /* Vertical Baseline locked here */
+    text-align: left;
+    font-variant-numeric: tabular-nums;
+}
+
+.view-mode-table .range-high {
+    width: 65px;
+    /* Anchored to right edge */
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.view-mode-table .spark-rail {
+    flex: none;
+    width: 38px;
+    /* Precise gap reduction */
+}
+
+.range-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    opacity: 0.5;
+    min-width: 32px;
+}
+
+.range-low,
+.range-high {
+    font-size: 0.75rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.range-low {
+    color: var(--color-negative);
+}
+
+.range-high {
+    color: var(--color-positive);
+}
+
+.spark-rail {
+    flex: 1;
+    height: 2px;
+    background: rgba(var(--color-accent-rgb), 0.1);
+    border-radius: 1px;
+    position: relative;
+}
+
+.spark-marker {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 6px;
+    height: 6px;
+    background: var(--color-accent);
+    border-radius: 50%;
+    box-shadow: 0 0 3px rgba(var(--color-accent-rgb), 0.5);
+}
+
+.dashboard-cell-left {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.dashboard-cell-right {
+    text-align: right;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.dashboard-item-name {
+    font-weight: 700;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.dashboard-item-sub {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.dashboard-item-price {
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+
+.dashboard-item-change {
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.market-status-icon {
+    font-size: 0.85rem;
+    color: var(--color-neutral);
+    transition: color 0.3s ease;
+}
+
+/* Relocate for High Density Cards */
+.view-mode-compact .market-status-icon,
+.view-mode-snapshot .market-status-icon {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+}
+
+.market-status-icon.open {
+    color: var(--color-positive);
+    filter: drop-shadow(0 0 2px rgba(6, 255, 79, 0.4));
+}
+
+.market-status-icon.closed {
+    color: var(--color-negative);
+}
+
+/* 52 Week Range Spark Rail Display */
+.dashboard-spark-rail-container {
+    display: flex;
+    align-items: center;
+    width: 150px;
+    /* Constrain width for density */
+    margin-top: 4px;
+    justify-content: flex-end;
+}
+
+.spark-rail {
+    flex: 1;
+    height: 1px;
+    background: rgba(0, 0, 0, 0.1);
+    margin: 0 8px;
+    position: relative;
+    top: 1px;
+}
+
+.spark-marker {
+    position: absolute;
+    top: -2px;
+    width: 5px;
+    height: 5px;
+    background: var(--color-accent);
+    border-radius: 50%;
+}
+
+.range-value {
+    font-size: 0.65rem;
+    font-weight: 700;
+}
+
+.range-label {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+}
+
+.dashboard-time-ref {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--color-accent);
+    letter-spacing: 0.3px;
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    height: 100%;
+    line-height: 1;
+}
+
+.dashboard-time-ref:hover {
+    color: var(--primary-color);
+}
+
+.dashboard-reorder-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-right: 12px;
+}
+
+.reorder-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 0.8rem;
+    padding: 4px;
+    opacity: 0.5;
+    transition: all 0.2s;
+}
+
+.reorder-btn:hover {
+    color: var(--color-accent);
+    opacity: 1;
+}

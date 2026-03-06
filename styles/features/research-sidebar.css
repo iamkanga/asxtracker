@@ -1,0 +1,933 @@
+/* --- Research Links (Sidebar/Add Share) --- */
+.research-links-panel {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 10px;
+    padding: 0 16px 16px 16px;
+    margin-bottom: 8px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.research-pill-link {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 0;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-size: 0.85rem;
+    text-decoration: none;
+    border: 1px solid var(--border-color);
+    transition: all 0.2s ease;
+    justify-content: center;
+    font-weight: 500;
+}
+
+.research-pill-link:hover {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    background-color: rgba(164, 147, 147, 0.05);
+    transform: translateY(-1px);
+}
+
+.research-pill-link i {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    transition: color 0.2s;
+}
+
+.research-pill-link:hover i {
+    color: var(--primary-color);
+}
+
+
+/* SIDEBAR SEARCH STYLES */
+.sidebar-search-wrapper {
+    position: relative;
+}
+
+.sidebar-results-list {
+    list-style: none;
+    padding: 0;
+    margin: 5px 0 0;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+}
+
+.sidebar-result-item:hover {
+    background: var(--bg-body);
+}
+
+.sidebar-results-list {
+    border-radius: 0;
+    max-height: 250px;
+    overflow-y: auto;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    z-index: 1001;
+    /* Above sidebar content */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.sidebar-result-item {
+    padding: 10px 12px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.sidebar-result-item:last-child {
+    border-bottom: none;
+}
+
+.sidebar-result-item:hover {
+    background: var(--bg-body);
+}
+
+.text-muted {
+    color: var(--text-muted);
+}
+
+.truncate {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mr-2px {
+    margin-right: 2px !important;
+}
+
+.mt-4px {
+    margin-top: 4px !important;
+}
+
+.mt-neg-2px {
+    margin-top: -2px !important;
+}
+
+.p-0 {
+    padding: 0 !important;
+}
+
+.pt-0 {
+    padding-top: 0 !important;
+}
+
+.pt-small {
+    padding-top: 10px !important;
+}
+
+.pb-4px {
+    padding-bottom: 4px !important;
+}
+
+.py-tiny {
+    padding: 4px 0 !important;
+}
+
+.py-small {
+    padding: 10px 0 !important;
+}
+
+.flex-2 {
+    flex: 2 !important;
+}
+
+.align-baseline {
+    align-items: baseline !important;
+}
+
+.border-top-faint {
+    border-top: 1px solid rgba(255, 255, 255, 0.05) !important;
+}
+
+.border-top-none {
+    border-top: none !important;
+}
+
+.font-size-0-7-rem {
+    font-size: 0.7rem !important;
+}
+
+.line-height-1 {
+    line-height: 1 !important;
+}
+
+.text-overflow-ellipsis {
+    text-overflow: ellipsis !important;
+}
+
+.overflow-hidden {
+    overflow: hidden !important;
+}
+
+/* -------------------------------------------------------------------------- */
+/*                                5. UTILITIES                                */
+/* -------------------------------------------------------------------------- */
+
+/* Layout Utilities */
+.justify-end {
+    justify-content: flex-end !important;
+}
+
+.text-xxs {
+    font-size: 0.65rem !important;
+}
+
+/* STRICT ALIGNMENT FIX */
+.notification-card .card-code,
+.notification-card .card-name,
+.notification-card .card-explainer {
+    text-align: left !important;
+    margin-left: 0 !important;
+    padding-left: 0 !important;
+    align-self: flex-start !important;
+}
+
+.whitespace-nowrap {
+    white-space: nowrap !important;
+}
+
+.text-warning {
+    color: var(--color-warning) !important;
+}
+
+.primary-text {
+    color: var(--text-color);
+    opacity: 1;
+}
+
+.text-left {
+    text-align: left !important;
+}
+
+.text-center {
+    text-align: center !important;
+}
+
+.text-right {
+    text-align: right !important;
+}
+
+.border-none {
+    border: none !important;
+}
+
+.border-top {
+    border-top: 1px solid var(--border-color) !important;
+}
+
+.bg-transparent {
+    background: transparent !important;
+}
+
+.pt-15 {
+    padding-top: 15px !important;
+}
+
+.preview-price-large {
+    font-size: 1.8rem;
+    font-weight: 700;
+}
+
+.preview-change-large {
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.text-xxs {
+    font-size: 0.7rem !important;
+}
+
+.mb-0 {
+    margin-bottom: 0 !important;
+}
+
+.mt-0 {
+    margin-top: 0 !important;
+}
+
+.pt-0 {
+    padding-top: 0 !important;
+}
+
+.pt-tiny {
+    padding-top: 4px !important;
+}
+
+.mb-neg-10px {
+    margin-bottom: -10px !important;
+}
+
+.mt-small {
+    margin-top: 5px;
+}
+
+.mt-tiny {
+    margin-top: 2px;
+}
+
+.mt-auto {
+    margin-top: auto !important;
+}
+
+.my-tiny {
+    margin: 2px 0;
+}
+
+.ml-auto {
+    margin-left: auto;
+}
+
+.mr-auto {
+    margin-right: auto;
+}
+
+/* Status Colors & Trends */
+.positive,
+.text-positive {
+    color: var(--color-positive);
+}
+
+.negative {
+    color: var(--color-negative) !important;
+}
+
+
+
+.text-neutral {
+    color: var(--color-neutral) !important;
+}
+
+.text-coffee {
+    color: var(--color-accent) !important;
+}
+
+.text-warning {
+    color: var(--color-warning) !important;
+}
+
+.text-muted-light {
+    color: #d1d1d1 !important;
+}
+
+/* Ghosted State for Hidden Assets */
+.ghosted {
+    opacity: 0.5 !important;
+    filter: grayscale(100%);
+    pointer-events: none;
+}
+
+.ghosted .cash-eye-btn,
+.ghosted .cash-grid-actions {
+    pointer-events: auto;
+}
+
+/* -------------------------------------------------------------------------- */
+/*                                6. THEME OVERRIDES                          */
+/* -------------------------------------------------------------------------- */
+
+/* Rating Input */
+.star-rating {
+    display: inline-flex;
+    gap: 4px;
+    font-size: 1.2rem;
+    cursor: pointer;
+}
+
+.star-item {
+    font-size: 1.5rem;
+    color: #ddd;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.star-item.active {
+    color: var(--color-accent);
+}
+
+.star-rating i {
+    cursor: default;
+}
+
+.star-rating i.active {
+    color: var(--color-accent) !important;
+}
+
+.neutral {
+    color: var(--color-accent);
+}
+
+/* Border / Trend Classes */
+.border-positive,
+.trend-up {
+    border-color: var(--color-positive);
+    border-style: solid;
+    border-width: 2px;
+    border-left-width: 4px;
+}
+
+.border-negative,
+.trend-down {
+    border-color: var(--color-negative);
+    border-style: solid;
+    border-width: 2px;
+    border-left-width: 4px;
+}
+
+.border-neutral,
+.trend-neutral {
+    border-color: var(--color-accent);
+    border-style: solid;
+    border-width: 2px;
+    border-left-width: 4px;
+}
+
+/* Trend Backgrounds (Subtle) */
+/* Trend Backgrounds (Subtle) & View-Specific Borders */
+
+/* Defaults (Base rules) */
+tr.trend-up,
+.share-card.trend-up {
+    border-right: none;
+    background: linear-gradient(145deg,
+            rgba(20, 160, 20, calc(var(--gradient-strength, 0.6) * 0.15)),
+            color-mix(in srgb, rgb(20, 160, 20) var(--gradient-tint, 0%), rgba(20, 20, 20, 0.95)));
+}
+
+tr.trend-down,
+.share-card.trend-down {
+    border-right: none;
+    background: linear-gradient(145deg,
+            rgba(180, 20, 20, calc(var(--gradient-strength, 0.6) * 0.15)),
+            color-mix(in srgb, rgb(180, 20, 20) var(--gradient-tint, 0%), rgba(20, 20, 20, 0.95)));
+}
+
+tr.trend-neutral,
+.share-card.trend-neutral {
+    border-right: none;
+    background: linear-gradient(145deg,
+            rgba(var(--color-accent-rgb), calc(var(--gradient-strength, 0.6) * 0.15)),
+            color-mix(in srgb, rgb(var(--color-accent-rgb)) var(--gradient-tint, 0%), rgba(20, 20, 20, 0.95)));
+}
+
+/* ?? TABLE VIEW: Side Borders Only, Equal Thickness */
+/* ?? TABLE VIEW: Side Borders Only, Equal Thickness */
+/* ?? TABLE VIEW: Robust Side Borders via First Cell */
+.view-table tr.trend-up td:first-child,
+.view-table tr.trend-down td:first-child,
+.view-table tr.trend-neutral td:first-child {
+    /* Use box-shadow for a bulletproof "Inner Border" that survives border-collapse */
+    box-shadow: inset 3px 0 0 0 var(--color-accent) !important;
+    /* 3px to be visible (Fallback to accent) */
+    border-left: none !important;
+    /* Remove standard border to avoid conflict */
+}
+
+/* Specific Colors for the Shadow Border */
+.view-table tr.trend-up td:first-child {
+    box-shadow: inset 3px 0 0 0 var(--color-positive) !important;
+}
+
+.view-table tr.trend-down td:first-child {
+    box-shadow: inset 3px 0 0 0 var(--color-negative) !important;
+}
+
+.view-table tr.trend-neutral td:first-child {
+    box-shadow: inset 3px 0 0 0 var(--color-accent) !important;
+}
+
+/* Ensure Row Backgrounds Logic matches */
+.view-table tr.trend-up {
+    background: linear-gradient(145deg, hsl(120, 100%, 8%), hsl(120, 100%, 4%)) !important;
+}
+
+.view-table tr.trend-down {
+    background: linear-gradient(145deg, hsl(353, 70%, 10%), hsl(353, 70%, 6%)) !important;
+}
+
+.view-table tr.trend-neutral {
+    background: linear-gradient(145deg, hsl(20, 30%, 12%), hsl(20, 30%, 8%)) !important;
+}
+
+/* Separators - REMOVED per user request for "No top/bottom borders" */
+.view-table tr {
+    border-bottom: none !important;
+    border-top: none !important;
+}
+
+/* ALL VIEWS: Share cards use LEFT-SIDE box-shadow only (4px) */
+/* Gradient backgrounds are applied via .dashboard-grade-up/down/neutral classes */
+.view-table .share-card.trend-up,
+.view-table .share-card.trend-down,
+.view-table .share-card.trend-neutral,
+.view-compact .share-card.trend-up,
+.view-compact .share-card.trend-down,
+.view-compact .share-card.trend-neutral,
+.view-snapshot .share-card.trend-up,
+.view-snapshot .share-card.trend-down,
+.view-snapshot .share-card.trend-neutral {
+    border: none !important;
+    /* Left-side indicator handled by box-shadow in main trend classes */
+}
+
+/* Internal Trend Text Coloring */
+.trend-up .change-value,
+.trend-up .change-percent,
+.trend-up .chevron-icon,
+.trend-up .fa-caret-up {
+    color: var(--positive);
+}
+
+.trend-down .change-value,
+.trend-down .change-percent,
+.trend-down .chevron-icon,
+.trend-down .fa-caret-down {
+    color: var(--negative);
+}
+
+.trend-neutral .chevron-icon,
+.trend-neutral .fa-minus,
+.trend-neutral .change-value,
+.trend-neutral .change-percent {
+    color: var(--primary-color) !important;
+}
+
+/* Pills Status */
+.code-pill.up,
+.asx-dropdown-pill.status-up {
+    color: var(--color-positive);
+    background: linear-gradient(135deg, rgba(20, 160, 20, var(--gradient-strength, 0.6)) 0%, rgba(20, 20, 20, 1) 100%) !important;
+    border: none !important;
+    padding-left: 8px;
+    padding-right: 8px;
+    border-radius: 0 !important;
+    font-weight: 600 !important;
+    text-shadow: none !important;
+}
+
+.code-pill.down,
+.asx-dropdown-pill.status-down {
+    color: var(--color-negative);
+    background: linear-gradient(135deg, rgba(180, 20, 20, var(--gradient-strength, 0.6)) 0%, rgba(20, 20, 20, 1) 100%) !important;
+    border: none !important;
+    padding-left: 8px;
+    padding-right: 8px;
+    border-radius: 0 !important;
+    font-weight: 600 !important;
+    text-shadow: none !important;
+}
+
+.code-pill.neutral,
+.asx-dropdown-pill.status-neutral {
+    color: var(--color-accent);
+    background: linear-gradient(135deg, rgba(164, 147, 147, var(--gradient-strength, 0.6)) 0%, rgba(20, 20, 20, 1) 100%) !important;
+    border: none !important;
+    padding-left: 8px;
+    padding-right: 8px;
+    border-radius: 0 !important;
+    font-weight: 600 !important;
+    text-shadow: none !important;
+}
+
+/* Override for Compact and Snapshot: No Border for clean badge look */
+.view-compact .code-pill,
+.view-snapshot .code-pill,
+.compact-view .code-pill,
+.snapshot-view .code-pill {
+    border: none !important;
+    background: transparent;
+    padding: 0;
+    margin: 0;
+    width: auto;
+    font-size: 1.1em;
+    /* maintain size */
+}
+
+/* -------------------------------------------------------------------------- */
+/*                     NOTIFICATION CARD GRID LAYOUT & CHIPS                  */
+/* -------------------------------------------------------------------------- */
+
+/* Filter Chips (Accordion Toggles) */
+.filter-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    /* RESTORED: Full Border by default */
+    border-radius: 0;
+    padding: 6px 12px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-color);
+    cursor: pointer;
+    transition: all 0.15s ease-in-out;
+    user-select: none;
+    margin-right: 8px;
+    margin-bottom: 8px;
+}
+
+.filter-chip:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-color: var(--text-muted);
+}
+
+.filter-chip .chip-badge {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    padding: 2px 6px;
+    border-radius: 12px;
+}
+
+/* Active State: Remove Full Border, Add Left Border */
+.filter-chip.active {
+    background-color: rgba(255, 255, 255, 0.03);
+    border: none !important;
+    /* Strip full border */
+    border-left-width: 4px !important;
+    border-left-style: solid !important;
+    padding-left: 10px;
+    /* Compensate padding */
+    border-radius: 0;
+    /* Keep square */
+}
+
+/* Active Color Variants directly matching NotificationUI classes */
+.filter-chip.active.chip-neutral {
+    border-left-color: var(--text-muted) !important;
+}
+
+.filter-chip.active.chip-green {
+    border-left-color: var(--color-positive) !important;
+}
+
+.filter-chip.active.chip-red {
+    border-left-color: var(--color-negative) !important;
+}
+
+.filter-chip.active.chip-custom {
+    border-left-color: var(--color-accent) !important;
+}
+
+
+.notification-card-grid {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    row-gap: 3px;
+    align-items: center;
+    background-color: var(--card-bg);
+    /* REMOVE ALL BORDERS except left status */
+    border: none !important;
+    padding: 12px 16px;
+    margin-bottom: 20px;
+    /* Increased gap for floating look */
+    /* Styles matching original card */
+    border-radius: 0;
+    transition: background-color 0.2s;
+    cursor: pointer;
+    /* Box shadow for subtle depth if needed, but keeping it flat for 'floating' look */
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+.notification-card-grid:hover {
+    background-color: rgba(255, 255, 255, 0.03);
+}
+
+/* Modifiers (Re-implementation for Grid) */
+.notification-card-grid.card-up {
+    border-left: 4px solid var(--color-positive);
+}
+
+.notification-card-grid.card-down {
+    border-left: 4px solid var(--color-negative);
+}
+
+.notification-card-grid.card-neutral {
+    border-left: 4px solid var(--text-muted);
+}
+
+.notification-card-grid.card-pinned {
+    border: 1px solid var(--color-accent);
+}
+
+/* Grid Cells */
+.notif-cell-code {
+    font-weight: 700;
+    font-size: 1.05rem;
+    color: var(--text-color);
+    line-height: 1.2;
+}
+
+.notif-cell-price {
+    font-weight: 700;
+    font-size: 1.05rem;
+    text-align: right;
+    line-height: 1.2;
+}
+
+.notif-cell-name {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    opacity: 0.9;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding-right: 8px;
+    /* Spacing from right column */
+}
+
+.notif-cell-change {
+    font-size: 0.9rem;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.notif-cell-explainer {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    margin-top: 3px;
+    /* Allow wrapping */
+}
+
+.notif-cell-range {
+    font-size: 0.8rem;
+    font-weight: 500;
+    text-align: right;
+    color: var(--text-muted);
+    margin-top: 3px;
+    white-space: nowrap;
+}
+
+
+/* -------------------------------------------------------------------------- */
+/*                                6. THEME OVERRIDES (DARK MODE)              */
+/* -------------------------------------------------------------------------- */
+body.dark-theme {
+    --bg-color: #212529;
+    --text-color: #f8f9fa;
+    --card-bg: #202020;
+    --border-color: #333333;
+    --header-bg: #343a40;
+    --sidebar-bg: #343a40;
+    --modal-content-bg: var(--card-bg);
+}
+
+body.dark-theme .form-control,
+body.dark-theme .modal-body input {
+    background-color: #2a2a2a;
+    color: var(--text-color);
+    border-color: #444;
+}
+
+body.dark-theme .highlight-row {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+body.dark-theme .sidebar-btn:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+body.dark-theme .sidebar-header {
+    border-bottom-color: var(--border-color);
+}
+
+body.dark-theme .modal-header {
+    border-bottom-color: var(--border-color);
+}
+
+body.dark-theme .sort-picker-row {
+    color: #ffffff;
+    border-bottom-color: #444;
+}
+
+body.dark-theme .modal-content {
+    background-color: #000000 !important;
+    /* FORCE BLACK BACKGROUND FOR FLOATING EFFECT */
+    color: var(--text-color);
+    border: none !important;
+    /* BORDER REMOVAL */
+}
+
+body.dark-theme .modal-content textarea,
+body.dark-theme .modal-content select {
+    color: var(--text-color, #ffffff) !important;
+    background-color: var(--card-bg, #343a40);
+    border-color: var(--border-color, #495057);
+}
+
+body.dark-theme .notes-dark-bg .note-input-white {
+    background-color: #ffffff !important;
+    color: #333333 !important;
+    border: 1px solid #ccc !important;
+}
+
+/* Dark Gradients for Lists */
+body.dark-theme .share-card {
+    background: linear-gradient(145deg, #282828, #181818);
+    border-bottom: 1px solid var(--border-color);
+}
+
+body.dark-theme .watchlist-item {
+    background: transparent;
+    border-bottom: 1px solid var(--border-color);
+}
+
+body.dark-theme .watchlist-item.trend-up,
+body.dark-theme .share-card.trend-up {
+    background: linear-gradient(145deg, hsl(120, 100%, 8%), hsl(120, 100%, 4%));
+}
+
+body.dark-theme .watchlist-item.trend-down,
+body.dark-theme .share-card.trend-down {
+    background: linear-gradient(145deg, hsl(353, 70%, 10%), hsl(353, 70%, 6%));
+}
+
+/* -------------------------------------------------------------------------- */
+/*                     WATCHLIST & SORT PICKER MODAL STYLES                   */
+/* -------------------------------------------------------------------------- */
+
+/* Checkbox Containers (Radio Style) */
+.carousel-checkbox,
+.hide-checkbox {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 2px solid var(--text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    background: transparent;
+    cursor: pointer;
+}
+
+/* Active State (Outer Circle) */
+.carousel-checkbox.active,
+.hide-checkbox.active {
+    border-color: var(--color-accent);
+}
+
+/* Inner Dot (The Solid Circle) */
+.radio-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background-color: var(--color-accent);
+    /* Always set color, toggle opacity/scale */
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transform: scale(0);
+    opacity: 0;
+    margin: 0;
+    pointer-events: none;
+    /* Let parent handle clicks */
+    display: block;
+    /* Defensive against overrides */
+}
+
+/* Show Dot on Active */
+.carousel-checkbox.active .radio-dot,
+.hide-checkbox.active .radio-dot {
+    transform: scale(1);
+    opacity: 1;
+}
+
+/* Highlight Selected Text */
+.carousel-selected .picker-item-content span,
+.carousel-selected .picker-item-content i,
+.carousel-selected .sort-picker-label,
+.carousel-selected .sort-picker-icon {
+    color: var(--color-accent) !important;
+    font-weight: 600;
+}
+
+/* Hidden Selected: Coffee Color + Strikethrough */
+.hidden-selected .picker-item-content span,
+.hidden-selected .picker-item-content i,
+.hidden-selected .sort-picker-label,
+.hidden-selected .sort-picker-icon {
+    color: var(--color-accent) !important;
+    font-weight: 600;
+    text-decoration: line-through;
+    opacity: 0.8;
+}
+
+/* Sort Picker Specifics for these classes */
+.sort-picker-row .carousel-checkbox,
+.sort-picker-row .hide-checkbox {
+    margin-left: auto;
+}
+
+/* Segmented Control Styling */
+/* Segmented Control Styling */
+.segmented-control {
+    display: flex;
+    background: var(--bg-dark);
+    /* Darker background for the track */
+    border-radius: 8px;
+    padding: 4px;
+    margin: 0 auto 10px auto;
+    /* Center with auto margins */
+    border: 1px solid var(--border-color);
+    max-width: 90%;
+    /* Prevent filling the whole modal width if it's large */
+    width: fit-content;
+    /* Only take needed space up to max-width */
+    min-width: 280px;
+    /* Ensure decent tap target area */
+    z-index: 10;
+    position: relative;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.segmented-button {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    padding: 8px 16px;
+    /* Slightly larger targets */
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+    position: relative;
+    white-space: nowrap;
+    /* Prevent text wrapping */
+}
+
+.segmented-button:hover {
+    color: var(--text-color);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.segmented-button.active {
+    background: var(--color-accent) !important;
+    /* Coffee Color */
+    color: white !important;
+    /* Contrast text */
+    font-weight: 600;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* -------------------------------------------------------------------------- */
+/*                                7. MEDIA QUERIES                            */
+/* -------------------------------------------------------------------------- */
+
+/* Tablet & Mobile */
+
+
+/* Desktop Only */
+
+
+/* Large Screens */

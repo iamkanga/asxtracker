@@ -875,16 +875,19 @@ export class SettingsUI {
         const updateParam = (id, val, isLimit = false) => {
             const el = modal.querySelector(`#${id}`);
             if (el) {
-                // If isLimit (Movers/52w Limit), treat 0 as "None" for display
+                // If isLimit (Movers/52w Limit), treat 0 as "OFF" for display
                 const isZero = (val === 0 || val === '0' || val === '$0.00' || val === '0.0%');
                 const isBlank = (val === null || val === undefined || val === '—');
 
                 if (isLimit && isZero) {
-                    el.textContent = 'None';
-                    el.parentElement.style.opacity = '0.4';
+                    el.textContent = 'OFF';
+                    el.parentElement.style.opacity = '0.3';
+                } else if (isBlank) {
+                    el.textContent = 'OFF';
+                    el.parentElement.style.opacity = '0.3';
                 } else {
-                    el.textContent = isBlank ? '—' : val;
-                    el.parentElement.style.opacity = isBlank ? '0.4' : '1';
+                    el.textContent = val;
+                    el.parentElement.style.opacity = '1';
                 }
             }
         };
@@ -892,10 +895,11 @@ export class SettingsUI {
         const fmtParam = (pct, dol) => {
             const hasP = (pct !== null && pct !== undefined && pct !== 0 && String(pct) !== '');
             const hasD = (dol !== null && dol !== undefined && dol !== 0 && String(dol) !== '');
-            const p = hasP ? `${parseFloat(pct).toFixed(1)}%` : 'None %';
-            const d = hasD ? `$${parseFloat(dol).toFixed(2)}` : '$ None';
 
-            if (!hasP && !hasD) return null;
+            const p = hasP ? `${parseFloat(pct).toFixed(1)}%` : 'OFF';
+            const d = hasD ? `$${parseFloat(dol).toFixed(2)}` : 'OFF';
+
+            if (!hasP && !hasD) return 'OFF';
             return `${p} | ${d}`;
         };
 

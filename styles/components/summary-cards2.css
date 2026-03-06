@@ -1,0 +1,478 @@
+﻿/* ==========================================================================
+   SUMMARY CARDS & SNAPSHOT (DASHBOARD)
+   Extracted from style.css monolith during CSS Rebuild Phase 5.
+   ========================================================================== */
+/* --- Portfolio Summary Cards --- */
+.portfolio-summary {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0;
+    margin: 0 !important;
+    margin-bottom: 12px !important;
+    background-color: transparent;
+    box-shadow: none;
+    border: none;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.portfolio-summary>.summary-card:first-child {
+    flex: 0 0 100%;
+    margin-bottom: 2px;
+}
+
+.portfolio-summary>.summary-card:not(:first-child) {
+    flex: 1;
+    min-width: 140px;
+}
+
+.summary-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--card-bg);
+    padding: 15px;
+    border-radius: 0 !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    border: none !important;
+    position: relative;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+/* Gradient Sidebar Implementation Removed - Pure Background design */
+@keyframes shimmer {
+    0% {
+        transform: translateX(-100%);
+    }
+
+    100% {
+        transform: translateX(100%);
+    }
+}
+
+.metric-label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    text-align: center;
+}
+
+.metric-value-large {
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: var(--text-color);
+    line-height: 1.1;
+    text-align: center;
+}
+
+.metric-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.metric-percent-small {
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-align: center;
+    display: inline-block;
+    opacity: 0.9;
+}
+
+.summary-card.clickable {
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.summary-card.clickable:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.summary-detail-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+}
+
+.summary-detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background-color: rgba(255, 255, 255, 0.03);
+    border-radius: 0;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.summary-detail-row:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+}
+
+.summary-detail-code {
+    font-weight: 500;
+    font-size: 1.1rem;
+}
+
+.summary-detail-value {
+    font-weight: 500;
+    font-size: 1.1rem;
+}
+
+
+/* =========================================
+   SNAPSHOT UI (MARKET PULSE)
+   ========================================= */
+.modal.modal-fullscreen {
+    width: 100vw;
+    height: 100vh;
+    border-radius: 0;
+    max-width: none;
+    max-height: none;
+    padding: 0;
+}
+
+.modal.modal-fullscreen .modal-content {
+    height: 100%;
+    border-radius: 0;
+}
+
+.snapshot-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    /* 2 Columns on Mobile */
+    gap: 10px;
+    padding: 10px;
+}
+
+/* Tablet/Desktop Override for Grid */
+
+
+.snapshot-card {
+    background-color: var(--card-bg);
+    border: none;
+    border-left: none !important;
+    overflow: visible !important;
+    z-index: 100;
+    border-radius: 0 !important;
+    padding: 12px 16px;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 8px;
+    min-height: 60px;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.1s ease;
+    margin-bottom: 10px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.snapshot-card:active {
+    transform: scale(0.98);
+}
+
+.snapshot-card:hover {
+    background-color: var(--bg-color);
+}
+
+/* Color Coding (Left Border) */
+.snapshot-positive {
+    background: linear-gradient(135deg, rgba(0, 180, 0, var(--gradient-strength, 0.6)) 0%, var(--card-bg) 100%) !important;
+    border-left: 4px solid var(--color-positive) !important;
+}
+
+.snapshot-negative {
+    background: linear-gradient(135deg, rgba(180, 0, 0, var(--gradient-strength, 0.6)) 0%, var(--card-bg) 100%) !important;
+    border-left: 4px solid var(--color-negative) !important;
+}
+
+.snapshot-neutral {
+    background: linear-gradient(135deg, rgba(var(--color-accent-rgb), var(--gradient-strength, 0.6)) 0%, var(--card-bg) 100%) !important;
+    border-left: 4px solid var(--color-accent) !important;
+}
+
+/* Column 1: Code (Left) */
+.snap-col-left {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    /* Extreme Left */
+}
+
+.snap-code {
+    font-weight: 800;
+    font-size: 1.2rem;
+    color: var(--text-color);
+    letter-spacing: 0.5px;
+    line-height: 1;
+}
+
+/* Column 2: Center (Price) */
+.snap-col-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* Center */
+}
+
+.snap-price {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--text-color);
+}
+
+/* Column 3: Right (Changes) */
+.snap-col-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    /* Extreme Right */
+    justify-content: center;
+}
+
+.snap-percent {
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.snap-value-change {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-muted);
+}
+
+/* Text Colors */
+.text-pos {
+    color: var(--color-positive);
+}
+
+.text-neg {
+    color: var(--color-negative);
+}
+
+/* --- Stock Details Modal (Specific) --- */
+/* --- Contemporary Summary Dashboard --- */
+.summary-board {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 4px 0;
+}
+
+.summary-tile-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+
+.summary-tile {
+    background: rgba(255, 255, 255, 0.03);
+    border: none !important;
+    border-radius: 0 !important;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 54px;
+    transition: background 0.2s;
+}
+
+.summary-tile.thin {
+    padding: 6px 10px;
+    min-height: 42px;
+}
+
+.summary-tile:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.summary-tile-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.summary-tile-label {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 700;
+}
+
+.summary-status-indicator {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--color-neutral);
+    opacity: 0.3;
+}
+
+.summary-status-indicator.status-on {
+    background: var(--color-accent);
+    /* Coffee */
+    opacity: 1;
+    box-shadow: 0 0 4px var(--color-accent);
+}
+
+.summary-status-indicator.kangaroo {
+    width: 14px;
+    height: 14px;
+    background: url('favicon.svg') no-repeat center center;
+    background-size: contain;
+    border-radius: 0;
+    opacity: 0.2;
+}
+
+.summary-status-indicator.kangaroo.status-on {
+    background: url('favicon.svg') no-repeat center center;
+    background-size: contain;
+    opacity: 1;
+    /* Precise Coffee Filter for #a49393 */
+    filter: invert(61%) sepia(6%) saturate(696%) hue-rotate(314deg) brightness(97%) contrast(90%);
+    box-shadow: none;
+}
+
+/* Always-on state for Badge Count kangaroo */
+.summary-status-indicator.kangaroo.always-on {
+    opacity: 1;
+    /* Precise Coffee Filter for #a49393 */
+    filter: invert(61%) sepia(6%) saturate(696%) hue-rotate(314deg) brightness(97%) contrast(90%);
+}
+
+.summary-tile-body {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+}
+
+.summary-tile-value {
+    font-size: 0.85rem;
+    color: white;
+    font-weight: 600;
+}
+
+.summary-tag {
+    font-size: 0.6rem;
+    padding: 2px 6px;
+    background: rgba(var(--color-accent-rgb, 164, 147, 147), 0.1);
+    color: var(--color-accent);
+    border-radius: 10px;
+    border: 1px solid rgba(var(--color-accent-rgb, 164, 147, 147), 0.2);
+}
+
+.summary-section-title {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    font-weight: 700;
+
+    margin-bottom: 8px;
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.summary-section-title i {
+    font-size: 0.8rem;
+    opacity: 1;
+}
+
+/* Specific Grid Pairings */
+.summary-grid-compact {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+}
+
+.summary-grid-paired {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+}
+
+@media (max-width: 480px) {
+    .summary-grid-compact {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    border-bottom: none;
+}
+
+#stock-details-modal .detail-row {
+    align-items: baseline;
+    /* Surgical Fix: Baseline alignment */
+}
+
+.detail-row .detail-label {
+    margin-bottom: 0 !important;
+}
+
+.highlight-row {
+    margin-top: 4px;
+    background-color: rgba(0, 0, 0, 0.02);
+    padding: 8px;
+    border-radius: 0;
+    border-bottom: none;
+}
+
+.highlight-row .detail-value {
+    color: var(--primary-color);
+    font-size: 1.1rem;
+}
+
+.snapshot-card {
+    border-left: none;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    grid-column: 1 / -1;
+}
+
+.snapshot-main {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.snapshot-value-large {
+    font-size: 2.5rem;
+    font-weight: 500;
+    color: var(--text-color);
+    line-height: 1;
+}
+
+.snapshot-corners {
+    display: flex;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.snapshot-sub {
+    font-size: 0.9rem;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 0;
+    background-color: var(--bg-color);
+    border: 1px solid var(--border-light);
+}

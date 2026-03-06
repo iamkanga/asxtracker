@@ -341,3 +341,503 @@ h1.modal-title,
 .standard-input:focus {
     border-color: var(--primary-color);
 }
+
+/* --- Widget Config Modal --- */
+.widget-config-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.widget-config-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 15px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
+    transition: background 0.2s;
+}
+
+.widget-config-row:hover {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.widget-config-row-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+}
+
+.widget-config-row-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.widget-config-row-label {
+    font-size: 0.9rem;
+    color: var(--text-color, #fff);
+    font-weight: 500;
+}
+
+.widget-config-row-desc {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.picker-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    cursor: pointer;
+    color: var(--text-color);
+    border: none !important;
+    margin: 2px 0;
+}
+
+.picker-item:hover {
+    background-color: var(--bg-color);
+}
+
+/* Separators removed globally for professional look */
+.picker-item,
+.watchlist-item,
+.sort-picker-row {
+    border-bottom: none !important;
+    border-top: none !important;
+}
+
+.dropdown-menu hr,
+.modal-content hr,
+.picker-list hr {
+    display: none !important;
+}
+
+.toggle-option.active[data-value="sell"],
+.toggle-option.active[data-value="below"] {
+    background-color: var(--color-negative);
+    color: #fff;
+}/* --- Add Share Modal (Specific) --- */
+#add-share-modal .modal-content {
+    background-color: var(--bg-secondary);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    border-radius: 0;
+    position: relative;
+    left: auto;
+    transform: none;
+    margin: 0;
+    width: 90%;
+    max-width: 500px;
+}
+
+#addShareSaveBtn {
+    color: var(--color-positive);
+}
+
+#addShareSaveBtn i {
+    color: inherit;
+}
+
+#add-share-modal .accordion-header {
+    background-color: var(--card-bg);
+    color: var(--text-color);
+    border-color: var(--border-color);
+}
+
+#add-share-modal .accordion-header:hover {
+    background-color: var(--bg-color);
+}
+
+#add-share-modal .accordion-content {
+    background-color: var(--card-bg);
+    color: var(--text-color);
+    border-top: 1px solid var(--border-color);
+}
+
+#add-share-modal .accordion-item {
+    border-bottom: 1px solid var(--border-color);
+}
+
+#add-share-modal .accordion {
+    border: 1px solid var(--border-color);
+}
+
+/* Force Watchlist Dropdown in Add Share to Dark */
+#add-share-modal .watchlist-trigger {
+    background-color: #ffffff;
+    border-color: #ccc;
+    height: 48px;
+    padding: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-sizing: border-box;
+}
+
+#add-share-modal .watchlist-trigger-text {
+    color: #000000;
+}
+
+#add-share-modal .watchlist-dropdown {
+    background-color: #383838;
+    border-color: #555;
+}
+
+#add-share-modal .watchlist-row {
+    border-bottom: none;
+}
+
+#add-share-modal .watchlist-row:hover {
+    background-color: #444;
+}
+
+#add-share-modal .watchlist-name {
+    color: #e0e0e0;
+}
+
+#add-share-modal .radio-check {
+    border-color: #666;
+}
+
+#add-share-modal .watchlist-row.selected .radio-check {
+    background-color: #383838;
+    border-color: var(--primary-color);
+}
+
+#add-share-modal input,
+#add-share-modal select,
+#add-share-modal textarea {
+    background-color: #ffffff;
+    color: #000000;
+    border: 1px solid #ccc;
+}
+
+#add-share-modal input:focus,
+#add-share-modal select:focus,
+#add-share-modal textarea:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+    outline: none;
+}
+
+#add-share-modal .segmented-toggle {
+    background-color: #ffffff;
+}
+
+#add-share-modal .toggle-option {
+    color: #666;
+    cursor: pointer;
+}
+
+#add-share-modal .toggle-option.active[data-value="buy"],
+#add-share-modal .toggle-option.active[data-value="above"] {
+    background-color: var(--color-positive);
+    color: #fff;
+}
+
+#add-share-modal .toggle-option.active[data-value="sell"],
+#add-share-modal .toggle-option.active[data-value="below"] {
+    background-color: var(--color-negative);
+    color: #fff;
+}
+
+#add-share-modal .notes-dark-bg {
+    background-color: transparent;
+}
+
+#add-share-modal .modal-close-btn {
+    color: #e0e0e0;
+}
+
+#add-share-modal .modal-close-btn:hover {
+    color: #fff;
+}
+
+/* --- Sort Picker Modal (Components) --- */
+.sort-picker-modal {
+    background-color: #222;
+    color: #fff;
+    z-index: 20005;
+    position: relative;
+    border: 1px solid #444;
+    max-width: 640px;
+    width: 100%;
+}
+
+/* Text Utility Colors */
+.text-positive {
+    color: var(--color-positive) !important;
+}
+
+.text-negative {
+    color: var(--color-negative) !important;
+}
+
+.text-neutral {
+    color: var(--text-muted) !important;
+}
+
+.sort-picker-modal .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: none;
+    /* Match Watchlist modal */
+    padding-bottom: 15px;
+    width: 100%;
+}
+
+.sort-picker-modal .modal-title {
+    flex: 1;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.sort-picker-modal .modal-title h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.sort-picker-modal .modal-body {
+    padding: 0 !important;
+}
+
+
+.sort-picker-modal .modal-close-btn {
+    margin-left: auto;
+    position: static;
+    font-size: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    color: var(--primary-color);
+}
+
+
+.sort-picker-list {
+    display: flex;
+    flex-direction: column;
+    padding-top: 10px;
+    gap: 4px;
+}
+
+/* Core Sort Picker Row - PURGED FOR CONSOLIDATION below */
+
+/* Legacy Sort Picker Styles Removed for Consolidation */
+
+/* --- Watchlist Picker Modal (Standardized Match) --- */
+#watchlistPickerModal .modal-content {
+    background-color: #222;
+    color: #fff;
+    border: 1px solid #444;
+    max-width: 640px;
+    margin: 0 20px;
+    /* Safety margin for mobile */
+}
+
+#watchlistPickerModal .modal-header {
+    border-bottom: none;
+    padding-bottom: 15px;
+}
+
+#watchlistPickerModal .modal-title {
+    color: #fff;
+    font-size: 1.25rem;
+}
+
+#watchlistPickerModal .modal-close-btn {
+    color: var(--primary-color);
+}
+
+.watchlist-picker-list {
+    display: flex;
+    flex-direction: column;
+    padding-top: 10px;
+    gap: 4px;
+    max-height: 50vh;
+    overflow-y: auto;
+    /* Custom Scrollbar for sleekness */
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-accent) var(--card-bg);
+}
+
+/* Core Watchlist Item - PURGED FOR CONSOLIDATION below */
+
+.watchlist-item.selected .watchlist-name-span {
+    color: var(--color-accent) !important;
+}
+
+.watchlist-name-span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+}
+
+.watchlist-item.selected i.fa-check {
+    color: var(--color-accent) !important;
+}
+
+.watchlist-item i {
+    width: 20px;
+    text-align: center;
+    margin-right: 8px;
+    color: var(--text-muted);
+}
+
+.watchlist-item:hover i,
+.watchlist-item.active i,
+.watchlist-item.selected i {
+    color: var(--color-accent);
+}
+
+
+
+.picker-item-content {
+    display: flex;
+    align-items: center;
+    flex: 1;
+}
+
+.picker-item-content span {
+    font-size: 1rem;
+}
+
+/* Ensure checkmark is visible and colored */
+.watchlist-item .fa-check {
+    color: var(--color-positive);
+}
+
+
+/* Carousel Selection (Radio-style) */
+.carousel-checkbox {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #555;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    background-color: transparent;
+    padding: 0;
+}
+
+.watchlist-item:hover .carousel-checkbox {
+    border-color: var(--color-accent);
+}
+
+.carousel-checkbox.active {
+    border-color: var(--color-accent);
+}
+
+
+
+.carousel-checkbox.active .radio-dot {
+    opacity: 1;
+    transform: scale(1);
+}
+
+/* Text Highlighting for Selected Items in Carousel */
+.watchlist-item.carousel-selected .picker-.pill-container span.active {
+    background: linear-gradient(135deg,
+            rgba(var(--color-accent-rgb), var(--gradient-strength, 0.6)),
+            color-mix(in srgb, rgb(var(--color-accent-rgb)) var(--gradient-tint, 0%), rgba(20, 20, 20, 0.95)));
+    color: white !important;
+    font-weight: 700;
+}
+
+/* Reorder Mode Tweaks */
+.reorder-active .watchlist-item {
+    cursor: default;
+}
+
+.reorder-active .watchlist-item:hover {
+    background-color: transparent;
+    color: inherit;
+}
+
+/* --- Branding: Search & Modal --- */
+/* Override generic green spinner with application accent (Coffee) */
+.fa-spinner {
+    color: var(--accent-color) !important;
+}
+
+/* Save Button: Ready State (Coffee) */
+/* Assuming the button adds a 'success' or just removes 'disabled' */
+/* We target the button when NOT disabled */
+.modal-action-btn:not(:disabled) {
+    color: var(--accent-color) !important;
+}
+
+.modal-action-btn:not(:disabled) .fa-check {
+    color: var(--accent-color) !important;
+}
+
+/* Ensure disabled is still grey */
+.modal-action-btn:disabled,
+.modal-action-btn.disabled {
+    color: var(--text-muted) !important;
+    /* or grey */
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+/* Primary Pill Button (Modern CTA) */
+.primary-pill-btn {
+    background-color: var(--color-accent);
+    color: #ffffff;
+    border: none;
+    border-radius: 50px;
+    padding: 12px 30px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 4px 12px rgba(164, 147, 147, 0.3);
+    cursor: pointer;
+    transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+.primary-pill-btn:hover {
+    transform: translateY(-2px);
+    background-color: var(--primary-hover);
+}
+
+.primary-pill-btn:active {
+    transform: scale(0.98);
+}
+
+
+/* --- BRANDING OVERRIDE (HIGH SPECIFICITY) --- */
+/* Force Coffee Color on Spinner and Save Tick */
+.modal-header i.fa-spinner,
+.modal-header i.fa-check,
+#addShareSaveBtn:not(:disabled) i.fa-check,
+#pricePreviewPanel .fa-spinner {
+    color: var(--accent-color) !important;
+}
+
+/* Ensure Save Button Text (if any) or Icon follows suit */
+#addShareSaveBtn:not(:disabled) {
+    color: var(--accent-color) !important;
+}
+
+
+

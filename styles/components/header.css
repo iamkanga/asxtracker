@@ -1,0 +1,505 @@
+/* ==========================================================================
+   APP HEADER & NAVIGATION
+   Main top header, navigation rows, and connection status indicator.
+   Extracted from style.css monolith during CSS Rebuild Phase 3.
+   ========================================================================== */
+
+#appHeader {
+    background-color: var(--card-bg);
+    box-shadow: var(--shadow-strong);
+    position: relative;
+    flex-shrink: 0;
+    top: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    z-index: 9999;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    padding: 12px 4px 10px 4px;
+    gap: 0;
+    margin: 0;
+    border-radius: 0;
+    min-height: 80px;
+    height: auto;
+    color: var(--text-inverse);
+    border-bottom: none;
+    align-items: stretch;
+}
+
+.header-inner-container {
+    width: 100%;
+    max-width: 1400px;
+    padding: 0 12px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    margin: 0 auto;
+}
+
+.header-top-row {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    width: 100%;
+    position: relative;
+    gap: 8px;
+    height: 48px;
+    margin-bottom: 2px;
+}
+
+.header-left-container {
+    grid-column: 1;
+    justify-self: start;
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+    flex-shrink: 0;
+    height: 40px;
+}
+
+.header-action-btn-right {
+    grid-column: 3;
+    justify-self: end;
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    height: 40px;
+}
+
+.header-left {
+    display: flex;
+    align-items: flex-end;
+    gap: 4px;
+    height: 60px;
+    padding-bottom: 8px;
+    padding-left: 0;
+}
+
+.header-right {
+    display: flex;
+    align-items: flex-end;
+    gap: 4px;
+    height: 60px;
+    padding-bottom: 8px;
+    padding-right: 0;
+}
+
+.hamburger-btn {
+    background: none;
+    border: none;
+    color: var(--color-accent) !important;
+    font-size: 2rem;
+    cursor: pointer;
+    padding: 4px;
+    line-height: 1;
+}
+
+.header-action-btn {
+    background: none;
+    border: none;
+    color: #ffffff !important;
+    font-size: 2rem;
+    cursor: pointer;
+    padding: 4px;
+    line-height: 1;
+}
+
+#hamburger-btn,
+#viewToggleBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 40px;
+    width: 40px;
+    padding: 0;
+    margin: 0;
+    color: var(--color-accent) !important;
+    background: transparent;
+    border: none;
+}
+
+#hamburger-btn i,
+#viewToggleBtn i {
+    color: var(--color-accent) !important;
+    font-size: 2.0rem;
+}
+
+#sortPickerBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    height: auto;
+    width: auto;
+    padding: 2px 10px;
+    margin: 0;
+    gap: 4px;
+    outline: none;
+    box-shadow: none;
+    border: none;
+    background-color: transparent;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-color);
+    cursor: pointer;
+}
+
+#sortPickerBtn:hover,
+#sortPickerBtn:focus,
+#sortPickerBtn:active,
+#sortPickerBtn.active {
+    outline: none;
+    box-shadow: none;
+    background-color: transparent;
+    border: none;
+    color: var(--primary-color) !important;
+}
+
+.header-text-btn {
+    background: none;
+    border: none;
+    color: var(--text-color);
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0;
+}
+
+.header-text-btn:hover {
+    color: var(--primary-color);
+}
+
+.live-refresh-btn {
+    background: none;
+    border: none;
+    color: var(--color-accent) !important;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+    display: flex !important;
+    align-items: center;
+    transition: opacity 0.2s;
+    opacity: 1;
+}
+
+.live-refresh-btn:hover {
+    opacity: 0.8;
+}
+
+.header-separator {
+    width: 1px;
+    height: 24px;
+    background-color: var(--border-color);
+    margin: 0 10px;
+}
+
+h1#dynamicWatchlistTitle {
+    grid-column: 2;
+    justify-self: center;
+    margin: 0;
+    text-align: center;
+    font-size: 2.1rem;
+    font-weight: 600;
+    line-height: 1.1;
+    color: var(--text-inverse);
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    z-index: 500;
+    pointer-events: auto;
+    transition: color 0.2s;
+}
+
+h1#dynamicWatchlistTitle:hover {
+    color: var(--primary-color);
+    cursor: pointer;
+}
+
+h1#dynamicWatchlistTitle.active {
+    color: var(--primary-color);
+}
+
+.app-title-compact {
+    font-size: 1.4rem;
+    line-height: 1.2;
+}
+
+#appVersion {
+    font-size: 0.6rem;
+    color: var(--ghosted-text, #888);
+    opacity: 0.8;
+    font-weight: 400;
+}
+
+.watchlist-controls-row {
+    width: 100%;
+    box-sizing: border-box;
+    border-top: none !important;
+    border-bottom: none !important;
+    background-color: transparent !important;
+    padding: 0;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    height: 44px;
+    margin: 0 !important;
+}
+
+.controls-left-group {
+    grid-column: 1;
+    justify-self: start;
+    flex: 0 1 auto;
+    min-width: 120px;
+    display: flex;
+    align-items: center;
+}
+
+.controls-right-group {
+    grid-column: 2;
+    justify-self: center;
+    flex: 0 1 auto;
+    min-width: 120px;
+    margin: 0;
+    display: flex;
+    align-items: center;
+}
+
+.header-sort-and-counts {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    height: 100%;
+    gap: 0;
+    padding-bottom: 2px;
+}
+
+.header-movement-counts {
+    display: flex;
+    gap: 15px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    line-height: 1;
+    margin-top: 1px;
+}
+
+.asx-toggle-text {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--accent-color, #a49393);
+    cursor: pointer;
+    line-height: 1;
+    margin-bottom: 0;
+}
+
+.asx-code-buttons-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    transition: max-height 0.4s ease-in-out, padding 0.4s ease-in-out, opacity 0.3s ease-in-out;
+    max-height: 0;
+    overflow: hidden;
+    padding: 0;
+    opacity: 0;
+}
+
+.asx-code-buttons-container.expanded {
+    max-height: 500px;
+    padding: 10px 0;
+    opacity: 1;
+    border-top: none;
+}
+
+#asxCodeButtonsToggle {
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: var(--accent-color, #a49393);
+    cursor: pointer;
+    margin-top: 4px;
+}
+
+/* --- CONNECTION STATUS INDICATOR (HEADER) --- */
+#connection-status {
+    display: none;
+    align-items: center;
+    gap: 6px;
+    background: #ff444422;
+    border: 1px solid #ff4444;
+    color: #ff4444;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+#connection-status.visible {
+    display: flex;
+}
+
+#connection-status .status-dot {
+    width: 6px;
+    height: 6px;
+    background-color: #ff4444;
+    border-radius: 50%;
+    animation: pulse-red 2s infinite;
+}
+
+@keyframes pulse-red {
+    0% {
+        opacity: 1;
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(255, 68, 68, 0.7);
+    }
+
+    70% {
+        opacity: 0.7;
+        transform: scale(1.1);
+        box-shadow: 0 0 0 4px rgba(255, 68, 68, 0);
+    }
+
+    100% {
+        opacity: 1;
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(255, 68, 68, 0);
+    }
+}
+
+/* --- CONNECTION DOT (SMALL INDICATOR) --- */
+.connection-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 8px;
+    background-color: var(--color-negative);
+    box-shadow: 0 0 5px var(--color-negative);
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+    vertical-align: middle;
+}
+
+.connection-dot.connected {
+    background-color: #4CAF50;
+    box-shadow: 0 0 5px #4CAF50;
+}
+
+.connection-dot.health-stale {
+    background-color: #FF9800;
+    box-shadow: 0 0 8px #FF9800;
+}
+
+.connection-dot.health-critical {
+    background-color: #F44336;
+    box-shadow: 0 0 10px #F44336;
+}
+
+.connection-dot:not(.connected):not(.health-stale):not(.health-critical) {
+    animation: pulse-red 2s infinite;
+}
+
+@keyframes pulse-green {
+    0% {
+        box-shadow: 0 0 3px #4CAF50;
+    }
+
+    50% {
+        box-shadow: 0 0 12px #4CAF50, 0 0 20px rgba(76, 175, 80, 0.4);
+    }
+
+    100% {
+        box-shadow: 0 0 5px #4CAF50;
+    }
+}
+
+.connection-dot.pulse-fresh {
+    animation: pulse-green 0.75s ease-in-out 2;
+}/* Header Carousel Navigation */
+.header-top-row .watchlist-carousel-nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: static;
+    /* Let buttons position relative to .header-top-row */
+    width: 100%;
+}
+
+.carousel-nav-btn {
+    background: none;
+    border: none;
+    color: var(--color-accent);
+    opacity: 0.3;
+    font-size: 1.1rem;
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.2s, transform 0.2s;
+    z-index: 2005;
+    /* Priority over title/hamburger */
+    pointer-events: auto !important;
+    min-width: 50px;
+    height: 48px;
+    flex-shrink: 0;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.carousel-nav-btn.prev {
+    left: 45px;
+    /* Offset from hamburger */
+}
+
+.carousel-nav-btn.next {
+    right: 45px;
+    /* Offset from view toggle */
+}
+
+
+.carousel-nav-btn:hover {
+    opacity: 0.6;
+}
+
+#dynamicWatchlistTitle {
+    text-align: center;
+    margin: 0 auto;
+    /* Center horizontally */
+    pointer-events: auto;
+    /* Required for bar tap modal */
+    z-index: 10;
+    width: auto;
+    /* Fix: Reduce from 100% to fit content */
+    max-width: fit-content;
+    padding: 0;
+    /* Hit area reduced to content */
+}
+
+/* Utility to ensure Coffee color is available */
+.text-coffee {
+    color: var(--color-accent) !important;
+}
+
+#dynamicWatchlistTitle span#current-watchlist-name {
+    pointer-events: auto;
+    cursor: pointer;
+    white-space: nowrap;
+    display: inline-block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: normal;
+}
+

@@ -1,0 +1,800 @@
+﻿/* ==========================================================================
+   SIDEBAR & COMMAND CENTER
+   Extracted from style.css monolith during CSS Rebuild Phase 4.
+   ========================================================================== */
+/* --- Sidebar --- */
+.sidebar {
+    /* Coffee Gradient for Sidebar */
+    background: linear-gradient(to bottom, #121212 0%, #1e1b18 100%) !important;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 230px;
+    /* Reduced by ~20% */
+    height: 100%;
+    /* Fallback */
+    height: 100dvh;
+    /* Dynamic Mobile Height */
+    /* background-color: var(--sidebar-bg); REMOVED for Gradient */
+    color: var(--text-color);
+    z-index: 100001 !important;
+    /* Safe High Value */
+    /* Topmost UI Element */
+    padding: 0;
+    box-shadow: 4px 0 12px rgba(0, 0, 0, 0.4);
+    /* Stronger shadow for contrast */
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    transition: transform 0.3s ease;
+}
+
+.sidebar.collapsed {
+    transform: translateX(-100%);
+}
+
+.sidebar-header {
+    padding: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+/* Decorative Kangaroo Icon - mirrored to face right, sized at 2.5x the close button */
+.sidebar-kangaroo-icon {
+    width: 3.75rem;
+    height: 3.75rem;
+    fill: var(--color-accent, #a49393);
+    opacity: 1;
+    flex-shrink: 0;
+    pointer-events: none;
+    transform: none;
+    /* Changed from scaleX(-1) to face left (outwards) */
+}
+
+@keyframes kangaroo-hop {
+
+    /* 5 Hops (0% - 75%) - Each hop covers 15% and moves 16px */
+    0% {
+        transform: translate(0, 0) rotate(0deg) scale(1);
+    }
+
+    7.5% {
+        transform: translate(8px, -12px) rotate(-5deg) scale(1.05, 0.95);
+    }
+
+    15% {
+        transform: translate(16px, 0) rotate(0deg) scale(1);
+    }
+
+    22.5% {
+        transform: translate(24px, -12px) rotate(-5deg) scale(1.05, 0.95);
+    }
+
+    30% {
+        transform: translate(32px, 0) rotate(0deg) scale(1);
+    }
+
+    37.5% {
+        transform: translate(40px, -12px) rotate(-5deg) scale(1.05, 0.95);
+    }
+
+    45% {
+        transform: translate(48px, 0) rotate(0deg) scale(1);
+    }
+
+    52.5% {
+        transform: translate(56px, -12px) rotate(-5deg) scale(1.05, 0.95);
+    }
+
+    60% {
+        transform: translate(64px, 0) rotate(0deg) scale(1);
+    }
+
+    67.5% {
+        transform: translate(72px, -12px) rotate(-5deg) scale(1.05, 0.95);
+    }
+
+    75% {
+        transform: translate(80px, 0) rotate(0deg) scale(1);
+    }
+
+    /* Somersault (75% - 100%) - High jump and full flip */
+    82.5% {
+        transform: translate(85px, -25px) rotate(-120deg) scale(1.1);
+    }
+
+    90% {
+        transform: translate(95px, -45px) rotate(-240deg) scale(1.2);
+    }
+
+    95% {
+        transform: translate(105px, -15px) rotate(-360deg) scale(1.1, 0.9);
+    }
+
+    100% {
+        transform: translate(115px, 0) rotate(-360deg) scale(1);
+    }
+}
+
+/* Explicit Animation Class for JS Triggering */
+.sidebar-kangaroo-icon.kangaroo-animate {
+    animation: kangaroo-hop 2.2s ease-in-out forwards;
+    /* Delay managed by JS or kept small */
+}
+
+/* Sidebar Extra Graphic (Fade-in after Kangaroo) */
+.sidebar-extra-graphic {
+    position: absolute;
+    left: 5px;
+    top: -12px;
+    width: 145px;
+    height: auto;
+    fill: var(--color-accent);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.sidebar:not(.collapsed) .sidebar-extra-graphic {
+    animation: fade-in-coffee 5.0s ease-in-out forwards;
+    animation-delay: 2.5s;
+    /* Trigger after kangaroo somersault (2.2s + 0.3s) */
+}
+
+@keyframes fade-in-coffee {
+    0% {
+        opacity: 0;
+        /* Start faint (technically 0 here, but will look faint very quickly) */
+    }
+
+    10% {
+        opacity: 0.1;
+    }
+
+    100% {
+        opacity: 1;
+        /* Full strength */
+    }
+}
+
+.sidebar-header h2 {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.sidebar-header .close-btn {
+    background: none;
+    border: none;
+    color: var(--color-accent);
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0 8px;
+    line-height: 1;
+    transform: translate(12px, 15px);
+}
+
+.sidebar-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px 0;
+}
+
+.sidebar-section {
+    padding: 15px 24px;
+    border-bottom: none;
+}
+
+.sidebar-section-title {
+    margin: 0 0 12px 0;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.sidebar-btn {
+    width: 100%;
+    background: none;
+    border: none;
+    padding: 12px 0;
+    text-align: left;
+    font-size: 1rem;
+    color: var(--text-color);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-radius: 0;
+    margin-bottom: 2px;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.sidebar-btn:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+    color: var(--primary-color);
+    padding-left: 8px;
+}
+
+.sidebar-btn i {
+    width: 20px;
+    text-align: center;
+    color: var(--primary-color);
+}
+
+.user-auth-section {
+    padding: 24px;
+    border-top: none;
+    background-color: rgba(0, 0, 0, 0.02);
+}
+
+.sidebar-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 100000 !important;
+    /* Safe High Value: Below Sidebar */
+    /* Always on top of everything except sidebar */
+
+    /* Base State: Hidden */
+    display: none;
+    pointer-events: auto !important;
+}
+
+/* Explicit Active State Logic */
+.sidebar-overlay.active {
+    display: block !important;
+}
+
+/* DEPRECATED: Old .hidden logic removed to prevent conflicts */
+/* .sidebar-overlay:not(.hidden) { display: block; } */
+
+
+
+/* Fix Notification Modal Z-Index to ensure it appears over Settings */
+/* Discreet Back Buttons */
+.modal-back-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    padding: 8px;
+    margin-right: 8px;
+    cursor: pointer;
+    transition: color 0.2s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-back-btn:hover {
+    color: var(--color-accent);
+}
+
+.modal-back-btn i {
+    font-size: 0.85rem;
+}
+
+#notification-modal {
+    z-index: 200002 !important;
+}
+
+/* --- SIDEBAR SPACING FIX --- */
+/* Reduce excessively large gap at the top of the sidebar */
+.sidebar-header {
+    padding-bottom: 0px !important;
+    margin-bottom: 0px !important;
+    height: 40px !important;
+    min-height: 0 !important;
+    display: flex;
+    align-items: center;
+}
+
+.sidebar-content {
+    padding-top: 25px !important;
+}
+
+.sidebar-section {
+    margin-bottom: 2px;
+    /* Tightened from default/missing */
+    padding-bottom: 5px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.sidebar-section:first-child {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+    border-top: none !important;
+}
+
+/* Data Management Styles */
+.sidebar-section-title {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+    padding: 10px 24px;
+    margin: 0;
+    font-weight: 700;
+}
+
+.btn-sidebar-danger {
+    color: var(--color-negative) !important;
+}
+
+.btn-sidebar-danger:hover {
+    background-color: rgba(255, 49, 49, 0.05) !important;
+}
+
+/* Global Sort Active Row Styling */
+.sort-picker-row.global-sort-active .sort-picker-icon,
+.sort-picker-row.global-sort-active .sort-picker-label,
+.sort-picker-row.global-sort-active .sort-picker-direction,
+.sort-picker-row.global-sort-active .sort-picker-direction i {
+    color: var(--color-accent) !important;
+}
+
+/* Redundant transition purged */
+
+/* --- Sidebar Auth & Navigation Components --- */
+
+/* Sidebar Auth Section & Logout */
+.user-auth-section {
+    margin-top: auto;
+    padding: 16px;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 10px 12px;
+    background: none;
+    border: none;
+    color: var(--text-color);
+    font-size: 1rem;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: background-color 0.2s;
+    text-align: left;
+}
+
+.nav-item:hover {
+    background-color: var(--bg-color);
+}
+
+.nav-item i {
+    width: 20px;
+    text-align: center;
+    color: var(--text-muted);
+}
+
+/* Share Form Pill Selector (Segmented Toggle) */
+.toggle-row {
+    display: flex;
+    gap: 12px;
+    width: 100%;
+    margin-bottom: 4px;
+}
+
+.toggle-group {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.toggle-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-bottom: 2px;
+    margin-left: 4px;
+    font-weight: 500;
+}
+
+.segmented-toggle {
+    display: flex;
+    background-color: var(--bg-color);
+    /* Matches app input background */
+    border-radius: 20px;
+    padding: 3px;
+    width: 100%;
+    margin-top: 0;
+    border: 1px solid var(--border-color);
+    min-height: 36px;
+}
+
+.toggle-option {
+    flex: 1;
+    text-align: center;
+    padding: 6px 12px;
+    border-radius: 16px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    transition: all 0.2s ease;
+    user-select: none;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.toggle-option.active {
+    background-color: var(--accent-color);
+    color: #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+/* FIX: Single Line Company Name with Ellipsis */
+.notification-card .card-name {
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    display: block;
+    margin-bottom: 2px;
+    max-width: 100%;
+    /* Ensure it respects container width */
+}
+
+/* FIX: Strict Alignment for Notification Content */
+.notification-card .card-content-left {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start !important;
+    justify-content: center;
+    text-align: left !important;
+    flex: 1;
+    /* Take available space */
+    min-width: 0;
+    /* Enable truncation */
+}
+
+.notification-card .card-content-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end !important;
+    justify-content: center;
+    text-align: right !important;
+    margin-left: 12px;
+}
+
+
+/* --- Sidebar Configuration (Display Tone) --- */
+.sidebar-accordion-btn {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    width: 100%;
+    padding: 12px 0;
+    /* Match .sidebar-btn padding exactly */
+    background: transparent;
+    border: none;
+    color: var(--text-color);
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s, padding-left 0.2s;
+    /* Match hover transition */
+    border-radius: 0;
+    /* Match .sidebar-btn */
+    margin: 0;
+    /* Match .sidebar-btn spacing structure usually implies margin-bottom: 2px */
+    margin-bottom: 2px;
+    gap: 12px;
+    /* Match .sidebar-btn gap */
+    font-size: 1rem;
+    /* Match .sidebar-btn font size */
+    text-transform: none;
+    /* Ensure no unwanted transform */
+}
+
+.sidebar-accordion-btn i {
+    width: 20px;
+    /* Standard icon width */
+    text-align: center;
+    margin-right: 0;
+    /* Use gap instead */
+    color: var(--color-accent);
+    /* Match icon color if needed, or inherit */
+}
+
+.sidebar-accordion-btn:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+    color: var(--primary-color);
+    padding-left: 8px;
+    /* Match .sidebar-btn hover shift */
+}
+
+.sidebar-accordion-btn[aria-expanded="true"] {
+    background: transparent;
+    /* No background highlight */
+    color: var(--color-accent);
+    /* Only text color changes */
+}
+
+/* Remove all sidebar separators */
+.sidebar-section {
+    border: none !important;
+    border-bottom: none !important;
+    box-shadow: none !important;
+}
+
+/* Remove all sidebar separators */
+.sidebar-section {
+    border: none !important;
+    border-bottom: none !important;
+    box-shadow: none !important;
+}
+
+.sidebar-accordion-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease, backdrop-filter 0.4s ease;
+    opacity: 0;
+    background: rgba(var(--color-accent-rgb), 0.03);
+    backdrop-filter: blur(0px);
+    border-radius: 0 0 12px 12px;
+    margin: 0 4px;
+}
+
+.sidebar-accordion-content.expanded {
+    max-height: 450px;
+    opacity: 1;
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(var(--color-accent-rgb), 0.1);
+    border-top: none;
+    padding-bottom: 10px;
+}
+
+.sidebar-vertical-list {
+    display: flex;
+    flex-direction: column;
+    padding: 5px 0;
+}
+
+.sidebar-list-item {
+    padding: 10px 15px;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-left: 2px solid transparent;
+}
+
+.sidebar-list-item:hover {
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--text-color);
+}
+
+.sidebar-list-item.active {
+    color: var(--color-accent) !important;
+    font-weight: 600;
+    text-decoration: underline;
+    background: rgba(var(--color-accent-rgb), 0.05);
+    border-left: 2px solid var(--color-accent);
+}
+
+/* Muted State for Kangaroo Icon */
+.kangaroo-icon-wrapper.is-muted {
+    opacity: 0.5;
+    position: relative;
+}
+
+.kangaroo-icon-wrapper.is-muted::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 120%;
+    height: 2px;
+    background-color: var(--color-text-muted);
+    transform: translate(-50%, -50%) rotate(-45deg);
+    pointer-events: none;
+}
+
+/* --- Sidebar Command Center --- */
+.command-center {
+    padding: 15px 20px;
+}
+
+.command-center-inner {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+/* Market Sentiment Tile */
+/* --- Sidebar Command Center --- */
+.command-center-inner {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 10px 0;
+}
+
+.sentiment-tile {
+    padding: 16px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.sentiment-tile:hover {
+    background: rgba(255, 255, 255, 0.05);
+    transform: translateY(-2px);
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+.sentiment-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.market-label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+}
+
+.market-status {
+    font-size: 0.6rem;
+    font-weight: 800;
+    padding: 2px 6px;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+}
+
+.market-status.status-open {
+    color: #4caf50;
+    background: rgba(76, 175, 80, 0.1);
+}
+
+.market-status.status-closed {
+    color: #ff5252;
+    background: rgba(255, 82, 82, 0.1);
+}
+
+.sentiment-body {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.sentiment-trend {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1.4rem;
+    font-weight: 700;
+}
+
+.sentiment-tile.bullish .sentiment-trend {
+    color: var(--color-positive);
+    text-shadow: 0 0 10px rgba(6, 255, 79, 0.3);
+}
+
+.sentiment-tile.bearish .sentiment-trend {
+    color: #ff5252;
+    text-shadow: 0 0 10px rgba(255, 82, 82, 0.3);
+}
+
+.sentiment-tile.neutral .sentiment-trend {
+    color: var(--text-muted);
+}
+
+.sentiment-subtext {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+/* Redesigned Sections & Grids */
+.command-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px 0;
+}
+
+/* First section doesn't need top border */
+.sentiment-tile+.command-section {
+    border-top: none;
+    padding-top: 0;
+}
+
+.command-section-title {
+    font-size: 0.65rem;
+    font-weight: 800;
+    color: var(--text-muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin: 0;
+    padding-left: 4px;
+    opacity: 0.6;
+}
+
+.command-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+}
+
+.command-grid.icon-only-grid {
+    grid-template-columns: repeat(3, 1fr);
+}
+
+.command-grid-item {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    padding: 14px 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    color: var(--text-color);
+}
+
+.command-grid-item:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.15);
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.command-icon {
+    font-size: 1.35rem;
+    color: var(--color-accent);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.command-grid-item:hover .command-icon {
+    color: var(--color-accent);
+    text-shadow: 0 0 8px rgba(164, 147, 147, 0.6);
+    /* Coffee Glow */
+    transform: scale(1.15);
+}
+
+/* Management Action styling refined */
+.command-grid-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.command-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: color 0.2s;
+}
+
+.command-grid-item:hover .command-label {
+    color: var(--text-color);
+}
+
+/* -------------------------------------------------------------------------- */

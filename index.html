@@ -9,15 +9,44 @@
     <!-- Basic Manifest Link for PWA compatibility -->
     <link rel="manifest" href="./manifest.json">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=1152">
+
+    <!-- 1. Variables & Root (MUST load first) -->
+    <link rel="stylesheet" href="styles/1-variables.css?v=1001">
+    <!-- 2. Base & Reset -->
+    <link rel="stylesheet" href="styles/2-base.css?v=1001">
+
+    <!-- 3-6. Main Stylesheet (Monolith - being extracted) -->
+    <link rel="stylesheet" href="style.css?v=2000">
+    <link rel="stylesheet" href="styles/5-utilities.css?v=2000">
+    <link rel="stylesheet" href="styles/7-media-queries.css?v=2000">
 
     <!-- Components -->
+    <link rel="stylesheet" href="styles/components/icons.css?v=2000">
+    <link rel="stylesheet" href="styles/components/common.css?v=2000">
+
+    <!-- Components -->
+    <link rel="stylesheet" href="styles/components/type-ahead.css?v=1001">
+    <link rel="stylesheet" href="styles/components/forms.css?v=1001">
     <link rel="stylesheet" href="styles/components/share-cards.css?v=1001">
+    <link rel="stylesheet" href="styles/components/summary-cards2.css?v=1001">
+    <link rel="stylesheet" href="styles/components/header.css?v=1001">
+    <link rel="stylesheet" href="styles/components/sidebar.css?v=1001">
     <link rel="stylesheet" href="styles/components/toast.css?v=1001">
     <link rel="stylesheet" href="styles/components/modal.css?v=1001">
     <link rel="stylesheet" href="styles/components/watchlist.css?v=1001">
 
     <!-- Features -->
+    <link rel="stylesheet" href="styles/features/layout.css?v=2000">
+    <link rel="stylesheet" href="styles/features/splash.css?v=1001">
+    <link rel="stylesheet" href="styles/features/widget-panel.css?v=1001">
+    <link rel="stylesheet" href="styles/features/cash.css?v=1001">
+    <link rel="stylesheet" href="styles/features/dashboard.css?v=1001">
+    <link rel="stylesheet" href="styles/features/research-links.css?v=1001">
+    <link rel="stylesheet" href="styles/features/research-sidebar.css?v=1001">
+    <link rel="stylesheet" href="styles/features/dashboard-sparklines.css?v=1001">
+    <link rel="stylesheet" href="styles/features/pickers.css?v=1001">
+    <link rel="stylesheet" href="styles/features/security.css?v=1001">
+    <link rel="stylesheet" href="styles/features/calculator.css?v=1001">
     <link rel="stylesheet" href="style-notifications.css?v=1001">
     <link rel="stylesheet" href="style-sidebar-fix.css?v=1001">
 
@@ -29,204 +58,7 @@
 
     <!-- Kangaroo Favicon -->
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
-    <style>
-        /* USER OVERRIDE: Remove Left Borders/Shadows */
-        .share-card.trend-up,
-        .share-card.trend-down,
-        .share-card.trend-neutral {
-            box-shadow: none !important;
-            border-color: transparent !important;
-        }
-
-        /* Watchlist Selector Dashboard Borders */
-        #watchlist-selector.dashboard-grade-up,
-        #watchlist-selector.dashboard-grade-down,
-        #watchlist-selector.dashboard-grade-neutral,
-        .watchlist-selector.dashboard-grade-up,
-        .watchlist-selector.dashboard-grade-down,
-        .watchlist-selector.dashboard-grade-neutral {
-            border-left: none !important;
-        }
-
-        /* Dashboard Rows (if any left) */
-        .dashboard-row.dashboard-grade-up,
-        .dashboard-row.dashboard-grade-down,
-        .dashboard-row.dashboard-grade-neutral {
-            box-shadow: none !important;
-            border-left: none !important;
-        }
-
-        /* ICON ONLY GRID UPDATE (V1081) - RESTORED TO 3-WIDE */
-        .command-grid.icon-only-grid {
-            row-gap: 30px !important;
-            column-gap: 15px;
-            margin-top: 20px;
-            margin-bottom: 20px;
-        }
-
-        .command-grid.icon-only-grid .command-icon {
-            margin-right: 0;
-            font-size: 1.7rem;
-            width: auto;
-            opacity: 0.7;
-            transition: opacity 0.2s ease, transform 0.2s ease;
-        }
-
-        .command-grid.icon-only-grid .command-grid-item:hover .command-icon {
-            opacity: 1;
-            /* Brighten on hover */
-            transform: scale(1.1);
-            /* Subtle grow */
-        }
-
-        .command-grid.icon-only-grid .command-grid-item:active .command-icon {
-            transform: scale(0.95);
-            /* Click press effect */
-        }
-
-        .command-grid.icon-only-grid .command-grid-item {
-            justify-content: center;
-            /* Center horizontally */
-            align-items: center;
-            /* Center vertically */
-            padding: 0;
-            /* Remove padding */
-            background: transparent;
-            /* Floating Look */
-            border: none;
-            /* Remove borders */
-            box-shadow: none;
-            /* Remove any shadow */
-        }
-
-        /* Portfolio Summary Gap */
-        /* Portfolio Spacing Fix: target Content Container directly */
-        #content-container {
-            padding-top: 12px !important;
-        }
-
-        /* Visual Settings Modal Buttons */
-        .visual-btn {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: var(--text-muted);
-            padding: 8px 12px;
-            border-radius: 6px;
-            font-size: 0.8rem;
-            cursor: pointer;
-            transition: all 0.2s;
-            flex: 1;
-        }
-
-        .visual-btn:hover {
-            background: rgba(255, 255, 255, 0.15);
-            color: var(--text-color);
-            border-color: var(--color-accent);
-        }
-
-        .visual-btn:active {
-            transform: scale(0.96);
-        }
-
-        /* COMPOSITE ICONS (Folder+Pencil, Bell+Cog) */
-        .composite-icon {
-            position: relative;
-            display: inline-flex;
-            justify-content: center;
-            align-items: center;
-            width: auto;
-            height: auto;
-        }
-
-        .composite-icon .main-icon {
-            font-size: 1.7rem;
-            /* Match base size */
-        }
-
-        .composite-icon .sub-icon {
-            position: absolute;
-            bottom: -4px;
-            right: -6px;
-            font-size: 0.85rem;
-            background: #212529;
-            /* Match modal/sidebar bg to create "cutout" look */
-            border-radius: 50%;
-            padding: 1px;
-            color: var(--color-accent) !important;
-            /* Force Coffee Color as requested */
-        }
-
-        .composite-icon .sub-icon.top-right {
-            bottom: auto;
-            top: -4px;
-            right: -6px;
-        }
-
-        /* --- AI Text Body Premium Styling --- */
-        .ai-text-body {
-            font-size: 0.95rem;
-            color: rgba(255, 255, 255, 0.9);
-            line-height: 1.6;
-            letter-spacing: 0.2px;
-        }
-
-        .ai-text-body strong {
-            color: var(--color-accent);
-            font-weight: 700;
-        }
-
-        .ai-text-body p {
-            margin-bottom: 1.25rem;
-        }
-
-        .ai-text-body ul,
-        .ai-text-body ol {
-            margin-bottom: 1.5rem;
-            padding-left: 0;
-        }
-
-        .ai-text-body li {
-            margin-bottom: 0.75rem;
-            position: relative;
-        }
-
-        /* --- AI Typography (Sympathetic Style) --- */
-        .ai-text-body h2,
-        .ai-text-body .ai-header-1 {
-            color: var(--color-accent);
-            font-size: 1rem;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin: 2rem 0 1rem 0;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            border: none !important;
-            background: none !important;
-            padding: 0 !important;
-        }
-
-        .ai-text-body h3,
-        .ai-text-body .ai-header-2 {
-            color: #fff;
-            font-size: 0.9rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin: 1.5rem 0 0.75rem 0;
-            opacity: 0.9;
-        }
-
-        .ai-text-body h4,
-        .ai-text-body .ai-header-3 {
-            color: var(--text-muted);
-            font-size: 0.8rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            margin: 1.25rem 0 0.5rem 0;
-        }
-    </style>
+    <link rel="stylesheet" href="styles/features/misc-overrides.css?v=1001">
 </head>
 
 <body style="background-color: #212529;">

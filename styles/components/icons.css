@@ -1,0 +1,149 @@
+/* --- Replacement SVG Icons --- */
+.nav-icon-svg {
+    width: 20px;
+    height: 20px;
+    display: block;
+    object-fit: contain;
+    transition: filter 0.3s ease;
+}
+
+.sidebar-title-svg {
+    height: 32px;
+    /* Match Kangaroo approx height */
+    width: auto;
+    margin-left: 10px;
+    object-fit: contain;
+    transition: filter 0.3s ease;
+}
+
+/* Global Kangaroo Icon Styles */
+.kangaroo-icon-inline {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1em;
+    height: 1em;
+    vertical-align: -0.125em;
+}
+
+.kangaroo-icon-inline svg {
+    width: 100%;
+    height: 100%;
+}
+
+.sidebar-kangaroo-wrapper {
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary-color);
+}
+
+.sidebar-kangaroo-wrapper svg {
+    width: 100%;
+    height: auto;
+}
+
+/* Invert for Dark Theme because SVGs are Black by default */
+body.dark-theme .nav-icon-svg,
+body.dark-theme .sidebar-title-svg {
+    filter: invert(1);
+}
+
+/* Also invert Sidebar Title in dark mode sidebar */
+/* Actually, Sidebar might be light or dark independent of body? 
+   Currently Sidebar follows body theme or specific style?
+   Let's assume body.dark-theme controls it. */
+
+
+/* --- Custom View Icons (Registry Compliant) --- */
+/* Replaces FontAwesome for View Toggle with Custom CSS Shapes */
+.view-icon-single,
+.view-icon-triple {
+    display: inline-block;
+    width: 1.1em;
+    height: 1.1em;
+    position: relative;
+    vertical-align: -0.15em;
+    box-sizing: border-box;
+    font-size: inherit;
+    font-family: sans-serif !important;
+    /* Reset FA */
+}
+
+/* Top Screen Area (Common) */
+.view-icon-single::before,
+.view-icon-triple::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 62%;
+    border: 2px solid currentColor;
+    box-sizing: border-box;
+    background: transparent;
+}
+
+/* Single View: Bottom Long Bar */
+.view-icon-single::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 25%;
+    background-color: currentColor;
+}
+
+/* Triple View: Bottom 3 Blocks */
+.view-icon-triple::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 28%;
+    height: 25%;
+    background-color: currentColor;
+    /* Create 2 clones to the right using box-shadow */
+    box-shadow: 0.41em 0 0 currentColor, 0.82em 0 0 currentColor;
+}
+
+.view-icon-double {
+    display: inline-block;
+    width: 1.1em;
+    height: 1.1em;
+    position: relative;
+    vertical-align: -0.15em;
+    box-sizing: border-box;
+    font-size: inherit;
+    font-family: sans-serif !important;
+}
+
+.view-icon-double::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 62%;
+    border: 2px solid currentColor;
+    box-sizing: border-box;
+    background: transparent;
+}
+
+/* Double View: Bottom 2 Blocks */
+.view-icon-double::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 45%;
+    height: 25%;
+    background-color: currentColor;
+    /* One clone to the right */
+    box-shadow: 0.6em 0 0 currentColor;
+}
+
+

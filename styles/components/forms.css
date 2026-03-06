@@ -1,0 +1,221 @@
+/* --- Forms & Buttons --- */
+.form-group {
+    margin-bottom: 24px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+.form-control,
+.modal-body input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 0;
+    font-size: 1rem;
+    box-sizing: border-box;
+    transition: border-color 0.2s;
+    background-color: #fff;
+    color: var(--text-color);
+}
+
+.form-control:focus,
+.modal-body input:focus {
+    border-color: var(--primary-color);
+    outline: none;
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 0;
+    cursor: pointer;
+    font-size: 16px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* NOTE: .btn-secondary removed - not referenced in codebase */
+
+.btn-danger {
+    background-color: transparent;
+    color: var(--color-negative);
+    border: none;
+    padding: 12px 0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 1rem;
+    font-weight: 500;
+    transition: opacity 0.2s;
+    width: 100%;
+}
+
+.btn-danger:hover {
+    opacity: 0.8;
+}
+
+.btn-danger i {
+    width: 20px;
+    text-align: center;
+}
+
+
+
+/* Accordion */
+.accordion {
+    border: 1px solid var(--border-color);
+    border-radius: 0;
+    overflow: hidden;
+    margin-bottom: 20px;
+}
+
+.accordion-item {
+    border-bottom: 1px solid var(--border-color);
+}
+
+.accordion-item:last-child {
+    border-bottom: none;
+}
+
+.accordion-header {
+    background-color: #383838;
+    padding: 12px;
+    cursor: pointer;
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+    color: #e0e0e0;
+    font-weight: 500;
+}
+
+.accordion-header:hover {
+    background-color: #e9ecef;
+}
+
+.accordion-content {
+    display: none;
+    padding: 16px;
+    gap: 16px;
+    background-color: var(--card-bg);
+}
+
+.accordion-item.active .accordion-content {
+    display: block;
+}
+
+.accordion-item.active .accordion-header i {
+    transform: rotate(180deg);
+}
+
+/* Toast */
+#toast-container>* {
+    pointer-events: auto;
+}
+
+/* Pills & Badges */
+.code-pill,
+.asx-dropdown-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0;
+    padding: 6px 12px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    margin: 4px;
+    text-transform: uppercase;
+    background: transparent;
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    transition: transform 0.1s ease;
+}
+
+.code-pill:active,
+.asx-dropdown-pill:active {
+    transform: scale(0.95);
+}
+
+.asx-dropdown-empty {
+    color: var(--text-muted);
+    padding: 10px;
+    text-align: center;
+    width: 100%;
+}
+
+/* Segmented Control & Other Inputs in Modals */
+
+
+.notes-dark-bg {
+    background-color: transparent;
+    padding: 15px;
+    border-radius: 0;
+}
+
+.note-container {
+    margin-bottom: 12px;
+    position: relative;
+}
+
+.notes-dark-bg .note-input-white {
+    width: 100%;
+    background-color: #fff;
+    color: var(--text-color);
+    border: none;
+    padding: 12px;
+    border-radius: 0;
+    resize: vertical;
+    font-family: inherit;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    box-sizing: border-box;
+}
+
+.note-input-white:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--primary-color);
+}
+
+.note-remove-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    color: var(--text-muted);
+    background: transparent;
+    border: none;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 10;
+}
+
+.note-remove-btn:hover {
+    color: var(--color-negative);
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.btn-add-simple {
+    background: none;
+    border: none;
+    font-size: 1.4rem;
+    cursor: pointer;
+    padding: 5px;
+}
+
+.btn-add-simple:hover {
+    transform: scale(1.1);
+    color: var(--primary-hover);
+}
+
+
+

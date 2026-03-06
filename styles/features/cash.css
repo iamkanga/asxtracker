@@ -1,0 +1,392 @@
+/* -------------------------------------------------------------------------- */
+/*                       4. FEATURES - CASH & ASSETS                          */
+/* -------------------------------------------------------------------------- */
+/* NOTE: Section restored to correct position during CSS Cleanup v2.0 (Directive 010) */
+.cash-container {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 0 10px 10px 10px;
+    /* top gap handled by #content-container */
+    width: 100%;
+    max-width: 1000px;
+    margin: 0 auto 40px auto;
+    border-radius: 0;
+}
+
+.cash-view-two-column {
+    grid-template-columns: repeat(2, 1fr);
+    max-width: 1200px;
+}
+
+.cash-view-three-column {
+    grid-template-columns: repeat(3, 1fr);
+    max-width: 1400px;
+}
+
+.cash-card {
+    background: #252525;
+    padding: 12px 16px;
+    /* padding-left: 16px; Removed - Border handles visual spacing now */
+    border-radius: 0 !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto auto;
+    gap: 2px 12px;
+    align-items: center;
+    cursor: pointer;
+    border: none;
+
+    border-left: none !important;
+    /* Ensure no border by default */
+    border-right: none !important;
+
+    border-right: none !important;
+    transition: transform 0.1s, background-color 0.1s;
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 8px;
+}
+
+.cash-card:hover {
+    background-color: #2a2a2a;
+    transform: translateY(-1px);
+}
+
+/* DEPRECATED: ::before strip removed in favor of direct border-left.
+   This ensures inline JS styles on the parent element work immediately.
+*/
+/*
+.cash-card::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 6px;
+    background-color: var(--sidebar-color, #424242);
+    z-index: 1;
+}
+*/
+
+/* Grid Cell Assignments */
+.cash-grid-category {
+    grid-column: 1;
+    grid-row: 1;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cash-grid-name {
+    grid-column: 1;
+    grid-row: 2;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cash-grid-balance {
+    grid-column: 2;
+    grid-row: 1;
+    text-align: right;
+    font-size: 1.1rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.cash-grid-actions {
+    grid-column: 2;
+    grid-row: 2;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.cash-comment-indicator {
+    color: var(--color-accent);
+    font-size: 0.85rem;
+    opacity: 0.8;
+}
+
+.cash-eye-btn {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    opacity: 0.6;
+    transition: opacity 0.2s;
+}
+
+.cash-eye-btn:hover {
+    opacity: 1;
+    color: var(--text-color);
+}
+
+/* Hide Actions in 2/3 Columns */
+.cash-view-two-column .cash-grid-actions,
+.cash-view-three-column .cash-grid-actions {
+    display: none !important;
+}
+
+/* Typography Scaling for Two-Column View */
+.cash-view-two-column .cash-grid-name {
+    font-size: 0.95rem;
+    /* Slightly larger for readability */
+    white-space: nowrap;
+    /* Revert to truncation */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    grid-column: 1 / span 2;
+    /* Utilize full width since actions are hidden */
+    line-height: 1.2;
+}
+
+.cash-view-two-column .cash-grid-balance {
+    font-size: 1rem;
+}
+
+.cash-view-two-column .cash-grid-category {
+    font-size: 0.7rem;
+}
+
+/* Typography Scaling for Three-Column View */
+.cash-view-three-column .cash-grid-name {
+    font-size: 0.8rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cash-view-three-column .cash-grid-balance {
+    font-size: 0.75rem;
+    grid-column: 1;
+    /* Match name alignment */
+    grid-row: 3;
+    text-align: left;
+    /* Match name alignment */
+}
+
+.cash-view-three-column .cash-grid-category {
+    font-size: 0.6rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Adjust Card Padding for Density */
+.cash-view-two-column .cash-card,
+.cash-view-three-column .cash-card {
+    padding: 10px 12px;
+    gap: 1px 8px;
+}
+
+.cash-view-three-column .cash-card {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto;
+    gap: 4px;
+}
+
+/* Hide Eye Icon in 2/3 Columns */
+.cash-view-two-column .cash-eye-btn,
+.cash-view-three-column .cash-eye-btn {
+    display: none !important;
+}
+
+/* Upscale Text for Two-Column View */
+.cash-view-two-column .cash-name-label {
+    font-size: 1.15rem;
+}
+
+.cash-view-two-column .cash-balance {
+    font-size: 1.25rem;
+}
+
+/* Asset Category Specific Side Borders (Solid Stripe) */
+/* Ensure borders looks right and don't overlap layout */
+.cash-card {
+    padding-left: 20px;
+    /* Consistently apply padding for the sidebar strip */
+}
+
+.cash-total-header {
+    background: var(--card-bg);
+    padding: 20px;
+    border-radius: 0 !important;
+    margin: 40px auto 20px auto !important;
+    max-width: 1000px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-color);
+    border: none;
+    border-left: 6px solid var(--color-accent);
+    position: relative;
+    overflow: hidden;
+
+    /* Matching Gradient Effect to Cards */
+    background: linear-gradient(135deg, rgba(var(--color-accent-rgb), var(--gradient-strength, 0.6)) 0%, var(--card-bg) 100%) !important;
+}
+
+/* Override the first-child margin reset specifically for cash-total-header */
+#content-container>.cash-total-header:first-child {
+    margin-top: 20px !important;
+}
+
+.cash-value-positive {
+    color: var(--color-positive);
+    font-weight: 700;
+}
+
+.cash-value-negative {
+    color: var(--color-negative);
+    font-weight: 700;
+}
+
+/* NOTE: Duplicate .cash-card rules consolidated into single definition above */
+
+/* Consolidating typography for grids */
+.cash-view-single .cash-grid-category {
+    font-size: 0.85rem;
+}
+
+.cash-view-single .cash-grid-name {
+    font-size: 1.1rem;
+}
+
+.cash-view-single .cash-grid-balance {
+    font-size: 1.2rem;
+}
+
+/* Handled via .cash-grid-balance above */
+
+/* Legacy cash-eye-icon wrapper removed in favor of grid alignment */
+
+/* Eye Icon Ghost Style */
+.icon-btn-ghost {
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    color: var(--text-muted);
+    font-size: 1rem;
+}
+
+.icon-btn-ghost:hover {
+    opacity: 0.7;
+    color: var(--primary-color);
+}
+
+.icon-btn-ghost i {
+    pointer-events: none;
+}
+
+/* Mobile & Multi-Column Density Refinements (V60 Audit) */
+
+
+/* Modal Inputs Theme */
+.cash-category-select,
+.comment-textarea,
+.standard-input,
+.standard-textarea,
+.standard-select {
+    background-color: var(--card-bg) !important;
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    padding: 10px;
+    border-radius: 0;
+    width: 100%;
+    box-sizing: border-box;
+    font-family: inherit;
+}
+
+/* Hide Spinners */
+/* Standard Select */
+.standard-select {
+    color-scheme: dark;
+    /* Helps native dropdowns on Windows use dark theme */
+}
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    margin: 0;
+}
+
+
+input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+/* FIX: Ensure modal inputs without icons start text correctly */
+.modal-body .standard-input {
+    padding-left: 10px !important;
+}
+
+
+.cash-category-select:focus,
+.comment-textarea:focus {
+    border-color: var(--accent-color) !important;
+    outline: none !important;
+    box-shadow: none !important;
+    /* Force removal of blue glow */
+}
+
+/* Specific Select Override for Chrome/Edge Blue Border */
+.cash-category-select:focus-visible {
+    outline: none !important;
+    border-color: var(--accent-color) !important;
+}
+
+/* User wants: Clicked on category highlighted in coffee text, normal background */
+.cash-category-select option:checked {
+    color: var(--accent-color) !important;
+    background-color: var(--card-bg) !important;
+    font-weight: 600;
+}
+
+/* Attempt to target hover - typically hard in native select, but valid effort */
+.cash-category-select option:hover {
+    box-shadow: none;
+    background-color: var(--card-bg);
+}
+
+.comment-row {
+    margin-bottom: 8px;
+}
+
+.btn-text-small {
+    background: none;
+    border: none;
+    font-size: 0.8rem;
+    color: var(--primary-color);
+    cursor: pointer;
+    padding: 4px 8px;
+    font-weight: 600;
+}
+
+.btn-text-small:hover {
+    text-decoration: underline;
+}
+
+/* --- Cash List --- */
+.cash-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 12px;
+}

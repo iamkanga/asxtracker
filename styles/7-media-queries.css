@@ -1,0 +1,14 @@
+/* --- Mobile View Fallback --- */
+
+/* Hide Mobile fallback by default */
+.mobile-cards-fallback {
+    display: none;
+    flex-direction: column;
+    gap: 12px;
+    padding: 10px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+
+

@@ -1,0 +1,65 @@
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.5;
+    /* V55: Force Full Vieport & No Gap */
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    /* Prevent scroll gap */
+    margin: 0 !important;
+    padding: 0 !important;
+    /* V60: Flexbox App Shell */
+    display: flex;
+    flex-direction: column;
+}
+
+#app {
+    display: flex;
+    flex-direction: column;
+    /* V55: Force Absolute Top/Left to kill Flow Gaps */
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+#main-content {
+    /* V60: Scrollable Area */
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    width: 100%;
+    position: relative;
+    /* Width constraints moved to inner container */
+    margin: 0;
+    padding: 0;
+    overscroll-behavior-y: none;
+    /* Prevent native PWA pull-to-refresh conflict */
+}
+
+#content-container {
+    /* V60: Inner Content Constraints */
+    width: 100%;
+    max-width: none !important;
+    /* Force full width */
+    margin: 0 !important;
+    padding: 8px 0 0 0 !important;
+    /* Consistent 8px gap below header for ALL views */
+    box-sizing: border-box;
+}
+
+button:focus,
+.action-icon:focus,
+.modal-close-btn:focus,
+i:focus {
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+/* -------------------------------------------------------------------------- */
+/*                                3. COMPONENTS                               */
+/* -------------------------------------------------------------------------- */

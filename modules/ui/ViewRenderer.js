@@ -534,7 +534,7 @@ export class ViewRenderer {
                                 <span class="${CSS_CLASSES.CARD_CODE}" data-code="${item.code}">${item.code}</span>
                             </div>
                             <!-- Company Name (New) -->
-                            <div class="card-name-label" style="font-size: 0.75rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; margin-top: 2px;">
+                            <div class="card-name-label">
                                 ${item.name || item.companyName || ''}
                             </div>
                             

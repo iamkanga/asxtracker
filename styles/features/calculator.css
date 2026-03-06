@@ -1,0 +1,344 @@
+/* -------------------------------------------------------------------------- */
+/*                         4b. FEATURES: CALCULATOR                            */
+/* -------------------------------------------------------------------------- */
+
+/* Input Wrapper (Shared Utility) */
+.input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+.input-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    pointer-events: none;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+}
+
+.input-wrapper .input-icon+.standard-input {
+    padding-left: 36px !important;
+}
+
+/* Segmented Control (Generic) */
+.segmented-control {
+    display: flex;
+    background-color: rgba(0, 0, 0, 0.05);
+    border-radius: 0 !important;
+    padding: 2px;
+    gap: 2px;
+    width: 100%;
+}
+
+.segmented-button {
+    flex: 1;
+    border: none;
+    background: none;
+    padding: 8px 12px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    border-radius: 0 !important;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+}
+
+.segmented-button.active {
+    background-color: var(--card-bg);
+    color: var(--text-color);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    font-weight: 600;
+}
+
+/* Sort Direction Toggle (Specific) */
+.sort-direction-toggle {
+    margin: 10px 20px 0 20px;
+    /* Match side padding of modal */
+}
+
+/* Sort Mode Container (wrapper) */
+.sort-mode-container {
+    padding: 0 20px 10px 20px;
+}
+
+/* Calculator Styles */
+.calc-keypad {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-top: 15px;
+}
+
+.calc-key {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 0;
+    height: 55px;
+    font-size: 1.4rem;
+    font-weight: 500;
+    color: var(--text-color);
+    cursor: pointer;
+    transition: all 0.1s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.calc-key:active {
+    transform: scale(0.95);
+    background-color: var(--border-color);
+}
+
+.calc-key-operator {
+    background-color: rgba(164, 147, 147, 0.1);
+    color: var(--primary-color);
+    font-weight: 600;
+}
+
+.calc-key-action {
+    color: var(--color-warning);
+    font-size: 1.1rem;
+}
+
+.calc-key-equal {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.calc-key-zero {
+    grid-column: span 2;
+}
+
+.calc-display-container {
+    background-color: var(--bg-color);
+    border-radius: 0;
+    padding: 15px;
+    text-align: right;
+    margin-bottom: 10px;
+    height: 90px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    border: 1px solid var(--border-color);
+}
+
+.calc-display-sub {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    min-height: 1.2em;
+}
+
+.calc-display-main {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: var(--text-color);
+    line-height: 1.2;
+    overflow-x: auto;
+    white-space: nowrap;
+}
+
+.calc-result-card {
+    background-color: rgba(0, 0, 0, 0.02);
+    border-radius: 0;
+    padding: 15px;
+    border: 1px solid var(--border-color);
+}
+
+.positive-bg-subtle {
+    background-color: rgba(6, 255, 79, 0.05);
+    border-color: rgba(6, 255, 79, 0.15) !important;
+}
+
+/* Dark Theme Overrides for Calculator */
+body.dark-theme .calc-key {
+    background-color: #2a2a2a;
+    border-color: #444;
+}
+
+body.dark-theme .calc-key:active {
+    background-color: #333;
+}
+
+body.dark-theme .calc-display-container {
+    background-color: #1a1a1a;
+    border-color: #333;
+}
+
+body.dark-theme .calc-result-card {
+    background-color: rgba(255, 255, 255, 0.03);
+}
+
+
+/* Calculator Refinements */
+.standard-input:focus::placeholder {
+    color: transparent;
+    opacity: 0;
+}
+
+.calc-spacer-large {
+    margin-bottom: 25px !important;
+}
+
+.calc-section-title {
+    color: var(--text-color);
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-bottom: 15px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 8px;
+    display: block;
+    width: 100%;
+}
+
+.detail-value.negative {
+    color: #c62828 !important;
+}
+
+.print-only {
+    display: none;
+}
+
+/* --- Mute Kangaroo Icon --- */
+.kangaroo-wrapper {
+    position: relative;
+    width: 44px;
+    /* Reduced by ~20% from 54px */
+    height: 44px;
+    cursor: pointer;
+    margin-left: 8px;
+    transition: all 0.2s ease;
+}
+
+.kangaroo-icon-img {
+    width: 100%;
+    height: 100%;
+    /* Face Left (Mirror) */
+    transform: scaleX(-1);
+    /* Default: Bright/Active */
+    opacity: 1;
+    filter: none;
+    display: block;
+}
+
+/* Hover Effect */
+.kangaroo-wrapper:hover .kangaroo-icon-img {
+    transform: scaleX(-1) scale(1.1);
+}
+
+/* Muted State (Notifications Off) */
+.kangaroo-wrapper.is-muted .kangaroo-icon-img {
+    opacity: 0.6;
+    /* Dimmed */
+    filter: sepia(0.5) grayscale(0.2);
+    /* Keep some warmth */
+}
+
+/* Strikethrough Logic (Pseudo-element on Wrapper) */
+.kangaroo-wrapper.is-muted::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 80%;
+    /* Shorter line */
+    /* Matches icon width exactly */
+    height: 3px;
+    /* Slightly thicker for larger icon */
+    background-color: var(--color-accent);
+    /* App Coffee */
+    transform: translate(-50%, -50%) rotate(-45deg);
+    /* Bottom-left to Top-right */
+    box-shadow: 0 0 1px rgba(255, 255, 255, 0.5);
+    /* Subtle highlight for contrast */
+    pointer-events: none;
+    border-radius: 2px;
+    opacity: 0.6;
+    /* Ghosted to match icon */
+}
+
+/* Discovery Sparkline */
+.discovery-spark-container {
+    width: 100%;
+    margin: 8px 0 12px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.discovery-spark-container .dashboard-range-data-group {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.discovery-spark-container .spark-rail {
+    flex: 1;
+    margin: 0 10px;
+    background-color: var(--border-color);
+    height: 4px;
+    border-radius: 0 !important;
+    position: relative;
+}
+
+.discovery-spark-container .spark-marker {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 8px;
+    height: 8px;
+    background-color: var(--color-accent);
+    border-radius: 50%;
+    box-shadow: 0 0 0 2px var(--card-bg);
+}
+
+/* Adjust Preview Row for Alignment */
+.discovery-price-right {
+    margin-left: auto;
+    /* Push to right */
+    text-align: right;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+/* Utility Classes for Grid Alignment */
+.text-left {
+    text-align: left !important;
+}
+
+.justify-start {
+    justify-content: flex-start !important;
+}
+
+
+/* -------------------------------------------------------------------------- */
+/*                     SETTINGS & FILTERING UI                                */
+/* -------------------------------------------------------------------------- */
+
+/* Standard Title Label (Overrides any global uppercase) */
+.detail-label {
+    font-weight: 700;
+    color: white;
+    text-transform: none !important;
+    line-height: 1.1;
+}
+
+/* Settings Input Alignment (Constitution Compliant - Override) */
+.settings-input-aligned {
+    text-align: left !important;
+    padding-left: 26px !important;
+}
+
+/* -------------------------------------------------------------------------- */
+/*                     FAVORITE LINKS PREMIUM UI                              */

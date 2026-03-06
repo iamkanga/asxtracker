@@ -1,0 +1,817 @@
+/* ==========================================================================
+   SPLASH SCREEN
+   All splash screen, auth button, paw-print, and debug overlay styles.
+   Extracted from style.css monolith during CSS Rebuild Phase 2.
+   ========================================================================== */
+
+/* --- Splash Screen (Legacy/Simple) --- */
+.splash-screen {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(33, 37, 41, 0.2);
+    /* Double transparency (0.4 -> 0.2) */
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+    transition: opacity 0.5s ease, backdrop-filter 0.5s ease;
+}
+
+.splash-content {
+    text-align: center;
+    padding: 20px;
+}
+
+/* --- Splash Screen Base Layer (Feature) --- */
+.splash-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100dvh;
+    min-height: 100dvh;
+    z-index: 10000;
+    display: block;
+    /* Removed flex centering to avoid mobile quirks */
+    transition: display 0s 0.5s;
+}
+
+.splash-screen.hidden {
+    display: none;
+}
+
+.splash-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.splash-background {
+    z-index: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: transparent;
+}
+
+.splash-bg-img {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 1;
+}
+
+/* Chest Branding Overlay (V37: Shimmer Lock) */
+.chest-branding-overlay {
+    position: absolute;
+    top: 42% !important;
+    /* Precisely aligned on kangaroo's chest branding */
+    left: 63% !important;
+    /* Precisely aligned on kangaroo's chest branding */
+    transform: translate(-50%, -50%);
+    width: 40vw;
+    max-width: 280px;
+    height: auto;
+    z-index: 5;
+    pointer-events: none;
+    opacity: 1 !important;
+}
+
+.chest-branding-overlay svg {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+.splash-content-layer {
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+.splash-logo-container {
+    width: fit-content;
+    height: fit-content;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    padding-top: 5vh;
+    padding-left: 2vw;
+    /* V66: Reverted for Desktop Safety (Previous V43 baseline) */
+    perspective: 1000px;
+    position: relative;
+    z-index: 25;
+}
+
+.splash-logo {
+    width: 93.5vw;
+    /* V63: Size Boost (+10% from 85vw) */
+    max-width: 550px;
+    height: auto;
+    color: var(--color-accent) !important;
+    fill: var(--color-accent) !important;
+    /* V47: Aggressive Tilt (-20deg) */
+    transform: rotate(-20deg);
+    /* V44: Dampened Sharp Stack (4px depth) */
+    filter:
+        /* Bevel Highlight (V77: Intensified from 0.3/0.25 to 0.45/0.4) */
+        drop-shadow(-1.5px -1.5px 0px rgba(255, 255, 255, 0.45))
+        /* Deep Extrusion */
+        drop-shadow(1px 1px 0px rgba(255, 255, 255, 0.4)) drop-shadow(2px 2px 0px rgba(255, 255, 255, 0.3)) drop-shadow(3px 3px 0px rgba(255, 255, 255, 0.2))
+        /* Cast Shadow Stack (V77: 4px Sharp + 12px Soft) */
+        drop-shadow(4px 4px 0px rgba(0, 0, 0, 0.95)) drop-shadow(8px 8px 12px rgba(0, 0, 0, 0.7));
+    will-change: transform, opacity;
+    opacity: 0;
+    z-index: 30;
+    overflow: visible;
+    /* Ensure shadows aren't clipped */
+}
+
+.splash-logo.enter {
+    animation: slamEntry 1.6s 2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes slamEntry {
+    0% {
+        transform: scale(0);
+        opacity: 0;
+    }
+
+    70% {
+        transform: scale(1.1);
+        opacity: 1;
+    }
+
+    100% {
+        transform: scale(1) rotate(-10deg);
+        /* V42: Lockdown angle */
+        opacity: 1;
+    }
+}
+
+.splash-logo.loop {
+    opacity: 1;
+    /* V45: Rocking removed per user request. Locked at static -10deg. */
+    /* animation: logoFloat 10s ease-in-out infinite alternate; */
+}
+
+@keyframes logoFloat {
+    from {
+        transform: translate(0, 0) rotate(-12deg);
+        /* V42: Float around -10 */
+    }
+
+    to {
+        transform: translate(10px, -10px) rotate(-8deg);
+        /* V42: Float around -10 */
+    }
+}
+
+.splash-logo.exit {
+    animation: zoomExit 0.6s cubic-bezier(0.55, 0.055, 0.675, 0.19) forwards;
+}
+
+@keyframes zoomExit {
+    0% {
+        transform: translate(0, 0) scale(1) rotate(-10deg);
+        /* V48: Sync with slamEntry end state (-10deg) */
+        opacity: 1;
+    }
+
+    60% {
+        opacity: 1;
+    }
+
+    100% {
+        transform: translate(0, 35vh) scale(15) rotate(-10deg);
+        /* V49: Center the explosion (move down 35vh to hit ~50vh mark) */
+        opacity: 0;
+    }
+}
+
+/* V48: Debug Control Group Styles (Clean Room) */
+.debug-shimmer-container {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 60vw;
+    /* Massive size for visibility */
+    height: auto;
+    z-index: 10000;
+    /* Above everything */
+    pointer-events: none;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.debug-logo {
+    width: 100%;
+    height: auto;
+    overflow: visible;
+    /* Explicitly disable all filters and transforms for control group */
+    filter: none !important;
+    transform: none !important;
+    opacity: 0.8;
+    /* Slight transparency to distinguish from base logo if needed */
+}
+
+/* V47: Split-Layer Overlay Style (Legacy, kept for reference but unused in V48) */
+.splash-logo-shimmer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 10;
+    /* Ensure it sits on top of the base logo */
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    filter: none !important;
+    /* Pure light, no shadow on the overlay itself */
+}
+
+.splash-auth-container {
+    width: 100%;
+    margin-bottom: 15vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    animation: authEntry 1s 2s forwards;
+    /* Synchronized with logo delay (V33) */
+    opacity: 0;
+    transform: translateY(20px);
+    z-index: 40;
+    pointer-events: auto;
+}
+
+@keyframes authEntry {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes btnShimmer {
+    0% {
+        transform: translateX(-150%) skewX(-20deg);
+    }
+
+    30% {
+        transform: translateX(150%) skewX(-20deg);
+    }
+
+    100% {
+        transform: translateX(150%) skewX(-20deg);
+    }
+}
+
+/* V31.2: Strictly Text-Only Auth Button */
+.splash-auth-container .auth-btn-lg {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    color: var(--app-coffee) !important;
+    font-size: 1.1rem;
+    font-weight: 600;
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+    justify-content: center;
+    cursor: pointer;
+    transition: opacity 0.3s;
+    outline: none !important;
+}
+
+/* V65: Shimmer Removed (Reverted to Clean) */
+
+@keyframes btnTextShimmer {
+    0% {
+        background-position: 200% center;
+    }
+
+    100% {
+        background-position: -200% center;
+    }
+}
+
+.text-shimmer {
+    background: linear-gradient(to right,
+            var(--app-coffee) 20%,
+            #ffffff 50%,
+            var(--app-coffee) 80%);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: btnTextShimmer 3.1s linear infinite;
+    display: inline-flex;
+    align-items: center;
+}
+
+.splash-auth-container .auth-btn-lg:hover {
+    opacity: 0.8 !important;
+    transform: none !important;
+}
+
+.splash-auth-container .auth-btn-lg i {
+    color: var(--app-coffee) !important;
+    margin-right: 12px;
+}
+
+.auth-btn-lg:hover {
+    transform: scale(1.05);
+}
+
+.splash-footprints-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.paw-print {
+    position: absolute;
+    width: 25px;
+    height: 25px;
+    opacity: 0;
+    color: var(--color-accent);
+}
+
+.splash-loading-indicator {
+    color: var(--text-muted);
+    font-size: 1.1rem;
+    margin-top: 1rem;
+}
+
+/* Sequential sync appearance - all vanish together at 90-95% */
+.paw-1 {
+    bottom: 22%;
+    left: 5%;
+    animation: trek-1 8s infinite;
+}
+
+.paw-2 {
+    bottom: 26%;
+    left: 13%;
+    animation: trek-2 8s infinite;
+}
+
+.paw-3 {
+    bottom: 29%;
+    left: 21%;
+    animation: trek-3 8s infinite;
+}
+
+.paw-4 {
+    bottom: 27%;
+    left: 30%;
+    animation: trek-4 8s infinite;
+}
+
+.paw-5 {
+    bottom: 25%;
+    left: 39%;
+    animation: trek-5 8s infinite;
+}
+
+.paw-6 {
+    bottom: 28%;
+    left: 48%;
+    animation: trek-6 8s infinite;
+}
+
+.paw-7 {
+    bottom: 31%;
+    left: 56%;
+    animation: trek-7 8s infinite;
+}
+
+.paw-8 {
+    bottom: 34%;
+    left: 64%;
+    animation: trek-8 8s infinite;
+}
+
+.paw-9 {
+    bottom: 33%;
+    left: 72%;
+    animation: trek-9 8s infinite;
+}
+
+.paw-10 {
+    bottom: 37%;
+    left: 80%;
+    animation: trek-10 8s infinite;
+}
+
+.paw-11 {
+    bottom: 43%;
+    left: 88%;
+    animation: trek-11 8s infinite;
+}
+
+.paw-12 {
+    bottom: 52%;
+    left: 95%;
+    animation: trek-12 8s infinite;
+}
+
+@keyframes trek-1 {
+    0% {
+        opacity: 0;
+    }
+
+    1%,
+    90% {
+        opacity: 1;
+        transform: rotate(65deg);
+    }
+
+    95%,
+    100% {
+        opacity: 0;
+    }
+}
+
+@keyframes trek-2 {
+
+    0%,
+    5% {
+        opacity: 0;
+    }
+
+    6%,
+    90% {
+        opacity: 1;
+        transform: rotate(70deg) translateX(5px);
+    }
+
+    95%,
+    100% {
+        opacity: 0;
+    }
+}
+
+@keyframes trek-3 {
+
+    0%,
+    10% {
+        opacity: 0;
+    }
+
+    11%,
+    90% {
+        opacity: 1;
+        transform: rotate(102deg) translateX(-5px);
+    }
+
+    95%,
+    100% {
+        opacity: 0;
+    }
+}
+
+@keyframes trek-4 {
+
+    0%,
+    15% {
+        opacity: 0;
+    }
+
+    16%,
+    90% {
+        opacity: 1;
+        transform: rotate(102deg) translateX(5px);
+    }
+
+    95%,
+    100% {
+        opacity: 0;
+    }
+}
+
+@keyframes trek-5 {
+
+    0%,
+    20% {
+        opacity: 0;
+    }
+
+    21%,
+    90% {
+        opacity: 1;
+        transform: rotate(72deg) translateX(-5px);
+    }
+
+    95%,
+    100% {
+        opacity: 0;
+    }
+}
+
+@keyframes trek-6 {
+
+    0%,
+    25% {
+        opacity: 0;
+    }
+
+    26%,
+    90% {
+        opacity: 1;
+        transform: rotate(57deg) translateX(5px);
+    }
+
+    95%,
+    100% {
+        opacity: 0;
+    }
+}
+
+@keyframes trek-7 {
+
+    0%,
+    30% {
+        opacity: 0;
+    }
+
+    31%,
+    90% {
+        opacity: 1;
+        transform: rotate(66deg) translateX(-5px);
+    }
+
+    95%,
+    100% {
+        opacity: 0;
+    }
+}
+
+@keyframes trek-8 {
+
+    0%,
+    35% {
+        opacity: 0;
+    }
+
+    36%,
+    90% {
+        opacity: 1;
+        transform: rotate(102deg) translateX(5px);
+    }
+
+    95%,
+    100% {
+        opacity: 0;
+    }
+}
+
+@keyframes trek-9 {
+
+    0%,
+    40% {
+        opacity: 0;
+    }
+
+    41%,
+    90% {
+        opacity: 1;
+        transform: rotate(57deg) translateX(-5px);
+    }
+
+    95%,
+    100% {
+        opacity: 0;
+    }
+}
+
+@keyframes trek-10 {
+
+    0%,
+    45% {
+        opacity: 0;
+    }
+
+    46%,
+    90% {
+        opacity: 1;
+        transform: rotate(67deg) translateX(5px);
+    }
+
+    95%,
+    100% {
+        opacity: 0;
+    }
+}
+
+@keyframes trek-11 {
+
+    0%,
+    50% {
+        opacity: 0;
+    }
+
+    51%,
+    90% {
+        opacity: 1;
+        transform: rotate(21deg) translateX(-5px);
+    }
+
+    95%,
+    100% {
+        opacity: 0;
+    }
+}
+
+@keyframes trek-12 {
+
+    0%,
+    55% {
+        opacity: 0;
+    }
+
+    56%,
+    90% {
+        opacity: 1;
+        transform: rotate(21deg) translateX(5px);
+    }
+
+    95%,
+    100% {
+        opacity: 0;
+    }
+}
+
+/* --- Splash Overrides (Position Adjustments) --- */
+.splash-auth-container {
+    position: absolute !important;
+    bottom: 8dvh !important;
+    /* Sit lower as requested */
+    width: 100% !important;
+    left: 0 !important;
+    display: flex !important;
+    justify-content: center !important;
+    z-index: 60;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.paw-print {
+    width: 22px;
+    height: 22px;
+}
+
+.paw-2 {
+    bottom: 24%;
+}
+
+.paw-3 {
+    bottom: 26%;
+}
+
+.paw-4 {
+    bottom: 25%;
+}
+
+.paw-5 {
+    bottom: 24%;
+}
+
+.paw-6 {
+    bottom: 25%;
+}
+
+.paw-7 {
+    bottom: 28%;
+}
+
+.paw-8 {
+    bottom: 31%;
+}
+
+.paw-9 {
+    bottom: 30%;
+}
+
+.paw-10 {
+    bottom: 34%;
+}
+
+.paw-11 {
+    bottom: 40%;
+}
+
+.paw-12 {
+    bottom: 48%;
+}
+
+
+/* V51: Atomic Debug Layer (CSP Bypass) */
+.atomic-debug-layer {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    z-index: 999999;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    /* V51: Force Visibility Border */
+    border: 10px solid hotpink;
+    box-sizing: border-box;
+}
+
+.debug-logo {
+    width: 800px;
+    height: 600px;
+    overflow: visible;
+    /* V50 Green Tint moved to CSS */
+    background: rgba(0, 255, 0, 0.2);
+    display: block;
+    /* Ensure block layout */
+}
+
+/* V52: Atomic Debug Layer (NUCLEAR OVERRIDE) */
+.atomic-debug-layer {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    pointer-events: none !important;
+    z-index: 2147483647 !important;
+    /* Max Int */
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    /* V51: Force Visibility Border */
+    border: 10px solid hotpink !important;
+    box-sizing: border-box !important;
+    background-color: transparent !important;
+}
+
+.debug-logo {
+    width: 800px !important;
+    height: 600px !important;
+    overflow: visible !important;
+    /* V50 Green Tint moved to CSS */
+    background: rgba(0, 255, 0, 0.2) !important;
+    display: block !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+/* V53: Layout Fix - Ensure Paw Prints are Absolute (Gap Fix) */
+/* V65: Size reduced by another 15% (48px -> 41px) */
+.paw-print {
+    position: absolute !important;
+    width: 41px;
+    height: 41px;
+    opacity: 0.5;
+    pointer-events: none;
+    z-index: 1;
+    /* Below content but visible in splash */
+}
+
+/* --- Splash Screen Overrides --- */
+/* Force immediate visibility for Auth Button as per user request */
+.splash-auth-container,
+.splash-auth-container button,
+.auth-btn-lg {
+    animation: none !important;
+    transition: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+    visibility: visible !important;
+}

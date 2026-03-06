@@ -501,8 +501,8 @@ export class BriefingUI {
                             <img src="${faviconUrl}" class="favicon-icon" onerror="this.src='${KANGAROO_ICON_SRC}'" alt="">
                             <span class="${CSS_CLASSES.CARD_CODE}">${item.code}</span>
                         </div>
-                        <div class="card-name-label" style="font-size: 0.75rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; margin-top: 2px;">
-                            ${item.name || ''}
+                        <div class="card-name-label">
+                            ${item.name || item.companyName || ''}
                         </div>
                     </div>
 

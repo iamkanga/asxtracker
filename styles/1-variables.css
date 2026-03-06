@@ -1,0 +1,93 @@
+@import url('https://fonts.googleapis.com/css2?family=Permanent+Marker&display=swap');
+
+/* -------------------------------------------------------------------------- */
+/*                                1. VARIABLES & ROOT                         */
+/* -------------------------------------------------------------------------- */
+:root {
+    /* Global Palette */
+    --bg-color: #212529;
+    /* Dark Default (Matches Splash) */
+
+    --card-bg: #2c2c2c;
+    /* Dark Default */
+
+    --text-color: #e0e0e0;
+    /* Light Text Default */
+
+    --border-color: #444444;
+    /* Very Light Grey */
+
+    /* Headers / Nav */
+    --header-bg: #ffffff;
+    --sidebar-bg: #ffffff;
+    --header-height: 60px;
+
+    /* Semantic Sentiment Colors */
+    --color-positive: #06FF4F;
+    /* Legacy Neon Green */
+    --color-negative: #FF3131;
+    /* Legacy Neon Red */
+    --color-positive-light: rgba(6, 255, 79, 0.18);
+    /* Translucent green for gradients */
+    --color-negative-light: rgba(255, 49, 49, 0.18);
+    /* Translucent red for gradients */
+    --positive: var(--color-positive);
+    --negative: var(--color-negative);
+    --color-accent: #a49393;
+    /* Coffee */
+    --color-accent-rgb: 164, 147, 147;
+    --gradient-strength: 0.6;
+    --gradient-tint: 0%;
+    --color-neutral: #888888;
+    /* Mid Grey */
+    --color-warning: #ffc107;
+    /* Amber/Gold for Stars */
+
+    /* Aliases */
+    --positive: var(--color-positive);
+    --negative: var(--color-negative);
+    --primary-color: var(--color-accent);
+    --primary-hover: #8e7a7a;
+    --accent-color: var(--color-accent);
+
+    /* UI Elements */
+    --shadow-medium: 0 2px 8px rgba(0, 0, 0, 0.08);
+    --shadow-strong: 0 4px 12px rgba(0, 0, 0, 0.15);
+    --text-muted: #999;
+    --border-light: var(--border-color);
+    --surface: var(--card-bg);
+    --borders: var(--border-color);
+    --text-inverse: #ffffff;
+
+    /* Legacy Mapped */
+    --trend-up-bg: #4caf50;
+    --trend-down-bg: #f44336;
+    --color-dark-surface: #2c2c2c;
+    /* Used for premium dark modals */
+    --modal-content-bg: var(--card-bg);
+
+    /* Splash Screen System Colors */
+    --app-coffee: #a49393;
+    --fur-base: #9C8479;
+    --fur-light: #BCAAA4;
+    --fur-shadow: #2d2624;
+
+    /* Asset Category Colors */
+    --asset-cash: #2196F3;
+    --asset-cash-in-bank: #1A237E;
+    --asset-term-deposit: #009688;
+    --asset-property: #795548;
+    --asset-crypto: #FFC107;
+    --asset-shares: #3F51B5;
+    --asset-super: #9C27B0;
+    --asset-personal: #E91E63;
+    --asset-other: #424242;
+
+    /* Gradient Strength Presets (0=none, 1=max) */
+    --gradient-strength: 0.6;
+    /* Notification Banner */
+    --banner-bg-error: rgba(255, 49, 49, 0.1);
+    /* Low opacity negative */
+    --banner-text-error: var(--color-negative);
+    --banner-border-error: var(--color-negative);
+}

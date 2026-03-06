@@ -2,8 +2,9 @@
 .mobile-share-cards {
     display: grid;
     gap: 12px;
-    padding: 10px 0;
-    /* Vertical only: side padding from #content-container */
+    padding: 0 0 10px 0 !important;
+    margin-top: 0 !important;
+    /* Spacing now strictly managed by #content-container */
     width: 100%;
     box-sizing: border-box;
     grid-template-columns: 1fr;
@@ -48,6 +49,18 @@
     font-size: 0.75rem !important;
 }
 
+/* Remove container border around ASX code in Grid Views (V1082) */
+.view-compact .code-pill,
+.view-snapshot .code-pill,
+.compact-view .code-pill,
+.snapshot-view .code-pill {
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
 .share-card {
     background: var(--card-bg);
     padding: 16px;
@@ -60,8 +73,7 @@
     position: relative;
     text-align: left;
     transition: transform 0.2s, opacity 0.3s;
-    border: 2px solid transparent !important;
-    /* Force full border */
+    border: none !important;
     box-sizing: border-box;
 }
 
@@ -89,6 +101,8 @@
     align-items: flex-start;
     gap: 2px;
     flex: 2;
+    min-width: 0;
+    /* Enable truncation */
 }
 
 .card-right-col {
@@ -106,9 +120,15 @@
     justify-content: flex-start;
     gap: 12px;
     align-items: center;
-    height: 20px;
-    margin-top: 2px;
-    padding-top: 0;
+}
+
+.card-name-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
 }
 
 .card-code-pill {
@@ -157,15 +177,15 @@
 }
 
 .share-card.trend-up {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+    background: linear-gradient(135deg, rgba(0, 180, 0, var(--gradient-strength, 0.6)) 0%, var(--card-bg) 100%) !important;
 }
 
 .share-card.trend-down {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+    background: linear-gradient(135deg, rgba(180, 0, 0, var(--gradient-strength, 0.6)) 0%, var(--card-bg) 100%) !important;
 }
 
 .share-card.trend-neutral {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+    background: linear-gradient(135deg, rgba(var(--color-accent-rgb), var(--gradient-strength, 0.6)) 0%, var(--card-bg) 100%) !important;
 }
 
 .share-card.ghosted {

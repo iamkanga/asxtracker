@@ -1,0 +1,574 @@
+.flex-column {
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+.justify-between {
+    justify-content: space-between !important;
+}
+
+.flex-1 {
+    flex: 1 !important;
+}
+
+.text-left {
+    text-align: left !important;
+}
+
+.modal-title-auto {
+    width: auto !important;
+}
+
+.star-gap-ml {
+    margin-left: 15px !important;
+}
+
+.justify-start {
+    justify-content: flex-start !important;
+}
+
+.justify-end {
+    justify-content: flex-end !important;
+}
+
+.align-center {
+    align-items: center !important;
+}
+
+.align-start {
+    align-items: flex-start !important;
+}
+
+.align-end {
+    align-items: flex-end !important;
+}
+
+.justify-center {
+    justify-content: center !important;
+}
+
+.align-baseline {
+    align-items: baseline !important;
+}
+
+.w-full {
+    width: 100% !important;
+}
+
+.display-flex {
+    display: flex !important;
+}
+
+.gap-6px {
+    gap: 6px !important;
+}
+
+.ml-small {
+    margin-left: 8px !important;
+}
+
+.mb-medium {
+    margin-bottom: 12px !important;
+}
+
+.font-normal {
+    font-weight: 400 !important;
+}
+
+.opacity-30 {
+    opacity: 0.3 !important;
+}
+
+.opacity-60 {
+    opacity: 0.6 !important;
+}
+
+.text-3xl {
+    font-size: 3rem !important;
+}
+
+.text-right {
+    text-align: right !important;
+}
+
+/* State Utilities */
+.ghosted {
+    opacity: 0.5 !important;
+    pointer-events: none !important;
+}
+
+.text-white {
+    color: #ffffff !important;
+}
+
+.opacity-100 {
+    opacity: 1 !important;
+}
+
+.cursor-pointer {
+    cursor: pointer !important;
+}
+
+.relative {
+    position: relative !important;
+}
+
+.z-10 {
+    z-index: 10 !important;
+}
+
+.mr-tiny {
+    margin-right: 4px !important;
+}
+
+.mx-tiny {
+    margin-left: 4px !important;
+    margin-right: 4px !important;
+}
+
+.share-card.ghosted .visibility-toggle-btn {
+    pointer-events: auto !important;
+    cursor: pointer !important;
+}
+
+/* Precise Spacing Utilities (Constitution Compliant) */
+.gap-tiny {
+    gap: 4px !important;
+}
+
+.gap-small {
+    gap: 8px !important;
+}
+
+.gap-medium {
+    gap: 12px !important;
+}
+
+.mb-0 {
+    margin-bottom: 0px !important;
+}
+
+.mb-2px {
+    margin-bottom: 2px !important;
+}
+
+.mb-4px {
+    margin-bottom: 4px !important;
+}
+
+.mb-small {
+    margin-bottom: 8px !important;
+}
+
+.mt-0 {
+    margin-top: 0px !important;
+}
+
+.mt-tiny {
+    margin-top: 4px !important;
+}
+
+.mt-small {
+    margin-top: 8px !important;
+}
+
+.pt-0 {
+    padding-top: 0px !important;
+}
+
+.pb-4px {
+    padding-bottom: 4px !important;
+}
+
+
+
+/* --- Zombie Classes: Selection & Radio States --- */
+
+/* Active/Selected carousel item indicator */
+.carousel-selected {
+    border: 2px solid var(--color-accent);
+    box-shadow: 0 0 8px rgba(164, 147, 147, 0.4);
+}
+
+/* Disabled/Hidden visual state */
+.hidden-selected {
+    opacity: 0.4;
+    filter: grayscale(100%);
+}
+
+/* Standard radio button dot indicator */
+
+
+/* -------------------------------------------------------------------------- */
+
+/* Grid View (Open Mode) */
+.favorite-links-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    justify-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 20px;
+}
+
+/* Fallback for very small screens */
+@media (max-width: 600px) {
+    .favorite-links-grid {
+        grid-template-columns: repeat(3, 1fr);
+        justify-items: center;
+        justify-content: center;
+        gap: 12px;
+        padding: 16px;
+    }
+
+    .link-favicon {
+        width: 52px;
+        height: 52px;
+    }
+}
+
+.favorite-link-item {
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+/* Manage View (List Mode) */
+.favorite-manage-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px 8px;
+}
+
+.favorite-manage-row {
+    display: flex;
+    align-items: center;
+    background: var(--card-bg);
+    padding: 12px;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    gap: 12px;
+}
+
+.manage-row-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    cursor: pointer;
+    /* Suggests editing */
+}
+
+.manage-link-name {
+    font-weight: 500;
+    color: var(--text-color);
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.manage-edit-icon {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    opacity: 0.5;
+}
+
+/* Manage Controls */
+.manage-controls {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    /* Spread out */
+}
+
+.btn-reorder {
+    background: none;
+    border: none;
+    color: var(--color-accent);
+    /* Coffee */
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 4px;
+    /* Touch target */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-reorder:disabled {
+    opacity: 0.2;
+    cursor: default;
+}
+
+.btn-delete {
+    background: none;
+    border: none;
+    color: var(--color-accent);
+    /* Coffee Color as requested */
+    font-size: 1.1rem;
+    cursor: pointer;
+    padding: 4px;
+    margin-left: 8px;
+    /* Extra separation */
+}
+
+/* Edit Mode Styling */
+.favorite-link-item.edit-mode .link-favicon {
+    opacity: 0.5;
+}
+
+/* Action Buttons Container (Edit Mode) */
+.favorite-action-buttons {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    display: flex;
+    gap: 4px;
+    z-index: 10;
+}
+
+/* Base Action Button */
+.fav-action-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 2px solid var(--card-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    transition: transform 0.2s ease, background-color 0.2s ease;
+    padding: 0;
+    font-size: 12px;
+}
+
+.fav-action-btn:hover {
+    transform: scale(1.1);
+}
+
+/* Specific Action Colors */
+.fav-btn-delete {
+    background-color: var(--color-danger);
+    color: white;
+}
+
+.fav-btn-delete:hover {
+    background-color: #ff3333;
+}
+
+.fav-btn-edit {
+    background-color: var(--color-primary);
+    /* Coffee/Blue */
+    color: white;
+}
+
+.fav-btn-edit:hover {
+    background-color: var(--color-accent);
+}
+
+.fav-btn-move {
+    background-color: var(--text-color);
+    color: var(--card-bg);
+}
+
+.fav-btn-move:hover {
+    opacity: 0.9;
+}
+
+.favorite-link-btn.disabled-link {
+    cursor: default;
+    pointer-events: none;
+    /* Prevent clicking */
+    opacity: 0.8;
+}
+
+/* Delete Overlay Button */
+.delete-link-overlay {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background-color: var(--color-danger);
+    color: white;
+    border: 2px solid var(--card-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    z-index: 10;
+    transition: transform 0.2s ease;
+    padding: 0;
+}
+
+.delete-link-overlay:hover {
+    transform: scale(1.1);
+    background-color: #ff3333;
+}
+
+.delete-link-overlay i {
+    font-size: 12px;
+}
+
+.favorite-link-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 12px 8px;
+    background: transparent;
+    border: none;
+    border-radius: 12px;
+    text-decoration: none;
+    color: var(--text-color);
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.favorite-link-btn:hover {
+    background: rgba(255, 255, 255, 0.05);
+    transform: translateY(-2px);
+}
+
+.favorite-link-btn:active {
+    transform: scale(0.95);
+}
+
+.link-favicon {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    flex-shrink: 0;
+    object-fit: contain;
+    background: var(--card-bg);
+    padding: 8px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+.link-name {
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-align: center;
+    width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    opacity: 0.9;
+}
+
+/* Custom Upload Styling */
+.btn-upload-icon {
+    background: none;
+    border: none;
+    color: var(--color-accent);
+    font-size: 1.1rem;
+    cursor: pointer;
+    padding: 4px;
+    margin-right: 8px;
+}
+
+.custom-icon-upload-input {
+    display: none;
+}
+
+/* Delete Zone (Shown during drag mode) */
+.favorite-delete-zone {
+    display: none;
+    position: sticky;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 20px;
+    background: linear-gradient(to top, rgba(220, 53, 69, calc(var(--gradient-strength, 0.6) * 0.25)), transparent);
+    border-top: 2px dashed var(--color-negative, #dc3545);
+    text-align: center;
+    color: var(--color-negative, #dc3545);
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: background 0.2s ease;
+}
+
+.favorite-delete-zone.active {
+    display: block;
+}
+
+.favorite-delete-zone.over {
+    background: linear-gradient(to top, rgba(220, 53, 69, calc(var(--gradient-strength, 0.6) * 0.6)), transparent);
+}
+
+.favorite-delete-zone i {
+    margin-right: 8px;
+    font-size: 1.1rem;
+}
+
+/* PREMIUM CHEVRON V5 */
+#favorite-links-title .chevron-premium-v5 {
+    margin-left: 8px;
+    opacity: 0.3;
+    transition: transform 0.3s ease;
+    width: 16px;
+    height: 16px;
+}
+
+/* Empty State for Favorite Links */
+.favorite-links-grid .empty-state {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-muted);
+}
+
+/* Responsive: Single column on very small screens */
+@media (max-width: 600px) {
+    .favorite-links-grid {
+        grid-template-columns: repeat(3, 1fr);
+        justify-items: center;
+        justify-content: center;
+        gap: 12px;
+        padding: 16px;
+    }
+
+    .link-favicon {
+        width: 52px;
+        height: 52px;
+    }
+}
+
+/* Skeleton Loading State */
+.skeleton-loader {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.skeleton-line {
+    height: 14px;
+    background: linear-gradient(90deg, #222 25%, #333 50%, #222 75%);
+    background-size: 200% 100%;
+    animation: skeletonShimmer 1.5s infinite linear;
+    border-radius: 4px;
+    width: 100%;
+}
+
+.skeleton-line.medium {
+    width: 85%;
+}
+
+.skeleton-line.short {
+    width: 50%;
+}
+
+@keyframes skeletonShimmer {
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -200% 0;
+    }
+}
