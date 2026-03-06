@@ -232,12 +232,12 @@ export class WidgetPanel {
                             </div>
                             <div style="display: flex; flex-direction: column; gap: 6px; align-items: flex-end;">
                                 <div style="display: flex; align-items: center; justify-content: flex-end; gap: 8px;">
-                                    <span style="font-size: 0.65rem; color: rgba(255,255,255,0.6); font-weight: 700; text-transform: uppercase;">ASX 200</span>
-                                    <span style="font-size: 0.75rem; min-width: 55px; text-align: right;">${asxHtml}</span>
+                                    <span style="font-size: 0.75rem; color: rgba(255,255,255,0.6); font-weight: 700; text-transform: uppercase;">ASX 200</span>
+                                    <span style="font-size: 0.9rem; min-width: 65px; text-align: right;">${asxHtml}</span>
                                 </div>
                                 <div style="display: flex; align-items: center; justify-content: flex-end; gap: 8px;">
-                                    <span style="font-size: 0.65rem; color: rgba(255,255,255,0.6); font-weight: 700; text-transform: uppercase;">S&P 500</span>
-                                    <span style="font-size: 0.75rem; min-width: 55px; text-align: right;">${spxHtml}</span>
+                                    <span style="font-size: 0.75rem; color: rgba(255,255,255,0.6); font-weight: 700; text-transform: uppercase;">S&P 500</span>
+                                    <span style="font-size: 0.9rem; min-width: 65px; text-align: right;">${spxHtml}</span>
                                 </div>
                             </div>
                         </div>
@@ -565,7 +565,10 @@ export class WidgetPanel {
             return `
                 <div class="widget-row" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 18px; cursor: pointer;" 
                      onclick="window.open('${url}', '_blank', 'noopener,noreferrer')">
-                    <span class="code" style="font-weight: 800; font-size: 1.05rem; color: #fff; flex: 1; text-align: left;">${displayName}</span>
+                    <div style="display: flex; align-items: center; flex: 1; text-align: left; gap: 8px;">
+                        <div class="analog-clock-hook" data-code="${code}" style="width: 14px; height: 14px; flex-shrink: 0;"></div>
+                        <span class="code" style="font-weight: 800; font-size: 1.05rem; color: #fff;">${displayName}</span>
+                    </div>
                     <div style="flex: 2; display: flex; justify-content: flex-end; align-items: center; gap: 8px;">
                         <span class="value" style="font-weight: 700; font-size: 1.1rem; color: #fff;">${priceStr}</span>
                         <span class="change ${pctClass}" style="font-weight: 700; font-size: 0.9rem; min-width: 65px; text-align: right;">${pctSign}${pct.toFixed(2)}%</span>
