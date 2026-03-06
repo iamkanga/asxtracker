@@ -9,7 +9,7 @@ import { AppState } from '../state/AppState.js';
 import { CSS_CLASSES, IDS, UI_ICONS, EVENTS, SECTOR_INDUSTRY_MAP, DASHBOARD_SYMBOLS, UI_LABELS, KANGAROO_ICON_SVG } from '../utils/AppConstants.js';
 import { navManager } from '../utils/NavigationManager.js';
 import { formatCurrency, formatPercent } from '../utils/formatters.js';
-import { BriefingUI } from './BriefingUI.js?v=327';
+
 import { SnapshotUI } from './SnapshotUI.js';
 import { ToastManager } from './ToastManager.js';
 import { LinkHelper } from '../utils/LinkHelper.js';

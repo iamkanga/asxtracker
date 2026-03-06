@@ -168,7 +168,7 @@ export const EVENTS = {
     UNPIN_ALERT: 'unpin-alert',
     SAVE_SCANNER_SETTINGS: 'save-scanner-settings',
     REQUEST_REFRESH_DETAILS: 'request-refresh-details',
-    SHOW_DAILY_BRIEFING: 'show-daily-briefing', // Sidebar Button Trigger
+
     FIREBASE_DATA_LOADED: 'firebase-data-loaded', // Splash Screen Trigger
     OPEN_FAVORITE_LINKS: 'open-favorite-links',
     FAVORITE_LINKS_UPDATED: 'favorite-links-updated',
@@ -1295,48 +1295,6 @@ export const CSS_CLASSES = {
     STATUS_OFF: 'status-off',
     SUMMARY_TAG: 'summary-tag',
 
-    // Briefing UI (Constitution Compliance)
-    BRIEFING_MODAL_WRAPPER: 'briefing-modal-wrapper',
-    BRIEFING_MODAL_CONTENT: 'briefing-modal-content',
-    BRIEFING_HEADER: 'briefing-header',
-    BRIEFING_TITLE_ROW: 'briefing-title-row',
-    BRIEFING_DATE: 'briefing-date',
-    BRIEFING_SUB_SHORTCUT: 'briefing-sub-shortcut',
-    BRIEFING_SCROLL_BODY: 'briefing-scroll-body',
-    BRIEFING_SECTION: 'briefing-section',
-    BRIEFING_SECTION_TITLE: 'briefing-section-title',
-    BRIEFING_HERO_ROW: 'briefing-hero-row',
-    BRIEFING_HERO_CARD: 'briefing-hero-card',
-    HERO_LABEL: 'hero-label',
-    HERO_MAIN_STAT: 'hero-main-stat',
-    HERO_SUB_STAT: 'hero-sub-stat',
-    BRIEFING_WATCHLIST_GRID: 'briefing-watchlist-grid',
-    BRIEFING_EMPTY: 'briefing-empty',
-    BRIEFING_FOOTER_PULSE: 'briefing-footer-pulse',
-    PULSE_ITEM: 'pulse-item',
-    PULSE_MINIMAL_ROW: 'pulse-minimal-row',
-    PULSE_STAT: 'pulse-stat',
-    PULSE_DIVIDER: 'pulse-divider',
-    HERO_BRAND: 'hero-brand',
-    HERO_FOOTER_ROW: 'hero-footer-row',
-    HERO_TOTAL_LABEL: 'hero-total-label',
-    HERO_TOTAL_VALUE: 'hero-total-value',
-    HERO_CLICK_HINT: 'hero-click-hint',
-    HERO_BG_POSITIVE: 'hero-bg-positive',
-    HERO_BG_NEGATIVE: 'hero-bg-negative',
-    HIGHLIGHT_CARD: 'highlight-card',
-    HIGHLIGHT_CODE: 'highlight-code',
-    HIGHLIGHT_PRICE: 'highlight-price',
-    HIGHLIGHT_CHANGE: 'highlight-change',
-    MARKET_ROW: 'market-row',
-    MARKET_ROW_CODE: 'market-row-code',
-    MARKET_ROW_NAME: 'market-row-name',
-    MARKET_ROW_CHANGE: 'market-row-change',
-    CLICKABLE_FOOTER: 'clickable-footer',
-    CLICKABLE_HERO: 'clickable-hero',
-    FOOTER_BG_POSITIVE: 'footer-bg-positive',
-    FOOTER_BG_NEGATIVE: 'footer-bg-negative',
-    FOOTER_BG_NEUTRAL: 'footer-bg-neutral',
 
     // Notification UI (Constitution Compliance)
     NOTIFICATION_BADGE: 'notification-badge',
@@ -1413,8 +1371,7 @@ export const IDS = {
     STOCK_DETAILS_MODAL: 'stock-details-modal',
     ADD_SHARE_MODAL: 'add-share-modal',
     NOTIFICATION_MODAL: 'notification-modal',
-    DAILY_BRIEFING_MODAL: 'daily-briefing-modal',
-    DAILY_BRIEFING_INTERACTION: 'asx_daily_briefing_interaction',
+
     SETTINGS_MODAL: 'settings-modal',
     CHART_MODAL: 'chart-modal',
     CHART_ROTATOR: 'chartRotator',
@@ -1678,14 +1635,6 @@ export const IDS = {
     SNAPSHOT_TOGGLE_ICON: 'snapshot-toggle-icon',
     SNAPSHOT_TOGGLE_ICON_2: 'snapshot-toggle-icon-2',
 
-    // Briefing Modal IDs
-    BRIEFING_PULSE_SHORTCUT: 'briefing-pulse-shortcut',
-    BRIEFING_PORTFOLIO_HERO: 'briefing-portfolio-hero',
-    BRIEFING_PORTFOLIO_GRID: 'briefing-portfolio-grid',
-    BRIEFING_WATCHLIST_GRID: 'briefing-watchlist-grid',
-    BRIEFING_MARKET_GRID: 'briefing-market-grid',
-    MARKET_PULSE_HEADER: 'market-pulse-header',
-    BRIEFING_MARKET_PULSE: 'briefing-market-pulse',
 
     // Notification UI IDs
     FLOATING_BELL: 'floating-bell',
@@ -1696,7 +1645,7 @@ export const IDS = {
     NOTIFICATION_LIST: 'notificationList',
     NOTIF_TIMESTAMP: 'notif-timestamp',
     NOTIF_SETTINGS_BTN: 'notif-settings-btn',
-    BTN_DAILY_BRIEFING: 'btn-daily-briefing',
+
     BTN_ANNOUNCEMENTS: 'btn-announcements',
     AI_SUMMARY_MODAL: 'ai-summary-modal',
     AI_PROMPT_EDITOR: 'ai-prompt-editor-container'

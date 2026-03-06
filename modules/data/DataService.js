@@ -102,84 +102,10 @@ export class DataService {
         }
     }
 
-    /**
-     * Generates a daily briefing via the backend AI service.
-     * @param {Object} context - The portfolio context object.
-     * @returns {Promise<string>} - The generated briefing text.
-     */
-    async generateBriefing(context) {
-        try {
-            const url = new URL(API_ENDPOINT);
-            // Append a specific parameter so we could route via GET if needed, but we use POST.
-
-            const user = AuthService.getCurrentUser();
-            const userId = user ? user.uid : null;
-
-            const payload = {
-                action: 'generateBriefing',
-                userId: userId,
-                context: context
-            };
-
-            // Using 'no-cors' mode would prevent reading the response. 
-            // We assume the GAS Web App is deployed as "Execute as Me" and "Access: Anyone".
-            // Typically this allows simple CORS requests if we don't send custom headers.
-            // We'll send data as text/plain (default) to avoid Preflight, 
-            // enabling the backend to parse E.postData.contents.
-            const response = await fetch(url.toString(), {
-                method: 'POST',
-                body: JSON.stringify(payload)
-                // Do NOT set Content-Type: application/json to avoid preflight
-            });
-
-            if (!response.ok) {
-                return { ok: false, error: `HTTP ${response.status}` };
-            }
-
-            const json = await response.json();
-            return json;
-        } catch (err) {
-            console.error('DataService: Briefing Gen Exception:', err);
-            return { ok: false, error: err.message };
-        }
-    }
 
 
-    /**
-     * Calls Gemini AI to roast the user's portfolio.
-     */
-    async roastPortfolio(context) {
-        try {
-            const user = AuthService.getCurrentUser();
-            const userId = user ? user.uid : null;
 
-            if (!userId) {
-                return { ok: false, error: 'User not logged in' };
-            }
 
-            const payload = {
-                action: 'roastPortfolio',
-                userId: userId,
-                context: context
-            };
-
-            const response = await fetch(this.API_ENDPOINT, {
-                method: 'POST',
-                body: JSON.stringify(payload)
-            });
-
-            if (!response.ok) {
-                console.error('[DataService] Roast Portfolio HTTP Error:', response.status);
-                return { ok: false, error: `HTTP ${response.status}` };
-            }
-
-            const json = await response.json();
-            return json;
-        } catch (err) {
-            console.error('DataService: Roast Gen Exception:', err);
-            return { ok: false, error: err.message };
-        }
-    }
 
     /**
      * Triggers a portfolio history snapshot on the backend.

@@ -16,7 +16,7 @@ import { ShareFormUI } from '../ui/ShareFormUI.js?v=1040';
 import { SearchDiscoveryUI } from '../ui/SearchDiscoveryUI.js?v=1040'; // Added
 import { NotificationUI } from '../ui/NotificationUI.js?v=1040';
 import { NotificationStore } from '../state/NotificationStore.js';
-import { BriefingUI } from '../ui/BriefingUI.js?v=1040';
+
 import { SnapshotUI } from '../ui/SnapshotUI.js'; // Added
 import { LinkHelper } from '../utils/LinkHelper.js';
 import { SettingsUI } from '../ui/SettingsUI.js?v=55';
@@ -355,7 +355,7 @@ export class AppController {
             SettingsUI.showModal(AppState.user?.uid);
         });
 
-        document.addEventListener(EVENTS.SHOW_DAILY_BRIEFING, () => BriefingUI.show());
+
 
         document.addEventListener(EVENTS.OPEN_PORTFOLIO_CHART, () => {
             // Lazy import to keep boot fast
@@ -3235,191 +3235,6 @@ export class AppController {
         document.body.removeChild(link);
     }
 
-    /**
-     * Calculates data for the Daily Briefing modal.
-     * Decouples heavy processing from BriefingUI.
-     */
-    calculateBriefingDigest() {
-        const shares = AppState.data.shares || [];
-        const livePrices = AppState.livePrices || new Map();
-
-        // 1. Portfolio Calculation
-        const portfolioItems = shares.filter(s => {
-            const units = parseFloat(s.portfolioShares) || parseFloat(s.units) || 0;
-            if (units <= 0) return false;
-
-            // AI Blacklist Filter
-            const code = (s.code || s.shareName || '').trim().toUpperCase();
-            if (BRIEFING_BLACKLIST.includes(code)) return false;
-
-            return true;
-        });
-
-        let totalDayChangeVal = 0;
-        let totalValue = 0;
-        let prevValue = 0;
-
-        portfolioItems.forEach(s => {
-            const units = parseFloat(s.portfolioShares) || parseFloat(s.units) || 0;
-            const code = String(s.code || s.shareName || s.symbol || '???');
-            // Clean Code for map lookup
-            const cleanCode = code.replace(/\.AX$/i, '').trim().toUpperCase();
-
-            const liveData = livePrices.get(cleanCode) || livePrices.get(code) || {};
-            const live = liveData.live || Number(s.purchasePrice) || 0;
-
-            // Prev Close Calculation
-            let prevClose = liveData.prevClose;
-            if ((!prevClose || prevClose === 0) && liveData.change) {
-                prevClose = live - liveData.change;
-            }
-            if (!prevClose || prevClose === 0) prevClose = live;
-
-            const valNow = units * live;
-            const valPrev = units * prevClose;
-
-            totalValue += valNow;
-            totalDayChangeVal += (valNow - valPrev);
-            prevValue += valPrev;
-        });
-
-        let totalPctChange = 0;
-        if (prevValue > 0) {
-            totalPctChange = ((totalValue - prevValue) / prevValue) * 100;
-        }
-
-        // 2. Portfolio Highlights
-        const pfMovers = portfolioItems.map(s => {
-            const cleanCode = String(s.code || s.shareName || '').replace(/\.AX$/i, '').trim().toUpperCase();
-            const data = livePrices.get(cleanCode);
-            if (!data) return null;
-            const code = cleanCode;
-            if (BRIEFING_BLACKLIST.includes(code)) return null;
-
-            return {
-                code: cleanCode,
-                live: data.live || 0,
-                change: data.change || 0,
-                pctChange: data.pctChange || (data.changePercent) || 0,
-                name: data.name || ''
-            };
-        }).filter(Boolean);
-
-        pfMovers.sort((a, b) => {
-            const pAR = Math.round((a.pctChange || 0) * 100);
-            const pBR = Math.round((b.pctChange || 0) * 100);
-            if (pBR !== pAR) return pBR - pAR;
-            return Math.abs(b.change || 0) - Math.abs(a.change || 0);
-        });
-
-        // 3. Watchlist Highlights
-        const watchedCodes = new Set(shares.map(s => (s.code || s.shareName || s.symbol || '').toUpperCase()).filter(Boolean));
-        const userMovers = Array.from(watchedCodes).map(rawCode => {
-            let cleanCode = String(rawCode).replace(/\.AX$/i, '').trim().toUpperCase();
-            const data = livePrices.get(cleanCode) || livePrices.get(rawCode);
-            if (!data) return null;
-            return {
-                code: cleanCode,
-                live: data.live || 0,
-                change: data.change || 0,
-                pctChange: data.pctChange || (data.changePercent) || 0,
-                name: data.name || ''
-            };
-        }).filter(Boolean);
-
-        userMovers.sort((a, b) => {
-            const pAR = Math.round((a.pctChange || 0) * 100);
-            const pBR = Math.round((b.pctChange || 0) * 100);
-            if (pBR !== pAR) return pBR - pAR;
-            return Math.abs(b.change || 0) - Math.abs(a.change || 0);
-        });
-
-        // 4. Market Sentiment
-        const pulse = notificationStore.getPulseCounts();
-        const upCount = pulse.gainers;
-        const downCount = pulse.losers;
-
-        let sentiment = 'Neutral';
-        if (upCount > downCount * 1.5) sentiment = 'Bullish';
-        else if (downCount > upCount * 1.5) sentiment = 'Bearish';
-
-        // 5. Market Pulse Top 3
-        const allAlerts = [
-            ...(pulse._global.movers?.up || []),
-            ...(pulse._global.movers?.down || []),
-            ...(pulse._global.hilo?.high || []),
-            ...(pulse._global.hilo?.low || [])
-        ];
-
-        // Hydrate from Live Prices to ensure we have BOTH $ and % change
-        const hydratedMarket = allAlerts.map(alert => {
-            const code = alert.code || alert.symbol;
-            if (!code) return null;
-
-            const cleanCode = String(code).replace(/\.AX$/i, '').trim().toUpperCase();
-            const data = livePrices.get(cleanCode);
-            if (!data) return { ...alert, pctChange: alert.pct || 0 }; // Fallback
-
-            // Calculate missing values if possible
-            let change = data.change || 0;
-            let pct = data.pctChange || data.changePercent || 0;
-
-            // Auto-fix discrepancies (User Report: $0 change but 8% move, or 18c change but 0% move)
-            // Case 1: Has Change, No Pct
-            if (change !== 0 && pct === 0 && data.live > 0) {
-                const prev = data.live - change;
-                if (prev !== 0) pct = (change / prev) * 100;
-            }
-            // Case 2: Has Pct, No Change
-            if (pct !== 0 && change === 0 && data.live > 0) {
-                const prev = data.live / (1 + (pct / 100));
-                change = data.live - prev;
-            }
-
-            return {
-                code: cleanCode,
-                live: data.live || 0,
-                change: change,
-                pctChange: pct,
-                name: data.name || ''
-            };
-        }).filter(Boolean);
-
-        // Deduplicate by Code
-        const uniqueMarket = [];
-        const seen = new Set();
-        hydratedMarket.forEach(item => {
-            if (!seen.has(item.code)) {
-                seen.add(item.code);
-                uniqueMarket.push(item);
-            }
-        });
-
-        uniqueMarket.sort((a, b) => {
-            const pA = Math.abs(a.pctChange || 0);
-            const pB = Math.abs(b.pctChange || 0);
-            if (pB !== pA) return pB - pA;
-            return Math.abs(b.change || 0) - Math.abs(a.change || 0);
-        });
-
-        return {
-            portfolio: {
-                totalValue,
-                totalDayChangeVal,
-                totalPctChange,
-                isUp: totalDayChangeVal >= 0
-            },
-            highlights: {
-                portfolio: pfMovers.slice(0, 3),
-                watchlists: userMovers.slice(0, 3),
-                market: uniqueMarket.slice(0, 3)
-            },
-            marketSentiment: {
-                sentiment,
-                pulse
-            }
-        };
-    }
 
     /**
      * Aggregates and prepares data for the Market Snapshot.

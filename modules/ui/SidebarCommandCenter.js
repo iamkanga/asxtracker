@@ -325,9 +325,7 @@ export class SidebarCommandCenter {
                         <button class="command-grid-item" id="nav-settings" title="App Settings">
                             <i class="fas fa-cog command-icon"></i>
                         </button>
-                        <button class="command-grid-item" id="nav-morning-brief" title="Morning Briefing">
-                            <i class="fas fa-coffee command-icon"></i>
-                        </button>
+
                     </div>
 
                     <!-- Layout Footer: Notification Count & Auth -->
@@ -427,10 +425,7 @@ export class SidebarCommandCenter {
                 document.dispatchEvent(new CustomEvent(EVENTS.WIDGET_TOGGLE));
                 break;
 
-            case 'nav-morning-brief':
-                this._closeSidebar();
-                document.dispatchEvent(new CustomEvent(EVENTS.SHOW_DAILY_BRIEFING));
-                break;
+
 
             case 'nav-market-pulse':
                 this._closeSidebar();

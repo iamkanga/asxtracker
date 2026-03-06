@@ -805,16 +805,7 @@ export class HeaderLayout {
             });
         }
 
-        // Sidebar Briefing Entry (New)
-        this.btnBriefing = document.getElementById('sidebar-briefing-btn');
-        if (this.btnBriefing) {
-            this.btnBriefing.addEventListener('click', () => {
-                this._toggleSidebar(false);
-                setTimeout(() => {
-                    document.dispatchEvent(new CustomEvent(EVENTS.SHOW_DAILY_BRIEFING));
-                }, 150);
-            });
-        }
+
 
         // Sidebar Market Pulse Entry (New)
         this.btnMarketPulse = document.getElementById('sidebar-market-pulse-btn');
