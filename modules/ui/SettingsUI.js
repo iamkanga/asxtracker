@@ -4,7 +4,7 @@
  * Handles Firestore Sync logic via UserStore.
  */
 
-import { CSS_CLASSES, IDS, UI_ICONS, EVENTS, SECTORS_LIST, SECTOR_INDUSTRY_MAP, STORAGE_KEYS, KANGAROO_ICON_SVG } from '../utils/AppConstants.js';
+import { CSS_CLASSES, IDS, UI_ICONS, EVENTS, SECTORS_LIST, SECTOR_INDUSTRY_MAP, STORAGE_KEYS, JUMPING_KANGAROO_ICON_SVG } from '../utils/AppConstants.js';
 import { navManager } from '../utils/NavigationManager.js';
 import { userStore, DataService } from '../data/DataService.js';
 import { AppState } from '../state/AppState.js';
@@ -184,6 +184,14 @@ export class SettingsUI {
                         margin-bottom: 2px;
                         position: relative;
                         transition: all 0.2s ease;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        color: var(--color-accent);
+                    }
+                    .summary-status-indicator.kangaroo.large svg {
+                        width: 100%;
+                        height: 100%;
                     }
                     .summary-status-indicator.kangaroo.large.status-on {
                         opacity: 1;
@@ -327,42 +335,42 @@ export class SettingsUI {
                             <div class="${CSS_CLASSES.SUMMARY_TILE_HEADER}">
                                 <span id="val-scope" class="${CSS_CLASSES.SUMMARY_TILE_LABEL}" style="font-size: 0.65rem; color: var(--color-accent); font-weight: 800;">Badge Custom</span>
                             </div>
-                            <div class="${CSS_CLASSES.SUMMARY_STATUS_INDICATOR} kangaroo large always-on"></div>
+                            <div class="${CSS_CLASSES.SUMMARY_STATUS_INDICATOR} kangaroo large always-on">${JUMPING_KANGAROO_ICON_SVG}</div>
                         </div>
                         <!-- 2. Alert Icon -->
                         <div class="${CSS_CLASSES.SUMMARY_TILE} thin summary-tile-clickable" data-toggle-target="toggle-pref-showBadges">
                             <div class="${CSS_CLASSES.SUMMARY_TILE_HEADER}">
                                 <span class="${CSS_CLASSES.SUMMARY_TILE_LABEL}">Alert Icon</span>
                             </div>
-                            <div id="ind-icon" class="${CSS_CLASSES.SUMMARY_STATUS_INDICATOR} kangaroo large"></div>
+                            <div id="ind-icon" class="${CSS_CLASSES.SUMMARY_STATUS_INDICATOR} kangaroo large">${JUMPING_KANGAROO_ICON_SVG}</div>
                         </div>
                         <!-- 3. 52w -->
                         <div class="${CSS_CLASSES.SUMMARY_TILE} thin summary-tile-clickable" data-toggle-target="toggle-hiloEnabled">
                             <div class="${CSS_CLASSES.SUMMARY_TILE_HEADER}">
                                 <span class="${CSS_CLASSES.SUMMARY_TILE_LABEL}">52w</span>
                             </div>
-                            <div id="ind-hilo" class="${CSS_CLASSES.SUMMARY_STATUS_INDICATOR} kangaroo large"></div>
+                            <div id="ind-hilo" class="${CSS_CLASSES.SUMMARY_STATUS_INDICATOR} kangaroo large">${JUMPING_KANGAROO_ICON_SVG}</div>
                         </div>
                         <!-- 4. Movers -->
                         <div class="${CSS_CLASSES.SUMMARY_TILE} thin summary-tile-clickable" data-toggle-target="toggle-moversEnabled">
                             <div class="${CSS_CLASSES.SUMMARY_TILE_HEADER}">
                                 <span class="${CSS_CLASSES.SUMMARY_TILE_LABEL}">Market Movers</span>
                             </div>
-                            <div id="ind-movers" class="${CSS_CLASSES.SUMMARY_STATUS_INDICATOR} kangaroo large"></div>
+                            <div id="ind-movers" class="${CSS_CLASSES.SUMMARY_STATUS_INDICATOR} kangaroo large">${JUMPING_KANGAROO_ICON_SVG}</div>
                         </div>
                         <!-- 5. Personal -->
                         <div class="${CSS_CLASSES.SUMMARY_TILE} thin summary-tile-clickable" data-toggle-target="toggle-personalEnabled">
                             <div class="${CSS_CLASSES.SUMMARY_TILE_HEADER}">
                                 <span class="${CSS_CLASSES.SUMMARY_TILE_LABEL}">Personal</span>
                             </div>
-                            <div id="ind-personal" class="${CSS_CLASSES.SUMMARY_STATUS_INDICATOR} kangaroo large"></div>
+                            <div id="ind-personal" class="${CSS_CLASSES.SUMMARY_STATUS_INDICATOR} kangaroo large">${JUMPING_KANGAROO_ICON_SVG}</div>
                         </div>
                         <!-- 6. Email -->
                         <div class="${CSS_CLASSES.SUMMARY_TILE} thin summary-tile-clickable" data-toggle-target="toggle-pref-dailyEmail">
                             <div class="${CSS_CLASSES.SUMMARY_TILE_HEADER}">
                                 <span class="${CSS_CLASSES.SUMMARY_TILE_LABEL}">Email</span>
                             </div>
-                            <div id="ind-email" class="${CSS_CLASSES.SUMMARY_STATUS_INDICATOR} kangaroo large"></div>
+                            <div id="ind-email" class="${CSS_CLASSES.SUMMARY_STATUS_INDICATOR} kangaroo large">${JUMPING_KANGAROO_ICON_SVG}</div>
                         </div>
                     </div>
                 </div>
@@ -398,7 +406,7 @@ export class SettingsUI {
                             <div class="${CSS_CLASSES.SUMMARY_TILE_HEADER}" style="justify-content: center;"><span class="${CSS_CLASSES.SUMMARY_TILE_LABEL}">Target Alerts Override</span></div>
                             <div class="${CSS_CLASSES.SUMMARY_TILE_BODY}" style="justify-content: center; position: relative;">
                                 <span class="${CSS_CLASSES.SUMMARY_TILE_VALUE}" id="sum-val-override">...</span>
-                                <div id="ind-override" class="${CSS_CLASSES.SUMMARY_STATUS_INDICATOR} kangaroo" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); width: 8px; height: 8px;"></div>
+                                <div id="ind-override" class="${CSS_CLASSES.SUMMARY_STATUS_INDICATOR} kangaroo" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); width: 12px; height: 12px; display: flex; align-items: center; justify-content: center; color: var(--color-accent);">${JUMPING_KANGAROO_ICON_SVG}</div>
                             </div>
                         </div>
 
@@ -423,7 +431,7 @@ export class SettingsUI {
         notifCard.innerHTML = `
             <div class="${CSS_CLASSES.DETAIL_CARD_HEADER}" style="border-bottom: none;">
                 <h3 class="${CSS_CLASSES.DETAIL_LABEL}" style="text-decoration: none; border-bottom: none; color: white; font-size: 1.1rem; display: flex; align-items: center; gap: 8px;">
-                    <span id="btn-open-notifications-icon" class="kangaroo-icon-inline" style="color: var(--color-accent); cursor: pointer; width: 22px; height: 22px;">${KANGAROO_ICON_SVG}</span> Alerts
+                    <span id="btn-open-notifications-icon" class="kangaroo-icon-inline" style="color: var(--color-accent); cursor: pointer; width: 22px; height: 22px;">${JUMPING_KANGAROO_ICON_SVG}</span> Alerts
                 </h3>
             </div>
 
@@ -851,22 +859,17 @@ export class SettingsUI {
                 valEl.style.opacity = isOn ? '1' : '0.5';
             }
             if (indEl) {
-                // USER REQUEST: Fix "Squares" issue. Remove inline bg color.
-                // Use 'always-on' class which (per CSS) adds opacity 1 and drop-shadow.
-                // Inactive = opacity 0.2 (Ghosted).
-
                 if (isOn) {
                     indEl.style.opacity = '1';
                     indEl.classList.add(CSS_CLASSES.ALWAYS_ON);
-                    // Ensure legacy classes don't override
                     indEl.classList.remove(CSS_CLASSES.STATUS_OFF);
                 } else {
-                    indEl.style.opacity = '0.2'; // Ghosted
+                    indEl.style.opacity = '0.4'; // Ghosted but visible
                     indEl.classList.remove(CSS_CLASSES.ALWAYS_ON);
                     indEl.classList.add(CSS_CLASSES.STATUS_OFF);
                 }
 
-                // Clean up any inline background color I previously added
+                // Clean up any inline background color
                 indEl.style.backgroundColor = '';
                 indEl.style.boxShadow = '';
             }
