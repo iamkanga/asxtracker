@@ -9,7 +9,7 @@
  */
 import { AppState } from '../state/AppState.js';
 import { notificationStore } from '../state/NotificationStore.js';
-import { CSS_CLASSES, IDS, EVENTS, UI_ICONS, DASHBOARD_SYMBOLS, DASHBOARD_LINKS, CASH_WATCHLIST_ID } from '../utils/AppConstants.js';
+import { CSS_CLASSES, IDS, EVENTS, UI_ICONS, UI_LABELS, DASHBOARD_SYMBOLS, DASHBOARD_LINKS, CASH_WATCHLIST_ID } from '../utils/AppConstants.js';
 import { formatCurrency, formatPercent } from '../utils/formatters.js';
 import { LinkHelper } from '../utils/LinkHelper.js';
 
@@ -17,10 +17,11 @@ export const WIDGET_MODULES = [
     { id: 'day_performance', label: 'Day Performance', description: "Today's portfolio gain/loss detail", icon: 'fa-calendar-day', renderer: '_renderDayPerformance', default: true },
     { id: 'dashboard_snapshot', label: 'Dashboard Snapshot', description: 'Live indexes, currencies & commodities', icon: 'fa-globe', renderer: '_renderDashboardSnapshot', default: true },
     { id: 'portfolio_summary', label: 'Portfolio Summary', description: 'Total wealth with shares vs cash breakdown', icon: 'fa-wallet', renderer: '_renderPortfolioSummary', default: true },
-    { id: 'cash_breakdown', label: 'Cash & Assets', description: 'Breakdown of non-share assets', icon: 'fa-piggy-bank', renderer: '_renderCashBreakdown', default: false },
+    { id: 'market_movers', label: 'Market Movers', description: 'Top 6 biggest movers on the ASX', icon: 'fa-rocket', renderer: '_renderMarketMovers', default: true },
     { id: 'notifications', label: 'Latest Alerts', description: 'Most recent price alerts & notifications', icon: 'fa-bell', renderer: '_renderNotifications', default: true },
-    { id: 'top_movers', label: 'Biggest Movers', description: 'Top daily % movers in your portfolio', icon: 'fa-bolt', renderer: '_renderTopMovers', default: false },
+    { id: 'top_movers', label: 'Watchlist Movers', description: 'Top daily % movers in your portfolio', icon: 'fa-bolt', renderer: '_renderTopMovers', default: false },
     { id: 'top_holdings', label: 'Top Holdings', description: 'Your largest positions by value', icon: 'fa-trophy', renderer: '_renderTopHoldings', default: false },
+    { id: 'cash_breakdown', label: 'Cash & Assets', description: 'Breakdown of non-share assets', icon: 'fa-piggy-bank', renderer: '_renderCashBreakdown', default: false },
     { id: 'watchlist_summary', label: 'Watchlists', description: 'Quick view of your watchlists', icon: 'fa-list', renderer: '_renderWatchlistSummary', default: false },
     { id: 'market_snapshot', label: 'Market Snapshot', description: 'ASX 200 index overview', icon: 'fa-chart-line', renderer: '_renderMarketSnapshot', default: false }
 ];
@@ -177,80 +178,153 @@ export class WidgetPanel {
     render() {
         if (!this.container) return;
         if (this.container.classList.contains('widget-hidden')) {
-            console.log('[WidgetPanel] Skipping render (hidden)');
             return;
         }
 
-        console.log('[WidgetPanel] Starting render...');
         const config = AppState.preferences?.widgetConfig || this._getDefaultConfig();
+        const stats = this._getPortfolioStats();
+        const dateOptions = { weekday: 'long', month: 'long', day: 'numeric' };
+        const dateStr = new Date().toLocaleDateString('en-AU', dateOptions);
 
-        // Compute portfolio day change direction for header gradient (matches portfolio title bar)
-        const holdings = this._getPortfolioHoldings().filter(h => h.price > 0);
-        const totalDayChange = holdings.reduce((acc, h) => acc + h.dayChangeValue, 0);
-        const trendClass = holdings.length > 0
-            ? (totalDayChange >= 0 ? 'trend-up-bg' : 'trend-down-bg')
-            : '';
+        const getIndexHtml = (code, fallbackCode) => {
+            const item = AppState.livePrices?.get(code) || AppState.livePrices?.get(fallbackCode) || { pctChange: 0 };
+            const pct = item.pctChange || 0;
+            const isUp = pct >= 0;
+            const colorVar = isUp ? 'var(--color-positive)' : 'var(--color-negative)';
+            return `<span style="color: ${colorVar} !important; font-weight: 700;">${isUp ? '+' : ''}${pct.toFixed(2)}%</span>`;
+        };
+
+        const asxHtml = getIndexHtml('^AXJO', 'XJO');
+        const spxHtml = getIndexHtml('^GSPC', 'INX');
+
+        // Styles for deep gradients
+        const positiveGradient = 'linear-gradient(135deg, rgba(6, 255, 79, 0.45) 0%, rgba(10, 10, 12, 1) 100%)';
+        const negativeGradient = 'linear-gradient(135deg, rgba(255, 49, 49, 0.45) 0%, rgba(10, 10, 12, 1) 100%)';
+        const activeGradient = stats.isUp ? positiveGradient : negativeGradient;
 
         let html = `
-            <div class="${CSS_CLASSES.WIDGET_HEADER} ${trendClass}">
-                <h3 class="${CSS_CLASSES.WIDGET_TITLE}">Summary Cards</h3>
-                <div class="widget-header-actions">
-                    <button class="widget-settings-btn" id="widget-settings-trigger" title="Widget Settings">
-                        <i class="fas fa-cog"></i>
-                    </button>
-                    <button class="widget-close-btn" id="widget-close-trigger" title="Close Panel">
-                        <i class="fas ${UI_ICONS.CLOSE}"></i>
-                    </button>
+            <!-- HEADER -->
+            <div class="${CSS_CLASSES.BRIEFING_HEADER}" style="padding: 24px 20px 10px 20px; background: linear-gradient(to bottom, rgba(0,0,0,0.4), transparent);">
+                <div class="${CSS_CLASSES.BRIEFING_TITLE_ROW}" style="display: flex; justify-content: space-between; align-items: center;">
+                    <h1 style="font-size: 1.6rem; margin: 0; font-weight: 700; color: #fff;">${this._getGreeting()}</h1>
+                    <div style="display: flex; gap: 4px; align-items: center;">
+                        <button class="widget-settings-btn" id="widget-settings-trigger" title="Settings" style="background: transparent; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border: none; color: rgba(255,255,255,0.6); cursor: pointer; font-size: 1.1rem;">
+                            <i class="fas fa-cog"></i>
+                        </button>
+                        <button class="widget-close-btn" id="widget-close-trigger" title="Close" style="background: transparent; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border: none; color: rgba(255,255,255,0.6); cursor: pointer; font-size: 1.1rem;">
+                            <i class="fas ${UI_ICONS.CLOSE}"></i>
+                        </button>
+                    </div>
                 </div>
+                <div class="${CSS_CLASSES.BRIEFING_DATE}" style="margin-top: 4px; opacity: 0.6; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">${dateStr}</div>
             </div>
-            <div class="${CSS_CLASSES.WIDGET_CONTENT} widget-scroll-container ${trendClass}">
+
+            <div class="${CSS_CLASSES.W_FULL} widget-scroll-container" style="flex: 1; overflow-y: auto; padding-bottom: 30px;">
+                
+                <!-- 1. PORTFOLIO HERO -->
+                <div class="widget-section-wrapper" style="padding: 12px 16px;">
+                    <div class="widget-hero-card ${stats.isUp ? 'is-up' : 'is-down'}" id="widget-portfolio-hero" 
+                         style="width: 100%; min-height: auto; padding: 18px; background: ${activeGradient}; box-shadow: 0 4px 20px rgba(0,0,0,0.4); cursor: pointer; border: none !important;">
+                        
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
+                            <div style="display: flex; align-items: center; gap: 6px; font-size: 0.75rem; letter-spacing: 1.5px; color: rgba(255,255,255,0.8); font-weight: 800; margin-top: 2px;">
+                                ASX TRACKER <img src="gemini-icon.png" style="width: 14px; height: 14px;">
+                            </div>
+                            <div style="display: flex; flex-direction: column; gap: 6px; align-items: flex-end;">
+                                <div style="display: flex; align-items: center; justify-content: flex-end; gap: 8px;">
+                                    <span style="font-size: 0.65rem; color: rgba(255,255,255,0.6); font-weight: 700; text-transform: uppercase;">ASX 200</span>
+                                    <span style="font-size: 0.75rem; min-width: 55px; text-align: right;">${asxHtml}</span>
+                                </div>
+                                <div style="display: flex; align-items: center; justify-content: flex-end; gap: 8px;">
+                                    <span style="font-size: 0.65rem; color: rgba(255,255,255,0.6); font-weight: 700; text-transform: uppercase;">S&P 500</span>
+                                    <span style="font-size: 0.75rem; min-width: 55px; text-align: right;">${spxHtml}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; flex-direction: column; align-items: flex-start; text-align: left; padding: 5px 0 0 0;">
+                            <div style="font-size: 0.75rem; color: rgba(255,255,255,0.6); font-weight: 700; text-transform: uppercase;">My Portfolio</div>
+                            <div style="font-size: 2rem; font-weight: 800; color: #fff; line-height: 1.1; margin-bottom: 12px;">
+                                ${stats.dayChange >= 0 ? '+' : ''}${formatCurrency(stats.dayChange)}
+                            </div>
+                            
+                            <div style="font-size: 0.75rem; color: rgba(255,255,255,0.6); font-weight: 700; text-transform: uppercase;">Day Change</div>
+                            <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 4px;">
+                                <div style="font-size: 1.4rem; font-weight: 800; color: ${stats.isUp ? 'var(--color-positive)' : 'var(--color-negative)'}; display: flex; align-items: center; gap: 6px;">
+                                    <i class="fas ${stats.isUp ? 'fa-arrow-trend-up' : 'fa-arrow-trend-down'}"></i>
+                                    ${stats.dayPct.toFixed(2)}%
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 12px; font-size: 0.85rem; font-weight: 700;">
+                                    <span style="color: var(--color-positive); display: flex; align-items: center; gap: 4px;">
+                                        ${stats.winners} <i class="fas fa-arrow-trend-up" style="font-size: 0.7rem;"></i>
+                                    </span>
+                                    <span style="color: var(--color-negative); display: flex; align-items: center; gap: 4px;">
+                                        ${stats.losers} <i class="fas fa-arrow-trend-down" style="font-size: 0.7rem;"></i>
+                                    </span>
+                                    <span style="color: rgba(255, 255, 255, 0.4);">${stats.unchanged}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
         `;
 
-        WIDGET_MODULES.forEach(module => {
+        // 2. DYNAMIC MODULES
+        const activeModules = WIDGET_MODULES.filter(module => {
             const userPref = config.find(c => c.id === module.id);
-            const isVisible = userPref ? userPref.visible : module.default;
-
-            if (!isVisible) return;
-
-            if (typeof this[module.renderer] === 'function') {
-                const headerActions = module.id === 'dashboard_snapshot'
-                    ? `<i class="fas fa-pen widget-dashboard-edit-btn" title="Edit Selection" onclick="document.dispatchEvent(new CustomEvent('open-widget-dashboard-picker'))" style="margin-left: auto; cursor: pointer; opacity: 0.7; font-size: 0.8rem;"></i>`
-                    : '';
-
-                html += `
-                    <section class="${CSS_CLASSES.WIDGET_SECTION}" data-module-id="${module.id}">
-                        <div class="widget-section-header">
-                            <i class="fas ${module.icon}"></i>
-                            <span>${module.label}</span>
-                            ${headerActions}
-                        </div>
-                        <div class="${CSS_CLASSES.WIDGET_CONTENT}">
-                            ${this[module.renderer]()}
-                        </div>
-                    </section>
-                `;
-            }
+            return userPref ? userPref.visible : module.default;
         });
 
-        html += `</div>`;
+        html += activeModules.map(module => {
+            // Hero-promoted modules are already handled or removed
+            if (['portfolio_summary', 'day_performance'].includes(module.id)) return '';
+
+            const content = this[module.renderer]();
+            if (!content || (typeof content === 'string' && content.includes('empty'))) return '';
+
+            return `
+                <div class="widget-section-wrapper" style="padding: 8px 16px;">
+                    <div class="widget-section-card" style="background: ${activeGradient}; padding: 18px 0; box-shadow: 0 4px 15px rgba(0,0,0,0.3); border: none !important;">
+                        <div class="widget-section-header" style="padding: 0 18px 15px 18px; display: flex; justify-content: space-between; align-items: center;">
+                            <div style="display: flex; align-items: center; gap: 6px; font-size: 0.75rem; letter-spacing: 1.5px; color: rgba(255,255,255,0.8); font-weight: 800;">
+                                <i class="fas ${module.icon}" style="font-size: 0.8rem; opacity: 0.9;"></i>
+                                <span style="text-transform: uppercase;">${module.label}</span>
+                            </div>
+                            ${module.id === 'dashboard_snapshot' ? '<i class="fas fa-pen" style="cursor: pointer; opacity: 0.4; font-size: 0.8rem;" onclick="document.dispatchEvent(new CustomEvent(\'open-widget-dashboard-picker\'))"></i>' : ''}
+                        </div>
+                        <div class="widget-section-content">
+                            ${content}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        html += `</div>`; // Close scroll container
         this.container.innerHTML = html;
 
         this._bindUIActions();
-        this._initClocks(); // Initialize market status clocks
-
-        if (!AppState.data?.shares?.length && !AppState.data?.cash?.length) {
-            this.container.innerHTML += `<div class="widget-empty-prompt">Add assets to populate your widget.</div>`;
-        }
+        this._initClocks();
     }
 
     _bindUIActions() {
-        const closeBtn = this.container?.querySelector('#widget-close-trigger');
+        if (!this.container) return;
+
+        const closeBtn = this.container.querySelector('#widget-close-trigger');
         if (closeBtn) closeBtn.onclick = () => this.toggle();
 
-        const settingsBtn = this.container?.querySelector('#widget-settings-trigger');
+        const settingsBtn = this.container.querySelector('#widget-settings-trigger');
         if (settingsBtn) {
             settingsBtn.onclick = () => {
                 document.dispatchEvent(new CustomEvent('open-widget-config'));
+            };
+        }
+
+        const heroCard = this.container.querySelector('#widget-portfolio-hero');
+        if (heroCard) {
+            heroCard.onclick = () => {
+                this.toggle();
+                document.dispatchEvent(new CustomEvent(EVENTS.OPEN_PORTFOLIO_VIEW));
             };
         }
     }
@@ -262,6 +336,44 @@ export class WidgetPanel {
     // ──────────────────────────────────────────
     // Shared Helpers
     // ──────────────────────────────────────────
+
+    _getPortfolioStats() {
+        const holdings = this._getPortfolioHoldings();
+        const cashItems = this._getCashItems();
+
+        const shareValue = holdings.reduce((acc, h) => acc + h.value, 0);
+        const dayChange = holdings.reduce((acc, h) => acc + h.dayChangeValue, 0);
+        const cashValue = cashItems.reduce((acc, c) => acc + (parseFloat(c.balance) || 0), 0);
+
+        const totalValue = shareValue + cashValue;
+        const prevShareValue = shareValue - dayChange;
+        const dayPct = prevShareValue > 0 ? ((dayChange / prevShareValue) * 100) : 0;
+
+        // Winners/Losers/Flat Logic
+        const liveHoldings = holdings.filter(h => h.price > 0);
+        const winners = liveHoldings.filter(h => h.pctChange > 0).length;
+        const losers = liveHoldings.filter(h => h.pctChange < 0).length;
+        const unchanged = liveHoldings.length - winners - losers;
+
+        return {
+            totalValue,
+            shareValue,
+            cashValue,
+            dayChange,
+            dayPct,
+            isUp: dayChange >= 0,
+            winners,
+            losers,
+            unchanged
+        };
+    }
+
+    _getGreeting() {
+        const hour = new Date().getHours();
+        if (hour < 12) return UI_LABELS.GOOD_MORNING || 'Good Morning';
+        if (hour < 17) return UI_LABELS.GOOD_AFTERNOON || 'Good Afternoon';
+        return UI_LABELS.GOOD_EVENING || 'Good Evening';
+    }
 
     _getPortfolioHoldings() {
         const shares = AppState.data.shares || [];
@@ -422,19 +534,15 @@ export class WidgetPanel {
         const dashboardData = AppState.data.dashboard || [];
         const livePrices = AppState.livePrices || new Map();
 
-        // Get ALL available dashboard codes from backend
         const allCodes = dashboardData
             .map(d => (d.ASXCode || d.code || '').toUpperCase())
             .filter(Boolean);
 
-        // User's PERSONAL selection (stored in preferences)
-        // If no selection saved, default to showing first 6 items
         let selectedCodes = AppState.preferences?.widgetDashboardItems;
         if (!selectedCodes || !Array.isArray(selectedCodes) || selectedCodes.length === 0) {
             selectedCodes = allCodes.slice(0, 6);
         }
 
-        // Filter to only codes that actually have live data
         const displayItems = selectedCodes
             .map(c => c.toUpperCase())
             .filter(c => {
@@ -442,74 +550,95 @@ export class WidgetPanel {
                 return ld && ld.live;
             });
 
-        if (!displayItems.length) {
-            return `<div class="widget-empty">No live dashboard data. <span class="widget-edit-link" style="color:var(--color-accent); cursor:pointer; text-decoration:underline;" onclick="document.dispatchEvent(new CustomEvent('open-widget-dashboard-picker'))">Select items</span></div>`;
-        }
+        if (!displayItems.length) return '<div class="widget-empty">No live snapshot data</div>';
 
-        let rows = displayItems.map(code => {
+        return displayItems.map(code => {
             const liveData = livePrices.get(code) || {};
             const price = parseFloat(liveData.live) || 0;
             const pct = parseFloat(liveData.pctChange) || 0;
-
-            const name = liveData.name || DASHBOARD_NAMES[code] || code;
             const pctClass = pct >= 0 ? 'text-up' : 'text-down';
             const pctSign = pct >= 0 ? '+' : '';
             const priceStr = this._formatDashboardPrice(code, price);
-
             const url = DASHBOARD_LINKS[code] || LinkHelper.getFinanceUrl(code);
+            const displayName = DASHBOARD_NAMES[code] || code;
 
             return `
-                <div class="widget-dashboard-row" style="cursor: pointer;" onclick="window.open('${url}', '_blank', 'noopener,noreferrer')">
-                    <div class="widget-dashboard-label">
-                        <div class="analog-clock-hook" data-code="${code}" style="width:14px; height:14px; display:inline-block; vertical-align:middle; margin-right:6px;"></div>
-                        <span class="widget-dashboard-name">${name}</span>
+                <div class="widget-row" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 18px; cursor: pointer;" 
+                     onclick="window.open('${url}', '_blank', 'noopener,noreferrer')">
+                    <span class="code" style="font-weight: 800; font-size: 1.05rem; color: #fff; flex: 1; text-align: left;">${displayName}</span>
+                    <div style="flex: 2; display: flex; justify-content: flex-end; align-items: center; gap: 8px;">
+                        <span class="value" style="font-weight: 700; font-size: 1.1rem; color: #fff;">${priceStr}</span>
+                        <span class="change ${pctClass}" style="font-weight: 700; font-size: 0.9rem; min-width: 65px; text-align: right;">${pctSign}${pct.toFixed(2)}%</span>
                     </div>
-                    <span class="widget-dashboard-price">${priceStr}</span>
-                    <span class="widget-dashboard-change ${pctClass}">${pctSign}${pct.toFixed(2)}%</span>
                 </div>
             `;
         }).join('');
+    }
 
-        return rows;
+    _renderMarketMovers() {
+        if (!notificationStore) return '<div class="widget-empty">Data unavailable</div>';
+        const alerts = notificationStore.getGlobalAlerts(true);
+        if (!alerts || !alerts.movers) return '<div class="widget-empty">No movers found</div>';
+
+        const allMovers = [...(alerts.movers.up || []), ...(alerts.movers.down || [])];
+        const enriched = allMovers.map(m => {
+            const live = AppState.livePrices?.get(m.code);
+            return live ? { ...m, live: live.live || m.live, pctChange: live.pctChange || m.pctChange || 0 } : m;
+        });
+
+        const seen = new Set();
+        const unique = enriched.filter(m => !seen.has(m.code) && seen.add(m.code));
+        unique.sort((a, b) => Math.abs(b.pctChange) - Math.abs(a.pctChange));
+        const top6 = unique.slice(0, 6);
+
+        if (top6.length === 0) return '<div class="widget-empty">No movers found</div>';
+
+        return top6.map(m => {
+            const isUp = m.pctChange >= 0;
+            const colorClass = isUp ? 'text-up' : 'text-down';
+            return `
+                <div class="widget-row" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 18px; cursor: pointer;"
+                     onclick="document.dispatchEvent(new CustomEvent('${EVENTS.ASX_CODE_CLICK}', { detail: { code: '${m.code}' } }))">
+                    <span class="code" style="font-weight: 800; font-size: 0.85rem; color: #fff; flex: 1; text-align: left;">${m.code}</span>
+                    <div style="flex: 2; display: flex; justify-content: flex-end; align-items: center; gap: 8px;">
+                        <span class="price" style="font-weight: 700; font-size: 0.85rem; color: #fff;">${formatCurrency(m.live)}</span>
+                        <span class="change ${colorClass}" style="font-weight: 700; font-size: 0.8rem; min-width: 55px; text-align: right;">${isUp ? '+' : ''}${m.pctChange.toFixed(2)}%</span>
+                    </div>
+                </div>
+            `;
+        }).join('');
     }
 
     _renderNotifications() {
         try {
             const local = notificationStore?.getLocalAlerts?.() || { pinned: [], fresh: [] };
             const allAlerts = [...(local.pinned || []), ...(local.fresh || [])];
-
             const filteredAlerts = allAlerts.filter(a => {
                 const intent = (a.intent || '').toLowerCase();
                 const code = (a.code || '').toUpperCase();
-                // Block 'movers' so they only show in Biggest Movers module
-                // Block 'brief' or 'morning' strings explicitly if they pop up
                 return intent !== 'mover' && intent !== 'up' && intent !== 'down' && intent !== 'brief' && !code.includes('MORNING');
             });
 
-            // Prioritize hit targets and show all targets + up to 4 other alerts
             const targets = filteredAlerts.filter(a => (a.intent || '').toLowerCase() === 'target');
             const others = filteredAlerts.filter(a => (a.intent || '').toLowerCase() !== 'target').slice(0, 4);
             const alerts = [...targets, ...others];
 
-            if (!alerts.length) return `<div class="widget-empty">No active alerts.</div>`;
+            if (!alerts.length) return '<div class="widget-empty">No active alerts</div>';
 
             return alerts.map(a => {
                 const message = this._formatAlertMessage(a);
                 const pct = Number(a.pct || a.pctChange || a.dayChangePercent || 0);
                 const signClass = pct >= 0 ? 'text-up' : 'text-down';
                 const code = a.code || '???';
-                const url = DASHBOARD_LINKS[code] || LinkHelper.getFinanceUrl(code);
-
                 return `
-                    <div class="widget-notification-item" style="cursor: pointer;" onclick="if('${code}' !== '???') document.dispatchEvent(new CustomEvent('${EVENTS.ASX_CODE_CLICK}', { detail: { code: '${code}' } }))">
-                        <span class="code ${signClass}">${code}</span>
-                        <span class="message">${message}</span>
+                    <div class="widget-notification-item" style="padding: 10px 18px; cursor: pointer;" onclick="if('${code}' !== '???') document.dispatchEvent(new CustomEvent('${EVENTS.ASX_CODE_CLICK}', { detail: { code: '${code}' } }))">
+                        <span class="code ${signClass}" style="font-weight: 800; margin-right: 10px;">${code}</span>
+                        <span class="message" style="font-size: 0.85rem; color: rgba(255,255,255,0.7);">${message}</span>
                     </div>
                 `;
             }).join('');
         } catch (e) {
-            console.error('[WidgetPanel] Notification render failed:', e);
-            return `<div class="widget-empty">Error loading alerts.</div>`;
+            return '<div class="widget-empty">Alerts unavailable</div>';
         }
     }
 
@@ -519,16 +648,14 @@ export class WidgetPanel {
         const sign = pct >= 0 ? '+' : '';
         const pctStr = `${sign}${Number(pct).toFixed(2)}%`;
         if (intent === 'target') return `Hit target ${formatCurrency(a.target)}`;
-        if (intent === 'hilo') return `Hit ${a.type === 'high' ? '52W High' : '52W Low'} (${pctStr})`;
+        if (intent === 'hilo') return `52wk ${a.type === 'high' ? 'High' : 'Low'} (${pctStr})`;
         return `Moved ${pctStr}`;
     }
 
     _renderMarketSnapshot() {
-        const livePrices = AppState.livePrices;
-        if (!livePrices) return `<div class="widget-empty">Market data unavailable.</div>`;
-
-        const xjo = livePrices.get('^AXJO') || livePrices.get('XJO');
-        if (!xjo || typeof xjo.live === 'undefined') return `<div class="widget-empty">Market data unavailable.</div>`;
+        if (!AppState.livePrices) return '<div class="widget-empty">Market data unavailable</div>';
+        const xjo = AppState.livePrices.get('^AXJO') || AppState.livePrices.get('XJO');
+        if (!xjo || typeof xjo.live === 'undefined') return '<div class="widget-empty">Market data unavailable</div>';
 
         const pct = Number(xjo.pctChange || 0);
         const changeClass = pct >= 0 ? 'text-up' : 'text-down';
@@ -536,27 +663,26 @@ export class WidgetPanel {
         const url = DASHBOARD_LINKS['^AXJO'] || LinkHelper.getFinanceUrl('^AXJO');
 
         return `
-            <div class="widget-market-row" style="cursor: pointer;" onclick="window.open('${url}', '_blank', 'noopener,noreferrer')">
-                <span>ASX 200</span>
-                <span class="value">${Number(xjo.live || 0).toLocaleString('en-AU', { maximumFractionDigits: 1 })}</span>
-                <span class="change ${changeClass}">${sign}${pct.toFixed(2)}%</span>
+            <div class="widget-row" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 18px; cursor: pointer;" onclick="window.open('${url}', '_blank', 'noopener,noreferrer')">
+                <span style="font-weight: 800; font-size: 0.85rem; color: #fff; flex: 1; text-align: left;">ASX 200</span>
+                <div style="flex: 2; display: flex; justify-content: flex-end; align-items: center; gap: 8px;">
+                    <span style="font-weight: 700; font-size: 0.85rem; color: #fff;">${Number(xjo.live || 0).toLocaleString('en-AU', { maximumFractionDigits: 1 })}</span>
+                    <span class="${changeClass}" style="font-weight: 700; font-size: 0.8rem; min-width: 55px; text-align: right;">${sign}${pct.toFixed(2)}%</span>
+                </div>
             </div>
         `;
     }
 
     _renderTopMovers() {
-        // Find movers across all watchlists based on notification logic
         const local = notificationStore?.getLocalAlerts?.() || { pinned: [], fresh: [] };
         const allAlerts = [...(local.pinned || []), ...(local.fresh || [])];
-
         let movers = allAlerts.filter(a => {
             const intent = (a.intent || '').toLowerCase();
             return intent === 'mover' || intent === 'up' || intent === 'down';
         });
 
-        if (!movers.length) return `<div class="widget-empty">No significant movers.</div>`;
+        if (!movers.length) return '<div class="widget-empty">No significant movers</div>';
 
-        // Sort by pure percentage change magnitude
         const sorted = movers.sort((a, b) => {
             const pctA = Math.abs(Number(a.pct || a.pctChange || a.dayChangePercent || 0));
             const pctB = Math.abs(Number(b.pct || b.pctChange || b.dayChangePercent || 0));
@@ -564,8 +690,7 @@ export class WidgetPanel {
         }).slice(0, 5);
 
         return sorted.map(h => {
-            const code = h.code || h.shareCode || '???';
-            // Live price if available
+            const code = h.code || '???';
             let price = h.price || 0;
             let pct = Number(h.pct || h.pctChange || h.dayChangePercent || 0);
 
@@ -576,12 +701,14 @@ export class WidgetPanel {
             }
 
             const pctClass = pct >= 0 ? 'text-up' : 'text-down';
-            const pctSign = pct >= 0 ? '+' : '';
             return `
-                <div class="widget-holding-row" style="cursor: pointer;" onclick="document.dispatchEvent(new CustomEvent('${EVENTS.ASX_CODE_CLICK}', { detail: { code: '${code}' } }))">
-                    <span class="code">${code}</span>
-                    <span class="value">${formatCurrency(price)}</span>
-                    <span class="change ${pctClass}">${pctSign}${pct.toFixed(2)}%</span>
+                <div class="widget-row" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 18px; cursor: pointer;"
+                     onclick="document.dispatchEvent(new CustomEvent('${EVENTS.ASX_CODE_CLICK}', { detail: { code: '${code}' } }))">
+                    <span class="code" style="font-weight: 800; font-size: 0.85rem; color: #fff; flex: 1; text-align: left;">${code}</span>
+                    <div style="flex: 2; display: flex; justify-content: flex-end; align-items: center; gap: 8px;">
+                        <span class="value" style="font-weight: 700; font-size: 0.85rem; color: #fff;">${formatCurrency(price)}</span>
+                        <span class="change ${pctClass}" style="font-weight: 700; font-size: 0.8rem; min-width: 55px; text-align: right;">${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%</span>
+                    </div>
                 </div>
             `;
         }).join('');
@@ -593,34 +720,39 @@ export class WidgetPanel {
             .sort((a, b) => b.value - a.value)
             .slice(0, 5);
 
-        if (!holdings.length) return `<div class="widget-empty">No holdings to display.</div>`;
+        if (!holdings.length) return '<div class="widget-empty">No portfolio holdings</div>';
         return holdings.map(h => {
             const pctClass = h.pctChange >= 0 ? 'text-up' : 'text-down';
-            const pctSign = h.pctChange >= 0 ? '+' : '';
             return `
-                <div class="widget-holding-row" style="cursor: pointer;" onclick="document.dispatchEvent(new CustomEvent('${EVENTS.ASX_CODE_CLICK}', { detail: { code: '${h.code}' } }))">
-                    <span class="code">${h.code}</span>
-                    <span class="value">${formatCurrency(h.value)}</span>
-                    <span class="change ${pctClass}">${pctSign}${h.pctChange.toFixed(2)}%</span>
+                <div class="widget-row" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 18px; cursor: pointer;"
+                     onclick="document.dispatchEvent(new CustomEvent('${EVENTS.ASX_CODE_CLICK}', { detail: { code: '${h.code}' } }))">
+                    <span class="code" style="font-weight: 800; font-size: 0.85rem; color: #fff; flex: 1; text-align: left;">${h.code}</span>
+                    <div style="flex: 2; display: flex; justify-content: flex-end; align-items: center; gap: 8px;">
+                        <span class="value" style="font-weight: 700; font-size: 0.85rem; color: #fff;">${formatCurrency(h.value)}</span>
+                        <span class="change ${pctClass}" style="font-weight: 700; font-size: 0.8rem; min-width: 55px; text-align: right;">${h.pctChange >= 0 ? '+' : ''}${h.pctChange.toFixed(2)}%</span>
+                    </div>
                 </div>
-             `;
+            `;
         }).join('');
     }
 
     _renderCashBreakdown() {
         const cashItems = this._getCashItems();
-        if (!cashItems.length) return `<div class="widget-empty">No cash assets.</div>`;
+        if (!cashItems.length) return '<div class="widget-empty">No cash assets</div>';
 
         const totalCash = cashItems.reduce((acc, c) => acc + (parseFloat(c.balance) || 0), 0);
         return `
-            <div class="widget-cash-total" style="cursor: pointer;" onclick="document.dispatchEvent(new CustomEvent('${EVENTS.REQUEST_QUICK_NAV}', { detail: { watchlistId: '${CASH_WATCHLIST_ID}', sortField: 'pctChange', sortDirection: 'desc' } }))">
-                <label style="cursor: pointer;">Total Cash & Assets</label>
-                <span class="value">${formatCurrency(totalCash)}</span>
+            <div class="widget-row" style="padding: 10px 18px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-weight: 800; font-size: 0.85rem; color: #fff; flex: 1; text-align: left;">Total Assets</span>
+                    <span style="font-weight: 700; font-size: 0.9rem; color: var(--color-accent); flex: 1; text-align: right;">${formatCurrency(totalCash)}</span>
+                </div>
             </div>
             ${cashItems.slice(0, 5).map(c => `
-                <div class="widget-cash-row" style="cursor: pointer;" onclick="document.dispatchEvent(new CustomEvent('${EVENTS.REQUEST_QUICK_NAV}', { detail: { watchlistId: '${CASH_WATCHLIST_ID}', sortField: 'pctChange', sortDirection: 'desc' } }))">
-                    <span class="label">${c.name || c.category || 'Unnamed'}</span>
-                    <span class="value">${formatCurrency(parseFloat(c.balance) || 0)}</span>
+                <div class="widget-row" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 18px; cursor: pointer;" 
+                     onclick="document.dispatchEvent(new CustomEvent('${EVENTS.REQUEST_QUICK_NAV}', { detail: { watchlistId: '${CASH_WATCHLIST_ID}' } }))">
+                    <span class="label" style="font-size: 0.8rem; color: rgba(255,255,255,0.6); flex: 1; text-align: left;">${c.name || c.category}</span>
+                    <span class="value" style="font-weight: 600; font-size: 0.85rem; color: #fff; flex: 1; text-align: right;">${formatCurrency(parseFloat(c.balance) || 0)}</span>
                 </div>
             `).join('')}
         `;
@@ -634,7 +766,7 @@ export class WidgetPanel {
             return name !== 'all shares' && name !== 'portfolio' && name !== 'cash & assets' && name !== 'dashboard';
         });
 
-        if (!userWatchlists.length) return `<div class="widget-empty">No custom watchlists.</div>`;
+        if (!userWatchlists.length) return '<div class="widget-empty">No watchlists found</div>';
 
         return userWatchlists.slice(0, 5).map(w => {
             const count = allShares.filter(s => {
@@ -643,11 +775,11 @@ export class WidgetPanel {
             }).length;
 
             return `
-                <div class="widget-holding-row" style="cursor: pointer;" onclick="document.dispatchEvent(new CustomEvent('${EVENTS.REQUEST_QUICK_NAV}', { detail: { watchlistId: '${w.id}', sortField: 'pctChange', sortDirection: 'desc' } }))">
-                    <span class="code" style="display:flex; align-items:center; gap:8px;">
-                        ${w.name}
-                    </span>
-                    <span class="value" style="color:var(--text-muted); font-size:0.8rem;">${count} stock${count !== 1 ? 's' : ''}</span>
+                <div class="widget-row" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 18px; cursor: pointer;"
+                     onclick="document.dispatchEvent(new CustomEvent('${EVENTS.REQUEST_QUICK_NAV}', { detail: { watchlistId: '${w.id}' } }))">
+                    <span class="code" style="font-weight: 800; font-size: 0.85rem; color: #fff; flex: 1; text-align: left;">${w.name}</span>
+                    <span class="value" style="font-weight: 700; font-size: 0.8rem; color: rgba(255,255,255,0.5); flex: 1; text-align: right;">${count} Stock${count !== 1 ? 's' : ''}</span>
+                    <span style="margin-left: 10px; text-align: right;"><i class="fas fa-chevron-right" style="font-size: 0.7rem; opacity: 0.3;"></i></span>
                 </div>
             `;
         }).join('');

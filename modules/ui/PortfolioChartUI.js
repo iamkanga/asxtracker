@@ -26,7 +26,7 @@ export class PortfolioChartUI {
     }
 
     constructor() {
-        this.range = '1y';
+        this.range = localStorage.getItem('ASX_NEXT_portfolioChartRange') || '1y';
         this.filter = 'SHARES_ONLY';
         this.chart = null;
         this.dataService = new DataService();
@@ -41,7 +41,8 @@ export class PortfolioChartUI {
         };
 
         // Visibility State (Sources instead of Metric Types)
-        this.visibleLayers = {
+        const savedLayers = JSON.parse(localStorage.getItem('ASX_NEXT_portfolioChartLayers') || 'null');
+        this.visibleLayers = savedLayers || {
             total: true,
             shares: false,
             super: false,
@@ -248,6 +249,7 @@ export class PortfolioChartUI {
         this.modal.querySelectorAll('.range-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 this.range = btn.dataset.range;
+                localStorage.setItem('ASX_NEXT_portfolioChartRange', this.range);
                 this.modal.querySelectorAll('.range-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 this.loadData();
@@ -264,6 +266,7 @@ export class PortfolioChartUI {
 
                 const layer = btn.dataset.layer;
                 this.visibleLayers[layer] = !this.visibleLayers[layer];
+                localStorage.setItem('ASX_NEXT_portfolioChartLayers', JSON.stringify(this.visibleLayers));
                 const isActive = this.visibleLayers[layer];
 
                 // Handle Dropdown Item Styling

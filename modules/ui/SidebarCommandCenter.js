@@ -228,7 +228,7 @@ export class SidebarCommandCenter {
         this.container.innerHTML = `
             <div class="command-center-inner">
                 <!-- Market Sentiment Tile (Triggers Daily Brief) -->
-                <div class="sentiment-tile glass-effect ${sentimentTrendClass}" id="act-tile-pulse" role="button" title="View Daily Briefing">
+                <div class="sentiment-tile glass-effect ${sentimentTrendClass}" id="act-tile-pulse" role="button" title="Open Widget Panel">
                     <div class="sentiment-header">
                         <span class="market-label">${metricsLabel.replace(' (NO DATA)', '')}</span>
                         <!-- Market Status: Text Only (Red/Green), No Background -->
@@ -241,8 +241,8 @@ export class SidebarCommandCenter {
                         </div>
                         <div class="sentiment-subtext" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
                             <span>${sentimentText}</span>
-                            <!-- Coffee Cup Icon (Daily Link) -->
-                             <i class="fas fa-coffee" style="font-size: 0.9rem; opacity: 0.7; color: var(--color-accent);"></i>
+                            <!-- Widget Icon -->
+                             <i class="fas fa-layer-group" style="font-size: 0.9rem; opacity: 0.7; color: var(--color-accent);"></i>
                         </div>
                     </div>
                 </div>
@@ -267,7 +267,7 @@ export class SidebarCommandCenter {
                             <i class="fas fa-link command-icon"></i>
                         </button>
                         <button class="command-grid-item" id="nav-widgets" title="Quick Widget">
-                            <i class="fas ${UI_ICONS.WIDGET} command-icon"></i>
+                            <i class="fas fa-layer-group command-icon"></i>
                         </button>
                         <button class="command-grid-item" id="nav-market-pulse" title="Market Pulse">
                             <i class="fas fa-heartbeat command-icon"></i>
@@ -325,6 +325,9 @@ export class SidebarCommandCenter {
                         <button class="command-grid-item" id="nav-settings" title="App Settings">
                             <i class="fas fa-cog command-icon"></i>
                         </button>
+                        <button class="command-grid-item" id="nav-morning-brief" title="Morning Briefing">
+                            <i class="fas fa-coffee command-icon"></i>
+                        </button>
                     </div>
 
                     <!-- Layout Footer: Notification Count & Auth -->
@@ -374,9 +377,9 @@ export class SidebarCommandCenter {
     _handleAction(id) {
         switch (id) {
             case 'act-tile-pulse':
-                // Top Tile -> Opens Daily Brief (User Request)
+                // Top Tile -> Opens Widget Panel
                 this._closeSidebar();
-                document.dispatchEvent(new CustomEvent(EVENTS.SHOW_DAILY_BRIEFING));
+                document.dispatchEvent(new CustomEvent(EVENTS.WIDGET_TOGGLE));
                 break;
 
             case 'nav-announcements':
@@ -422,6 +425,11 @@ export class SidebarCommandCenter {
             case 'nav-widgets':
                 this._closeSidebar();
                 document.dispatchEvent(new CustomEvent(EVENTS.WIDGET_TOGGLE));
+                break;
+
+            case 'nav-morning-brief':
+                this._closeSidebar();
+                document.dispatchEvent(new CustomEvent(EVENTS.SHOW_DAILY_BRIEFING));
                 break;
 
             case 'nav-market-pulse':

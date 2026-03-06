@@ -1,4 +1,4 @@
-/**
+﻿/**
  * SnapshotUI.js
  * Renders the "Market Pulse" Snapshot view.
  * Triggered by Long-Hold on the Portfolio View.
@@ -73,36 +73,57 @@ export class SnapshotUI {
         modal.className = `${CSS_CLASSES.MODAL} ${CSS_CLASSES.MODAL_FULLSCREEN} ${CSS_CLASSES.HIDDEN}`;
 
         modal.innerHTML = `
-            <div class="${CSS_CLASSES.MODAL_OVERLAY}" style="background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);"></div>
-            <div class="${CSS_CLASSES.MODAL_CONTENT}" style="max-height: 100vh; display: flex; flex-direction: column; box-shadow: 0 10px 50px rgba(0,0,0,0.5); border: none !important;">
-                
-                <!-- FLOAT HEADER -->
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; padding: 30px 20px 15px 20px;">
-                    <div style="display: flex; flex-direction: column;">
-                        <h1 style="font-size: 1.6rem; font-weight: 800; color: white; letter-spacing: -0.5px; margin: 0; text-transform: uppercase;">
-                            <i class="fas fa-heartbeat" style="color: var(--color-accent); margin-right: 12px;"></i>
+            <div class="${CSS_CLASSES.MODAL_OVERLAY}"></div>
+            <div class="${CSS_CLASSES.MODAL_CONTENT} ${CSS_CLASSES.SNAPSHOT_CONTENT}" style="max-height: 90vh; display: flex; flex-direction: column;">
+                <div class="${CSS_CLASSES.MODAL_HEADER}">
+                    <div style="display: flex; flex-direction: column; justify-content: center;">
+                        <h2 class="${CSS_CLASSES.MODAL_TITLE}" style="margin-bottom: 0;">
+                            <i class="fas fa-heartbeat" style="color: var(--color-accent); margin-right: 8px;"></i>
                             ${UI_LABELS.MARKET_PULSE_TITLE}
-                        </h1>
-                        <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px;">
-                            ${UI_LABELS.ALL_WATCHLIST_CHANGE}
-                        </span>
+                        </h2>
+                        <span style="font-size: 0.8rem; color: var(--text-muted); margin-left: 0; font-weight: 400; margin-top: 2px;">${UI_LABELS.ALL_WATCHLIST_CHANGE}</span>
                     </div>
-                    <button class="${CSS_CLASSES.MODAL_CLOSE_BTN}" title="${UI_LABELS.CLOSE}" style="background: transparent; width: 44px; height: 44px; color: rgba(255,255,255,0.6); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;">
-                        <i class="fas ${UI_ICONS.CLOSE}" style="font-size: 1.2rem;"></i>
+                    <button class="${CSS_CLASSES.MODAL_CLOSE_BTN}" title="${UI_LABELS.CLOSE}">
+                        <i class="fas ${UI_ICONS.CLOSE}"></i>
                     </button>
                 </div>
                 
-                <!-- MINIMAL CONTROLS -->
-                <div class="${CSS_CLASSES.SNAPSHOT_CONTROLS}" style="padding: 0 0 15px 0 !important; display: flex; justify-content: center; width: 100%;">
-                    <button type="button" id="${IDS.SNAPSHOT_TOGGLE_BTN}" style="background: transparent; border: none; color: rgba(255,255,255,0.6); padding: 8px 16px; font-size: 0.8rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center;">
-                        <i class="fas fa-sort" id="${IDS.SNAPSHOT_TOGGLE_ICON}"></i>
-                        <span id="${IDS.SNAPSHOT_TOGGLE_TEXT}">${UI_LABELS.HIGH_TO_LOW}</span>
-                        <i class="fas fa-sort" id="snapshot-toggle-icon-2"></i>
-                    </button>
+                <!-- NUCLEAR STYLES for Toggle -->
+                <style>
+                    #${IDS.SNAPSHOT_TOGGLE_BTN} {
+                        border: none !important;
+                        outline: none !important;
+                        box-shadow: none !important;
+                        background: transparent !important;
+                    }
+                    #${IDS.SNAPSHOT_TOGGLE_BTN}:focus, #${IDS.SNAPSHOT_TOGGLE_BTN}:active {
+                        border: none !important;
+                        outline: none !important;
+                    }
+                    .${CSS_CLASSES.SNAPSHOT_CONTROLS} {
+                        border: none !important;
+                        box-shadow: none !important;
+                    }
+                </style>
+
+                <div class="${CSS_CLASSES.SNAPSHOT_CONTROLS}" style="padding: 0 15px 2px 15px !important; border-bottom: none !important; display: flex; justify-content: center;">
+                    <div class="${CSS_CLASSES.SEGMENTED_CONTROL}" style="width: 100%; max-width: 300px; border: none !important; background: transparent !important; box-shadow: none !important;">
+                        <button type="button" class="${CSS_CLASSES.SEGMENTED_BUTTON} w-full" id="${IDS.SNAPSHOT_TOGGLE_BTN}">
+                            <div class="${CSS_CLASSES.W_FULL} ${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.ALIGN_CENTER}" style="justify-content: center;">
+                                <i class="fas fa-sort" id="${IDS.SNAPSHOT_TOGGLE_ICON}" style="margin-right: 15px;"></i>
+                                <span class="${CSS_CLASSES.FONT_BOLD}" id="${IDS.SNAPSHOT_TOGGLE_TEXT}">${UI_LABELS.HIGH_TO_LOW}</span>
+                                <i class="fas fa-sort" id="${IDS.SNAPSHOT_TOGGLE_ICON_2}" style="margin-left: 15px;"></i>
+                            </div>
+                        </button>
+                    </div>
                 </div>
 
-                <div class="${CSS_CLASSES.MODAL_BODY} ${CSS_CLASSES.SCROLLABLE_BODY}" id="${CSS_CLASSES.SNAPSHOT_GRID}" style="padding: 10px 10px 100px 10px !important; flex: 1;">
-                    <!-- Grid Items Injected Here as Floating Cards -->
+                <div class="${CSS_CLASSES.MODAL_BODY} ${CSS_CLASSES.SCROLLABLE_BODY}" id="${CSS_CLASSES.SNAPSHOT_GRID}" style="padding-top: 0 !important;">
+                    <!-- Grid Items Injected Here -->
+                </div>
+                
+                <div class="${CSS_CLASSES.MODAL_FOOTER}" style="text-align: center; color: var(--text-muted); font-size: 0.7rem; padding: 10px;">
+                    ${UI_LABELS.TAP_CARD_DETAILS}
                 </div>
             </div>
         `;
@@ -142,10 +163,8 @@ export class SnapshotUI {
                 i.className = `fas ${iconClass}`;
                 i.style.color = color;
                 i.style.marginRight = '15px'; // Reset styles just in case
-                if (i.id === 'snapshot-toggle-icon-2') {
-                    i.style.marginRight = '0';
-                    i.style.marginLeft = '15px';
-                }
+                if (i.id === IDS.SNAPSHOT_TOGGLE_ICON_2) i.style.marginRight = '0'; // Right icon
+                if (i.id === IDS.SNAPSHOT_TOGGLE_ICON_2) i.style.marginLeft = '15px';
             });
         };
 
@@ -178,7 +197,7 @@ export class SnapshotUI {
         if (!grid) return;
 
         // Dynamic Background Logic
-        const content = modal.querySelector(`.${CSS_CLASSES.MODAL_CONTENT}`);
+        const content = modal.querySelector(`.${CSS_CLASSES.SNAPSHOT_CONTENT}`);
         if (content) {
             content.classList.remove(CSS_CLASSES.TREND_UP_BG, CSS_CLASSES.TREND_DOWN_BG, CSS_CLASSES.TREND_MIXED_DESC_BG, CSS_CLASSES.TREND_MIXED_ASC_BG);
             if (this._currentSort === 'desc') {
@@ -261,12 +280,9 @@ export class SnapshotUI {
         const valStr = formatCurrency(Math.abs(item.valChange));
         const displayVal = `${valStr}`;
 
-        const current = item.price || 0;
         const high = item.high || 0;
         const low = item.low || 0;
-        const pct = item.pctChange || 0;
-        const isUp = pct > 0;
-        const isDown = pct < 0;
+        const current = item.price || 0;
 
         // Sparkline Calculation
         let sparklineHtml = '';
@@ -274,26 +290,21 @@ export class SnapshotUI {
             const rangePercent = Math.min(Math.max(((current - low) / (high - low)) * 100, 0), 100);
 
             sparklineHtml = `
-                <div style="display: flex; align-items: center; justify-content: center; width: 100%;">
-                    <div style="font-size: 0.75rem; color: var(--text-muted); margin-right: 8px; font-weight: 700;">${low.toFixed(2)}</div>
-                    <div style="margin: 0; width: 80px; min-width: 80px; position: relative;">
-                        <div style="height: 3px; background-color: rgba(255,255,255,0.15); border-radius: 2px; position: relative; width: 100%; pointer-events: none;">
-                            <div style="position: absolute; left: ${rangePercent}%; top: 50%; transform: translate(-50%, -50%); width: 8px; height: 8px; background-color: var(--color-accent) !important; border-radius: 50%; z-index: 2000; box-shadow: 0 0 0 1px #fff, 0 2px 4px rgba(0,0,0,0.5);"></div>
-                        </div>
+                <div style="font-size: 0.75rem; color: var(--text-muted); margin-right: 6px;">${low.toFixed(2)}</div>
+                <div class="${CSS_CLASSES.DASHBOARD_SPARK_CONTAINER}" style="margin: 0; width: 60px; min-width: 60px; overflow: visible !important;">
+                    <div class="${CSS_CLASSES.SPARK_RAIL}" style="height: 3px; background-color: transparent; position: relative; width: 100%; overflow: visible !important; pointer-events: none;">
+                        <div class="${CSS_CLASSES.SPARK_MARKER}" style="position: absolute; left: ${rangePercent}%; top: 50%; transform: translate(-50%, -50%); width: 8px; height: 8px; background-color: #a49393 !important; border-radius: 50%; z-index: 20000; box-shadow: 0 0 0 1px #fff, 0 2px 4px rgba(0,0,0,0.3);"></div>
                     </div>
-                    <div style="font-size: 0.75rem; color: var(--text-muted); margin-left: 8px; font-weight: 700;">${high.toFixed(2)}</div>
                 </div>
+                <div style="font-size: 0.75rem; color: var(--text-muted); margin-left: 6px;">${high.toFixed(2)}</div>
              `;
         }
 
         return `
-            <div class="${CSS_CLASSES.SNAPSHOT_CARD}" data-code="${item.code}" 
-                 style="display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; margin: 8px 12px; border-radius: 0; 
-                        background: transparent; border: none; cursor: pointer;">
-                
+            <div class="${CSS_CLASSES.SNAPSHOT_CARD} ${colorClass}" data-code="${item.code}" style="justify-content: space-between;">
                 <!-- Left: Code -->
-                <div style="flex: 0 0 80px;">
-                    <span style="font-size: 1.3rem; font-weight: 900; letter-spacing: 1px; color: #fff;">${item.code}</span>
+                <div class="${CSS_CLASSES.SNAP_COL_LEFT}" style="flex: 0 0 auto;">
+                    <span class="${CSS_CLASSES.SNAP_CODE}">${item.code}</span>
                 </div>
 
                 <!-- Center: Sparkline -->
@@ -302,9 +313,9 @@ export class SnapshotUI {
                 </div>
 
                 <!-- Right: Price & Changes -->
-                <div style="text-align: right; flex: 0 0 110px;">
-                     <div style="font-weight: 800; font-size: 1.3rem; color: #fff; line-height: 1; margin-bottom: 4px;">${priceStr}</div>
-                     <div style="display: flex; gap: 8px; justify-content: flex-end; font-size: 0.9rem; font-weight: 800;">
+                <div class="${CSS_CLASSES.SNAP_COL_RIGHT}" style="text-align: right; flex: 0 0 auto;">
+                     <div class="${CSS_CLASSES.SNAP_PRICE}" style="font-weight: 700;">${priceStr}</div>
+                     <div style="display: flex; gap: 6px; justify-content: flex-end; font-size: 0.8rem;">
                         <span class="${textClass}">${displayVal}</span>
                         <span class="${textClass}">${pctStr}</span>
                      </div>
