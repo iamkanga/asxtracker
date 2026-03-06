@@ -16,15 +16,19 @@ export class SnapshotUI {
     static show() {
         if (document.getElementById(IDS.SNAPSHOT_MODAL_CONTAINER)) return;
 
-        // V322 FIX: DO NOT HIDE Briefing Modal.
-        // We layer Snapshot (z-index 1010) on TOP of Briefing (z-index 1001).
+        // CONSTITUTION RULE III & IV: Ready Guard & Null Safety
+        if (!AppState?.data || !AppState?.data?.shares) {
+            console.warn('[SnapshotUI] Data not ready');
+            return;
+        }
 
         const modal = this._renderModal();
-        modal.style.zIndex = '1010'; // Override generic overlay
+        // Force high z-index to clear all other UI
+        modal.style.zIndex = '100001';
         document.body.appendChild(modal);
 
         // Initial Render: Load Preference
-        this._currentSort = AppState.preferences.snapshotSort || 'desc';
+        this._currentSort = AppState.preferences?.snapshotSort || 'desc';
 
         this._updateGrid(modal);
         this._bindEvents(modal);
@@ -45,21 +49,18 @@ export class SnapshotUI {
     }
 
     static _close(modal) {
+        if (!modal) return;
         modal.classList.remove(CSS_CLASSES.SHOW);
         modal.classList.add(CSS_CLASSES.HIDDEN);
 
-        // Unsubscribe from Live Updates
         if (modal._priceUnsub) {
             modal._priceUnsub();
             modal._priceUnsub = null;
         }
 
-        // No need for complex restoration since Briefing was never hidden.
-        // Just remove ourselves.
-
         setTimeout(() => {
             if (modal.parentElement) modal.remove();
-        }, 300);
+        }, 850); // Improved pace: matching 0.8s transition + buffer
 
         if (modal._navActive) {
             modal._navActive = false;
@@ -70,40 +71,34 @@ export class SnapshotUI {
     static _renderModal() {
         const modal = document.createElement('div');
         modal.id = IDS.SNAPSHOT_MODAL_CONTAINER;
-        modal.className = `${CSS_CLASSES.MODAL} ${CSS_CLASSES.MODAL_FULLSCREEN} ${CSS_CLASSES.HIDDEN}`;
+        // Use ID for specific overrides, base modal classes for structure
+        modal.className = `${CSS_CLASSES.MODAL} ${CSS_CLASSES.HIDDEN}`;
 
+        // CONSTITUTION RULE I: Using Registry Classes
         modal.innerHTML = `
-            <div class="${CSS_CLASSES.MODAL_OVERLAY}" style="background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);"></div>
-            <div class="${CSS_CLASSES.MODAL_CONTENT}" style="max-height: 100vh; display: flex; flex-direction: column; box-shadow: 0 10px 50px rgba(0,0,0,0.5); border: none !important;">
-                
-                <!-- FLOAT HEADER -->
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; padding: 30px 20px 15px 20px;">
-                    <div style="display: flex; flex-direction: column;">
-                        <h1 style="font-size: 1.6rem; font-weight: 800; color: white; letter-spacing: -0.5px; margin: 0; text-transform: uppercase;">
-                            <i class="fas fa-heartbeat" style="color: var(--color-accent); margin-right: 12px;"></i>
-                            ${UI_LABELS.MARKET_PULSE_TITLE}
-                        </h1>
-                        <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px;">
-                            ${UI_LABELS.ALL_WATCHLIST_CHANGE}
-                        </span>
+            <div class="${CSS_CLASSES.MODAL_OVERLAY}"></div>
+            <div class="${CSS_CLASSES.MODAL_CONTENT}">
+                <header class="${CSS_CLASSES.SNAPSHOT_MODAL_HEADER}">
+                    <div class="${CSS_CLASSES.SNAPSHOT_TITLE_STACK}">
+                        <h1><i class="fas fa-heartbeat"></i> ${UI_LABELS.MARKET_PULSE_TITLE}</h1>
+                        <span>${UI_LABELS.ALL_WATCHLIST_CHANGE}</span>
                     </div>
-                    <button class="${CSS_CLASSES.MODAL_CLOSE_BTN}" title="${UI_LABELS.CLOSE}" style="background: transparent; width: 44px; height: 44px; color: rgba(255,255,255,0.6); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;">
-                        <i class="fas ${UI_ICONS.CLOSE}" style="font-size: 1.2rem;"></i>
+                    <button class="${CSS_CLASSES.SNAPSHOT_CLOSE_BTN_FLOAT} ${CSS_CLASSES.MODAL_CLOSE_BTN}" title="${UI_LABELS.CLOSE}">
+                        <i class="fas ${UI_ICONS.CLOSE}"></i>
                     </button>
-                </div>
+                </header>
                 
-                <!-- MINIMAL CONTROLS -->
-                <div class="${CSS_CLASSES.SNAPSHOT_CONTROLS}" style="padding: 0 0 15px 0 !important; display: flex; justify-content: center; width: 100%;">
-                    <button type="button" id="${IDS.SNAPSHOT_TOGGLE_BTN}" style="background: transparent; border: none; color: rgba(255,255,255,0.6); padding: 8px 16px; font-size: 0.8rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                <div class="${CSS_CLASSES.SNAPSHOT_CONTROLS}">
+                    <button type="button" id="${IDS.SNAPSHOT_TOGGLE_BTN}">
                         <i class="fas fa-sort" id="${IDS.SNAPSHOT_TOGGLE_ICON}"></i>
-                        <span id="${IDS.SNAPSHOT_TOGGLE_TEXT}">${UI_LABELS.HIGH_TO_LOW}</span>
-                        <i class="fas fa-sort" id="snapshot-toggle-icon-2"></i>
+                        <span id="${IDS.SNAPSHOT_TOGGLE_TEXT}">${UI_LABELS.LOW_TO_HIGH}</span>
+                        <i class="fas fa-sort" id="${IDS.SNAPSHOT_TOGGLE_ICON_2}"></i>
                     </button>
                 </div>
 
-                <div class="${CSS_CLASSES.MODAL_BODY} ${CSS_CLASSES.SCROLLABLE_BODY}" id="${CSS_CLASSES.SNAPSHOT_GRID}" style="padding: 10px 10px 100px 10px !important; flex: 1;">
-                    <!-- Grid Items Injected Here as Floating Cards -->
-                </div>
+                <main class="${CSS_CLASSES.MODAL_BODY} ${CSS_CLASSES.SCROLLABLE_BODY} ${CSS_CLASSES.SNAPSHOT_GRID} ${CSS_CLASSES.SNAPSHOT_MAIN_BODY}" id="${CSS_CLASSES.SNAPSHOT_GRID}">
+                    <!-- Cards injected here -->
+                </main>
             </div>
         `;
 
@@ -239,73 +234,48 @@ export class SnapshotUI {
         return AppState.controller.getSnapshotData();
     }
 
+    static _renderSparkline(low, high, current) {
+        if (!(high > 0 && low > 0 && current > 0 && high > low)) return '';
+
+        const rangePercent = Math.min(Math.max(((current - low) / (high - low)) * 100, 0), 100);
+
+        return `
+            <div class="${CSS_CLASSES.SNAP_SPARK_CONTAINER}">
+                <div class="${CSS_CLASSES.SNAP_RANGE_LOW}">${low.toFixed(2)}</div>
+                <div class="${CSS_CLASSES.SNAP_RAIL}">
+                    <div class="${CSS_CLASSES.SNAP_MARKER}" style="left: ${rangePercent}%;"></div>
+                </div>
+                <div class="${CSS_CLASSES.SNAP_RANGE_HIGH}">${high.toFixed(2)}</div>
+            </div>
+        `;
+    }
+
     static _renderCard(item) {
         const isPos = item.pctChange > 0;
         const isNeg = item.pctChange < 0;
 
-        let colorClass = CSS_CLASSES.SNAPSHOT_NEUTRAL;
         let textClass = '';
-
-        if (isPos) {
-            colorClass = CSS_CLASSES.SNAPSHOT_POSITIVE;
-            textClass = CSS_CLASSES.TEXT_POS;
-        } else if (isNeg) {
-            colorClass = CSS_CLASSES.SNAPSHOT_NEGATIVE;
-            textClass = CSS_CLASSES.TEXT_NEG;
-        }
+        if (isPos) textClass = CSS_CLASSES.TEXT_POS;
+        else if (isNeg) textClass = CSS_CLASSES.TEXT_NEG;
 
         const priceStr = formatCurrency(item.price);
-        const pctVal = Math.abs(item.pctChange).toFixed(2);
-        const pctStr = `${pctVal}%`;
-
+        const pctStr = `${Math.abs(item.pctChange).toFixed(2)}%`;
         const valStr = formatCurrency(Math.abs(item.valChange));
-        const displayVal = `${valStr}`;
-
-        const current = item.price || 0;
-        const high = item.high || 0;
-        const low = item.low || 0;
-        const pct = item.pctChange || 0;
-        const isUp = pct > 0;
-        const isDown = pct < 0;
-
-        // Sparkline Calculation
-        let sparklineHtml = '';
-        if (high > 0 && low > 0 && current > 0 && high > low) {
-            const rangePercent = Math.min(Math.max(((current - low) / (high - low)) * 100, 0), 100);
-
-            sparklineHtml = `
-                <div style="display: flex; align-items: center; justify-content: center; width: 100%;">
-                    <div style="font-size: 0.75rem; color: var(--text-muted); margin-right: 8px; font-weight: 700;">${low.toFixed(2)}</div>
-                    <div style="margin: 0; width: 80px; min-width: 80px; position: relative;">
-                        <div style="height: 3px; background-color: rgba(255,255,255,0.15); border-radius: 2px; position: relative; width: 100%; pointer-events: none;">
-                            <div style="position: absolute; left: ${rangePercent}%; top: 50%; transform: translate(-50%, -50%); width: 8px; height: 8px; background-color: var(--color-accent) !important; border-radius: 50%; z-index: 2000; box-shadow: 0 0 0 1px #fff, 0 2px 4px rgba(0,0,0,0.5);"></div>
-                        </div>
-                    </div>
-                    <div style="font-size: 0.75rem; color: var(--text-muted); margin-left: 8px; font-weight: 700;">${high.toFixed(2)}</div>
-                </div>
-             `;
-        }
 
         return `
-            <div class="${CSS_CLASSES.SNAPSHOT_CARD}" data-code="${item.code}" 
-                 style="display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; margin: 8px 12px; border-radius: 0; 
-                        background: transparent; border: none; cursor: pointer;">
-                
-                <!-- Left: Code -->
-                <div style="flex: 0 0 80px;">
-                    <span style="font-size: 1.3rem; font-weight: 900; letter-spacing: 1px; color: #fff;">${item.code}</span>
+            <div class="${CSS_CLASSES.SNAPSHOT_CARD}" data-code="${item.code}">
+                <div class="${CSS_CLASSES.SNAP_COL_LEFT}">
+                    <span class="${CSS_CLASSES.SNAP_CODE}">${item.code}</span>
                 </div>
 
-                <!-- Center: Sparkline -->
-                 <div style="flex: 1; display: flex; align-items: center; justify-content: center;">
-                    ${sparklineHtml}
+                <div class="${CSS_CLASSES.SNAP_COL_CENTER}">
+                    ${this._renderSparkline(item.low, item.high, item.price)}
                 </div>
 
-                <!-- Right: Price & Changes -->
-                <div style="text-align: right; flex: 0 0 110px;">
-                     <div style="font-weight: 800; font-size: 1.3rem; color: #fff; line-height: 1; margin-bottom: 4px;">${priceStr}</div>
-                     <div style="display: flex; gap: 8px; justify-content: flex-end; font-size: 0.9rem; font-weight: 800;">
-                        <span class="${textClass}">${displayVal}</span>
+                <div class="${CSS_CLASSES.SNAP_COL_RIGHT}">
+                     <div class="${CSS_CLASSES.SNAP_PRICE}">${priceStr}</div>
+                     <div class="${CSS_CLASSES.SNAP_VALUE_CHANGE}">
+                        <span class="${textClass}">${valStr}</span>
                         <span class="${textClass}">${pctStr}</span>
                      </div>
                 </div>
@@ -322,27 +292,10 @@ export class SnapshotUI {
 
         let pressTimer;
         let hasTriggered = false;
-        const LONG_PRESS_DURATION = 600; // Reduced to 600ms for better responsiveness
-
-        // Visual Feedback (Subtle Opacity instead of Scale)
-        const addVisual = () => element.style.opacity = '0.7';
-        const removeVisual = () => element.style.opacity = '1';
-
-        // Block Click if Long Press occurred
-        const clickBlocker = (e) => {
-            if (hasTriggered) {
-                e.preventDefault();
-                e.stopImmediatePropagation();
-                hasTriggered = false; // Reset
-
-                return false;
-            }
-        };
+        const LONG_PRESS_DURATION = 600;
 
         const startHandler = (e) => {
             hasTriggered = false;
-
-            // Ignore buttons/links
             if (e.target.closest('button') || e.target.closest('a')) return;
 
             pressTimer = setTimeout(() => {
@@ -359,7 +312,6 @@ export class SnapshotUI {
             }
         };
 
-        // Context Menu Block (Mobile)
         const contextMenuHandler = (e) => {
             const currentId = AppState.watchlist.id;
             if (currentId && currentId.toLowerCase() === 'portfolio') {
@@ -369,26 +321,26 @@ export class SnapshotUI {
             }
         };
 
-        // Add Listeners
         element.style.transition = 'opacity 0.2s ease';
-
-        // Prevent Text Selection and Callouts (Copy/Paste menu)
         element.style.userSelect = 'none';
-        element.style.webkitUserSelect = 'none'; // Safari/Chrome
-        element.style.webkitTouchCallout = 'none'; // iOS Safari
-        element.style.touchAction = 'manipulation'; // Improve tap handling
+        element.style.webkitUserSelect = 'none';
+        element.style.webkitTouchCallout = 'none';
+        element.style.touchAction = 'manipulation';
 
         element.addEventListener('mousedown', startHandler);
         element.addEventListener('touchstart', startHandler, { passive: true });
-
         element.addEventListener('mouseup', cancelHandler);
         element.addEventListener('mouseleave', cancelHandler);
         element.addEventListener('touchend', cancelHandler);
         element.addEventListener('touchmove', cancelHandler);
-
         element.addEventListener('contextmenu', contextMenuHandler);
-
-        // Use Capture Phase to ensure we block the click before the card handler sees it
-        element.addEventListener('click', clickBlocker, true);
+        element.addEventListener('click', (e) => {
+            if (hasTriggered) {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                hasTriggered = false;
+                return false;
+            }
+        }, true);
     }
 }

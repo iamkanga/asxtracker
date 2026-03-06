@@ -1080,8 +1080,19 @@ export const CSS_CLASSES = {
     SNAP_PRICE: 'snap-price',
     SNAP_PERCENT: 'snap-percent',
     SNAP_VALUE_CHANGE: 'snap-value-change',
+    SNAP_SPARK_CONTAINER: 'snap-spark-container',
+    SNAP_RANGE_LOW: 'snap-range-low',
+    SNAP_RAIL: 'snap-rail',
+    SNAP_MARKER: 'snap-marker',
+    SNAP_RANGE_HIGH: 'snap-range-high',
     TEXT_POS: 'text-pos',
     TEXT_NEG: 'text-neg',
+
+    // Snapshot Component Specific Classes
+    SNAPSHOT_MODAL_HEADER: 'snapshot-modal-header',
+    SNAPSHOT_TITLE_STACK: 'snapshot-title-stack',
+    SNAPSHOT_CLOSE_BTN_FLOAT: 'snapshot-close-btn-float',
+    SNAPSHOT_MAIN_BODY: 'snapshot-main-body',
 
     // Animation Classes
     FADE_OUT: 'fade-out',
@@ -1547,6 +1558,7 @@ export const IDS = {
     SNAPSHOT_TOGGLE_ICON: 'snapshotToggleIcon',
     SNAPSHOT_TOGGLE_ICON_2: 'snapshotToggleIcon2',
     SNAPSHOT_TOGGLE_TEXT: 'snapshotToggleText',
+    SNAPSHOT_TOGGLE_ICON_2: 'snapshot-toggle-icon-2',
     MARKET_STATUS_DOT: 'marketStatusDot',
     MARKET_STATUS_TEXT: 'marketStatusText',
     PIN_SETUP_MODAL: 'pin-setup-modal',

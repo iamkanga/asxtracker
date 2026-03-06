@@ -1225,7 +1225,7 @@ export class ViewRenderer {
         // Events
         const close = () => {
             modal.classList.add(CSS_CLASSES.HIDDEN);
-            setTimeout(() => modal.remove(), 300);
+            setTimeout(() => modal.remove(), 850); // Increased pace to match Snapshot
 
             // CLEANUP: Always remove specialized listeners
             window.removeEventListener(EVENTS.RESEARCH_LINKS_UPDATED, researchUpdateHandler);
