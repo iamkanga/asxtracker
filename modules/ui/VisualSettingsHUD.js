@@ -1,12 +1,13 @@
 import { CSS_CLASSES, EVENTS, UI_ICONS, IDS, STORAGE_KEYS } from '../utils/AppConstants.js';
 import { AppState } from '../state/AppState.js';
 import { ThemeStudio } from './ThemeStudio.js';
+import { navManager } from '../utils/NavigationManager.js';
 
 export class VisualSettingsHUD {
 
     static get ID() { return 'visual-settings-hud'; }
 
-    static show() {
+    static show(cameFromSettings = false) {
         const id = this.ID;
         let hud = document.getElementById(id);
 
@@ -17,7 +18,7 @@ export class VisualSettingsHUD {
         }
 
         // Render content
-        this.render(hud);
+        this.render(hud, cameFromSettings);
 
         // Appear animation
         requestAnimationFrame(() => {
@@ -25,11 +26,16 @@ export class VisualSettingsHUD {
         });
     }
 
-    static hide() {
+    static hide(skipPopState = false) {
         const hud = document.getElementById(this.ID);
         if (hud) {
             hud.classList.remove('visible');
-            setTimeout(() => hud.remove(), 300); // Wait for transition
+            setTimeout(() => {
+                if (hud.parentElement) hud.remove();
+            }, 300);
+        }
+        if (!skipPopState) {
+            navManager.popStateSilently();
         }
     }
 
@@ -42,7 +48,7 @@ export class VisualSettingsHUD {
         }
     }
 
-    static render(container) {
+    static render(container, cameFromSettings = false) {
         const prefs = AppState.preferences.containerBorders || { sides: [0, 0, 0, 0], thickness: 1 };
         // Gradient Strength Logic matches HeaderLayout.js
         const strength = typeof AppState.preferences.gradientStrength === 'number' ? AppState.preferences.gradientStrength : 0.25;
@@ -81,7 +87,9 @@ export class VisualSettingsHUD {
         container.innerHTML = `
             <div class="hud-header">
                 <span class="hud-title"><i class="fas fa-palette"></i> Visual Studio</span>
-                <button class="hud-close" id="hud-close-btn" title="Close"><i class="fas fa-times"></i></button>
+                <button class="hud-close" id="hud-close-btn" title="${cameFromSettings ? 'Back' : 'Close'}">
+                    <i class="fas ${cameFromSettings ? 'fa-arrow-left' : 'fa-times'}"></i>
+                </button>
             </div>
             
             <div class="hud-content">
@@ -389,7 +397,23 @@ export class VisualSettingsHUD {
         container.querySelector('#hud-close-btn').addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
-            this.hide();
+            if (cameFromSettings) {
+                this.hide(true);
+                setTimeout(() => {
+                    document.dispatchEvent(new CustomEvent('open-general-settings'));
+                }, 300);
+            } else {
+                this.hide();
+            }
+        });
+
+        navManager.pushState(() => {
+            if (cameFromSettings) {
+                this.hide(true);
+                document.dispatchEvent(new CustomEvent('open-general-settings'));
+            } else {
+                this.hide(true);
+            }
         });
 
         // Borders (Edges)

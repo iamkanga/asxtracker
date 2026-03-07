@@ -13,7 +13,7 @@ import { userStore } from '../data/DataService.js';
 
 export class DataManagementUI {
 
-    static showModal() {
+    static showModal(cameFromSettings = false) {
         const existing = document.getElementById('data-management-modal');
         if (existing) existing.remove();
 
@@ -29,7 +29,9 @@ export class DataManagementUI {
             <div class="${CSS_CLASSES.MODAL_CONTENT} ${CSS_CLASSES.MODAL_CONTENT_MEDIUM}" style="max-height: 85vh; display: flex; flex-direction: column;">
                 <div class="${CSS_CLASSES.MODAL_HEADER}">
                     <h2 class="${CSS_CLASSES.MODAL_TITLE}">Data Management</h2>
-                    <button class="${CSS_CLASSES.MODAL_CLOSE_BTN}"><i class="fas ${UI_ICONS.CLOSE}"></i></button>
+                    <button class="${CSS_CLASSES.MODAL_CLOSE_BTN}" title="${cameFromSettings ? 'Back' : 'Close'}">
+                        <i class="fas ${cameFromSettings ? 'fa-arrow-left' : UI_ICONS.CLOSE}"></i>
+                    </button>
                 </div>
                 
                 <!-- TABS HEADER -->
@@ -132,7 +134,11 @@ export class DataManagementUI {
         // Navigation Hook
         navManager.pushState(() => {
             if (modal.parentElement) {
-                modal.querySelector(`.${CSS_CLASSES.MODAL_CLOSE_BTN}`).click();
+                modal.remove();
+                if (cameFromSettings) {
+                    const { GeneralSettingsUI } = require('./GeneralSettingsUI.js');
+                    GeneralSettingsUI.showModal();
+                }
             }
         });
 
@@ -153,7 +159,13 @@ export class DataManagementUI {
         // --- CLOSE LOGIC ---
         const close = () => {
             modal.remove();
-            navManager.popStateSilently();
+            if (cameFromSettings) {
+                navManager.popStateSilently();
+                const { GeneralSettingsUI } = require('./GeneralSettingsUI.js');
+                GeneralSettingsUI.showModal();
+            } else {
+                navManager.popStateSilently();
+            }
         };
         modal.querySelector(`.${CSS_CLASSES.MODAL_CLOSE_BTN}`).addEventListener('click', close);
         modal.querySelector(`.${CSS_CLASSES.MODAL_OVERLAY}`).addEventListener('click', close);

@@ -44,38 +44,16 @@ export class GeneralSettingsUI {
                 </div>
                 <div class="settings-accordion-body">
 
-                    <!-- 1. GENERAL SETTINGS -->
+                    <!-- 1. APPEARANCE (Direct Action) -->
                     <div class="settings-acc-section">
-                        <button class="settings-acc-trigger" data-section="general">
-                            <div class="settings-acc-icon"><i class="fas fa-cog"></i></div>
-                            <span class="settings-acc-label">Settings</span>
-                            <i class="fas fa-chevron-down settings-acc-chevron"></i>
-                        </button>
-                        <div class="settings-acc-content" id="acc-content-general">
-                            <div class="settings-acc-inner">
-                                <!-- Theme Shortcut Tile -->
-                                <div class="settings-acc-theme-tile" id="settings-acc-theme-shortcut" style="margin-bottom: 16px;">
-                                    <div class="settings-acc-theme-icon"><i class="fas fa-palette"></i></div>
-                                    <div class="settings-acc-theme-info">
-                                        <div class="settings-acc-theme-name">Appearance</div>
-                                        <div class="settings-acc-theme-sub">Current: <strong>${currentThemeName}</strong></div>
-                                    </div>
-                                    <i class="fas fa-chevron-right settings-acc-theme-arrow"></i>
-                                </div>
-
-                                <!-- One-Tap Research Toggle -->
-                                <div class="settings-acc-row">
-                                    <div class="settings-acc-row-info">
-                                        <div class="settings-acc-row-title">${UI_LABELS.AI_QUICK_SUMMARY_TOGGLE}</div>
-                                        <div class="settings-acc-row-desc">Single tap to trigger in-app AI research</div>
-                                    </div>
-                                    <div class="square-radio-wrapper">
-                                        <input type="checkbox" id="gen-ai-one-tap-toggle" ${AppState.preferences?.oneTapResearch ? 'checked' : ''}>
-                                        <div class="square-radio-visual"></div>
-                                    </div>
-                                </div>
+                        <button class="settings-acc-trigger" id="settings-acc-appearance-direct">
+                            <div class="settings-acc-icon"><i class="fas fa-palette"></i></div>
+                            <div class="settings-acc-row-info">
+                                <span class="settings-acc-label" style="display: block;">Appearance</span>
+                                <span class="settings-acc-row-desc">Current: <strong>${currentThemeName}</strong></span>
                             </div>
-                        </div>
+                            <i class="fas fa-chevron-right settings-acc-chevron"></i>
+                        </button>
                     </div>
 
                     <!-- 2. AI MANAGEMENT -->
@@ -83,10 +61,22 @@ export class GeneralSettingsUI {
                         <button class="settings-acc-trigger" data-section="ai">
                             <div class="settings-acc-icon"><i class="fas fa-robot"></i></div>
                             <span class="settings-acc-label">AI Management</span>
-                            <i class="fas fa-chevron-down settings-acc-chevron"></i>
+                            <i class="fas fa-chevron-right settings-acc-chevron"></i>
                         </button>
                         <div class="settings-acc-content" id="acc-content-ai">
                             <div class="settings-acc-inner">
+                                <!-- One-Tap Research Toggle (Moved here from general settings) -->
+                                <div class="settings-acc-row" style="margin-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 14px;">
+                                    <div class="settings-acc-row-info">
+                                        <div class="settings-acc-row-title">${UI_LABELS.AI_QUICK_SUMMARY_TOGGLE}</div>
+                                        <div class="settings-acc-row-desc">Perform research with a single tap</div>
+                                    </div>
+                                    <div class="square-radio-wrapper">
+                                        <input type="checkbox" id="gen-ai-one-tap-toggle" ${AppState.preferences?.oneTapResearch ? 'checked' : ''}>
+                                        <div class="square-radio-visual"></div>
+                                    </div>
+                                </div>
+
                                 <!-- Prompt Templates -->
                                 <div id="ai-prompt-editor-container">
                                     ${this._renderAiPromptTemplates()}
@@ -107,7 +97,7 @@ export class GeneralSettingsUI {
                         <button class="settings-acc-trigger" data-section="data">
                             <div class="settings-acc-icon"><i class="fas fa-database"></i></div>
                             <span class="settings-acc-label">Data Management</span>
-                            <i class="fas fa-chevron-down settings-acc-chevron"></i>
+                            <i class="fas fa-chevron-right settings-acc-chevron"></i>
                         </button>
                         <div class="settings-acc-content" id="acc-content-data">
                             <div class="settings-acc-inner">
@@ -137,7 +127,7 @@ export class GeneralSettingsUI {
                         <button class="settings-acc-trigger" data-section="security">
                             <div class="settings-acc-icon"><i class="fas ${UI_ICONS.SHIELD}"></i></div>
                             <span class="settings-acc-label">Security</span>
-                            <i class="fas fa-chevron-down settings-acc-chevron"></i>
+                            <i class="fas fa-chevron-right settings-acc-chevron"></i>
                         </button>
                         <div class="settings-acc-content" id="acc-content-security">
                             <div class="settings-acc-inner">
@@ -220,12 +210,11 @@ export class GeneralSettingsUI {
             });
         });
 
-        // Theme Shortcut -> Opens Visual Settings HUD
-        modal.querySelector('#settings-acc-theme-shortcut')?.addEventListener('click', () => {
-            this._dismissModal(modal);
-            // Small delay to ensure modal is dismissed before HUD appears
+        // Appearance Direct Action -> Opens Visual Settings HUD
+        modal.querySelector('#settings-acc-appearance-direct')?.addEventListener('click', () => {
+            this._dismissModal(modal, true); // true = skip popState because we are pushing a NEW state
             setTimeout(() => {
-                VisualSettingsHUD.show();
+                VisualSettingsHUD.show(true); // true = cameFromSettings
             }, 300);
         });
 
@@ -272,7 +261,10 @@ export class GeneralSettingsUI {
 
         // Data Tools
         modal.querySelector('#settings-acc-data-tools')?.addEventListener('click', () => {
-            DataManagementUI.showModal();
+            this._dismissModal(modal, true);
+            setTimeout(() => {
+                DataManagementUI.showModal(true); // true = cameFromSettings
+            }, 300);
         });
 
         // Delete Data
@@ -284,14 +276,18 @@ export class GeneralSettingsUI {
 
     /**
      * Smooth dismiss with animation.
+     * @param {HTMLElement} modal 
+     * @param {boolean} skipPopState If true, doesn't call navManager.popStateSilently()
      */
-    static _dismissModal(modal) {
+    static _dismissModal(modal, skipPopState = false) {
         if (!modal) return;
         modal.classList.remove(CSS_CLASSES.SHOW);
         setTimeout(() => {
             if (modal.parentElement) modal.remove();
         }, 350);
-        navManager.popStateSilently();
+        if (!skipPopState) {
+            navManager.popStateSilently();
+        }
     }
 
     /**

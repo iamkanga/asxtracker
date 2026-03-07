@@ -124,7 +124,7 @@
 
 /* --- Accordion Section --- */
 .settings-acc-section {
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    border-bottom: none;
 }
 
 .settings-acc-section:last-child {
@@ -206,7 +206,7 @@
     align-items: center;
     justify-content: space-between;
     padding: 14px 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    border-bottom: none;
     gap: 12px;
 }
 
@@ -251,7 +251,7 @@
     font-size: 0.88rem;
     font-weight: 600;
     transition: color 0.15s;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    border-bottom: none;
     -webkit-tap-highlight-color: transparent;
 }
 
