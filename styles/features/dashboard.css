@@ -238,9 +238,8 @@
 }
 
 .dashboard-row.neutral {
-    border-left: 4px solid var(--color-accent) !important;
+    box-shadow: inset 4px 0 0 0 var(--color-accent) !important;
     background: linear-gradient(135deg, rgba(var(--color-accent-rgb), var(--gradient-strength, 0.6)) 0%, var(--card-bg) 100%) !important;
-    box-shadow: none !important;
 }
 
 /* Clickable Dashboard Rows */
@@ -270,6 +269,7 @@ body.dark-theme .dashboard-row.clickable:hover {
     border-left-width: 0 !important;
     /* Removed Left Border */
     border-right-width: 0;
+    box-shadow: none !important;
 }
 
 .dashboard-row-main {
@@ -307,6 +307,7 @@ body.dark-theme .dashboard-row.clickable:hover {
     /* Removed Left Border */
     border-right: none !important;
     border-bottom: 1px solid var(--border-color);
+    box-shadow: none !important;
 }
 
 .dashboard-container.view-mode-compact .dashboard-item-name,
@@ -376,9 +377,8 @@ body.dark-theme .dashboard-row.clickable:hover {
 }
 
 .dashboard-container.view-mode-snapshot .dashboard-row.negative {
-    border-left: 4px solid var(--color-negative) !important;
+    box-shadow: inset 4px 0 0 0 var(--color-negative) !important;
     background: linear-gradient(135deg, rgba(180, 0, 0, var(--gradient-strength, 0.6)) 0%, var(--card-bg) 100%) !important;
-    box-shadow: none !important;
 }
 
 .dashboard-container.view-mode-snapshot .dashboard-item-name,
