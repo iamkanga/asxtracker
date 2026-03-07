@@ -1,0 +1,402 @@
+/* ==========================================================================
+   Settings Accordion Modal
+   Bottom-sheet style settings panel with collapsible accordion sections.
+   Follows: styles/features/ (Constitution V. Modular CSS Standard)
+   ========================================================================== */
+
+/* --- Bottom Sheet Container --- */
+.settings-accordion-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+}
+
+.settings-accordion-modal.show {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.settings-accordion-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+}
+
+.settings-accordion-sheet {
+    position: relative;
+    width: 100%;
+    max-width: 500px;
+    max-height: 82vh;
+    background: var(--bg-color, #212529);
+    border-radius: 16px 16px 0 0;
+    display: flex;
+    flex-direction: column;
+    transform: translateY(100%);
+    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    overflow: hidden;
+    box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.5);
+}
+
+.settings-accordion-modal.show .settings-accordion-sheet {
+    transform: translateY(0);
+}
+
+/* --- Sheet Handle --- */
+.settings-accordion-handle {
+    width: 36px;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+    margin: 10px auto 0;
+    flex-shrink: 0;
+}
+
+/* --- Sheet Header --- */
+.settings-accordion-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px 10px;
+    flex-shrink: 0;
+}
+
+.settings-accordion-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--text-color, #e0e0e0);
+    letter-spacing: -0.01em;
+}
+
+.settings-accordion-close {
+    background: none;
+    border: none;
+    color: var(--text-muted, #999);
+    font-size: 1.25rem;
+    cursor: pointer;
+    padding: 6px;
+    line-height: 1;
+    border-radius: 50%;
+    transition: color 0.2s, background 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+}
+
+.settings-accordion-close:hover,
+.settings-accordion-close:active {
+    color: var(--text-color, #e0e0e0);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+/* --- Scrollable Body --- */
+.settings-accordion-body {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 4px 0 30px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+}
+
+.settings-accordion-body::-webkit-scrollbar {
+    width: 4px;
+}
+
+.settings-accordion-body::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.settings-accordion-body::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+}
+
+/* --- Accordion Section --- */
+.settings-acc-section {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.settings-acc-section:last-child {
+    border-bottom: none;
+}
+
+/* --- Accordion Header (Clickable Row) --- */
+.settings-acc-trigger {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    padding: 18px 20px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-color, #e0e0e0);
+    text-align: left;
+    transition: background 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.settings-acc-trigger:active {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.settings-acc-icon {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 1rem;
+    color: var(--color-accent, #a49393);
+    opacity: 0.85;
+}
+
+.settings-acc-label {
+    flex: 1;
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+}
+
+.settings-acc-chevron {
+    font-size: 0.8rem;
+    color: var(--text-muted, #999);
+    opacity: 0.6;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    flex-shrink: 0;
+}
+
+.settings-acc-section.open .settings-acc-chevron {
+    transform: rotate(180deg);
+}
+
+/* --- Accordion Content Panel --- */
+.settings-acc-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+        opacity 0.25s ease;
+    opacity: 0;
+}
+
+.settings-acc-section.open .settings-acc-content {
+    opacity: 1;
+    /* max-height set via JS for smooth animation */
+}
+
+.settings-acc-inner {
+    padding: 0 20px 20px 20px;
+}
+
+/* --- Setting Rows inside Accordion --- */
+.settings-acc-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    gap: 12px;
+}
+
+.settings-acc-row:last-child {
+    border-bottom: none;
+}
+
+.settings-acc-row-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.settings-acc-row-title {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text-color, #e0e0e0);
+    line-height: 1.3;
+}
+
+.settings-acc-row-desc {
+    font-size: 0.72rem;
+    color: var(--text-muted, #999);
+    opacity: 0.7;
+    line-height: 1.3;
+}
+
+/* --- Accent Action Buttons inside Accordion --- */
+.settings-acc-action-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 14px 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-color, #e0e0e0);
+    text-align: left;
+    font-size: 0.88rem;
+    font-weight: 600;
+    transition: color 0.15s;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    -webkit-tap-highlight-color: transparent;
+}
+
+.settings-acc-action-btn:last-child {
+    border-bottom: none;
+}
+
+.settings-acc-action-btn:active {
+    color: var(--color-accent, #a49393);
+}
+
+.settings-acc-action-btn i {
+    width: 20px;
+    text-align: center;
+    font-size: 0.9rem;
+    color: var(--color-accent, #a49393);
+    opacity: 0.8;
+}
+
+.settings-acc-action-btn .acc-action-chevron {
+    margin-left: auto;
+    font-size: 0.7rem;
+    color: var(--text-muted, #999);
+    opacity: 0.4;
+}
+
+/* --- Delete / Danger Row --- */
+.settings-acc-action-btn.danger {
+    color: var(--color-negative, #FF3131);
+}
+
+.settings-acc-action-btn.danger i {
+    color: var(--color-negative, #FF3131);
+}
+
+/* --- AI Textarea inside Accordion --- */
+.settings-acc-textarea {
+    width: 100%;
+    min-height: 80px;
+    font-size: 0.8rem;
+    border-radius: 8px;
+    padding: 12px;
+    line-height: 1.4;
+    resize: vertical;
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: var(--text-color, #e0e0e0);
+    outline: none;
+    transition: border-color 0.2s;
+    box-sizing: border-box;
+}
+
+.settings-acc-textarea:focus {
+    border-color: rgba(var(--color-accent-rgb, 164, 147, 147), 0.4);
+}
+
+/* --- AI Template Group --- */
+.settings-acc-template-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.settings-acc-template-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--color-accent, #a49393);
+    opacity: 0.8;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* --- Reset Button (Danger Zone) --- */
+.settings-acc-reset-btn {
+    background: none;
+    border: none;
+    color: var(--color-negative, #FF3131);
+    font-weight: 600;
+    font-size: 0.82rem;
+    cursor: pointer;
+    padding: 8px 12px;
+    transition: opacity 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.settings-acc-reset-btn:active {
+    opacity: 0.7;
+}
+
+/* --- Theme Shortcut Tile --- */
+.settings-acc-theme-tile {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.15s;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    -webkit-tap-highlight-color: transparent;
+}
+
+.settings-acc-theme-tile:active {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.settings-acc-theme-icon {
+    width: 38px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    font-size: 1.1rem;
+    color: var(--color-accent, #a49393);
+    background: rgba(var(--color-accent-rgb, 164, 147, 147), 0.12);
+    flex-shrink: 0;
+}
+
+.settings-acc-theme-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.settings-acc-theme-name {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text-color, #e0e0e0);
+}
+
+.settings-acc-theme-sub {
+    font-size: 0.72rem;
+    color: var(--text-muted, #999);
+    opacity: 0.7;
+}
+
+.settings-acc-theme-arrow {
+    font-size: 0.8rem;
+    color: var(--text-muted, #999);
+    opacity: 0.5;
+}
