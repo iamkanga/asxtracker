@@ -1,5 +1,5 @@
 import { formatCurrency, formatPercent } from '../utils/formatters.js';
-import { CASH_CATEGORIES, CSS_CLASSES, UI_ICONS, ASSET_CUSTOM_COLORS } from '../utils/AppConstants.js';
+import { CASH_CATEGORIES, CSS_CLASSES, UI_ICONS, ASSET_CUSTOM_COLORS, EVENTS } from '../utils/AppConstants.js';
 import { AppState } from '../state/AppState.js';
 import { navManager } from '../utils/NavigationManager.js';
 
@@ -180,13 +180,18 @@ export class CashPieChart {
         this.modal.innerHTML = `
             <div class="${CSS_CLASSES.MODAL_OVERLAY}"></div>
             <div class="${CSS_CLASSES.MODAL_CONTENT}" style="max-width: 500px; padding: 0; overflow: hidden; border-radius: 20px; background: var(--card-bg);">
-                <div class="${CSS_CLASSES.MODAL_HEADER}" style="padding: 20px 24px; border-bottom: 1px solid rgba(255,255,255,0.05);">
-                    <h2 class="${CSS_CLASSES.MODAL_TITLE}" style="display: flex; align-items: center; gap: 12px;">
+                <div class="${CSS_CLASSES.MODAL_HEADER}" style="padding: 20px 24px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: space-between;">
+                    <h2 class="${CSS_CLASSES.MODAL_TITLE}" style="display: flex; align-items: center; gap: 12px; margin: 0;">
                         <i class="fas fa-chart-pie" style="color: var(--color-accent);"></i> Asset Breakdown
                     </h2>
-                    <button class="${CSS_CLASSES.MODAL_CLOSE_BTN} pie-close-btn" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: var(--text-muted);">
-                        <i class="fas ${UI_ICONS.CLOSE}"></i>
-                    </button>
+                    <div style="display: flex; align-items: center; gap: 16px;">
+                        <button class="${CSS_CLASSES.MODAL_ACTION_BTN} cash-pie-history-btn" title="View Portfolio History" style="background: none; border: none; font-size: 1.1rem; cursor: pointer; color: var(--text-muted); transition: color 0.2s;">
+                            <i class="fas ${UI_ICONS.CHART}"></i>
+                        </button>
+                        <button class="${CSS_CLASSES.MODAL_CLOSE_BTN} pie-close-btn" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: var(--text-muted);">
+                            <i class="fas ${UI_ICONS.CLOSE}"></i>
+                        </button>
+                    </div>
                 </div>
                 <div class="${CSS_CLASSES.MODAL_BODY}" style="padding: 24px; display: flex; flex-direction: column; align-items: center; gap: 24px;">
                     <div class="pie-container-large" style="position: relative; width: 260px; height: 260px; display: flex; align-items: center; justify-content: center; margin: 10px 0;">
@@ -218,6 +223,18 @@ export class CashPieChart {
 
         this.modal.querySelector('.pie-close-btn').addEventListener('click', close);
         this.modal.querySelector(`.${CSS_CLASSES.MODAL_OVERLAY}`).addEventListener('click', close);
+
+        // Bind History Button
+        const historyBtn = this.modal.querySelector('.cash-pie-history-btn');
+        if (historyBtn) {
+            historyBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                document.dispatchEvent(new CustomEvent(EVENTS.OPEN_PORTFOLIO_CHART));
+            });
+            // Hover effect
+            historyBtn.addEventListener('mouseenter', () => historyBtn.style.color = 'var(--color-accent)');
+            historyBtn.addEventListener('mouseleave', () => historyBtn.style.color = 'var(--text-muted)');
+        }
 
         // Navigation Support
         this.modal._navActive = true;
@@ -426,14 +443,18 @@ export class CashPieChart {
     }
 
     _getCategoryLabel(catId) {
-        if (!catId) return 'Asset';
+        if (!catId) return 'Cash';
+
         const userCat = (AppState.preferences.userCategories || []).find(c => c && c.id === catId);
         if (userCat) return userCat.label;
 
         const sysCat = CASH_CATEGORIES.find(c => c.id === catId);
         if (sysCat) return sysCat.label;
 
-        return catId.replace(/^user_/i, '').replace(/_/g, ' ');
+        const label = catId.replace(/^user_/i, '').replace(/_/g, ' ');
+        if (!label || label.toLowerCase() === 'asset') return 'Other Asset';
+
+        return label.charAt(0).toUpperCase() + label.slice(1);
     }
 
     _getCategoryColor(catId) {

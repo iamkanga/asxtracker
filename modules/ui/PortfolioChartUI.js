@@ -532,6 +532,11 @@ export class PortfolioChartUI {
                 if (isSuper) liveSuperVal += val;
             });
 
+            // Initialize liveCatVals for all known categories (to ensure they exist for the breakdown toggles)
+            Object.keys(this._getCashByCategory()).forEach(cid => {
+                liveCatVals[cid] = 0;
+            });
+
             rawCash.forEach(c => {
                 // Filter out hidden cash to match CashController logic
                 if (AppState.hiddenAssets.has(String(c.id))) return;
@@ -638,23 +643,40 @@ export class PortfolioChartUI {
     _getCashByCategory() {
         const cash = AppState.data.cash || [];
         const map = {};
+
+        // 1. Accumulate balances ONLY from categories that actually have assets
+        // This avoids cluttering the history menu with unused defaults like 'Crypto' or 'Property'
         cash.forEach(item => {
             if (item.category === 'shares') return;
-            const bal = parseFloat(item.balance || 0);
-            if (bal === 0) return;
+            if (item.category === 'super') return; // Super is handled as a primary series
+
             const cid = item.category || 'cash';
-            map[cid] = (map[cid] || 0) + bal;
+            map[cid] = (map[cid] || 0) + (parseFloat(item.balance) || 0);
         });
+
         return map;
     }
 
     _getCategoryLabel(catId) {
-        if (catId.startsWith('user_')) {
-            const ucat = AppState.preferences.userCategories?.find(c => c.id === catId);
+        if (!catId) return 'Cash';
+
+        // 1. Check User-Defined Categories first (Exact ID match)
+        if (AppState.preferences.userCategories) {
+            const ucat = AppState.preferences.userCategories.find(c => c && c.id === catId);
             if (ucat) return ucat.label;
         }
-        const sys = CASH_CATEGORIES.find(c => c.id === catId);
-        return sys ? sys.label : 'Asset';
+
+        // 2. Check System Registry
+        const sys = CASH_CATEGORIES.find(c => c && c.id === catId);
+        if (sys) return sys.label;
+
+        // 3. Intelligent Fallback:
+        // If it's a user category or custom ID not in registry, clean it up visually.
+        // matches the design logic in CashViewRenderer.
+        const label = catId.replace(/^user_/i, '').replace(/_/g, ' ');
+        if (!label || label.toLowerCase() === 'asset') return 'Other Asset';
+
+        return label.charAt(0).toUpperCase() + label.slice(1);
     }
 
     _getCategoryColor(catId, index) {
