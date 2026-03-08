@@ -1,7 +1,7 @@
 body {
     background-color: var(--bg-color);
     color: var(--text-color);
-    font-family: 'Inter', sans-serif;
+    font-family: var(--font-main);
     -webkit-font-smoothing: antialiased;
     line-height: 1.5;
     /* V55: Force Full Vieport & No Gap */

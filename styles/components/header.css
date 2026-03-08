@@ -206,7 +206,7 @@ h1#dynamicWatchlistTitle {
     margin: 0;
     text-align: center;
     font-size: 2.1rem;
-    font-weight: 600;
+    font-weight: 700;
     line-height: 1.1;
     color: var(--text-inverse);
     display: flex;
@@ -294,7 +294,7 @@ h1#dynamicWatchlistTitle.active {
 
 .asx-toggle-text {
     font-size: 1.05rem;
-    font-weight: 600;
+    font-weight: 700;
     color: var(--accent-color, #a49393);
     cursor: pointer;
     line-height: 1;
@@ -425,7 +425,9 @@ h1#dynamicWatchlistTitle.active {
 
 .connection-dot.pulse-fresh {
     animation: pulse-green 0.75s ease-in-out 2;
-}/* Header Carousel Navigation */
+}
+
+/* Header Carousel Navigation */
 .header-top-row .watchlist-carousel-nav {
     display: flex;
     align-items: center;
@@ -502,4 +504,3 @@ h1#dynamicWatchlistTitle.active {
     text-overflow: ellipsis;
     line-height: normal;
 }
-
