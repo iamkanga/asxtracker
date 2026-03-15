@@ -159,11 +159,11 @@ export class SnapshotUI {
             });
         }
 
-        // Delegate Card Clicks
         modal.addEventListener('click', (e) => {
             const card = e.target.closest(`.${CSS_CLASSES.SNAPSHOT_CARD}`);
             if (card && card.dataset.code) {
                 document.dispatchEvent(new CustomEvent(EVENTS.ASX_CODE_CLICK, { detail: { code: card.dataset.code } }));
+                this._close(modal);
             }
         });
     }

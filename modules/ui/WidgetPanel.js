@@ -564,7 +564,7 @@ export class WidgetPanel {
 
             return `
                 <div class="widget-row" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 18px; cursor: pointer;" 
-                     onclick="window.open('${url}', '_blank', 'noopener,noreferrer')">
+                     onclick="document.dispatchEvent(new CustomEvent('${EVENTS.ASX_CODE_CLICK}', { detail: { code: '${code}' } }))">
                     <div style="display: flex; align-items: center; flex: 1; text-align: left; gap: 8px;">
                         <div class="analog-clock-hook" data-code="${code}" style="width: 14px; height: 14px; flex-shrink: 0;"></div>
                         <span class="code" style="font-weight: 800; font-size: 1.05rem; color: #fff;">${displayName}</span>
