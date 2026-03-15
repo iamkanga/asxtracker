@@ -1540,7 +1540,7 @@ export class ViewRenderer {
 
         const modal = document.createElement('div');
         modal.id = IDS.RESEARCH_MODAL;
-        modal.className = `${CSS_CLASSES.MODAL} ${CSS_CLASSES.SHOW}`;
+        modal.className = `${CSS_CLASSES.MODAL} ${CSS_CLASSES.HIDDEN}`;
         modal.innerHTML = `
             <div class="${CSS_CLASSES.MODAL_OVERLAY}"></div>
                 <div class="${CSS_CLASSES.MODAL_CONTENT} ${CSS_CLASSES.MODAL_CONTENT_MEDIUM} ${CSS_CLASSES.RESEARCH_MODAL_CONTENT}">
@@ -1662,8 +1662,15 @@ export class ViewRenderer {
 
         // Bind Events
         const close = () => {
-            modal.classList.add(CSS_CLASSES.HIDDEN);
-            setTimeout(() => modal.remove(), 300);
+            if (modal._isClosing) return;
+            modal._isClosing = true;
+            modal.classList.remove(CSS_CLASSES.SHOW);
+            modal.style.pointerEvents = 'none';
+
+            setTimeout(() => {
+                modal.classList.add(CSS_CLASSES.HIDDEN);
+                if (modal.parentElement) modal.remove();
+            }, 850);
 
             // CLEANUP: Specialized handle
             window.removeEventListener(EVENTS.RESEARCH_LINKS_UPDATED, researchUpdateHandler);
@@ -1706,6 +1713,13 @@ export class ViewRenderer {
         }
 
         document.body.appendChild(modal);
+
+        requestAnimationFrame(() => {
+            modal.classList.remove(CSS_CLASSES.HIDDEN);
+            requestAnimationFrame(() => {
+                modal.classList.add(CSS_CLASSES.SHOW);
+            });
+        });
     }
 
     renderSortPickerModal(watchlistId, currentSort, onSelect, onHide = null, onGlobalToggle = null, onGlobalCancel = null) {
@@ -1800,6 +1814,9 @@ export class ViewRenderer {
         // 5. Ensure Visibility
         requestAnimationFrame(() => {
             modal.classList.remove(CSS_CLASSES.HIDDEN);
+            requestAnimationFrame(() => {
+                modal.classList.add(CSS_CLASSES.SHOW);
+            });
             document.getElementById(IDS.SORT_PICKER_BTN)?.classList.add(CSS_CLASSES.ACTIVE);
 
             // Register with NavigationManager if not already active
@@ -2612,7 +2629,17 @@ export class ViewRenderer {
     _closeSortPickerInstance() {
         const modal = document.getElementById(IDS.SORT_PICKER_MODAL);
         if (modal) {
-            modal.classList.add(CSS_CLASSES.HIDDEN);
+            if (modal._isClosing) return;
+            modal._isClosing = true;
+
+            modal.classList.remove(CSS_CLASSES.SHOW);
+            modal.style.pointerEvents = 'none';
+
+            setTimeout(() => {
+                modal.classList.add(CSS_CLASSES.HIDDEN);
+                modal._isClosing = false;
+                modal.style.pointerEvents = '';
+            }, 850);
             document.getElementById(IDS.SORT_PICKER_BTN)?.classList.remove(CSS_CLASSES.ACTIVE);
             this.isSortEditMode = false;
             this.sortPickerMode = 'default';
@@ -2645,7 +2672,7 @@ export class ViewRenderer {
         // Apply trend-based class to the modal content for matching gradients
         const modal = document.createElement('div');
         modal.id = IDS.SUMMARY_DETAIL_MODAL;
-        modal.className = `${CSS_CLASSES.MODAL} ${CSS_CLASSES.SHOW} `;
+        modal.className = `${CSS_CLASSES.MODAL} ${CSS_CLASSES.HIDDEN} `;
         const modalContentClass = `${CSS_CLASSES.MODAL_CONTENT} ${CSS_CLASSES.MODAL_CONTENT_MEDIUM} ${trendClass}`;
 
         const rowsHtml = shares.map(share => {
@@ -2703,7 +2730,7 @@ export class ViewRenderer {
         // Bind Events
         const close = () => {
             modal.classList.add(CSS_CLASSES.HIDDEN);
-            setTimeout(() => modal.remove(), 300);
+            setTimeout(() => modal.remove(), 850);
 
             // Remove from history stack if closed manually
             if (modal._navActive) {
@@ -2745,6 +2772,10 @@ export class ViewRenderer {
                     document.dispatchEvent(new CustomEvent(EVENTS.ASX_CODE_CLICK, { detail: { code, id } }));
                 }, 150);
             });
+        });
+
+        requestAnimationFrame(() => {
+            modal.classList.remove(CSS_CLASSES.HIDDEN);
         });
     }
 

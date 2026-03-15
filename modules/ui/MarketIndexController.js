@@ -100,9 +100,19 @@ export class MarketIndexController {
         // v1149: Prevent double-opening if already visible
         if (!this.modal.classList.contains('hidden')) return;
 
-        this.modal.classList.remove('hidden');
-        document.body.style.overflow = 'hidden';
-        this.render(notificationStore.getMarketIndexAlerts());
+        // Ensure initially hidden for animation clarity
+        // v2.3 Animation: Reset before showing
+        this.modal.classList.add('hidden');
+        this.modal.classList.remove('show');
+        
+        requestAnimationFrame(() => {
+            this.modal.classList.remove('hidden');
+            requestAnimationFrame(() => {
+                this.modal.classList.add('show');
+                document.body.style.overflow = 'hidden';
+                this.render(notificationStore.getMarketIndexAlerts());
+            });
+        });
 
         // Register with NavigationManager for Back Button support
         navManager.pushState(() => {
@@ -115,8 +125,14 @@ export class MarketIndexController {
     closeModal(fromNav = false) {
         if (!this.modal || this.modal.classList.contains('hidden')) return;
 
-        this.modal.classList.add('hidden');
+        this.modal.classList.remove('show');
         document.body.style.overflow = '';
+
+        setTimeout(() => {
+            if (!this.modal.classList.contains('show')) {
+                this.modal.classList.add('hidden');
+            }
+        }, 850);
 
         // If closed via UI (X button) instead of Back Button, sync the browser history
         if (!fromNav) {

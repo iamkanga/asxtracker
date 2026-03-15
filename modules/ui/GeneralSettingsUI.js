@@ -159,8 +159,13 @@ export class GeneralSettingsUI {
         this._bindAccordionEvents(modal, controller);
 
         // Show with animation (next frame)
+        // v2.3 Animation: Reset before showing
+        modal.classList.remove(CSS_CLASSES.SHOW);
+        
         requestAnimationFrame(() => {
-            modal.classList.add(CSS_CLASSES.SHOW);
+            requestAnimationFrame(() => {
+                modal.classList.add(CSS_CLASSES.SHOW);
+            });
         });
     }
 
@@ -281,10 +286,11 @@ export class GeneralSettingsUI {
      */
     static _dismissModal(modal, skipPopState = false) {
         if (!modal) return;
+        modal._isClosing = true;
         modal.classList.remove(CSS_CLASSES.SHOW);
         setTimeout(() => {
             if (modal.parentElement) modal.remove();
-        }, 350);
+        }, 850);
         if (!skipPopState) {
             navManager.popStateSilently();
         }

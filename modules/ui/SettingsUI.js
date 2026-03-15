@@ -39,7 +39,12 @@ export class SettingsUI {
         });
 
         // Show
-        requestAnimationFrame(() => modal.classList.remove(CSS_CLASSES.HIDDEN));
+        requestAnimationFrame(() => {
+            modal.classList.remove(CSS_CLASSES.HIDDEN);
+            requestAnimationFrame(() => {
+                modal.classList.add(CSS_CLASSES.SHOW);
+            });
+        });
     }
 
     static _renderModal() {
@@ -1243,9 +1248,18 @@ export class SettingsUI {
         };
 
         const close = () => {
+            if (modal._isClosing) return;
+            modal._isClosing = true;
+
             // NO REVERT LOGIC - Auto-Saved.
-            modal.classList.add(CSS_CLASSES.HIDDEN);
-            setTimeout(() => modal.remove(), 300);
+            modal.classList.remove(CSS_CLASSES.SHOW);
+            modal.style.pointerEvents = 'none';
+
+            setTimeout(() => {
+                modal.classList.add(CSS_CLASSES.HIDDEN);
+                modal.remove();
+            }, 850);
+
             if (unsubscribe) unsubscribe();
             if (modal._navActive) {
                 modal._navActive = false;

@@ -260,6 +260,9 @@ export class NotificationUI {
         if (modal) {
             // If already open, just ensure it's visible and update list if needed
             modal.classList.remove(CSS_CLASSES.HIDDEN);
+            requestAnimationFrame(() => {
+                modal.classList.add(CSS_CLASSES.SHOW);
+            });
             this._updateList(modal);
         } else {
             // Render Fresh
@@ -271,6 +274,9 @@ export class NotificationUI {
 
             requestAnimationFrame(() => {
                 modal.classList.remove(CSS_CLASSES.HIDDEN);
+                requestAnimationFrame(() => {
+                    modal.classList.add(CSS_CLASSES.SHOW);
+                });
             });
         }
 
@@ -455,7 +461,11 @@ export class NotificationUI {
     }
 
     static _close(modal) {
-        modal.classList.add(CSS_CLASSES.HIDDEN);
+        if (!modal || modal._isClosing) return;
+        modal._isClosing = true;
+
+        modal.classList.remove(CSS_CLASSES.SHOW);
+        modal.style.pointerEvents = 'none';
 
         // UNIVERSAL RESTORATION: Restore any modals we hid when opening
         if (this._restorableModals && this._restorableModals.length > 0) {
@@ -486,7 +496,10 @@ export class NotificationUI {
             this._settingsRestorable = false;
         }
 
-        setTimeout(() => modal.remove(), 300);
+        setTimeout(() => {
+            modal.classList.add(CSS_CLASSES.HIDDEN);
+            modal.remove();
+        }, 850);
         if (modal._navActive) {
             modal._navActive = false;
             navManager.popStateSilently();

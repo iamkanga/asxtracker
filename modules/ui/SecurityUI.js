@@ -20,7 +20,7 @@ export const SecurityUI = {
 
         const modal = document.createElement('div');
         modal.id = IDS.SECURITY_UNLOCK_MODAL;
-        modal.className = `${CSS_CLASSES.MODAL} ${CSS_CLASSES.SHOW} ${CSS_CLASSES.SECURITY_LOCK_MODAL}`;
+        modal.className = `${CSS_CLASSES.MODAL} ${CSS_CLASSES.HIDDEN} ${CSS_CLASSES.SECURITY_LOCK_MODAL}`;
 
         // We wait for the support check to be sure about biometric button visibility
         const isBiometricSupported = await AppState.securityController.waitForSupportCheck();
@@ -61,6 +61,13 @@ export const SecurityUI = {
 
         document.body.appendChild(modal);
 
+        requestAnimationFrame(() => {
+            modal.classList.remove(CSS_CLASSES.HIDDEN);
+            requestAnimationFrame(() => {
+                modal.classList.add(CSS_CLASSES.SHOW);
+            });
+        });
+
         let currentPin = "";
         const dots = modal.querySelectorAll(`.${CSS_CLASSES.PIN_DOT}`);
 
@@ -90,8 +97,12 @@ export const SecurityUI = {
 
                     // Execute immediately (Performance fix)
                     if (options.onUnlock(currentPin)) {
-                        modal.classList.add(CSS_CLASSES.FADE_OUT);
-                        setTimeout(() => modal.remove(), 300);
+                        modal.classList.remove(CSS_CLASSES.SHOW);
+                        modal.style.pointerEvents = 'none';
+                        setTimeout(() => {
+                            modal.classList.add(CSS_CLASSES.HIDDEN);
+                            modal.remove();
+                        }, 850);
                     } else {
                         // Shake animation
                         modal.querySelector(`.${CSS_CLASSES.SECURITY_PIN_CONTENT}`).classList.add(CSS_CLASSES.SHAKE);
@@ -147,7 +158,16 @@ export const SecurityUI = {
         const prefs = AppState.preferences.security;
         const modal = document.createElement('div');
         modal.id = IDS.SECURITY_SETTINGS_MODAL;
-        modal.className = `${CSS_CLASSES.MODAL} ${CSS_CLASSES.SHOW}`;
+        modal.className = `${CSS_CLASSES.MODAL} ${CSS_CLASSES.HIDDEN}`;
+
+        document.body.appendChild(modal);
+
+        requestAnimationFrame(() => {
+            modal.classList.remove(CSS_CLASSES.HIDDEN);
+            requestAnimationFrame(() => {
+                modal.classList.add(CSS_CLASSES.SHOW);
+            });
+        });
 
         // Register with NavigationManager
         this._navActive = true;
@@ -318,8 +338,17 @@ export const SecurityUI = {
 
         const modal = document.createElement('div');
         modal.id = IDS.PIN_SETUP_MODAL;
-        modal.className = `${CSS_CLASSES.MODAL} ${CSS_CLASSES.SHOW}`;
+        modal.className = `${CSS_CLASSES.MODAL} ${CSS_CLASSES.HIDDEN}`;
         modal.style.zIndex = "1100"; // Exceptional override for layered modals
+
+        document.body.appendChild(modal);
+
+        requestAnimationFrame(() => {
+            modal.classList.remove(CSS_CLASSES.HIDDEN);
+            requestAnimationFrame(() => {
+                modal.classList.add(CSS_CLASSES.SHOW);
+            });
+        });
 
         modal.innerHTML = `
             <div class="${CSS_CLASSES.MODAL_OVERLAY}"></div>
@@ -353,11 +382,20 @@ export const SecurityUI = {
         });
 
         const closeModal = () => {
-            modal.remove();
+            if (modal._isClosing) return;
+            modal._isClosing = true;
+
+            modal.classList.remove(CSS_CLASSES.SHOW);
+            modal.style.pointerEvents = 'none';
+
+            setTimeout(() => {
+                modal.classList.add(CSS_CLASSES.HIDDEN);
+                if (modal.parentElement) modal.remove();
+            }, 850);
 
             // Navigation Cleanup
             if (modal._navActive) {
-                modal._navActive = false;
+                this._navActive = false;
                 navManager.popStateSilently();
             }
             if (onCancel) onCancel();
@@ -415,10 +453,15 @@ export const SecurityUI = {
 
                             // Navigation Cleanup before removal
                             if (modal._navActive) {
-                                modal._navActive = false;
+                                this._navActive = false;
                                 navManager.popStateSilently();
                             }
-                            modal.remove();
+                            modal.classList.remove(CSS_CLASSES.SHOW);
+                            modal.style.pointerEvents = 'none';
+                            setTimeout(() => {
+                                modal.classList.add(CSS_CLASSES.HIDDEN);
+                                modal.remove();
+                            }, 850);
                             if (onSuccess) onSuccess();
                         } else {
                             ToastManager.error("PINs do not match. Try again.");
@@ -440,7 +483,17 @@ export const SecurityUI = {
 
     _closeSecurityModal(modal) {
         if (modal) {
-            modal.remove();
+            if (modal._isClosing) return;
+            modal._isClosing = true;
+
+            modal.classList.remove(CSS_CLASSES.SHOW);
+            modal.style.pointerEvents = 'none';
+
+            setTimeout(() => {
+                modal.classList.add(CSS_CLASSES.HIDDEN);
+                if (modal.parentElement) modal.remove();
+            }, 850);
+            
             // Remove from history stack if closed manually
             if (this._navActive) {
                 this._navActive = false;

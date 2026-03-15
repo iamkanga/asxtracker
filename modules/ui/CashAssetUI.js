@@ -159,7 +159,7 @@ export class CashAssetUI {
 
         const modal = document.createElement('div');
         modal.id = this.modalId;
-        modal.className = `${CSS_CLASSES.MODAL} ${CSS_CLASSES.HIDDEN}`;
+        modal.className = `${CSS_CLASSES.MODAL} ${CSS_CLASSES.HIDDEN} ${CSS_CLASSES.SHOW}`;
 
         // PRIORITY: Use Category Theme color if it exists, otherwise use asset's explicit color or pick one
         const userCatTheme = (AppState.preferences.userCategories || []).find(c => c && c.id === this.selectedCategory);
@@ -398,11 +398,19 @@ export class CashAssetUI {
         modal.querySelector(`#${IDS.BTN_ADD_COMMENT}`).addEventListener('click', () => addComment());
 
         const close = () => {
+            if (modal._isClosing) return;
+            modal._isClosing = true;
+
             // Detach keyboard handler before closing
             KeyboardModalHandler.detach();
 
-            modal.classList.add(CSS_CLASSES.HIDDEN);
-            setTimeout(() => modal.remove(), 300);
+            modal.classList.remove(CSS_CLASSES.SHOW);
+            modal.style.pointerEvents = 'none';
+
+            setTimeout(() => {
+                modal.classList.add(CSS_CLASSES.HIDDEN);
+                modal.remove();
+            }, 850);
             navManager.popStateSilently();
         };
 
@@ -418,7 +426,9 @@ export class CashAssetUI {
         // Attach keyboard handler for Android keyboard visibility
         KeyboardModalHandler.attach(modal);
 
-        requestAnimationFrame(() => modal.classList.remove(CSS_CLASSES.HIDDEN));
+        requestAnimationFrame(() => {
+            modal.classList.remove(CSS_CLASSES.HIDDEN);
+        });
     }
 
     gatherFormData(modal) {

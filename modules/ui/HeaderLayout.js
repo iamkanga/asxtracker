@@ -493,24 +493,31 @@ export class HeaderLayout {
      */
     _openCreateWatchlistModal() {
         if (!this.createWatchlistModal) return;
-        this.createWatchlistModal.classList.remove(CSS_CLASSES.HIDDEN);
-        this.createWatchlistModal.classList.add(CSS_CLASSES.SHOW);
 
-        // Register with NavigationManager
-        this._createModalNavActive = true;
-        navManager.pushState(() => {
-            this._createModalNavActive = false;
-            this._closeCreateWatchlistModal();
+        // Ensure initially hidden for animation clarity
+        this.createWatchlistModal.classList.add(CSS_CLASSES.HIDDEN);
+        this.createWatchlistModal.classList.remove(CSS_CLASSES.SHOW);
+
+        requestAnimationFrame(() => {
+            this.createWatchlistModal.classList.remove(CSS_CLASSES.HIDDEN);
+            this.createWatchlistModal.classList.add(CSS_CLASSES.SHOW);
+
+            // Register with NavigationManager
+            this._createModalNavActive = true;
+            navManager.pushState(() => {
+                this._createModalNavActive = false;
+                this._closeCreateWatchlistModal();
+            });
+
+            // Reset input
+            if (this.createWatchlistInput) {
+                this.createWatchlistInput.value = '';
+                this.createWatchlistInput.focus();
+            }
+            if (this.createWatchlistSubmit) {
+                this.createWatchlistSubmit.disabled = true;
+            }
         });
-
-        // Reset input
-        if (this.createWatchlistInput) {
-            this.createWatchlistInput.value = '';
-            this.createWatchlistInput.focus();
-        }
-        if (this.createWatchlistSubmit) {
-            this.createWatchlistSubmit.disabled = true;
-        }
     }
 
     /**
@@ -631,25 +638,31 @@ export class HeaderLayout {
         // Store the current ID for save/delete operations
         this.currentEditWatchlistId = currentId;
 
-        this.editWatchlistModal.classList.remove(CSS_CLASSES.HIDDEN);
-        this.editWatchlistModal.classList.add(CSS_CLASSES.SHOW);
+        // Ensure initially hidden for animation clarity
+        this.editWatchlistModal.classList.add(CSS_CLASSES.HIDDEN);
+        this.editWatchlistModal.classList.remove(CSS_CLASSES.SHOW);
 
-        // Register with NavigationManager
-        this._editModalNavActive = true;
-        navManager.pushState(() => {
-            this._editModalNavActive = false;
-            this._closeEditWatchlistModal();
+        requestAnimationFrame(() => {
+            this.editWatchlistModal.classList.remove(CSS_CLASSES.HIDDEN);
+            this.editWatchlistModal.classList.add(CSS_CLASSES.SHOW);
+
+            // Register with NavigationManager
+            this._editModalNavActive = true;
+            navManager.pushState(() => {
+                this._editModalNavActive = false;
+                this._closeEditWatchlistModal();
+            });
+
+            // Pre-fill input with current name
+            if (this.editWatchlistInput) {
+                this.editWatchlistInput.value = currentName;
+                this.editWatchlistInput.focus();
+                this.editWatchlistInput.select();
+            }
+            if (this.editWatchlistSubmit) {
+                this.editWatchlistSubmit.disabled = !currentName;
+            }
         });
-
-        // Pre-fill input with current name
-        if (this.editWatchlistInput) {
-            this.editWatchlistInput.value = currentName;
-            this.editWatchlistInput.focus();
-            this.editWatchlistInput.select();
-        }
-        if (this.editWatchlistSubmit) {
-            this.editWatchlistSubmit.disabled = !currentName;
-        }
     }
 
     /**

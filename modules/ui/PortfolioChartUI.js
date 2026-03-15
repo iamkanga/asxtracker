@@ -59,7 +59,7 @@ export class PortfolioChartUI {
 
         this.modal = document.createElement('div');
         this.modal.id = 'portfolio-chart-modal';
-        this.modal.className = `${CSS_CLASSES.MODAL} ${CSS_CLASSES.SHOW}`;
+        this.modal.className = `${CSS_CLASSES.MODAL} ${CSS_CLASSES.HIDDEN}`;
 
         // Prepare Category Breakdown Dropdown Items
         const cashByCat = this._getCashByCategory();
@@ -228,14 +228,33 @@ export class PortfolioChartUI {
 
         document.body.appendChild(this.modal);
         this._bindEvents();
+
+        requestAnimationFrame(() => {
+            this.modal.classList.remove(CSS_CLASSES.HIDDEN);
+            requestAnimationFrame(() => {
+                this.modal.classList.add(CSS_CLASSES.SHOW);
+            });
+        });
+
         setTimeout(() => this.initChart(), 100);
     }
 
     _bindEvents() {
         const close = () => {
+            if (this.modal._isClosing) return;
+            this.modal._isClosing = true;
+
             if (this.resizeObserver) { this.resizeObserver.disconnect(); this.resizeObserver = null; }
             if (this.chart) { this.chart.remove(); this.chart = null; }
-            this.modal.remove();
+            
+            this.modal.classList.remove(CSS_CLASSES.SHOW);
+            this.modal.style.pointerEvents = 'none';
+            
+            setTimeout(() => {
+                this.modal.classList.add(CSS_CLASSES.HIDDEN);
+                if (this.modal.parentElement) this.modal.remove();
+            }, 850);
+
             if (this.modal._navActive) { this.modal._navActive = false; navManager.popStateSilently(); }
         };
 

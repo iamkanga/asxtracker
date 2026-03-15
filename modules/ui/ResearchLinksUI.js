@@ -93,7 +93,15 @@ export default class ResearchLinksUI {
         const modal = document.getElementById(IDS.MODAL_RESEARCH_LINKS);
         if (!modal) return;
 
-        modal.classList.remove(CSS_CLASSES.HIDDEN);
+        modal.classList.add(CSS_CLASSES.HIDDEN); 
+        
+        requestAnimationFrame(() => {
+            modal.classList.remove(CSS_CLASSES.HIDDEN);
+            requestAnimationFrame(() => {
+                modal.classList.add(CSS_CLASSES.SHOW);
+            });
+        });
+        
         this.render();
 
         navManager.pushState(() => this.hide(), 'ResearchLinks');
@@ -102,8 +110,18 @@ export default class ResearchLinksUI {
     static hide() {
         const modal = document.getElementById(IDS.MODAL_RESEARCH_LINKS);
         if (modal) {
-            modal.classList.add(CSS_CLASSES.HIDDEN);
+            if (modal._isClosing) return;
+            modal._isClosing = true;
+
+            modal.classList.remove(CSS_CLASSES.SHOW);
+            modal.style.pointerEvents = 'none';
+
             // Safety: Ensure we pop state if we're closing via UI and not via back button
+            setTimeout(() => {
+                modal.classList.add(CSS_CLASSES.HIDDEN);
+                modal._isClosing = false;
+                modal.style.pointerEvents = '';
+            }, 850);
             navManager.popStateSilently();
         }
     }

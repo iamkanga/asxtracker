@@ -495,7 +495,7 @@ export class ShareFormUI {
         const currentMemberships = stringMemberships.filter(id => validWatchlistIds.has(id));
         const modal = document.createElement('div');
         modal.id = IDS.ADD_SHARE_MODAL;
-        modal.className = `${CSS_CLASSES.MODAL} ${CSS_CLASSES.HIDDEN}`;
+        modal.className = `${CSS_CLASSES.MODAL} ${CSS_CLASSES.HIDDEN} ${CSS_CLASSES.SHOW}`;
 
         // FIX: Ensure Edit Modal is on top of Stock Details (21000)
         modal.style.setProperty('z-index', '22000', 'important');
@@ -746,11 +746,19 @@ export class ShareFormUI {
         const overlay = modal.querySelector(`.${CSS_CLASSES.MODAL_OVERLAY}`);
 
         const close = () => {
+            if (modal._isClosing) return;
+            modal._isClosing = true;
+
             // Detach keyboard handler before closing
             KeyboardModalHandler.detach();
 
-            modal.classList.add(CSS_CLASSES.HIDDEN);
-            setTimeout(() => modal.remove(), 300);
+            modal.classList.remove(CSS_CLASSES.SHOW);
+            modal.style.pointerEvents = 'none';
+
+            setTimeout(() => {
+                modal.classList.add(CSS_CLASSES.HIDDEN);
+                modal.remove();
+            }, 850);
 
             // Remove from history stack if closed manually
             if (modal._navActive) {

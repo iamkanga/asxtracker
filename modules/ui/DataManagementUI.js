@@ -14,12 +14,9 @@ import { userStore } from '../data/DataService.js';
 export class DataManagementUI {
 
     static showModal(cameFromSettings = false) {
-        const existing = document.getElementById('data-management-modal');
-        if (existing) existing.remove();
-
         const modal = document.createElement('div');
         modal.id = 'data-management-modal';
-        modal.className = `${CSS_CLASSES.MODAL} ${CSS_CLASSES.SHOW}`;
+        modal.className = `${CSS_CLASSES.MODAL} ${CSS_CLASSES.HIDDEN}`;
 
         // Initial Tabs State
         let activeTab = 'export'; // 'export' | 'import'
@@ -131,14 +128,24 @@ export class DataManagementUI {
 
         document.body.appendChild(modal);
 
+        requestAnimationFrame(() => {
+            modal.classList.remove(CSS_CLASSES.HIDDEN);
+            requestAnimationFrame(() => {
+                modal.classList.add(CSS_CLASSES.SHOW);
+            });
+        });
+
         // Navigation Hook
         navManager.pushState(() => {
             if (modal.parentElement) {
-                modal.remove();
-                if (cameFromSettings) {
-                    const { GeneralSettingsUI } = require('./GeneralSettingsUI.js');
-                    GeneralSettingsUI.showModal();
-                }
+                modal.classList.add(CSS_CLASSES.HIDDEN);
+                setTimeout(() => {
+                    if (modal.parentElement) modal.remove();
+                    if (cameFromSettings) {
+                        const { GeneralSettingsUI } = require('./GeneralSettingsUI.js');
+                        GeneralSettingsUI.showModal();
+                    }
+                }, 850);
             }
         });
 
@@ -158,14 +165,21 @@ export class DataManagementUI {
 
         // --- CLOSE LOGIC ---
         const close = () => {
-            modal.remove();
-            if (cameFromSettings) {
-                navManager.popStateSilently();
-                const { GeneralSettingsUI } = require('./GeneralSettingsUI.js');
-                GeneralSettingsUI.showModal();
-            } else {
-                navManager.popStateSilently();
-            }
+            if (modal._isClosing) return;
+            modal._isClosing = true;
+
+            modal.classList.remove(CSS_CLASSES.SHOW);
+            modal.style.pointerEvents = 'none';
+
+            setTimeout(() => {
+                modal.classList.add(CSS_CLASSES.HIDDEN);
+                if (modal.parentElement) modal.remove();
+                if (cameFromSettings) {
+                    const { GeneralSettingsUI } = require('./GeneralSettingsUI.js');
+                    GeneralSettingsUI.showModal();
+                }
+            }, 850);
+            navManager.popStateSilently();
         };
         modal.querySelector(`.${CSS_CLASSES.MODAL_CLOSE_BTN}`).addEventListener('click', close);
         modal.querySelector(`.${CSS_CLASSES.MODAL_OVERLAY}`).addEventListener('click', close);
@@ -336,8 +350,17 @@ export class DataManagementUI {
 
     static _showSyncResult(matches = [], newShares = [], ignored = []) {
         const modal = document.createElement('div');
-        modal.className = `${CSS_CLASSES.MODAL} ${CSS_CLASSES.SHOW}`;
+        modal.className = `${CSS_CLASSES.MODAL} ${CSS_CLASSES.HIDDEN}`;
         modal.style.zIndex = '3000';
+
+        document.body.appendChild(modal);
+
+        requestAnimationFrame(() => {
+            modal.classList.remove(CSS_CLASSES.HIDDEN);
+            requestAnimationFrame(() => {
+                modal.classList.add(CSS_CLASSES.SHOW);
+            });
+        });
 
         const renderItemCard = (item, type) => {
             const isNew = type === 'new';
@@ -453,12 +476,24 @@ export class DataManagementUI {
 
         navManager.pushState(() => {
             if (modal.parentElement) {
-                modal.remove();
+                modal.classList.add(CSS_CLASSES.HIDDEN);
+                setTimeout(() => {
+                    if (modal.parentElement) modal.remove();
+                }, 850);
             }
         });
 
         const closeModal = () => {
-            modal.remove();
+            if (modal._isClosing) return;
+            modal._isClosing = true;
+
+            modal.classList.remove(CSS_CLASSES.SHOW);
+            modal.style.pointerEvents = 'none';
+
+            setTimeout(() => {
+                modal.classList.add(CSS_CLASSES.HIDDEN);
+                if (modal.parentElement) modal.remove();
+            }, 850);
             navManager.popStateSilently();
         };
 

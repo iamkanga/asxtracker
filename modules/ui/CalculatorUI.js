@@ -26,7 +26,7 @@ export default class CalculatorUI {
 
         const modal = document.createElement('div');
         modal.id = IDS.CALCULATOR_MODAL;
-        modal.className = `${CSS_CLASSES.MODAL} ${CSS_CLASSES.SHOW}`;
+        modal.className = `${CSS_CLASSES.MODAL} ${CSS_CLASSES.HIDDEN}`;
         modal.innerHTML = `
             <div class="${CSS_CLASSES.MODAL_OVERLAY}"></div>
             <div class="${CSS_CLASSES.MODAL_CONTENT} ${CSS_CLASSES.MODAL_CONTENT_MEDIUM}" style="height: 85vh; max-height: 750px; display: flex; flex-direction: column;">
@@ -44,6 +44,13 @@ export default class CalculatorUI {
         const instance = new CalculatorUI();
         instance.render(modal.querySelector('#calc-modal-body'));
 
+        requestAnimationFrame(() => {
+            modal.classList.remove(CSS_CLASSES.HIDDEN);
+            requestAnimationFrame(() => {
+                modal.classList.add(CSS_CLASSES.SHOW);
+            });
+        });
+
         // Nav Hook
         navManager.pushState(() => {
             if (modal.parentElement) modal.remove();
@@ -51,8 +58,17 @@ export default class CalculatorUI {
 
         // Close Logic
         const close = () => {
-            modal.remove();
-            navManager.popStateSilently();
+            if (modal._isClosing) return;
+            modal._isClosing = true;
+
+            modal.classList.remove(CSS_CLASSES.SHOW);
+            modal.style.pointerEvents = 'none';
+
+            setTimeout(() => {
+                modal.classList.add(CSS_CLASSES.HIDDEN);
+                modal.remove();
+                navManager.popStateSilently();
+            }, 850);
         };
         modal.querySelector(`.${CSS_CLASSES.MODAL_CLOSE_BTN}`).addEventListener('click', close);
         modal.querySelector(`.${CSS_CLASSES.MODAL_OVERLAY}`).addEventListener('click', close);

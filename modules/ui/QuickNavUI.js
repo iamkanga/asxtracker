@@ -229,8 +229,19 @@ export class QuickNavUI {
         this._updateSortDisplay();
         this._updateDirectionIcon();
 
-        this.modal.classList.remove(CSS_CLASSES.HIDDEN);
-        this.modal.classList.add(CSS_CLASSES.SHOW);
+        // v2.3 Animation: Reset before showing
+        this._isClosing = false;
+        this.modal.style.pointerEvents = '';
+        this.modal.classList.add(CSS_CLASSES.HIDDEN);
+        this.modal.classList.remove(CSS_CLASSES.SHOW);
+
+        requestAnimationFrame(() => {
+            this.modal.classList.remove(CSS_CLASSES.HIDDEN);
+            requestAnimationFrame(() => {
+                this.modal.classList.add(CSS_CLASSES.SHOW);
+            });
+        });
+
         this.isVisible = true;
 
         // Register with NavigationManager
@@ -248,9 +259,19 @@ export class QuickNavUI {
     }
 
     hide() {
+        if (!this.isVisible || this._isClosing) return;
+        this._isClosing = true;
+        
         this.modal.classList.remove(CSS_CLASSES.SHOW);
-        this.modal.classList.add(CSS_CLASSES.HIDDEN);
+        this.modal.style.pointerEvents = 'none';
         this.isVisible = false;
+
+        // v2.3 Animation: Delay hiding to allow transition to finish
+        setTimeout(() => {
+            if (!this.isVisible) {
+                this.modal.classList.add(CSS_CLASSES.HIDDEN);
+            }
+        }, 850);
 
         // Navigation Cleanup: If closed manually, sync history stack
         if (this._navActive) {

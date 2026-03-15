@@ -50,9 +50,11 @@ export class SnapshotUI {
     }
 
     static _close(modal) {
-        if (!modal) return;
+        if (!modal || modal._isClosing) return;
+        modal._isClosing = true;
+
         modal.classList.remove(CSS_CLASSES.SHOW);
-        modal.classList.add(CSS_CLASSES.HIDDEN);
+        modal.style.pointerEvents = 'none';
 
         if (modal._priceUnsub) {
             modal._priceUnsub();
@@ -60,6 +62,7 @@ export class SnapshotUI {
         }
 
         setTimeout(() => {
+            modal.classList.add(CSS_CLASSES.HIDDEN);
             if (modal.parentElement) modal.remove();
         }, 850); // Improved pace: matching 0.8s transition + buffer
 

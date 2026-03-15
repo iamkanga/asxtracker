@@ -86,8 +86,17 @@ export class WatchlistUI {
     closeModal() {
         const modal = document.getElementById(IDS.WATCHLIST_PICKER_MODAL);
         if (modal) {
+            if (modal._isClosing) return;
+            modal._isClosing = true;
+
             modal.classList.remove(CSS_CLASSES.SHOW);
-            modal.classList.add(CSS_CLASSES.HIDDEN);
+            modal.style.pointerEvents = 'none';
+
+            setTimeout(() => {
+                modal.classList.add(CSS_CLASSES.HIDDEN);
+                modal._isClosing = false;
+                modal.style.pointerEvents = '';
+            }, 850);
 
             if (this._navActive) {
                 this._navActive = false;
@@ -178,20 +187,28 @@ export class WatchlistUI {
         const titleEl = document.getElementById(IDS.DYNAMIC_WATCHLIST_TITLE);
 
         if (modal) {
-            modal.classList.remove(CSS_CLASSES.HIDDEN);
-            modal.classList.add(CSS_CLASSES.SHOW);
-            if (titleEl) titleEl.classList.add(CSS_CLASSES.ACTIVE);
+            // Ensure initially hidden for animation clarity
+            modal.classList.add(CSS_CLASSES.HIDDEN);
+            modal.classList.remove(CSS_CLASSES.SHOW);
 
-            this._navActive = true;
-            navManager.pushState(() => {
-                if (modal.classList.contains(CSS_CLASSES.SHOW)) {
-                    this._navActive = false;
-                    this.closeModal();
-                }
+            requestAnimationFrame(() => {
+                modal.classList.remove(CSS_CLASSES.HIDDEN);
+                requestAnimationFrame(() => {
+                    modal.classList.add(CSS_CLASSES.SHOW);
+                });
+                if (titleEl) titleEl.classList.add(CSS_CLASSES.ACTIVE);
+
+                this._navActive = true;
+                navManager.pushState(() => {
+                    if (modal.classList.contains(CSS_CLASSES.SHOW)) {
+                        this._navActive = false;
+                        this.closeModal();
+                    }
+                });
+
+                // Initial Render
+                this.renderWatchlistDropdown();
             });
-
-            // Initial Render
-            this.renderWatchlistDropdown();
         }
     }
 

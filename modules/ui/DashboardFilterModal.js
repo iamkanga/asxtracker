@@ -20,13 +20,18 @@ export class DashboardFilterModal {
         this._renderList(modal);
         this._bindEvents(modal);
 
-        requestAnimationFrame(() => modal.classList.remove(CSS_CLASSES.HIDDEN));
+        requestAnimationFrame(() => {
+            modal.classList.remove(CSS_CLASSES.HIDDEN);
+            requestAnimationFrame(() => {
+                modal.classList.add(CSS_CLASSES.SHOW);
+            });
+        });
     }
 
     static _renderModal() {
         const modal = document.createElement('div');
         modal.id = 'dashboard-filter-modal';
-        modal.className = `${CSS_CLASSES.MODAL} ${CSS_CLASSES.HIDDEN}`;
+        modal.className = `${CSS_CLASSES.MODAL} ${CSS_CLASSES.HIDDEN} ${CSS_CLASSES.SHOW}`;
 
         modal.innerHTML = `
             <div class="${CSS_CLASSES.MODAL_OVERLAY}"></div>
@@ -280,9 +285,16 @@ export class DashboardFilterModal {
 
     static _bindEvents(modal) {
         const closeModal = () => {
-            modal.classList.add(CSS_CLASSES.HIDDEN);
-            setTimeout(() => { if (modal.parentElement) modal.remove(); }, 300);
-            window.dispatchEvent(new Event('dashboard-prefs-changed'));
+            if (modal._isClosing) return;
+            modal._isClosing = true;
+
+            modal.classList.remove(CSS_CLASSES.SHOW);
+            modal.style.pointerEvents = 'none';
+
+            setTimeout(() => {
+                if (modal.parentElement) modal.remove();
+                window.dispatchEvent(new Event('dashboard-prefs-changed'));
+            }, 850);
 
             // Navigation Cleanup
             if (modal._navActive) {

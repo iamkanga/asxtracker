@@ -19,7 +19,7 @@ export class SearchDiscoveryUI {
 
         const modal = document.createElement('div');
         modal.id = IDS.DISCOVERY_MODAL;
-        modal.className = `${CSS_CLASSES.MODAL} ${CSS_CLASSES.SHOW}`;
+        modal.className = `${CSS_CLASSES.MODAL} ${CSS_CLASSES.HIDDEN} ${CSS_CLASSES.SHOW}`;
         modal.innerHTML = `
             <div class="${CSS_CLASSES.MODAL_OVERLAY}"></div>
             <div class="${CSS_CLASSES.MODAL_CONTENT} modal-content-medium" style="max-height: 85vh; display: flex; flex-direction: column;">
@@ -59,6 +59,10 @@ export class SearchDiscoveryUI {
 
         document.body.appendChild(modal);
 
+        requestAnimationFrame(() => {
+            modal.classList.remove(CSS_CLASSES.HIDDEN);
+        });
+
         // Binds
         this._bindEvents(modal);
 
@@ -89,16 +93,14 @@ export class SearchDiscoveryUI {
             if (modal._isClosing) return;
             modal._isClosing = true;
 
-            // Visual Dismissal (Immediate)
+            // Visual Dismissal (Start Animation)
             modal.classList.remove(CSS_CLASSES.SHOW);
-            modal.classList.add(CSS_CLASSES.HIDDEN);
-            modal.style.display = 'none';
             modal.style.pointerEvents = 'none';
 
             // DOM Cleanup
             setTimeout(() => {
                 modal.remove();
-            }, 50);
+            }, 850);
 
             // Remove from history stack if closed manually
             if (modal._navActive) {

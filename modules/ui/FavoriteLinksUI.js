@@ -65,7 +65,12 @@ export class FavoriteLinksUI {
         }
 
         this._renderContent(modal);
-        modal.classList.remove(CSS_CLASSES.HIDDEN);
+        requestAnimationFrame(() => {
+            modal.classList.remove(CSS_CLASSES.HIDDEN);
+            requestAnimationFrame(() => {
+                modal.classList.add(CSS_CLASSES.SHOW);
+            });
+        });
 
         modal._navActive = true;
         navManager.pushState(() => {
@@ -79,7 +84,18 @@ export class FavoriteLinksUI {
     static closeModal() {
         const modal = document.getElementById(IDS.MODAL_FAVORITE_LINKS);
         if (modal) {
-            modal.classList.add(CSS_CLASSES.HIDDEN);
+            if (modal._isClosing) return;
+            modal._isClosing = true;
+
+            modal.classList.remove(CSS_CLASSES.SHOW);
+            modal.style.pointerEvents = 'none';
+
+            setTimeout(() => {
+                modal.classList.add(CSS_CLASSES.HIDDEN);
+                modal._isClosing = false;
+                modal.style.pointerEvents = '';
+            }, 850);
+
             if (modal._navActive) {
                 modal._navActive = false;
                 navManager.popStateSilently();
