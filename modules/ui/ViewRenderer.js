@@ -861,8 +861,18 @@ export class ViewRenderer {
 
         const safeVal = (v, fmt) => (v !== undefined && v !== null && v !== 0) ? fmt(v) : '-';
 
-        // Check if we should show a Back button (e.g. if Allocation modal is present)
+        // Check for specific Parent Modals for Back Button support
         const hasAllocationModal = document.getElementById('share-pie-modal') !== null;
+        const hasSnapshotModal = document.getElementById(IDS.SNAPSHOT_MODAL_CONTAINER) !== null;
+        const hasNotificationModal = document.getElementById(IDS.NOTIFICATION_MODAL) !== null;
+        
+        const hasParentModal = hasAllocationModal || hasSnapshotModal || hasNotificationModal;
+        
+        // Determine label for Back button
+        let backLabel = 'Back';
+        if (hasAllocationModal) backLabel = 'Back to Allocation';
+        else if (hasSnapshotModal) backLabel = 'Back to Market Pulse';
+        else if (hasNotificationModal) backLabel = 'Back to Notifications';
 
         modal.innerHTML = `
             <div class="${CSS_CLASSES.MODAL_OVERLAY}"></div>
@@ -872,8 +882,8 @@ export class ViewRenderer {
                         <div class="${CSS_CLASSES.MODAL_HEADER_LEFT} ${CSS_CLASSES.FLEX_1}">
                             <div class="${CSS_CLASSES.TEXT_LEFT} ${CSS_CLASSES.W_FULL}">
                                 <div class="${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.ALIGN_CENTER} ${CSS_CLASSES.JUSTIFY_START}">
-                                    ${hasAllocationModal ? `
-                                        <button class="modal-back-btn" id="details-back-btn" title="Back to Allocation" style="margin-right: 12px; margin-left: -5px;">
+                                    ${hasParentModal ? `
+                                        <button class="modal-back-btn" id="details-back-btn" title="${backLabel}" style="margin-right: 12px; margin-left: -5px;">
                                             <i class="fas fa-chevron-left"></i>
                                         </button>
                                     ` : ''}
@@ -1226,6 +1236,19 @@ export class ViewRenderer {
         const close = () => {
             modal.classList.add(CSS_CLASSES.HIDDEN);
             setTimeout(() => modal.remove(), 850); // Increased pace to match Snapshot
+
+            // RESTORE PARENT MODALS IF HIDDEN
+            const snapshotModal = document.getElementById(IDS.SNAPSHOT_MODAL_CONTAINER);
+            if (snapshotModal && snapshotModal.classList.contains(CSS_CLASSES.HIDDEN)) {
+                snapshotModal.classList.remove(CSS_CLASSES.HIDDEN);
+                snapshotModal.classList.add(CSS_CLASSES.SHOW);
+            }
+
+            const notifModal = document.getElementById(IDS.NOTIFICATION_MODAL);
+            if (notifModal && notifModal.classList.contains(CSS_CLASSES.HIDDEN)) {
+                notifModal.classList.remove(CSS_CLASSES.HIDDEN);
+                // NotificationUI handles its own SHOW logic usually via class presence
+            }
 
             // CLEANUP: Always remove specialized listeners
             window.removeEventListener(EVENTS.RESEARCH_LINKS_UPDATED, researchUpdateHandler);

@@ -36,7 +36,8 @@ export class SnapshotUI {
         // REACTIVE UPDATE: Keep Snapshot Live
         if (StateAuditor && typeof StateAuditor.on === 'function') {
             modal._priceUnsub = StateAuditor.on('PRICES_UPDATED', () => {
-                if (document.body.contains(modal) && modal.classList.contains(CSS_CLASSES.SHOW)) {
+                // UPDATE: Check HIDDEN instead of SHOW to handle restoration correctly
+                if (document.body.contains(modal) && !modal.classList.contains(CSS_CLASSES.HIDDEN)) {
                     this._updateGrid(modal);
                 }
             });
@@ -163,7 +164,10 @@ export class SnapshotUI {
             const card = e.target.closest(`.${CSS_CLASSES.SNAPSHOT_CARD}`);
             if (card && card.dataset.code) {
                 document.dispatchEvent(new CustomEvent(EVENTS.ASX_CODE_CLICK, { detail: { code: card.dataset.code } }));
-                this._close(modal);
+                
+                // HIDE VISUALLY BUT DO NOT POP NAV (allow return)
+                modal.classList.remove(CSS_CLASSES.SHOW);
+                modal.classList.add(CSS_CLASSES.HIDDEN);
             }
         });
     }

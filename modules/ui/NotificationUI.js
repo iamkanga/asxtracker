@@ -603,6 +603,9 @@ export class NotificationUI {
 
                     const code = card.dataset.code;
                     if (code) {
+                        // HIDE THE MODAL VISUALLY (allow return navigation)
+                        const modal = document.getElementById(IDS.NOTIFICATION_MODAL);
+                        if (modal) modal.classList.add(CSS_CLASSES.HIDDEN);
 
                         const isSaved = (AppState.data.shares || []).some(s => {
                             const sCode = s.code || s.shareName || s.symbol;
