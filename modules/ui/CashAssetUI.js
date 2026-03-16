@@ -410,7 +410,7 @@ export class CashAssetUI {
             setTimeout(() => {
                 modal.classList.add(CSS_CLASSES.HIDDEN);
                 modal.remove();
-            }, 650);
+            }, 450);
             navManager.popStateSilently();
         };
 

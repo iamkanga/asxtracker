@@ -1258,7 +1258,7 @@ export class SettingsUI {
             setTimeout(() => {
                 modal.classList.add(CSS_CLASSES.HIDDEN);
                 modal.remove();
-            }, 650);
+            }, 450);
 
             if (unsubscribe) unsubscribe();
             if (modal._navActive) {

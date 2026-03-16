@@ -254,7 +254,7 @@ export class PortfolioChartUI {
             setTimeout(() => {
                 this.modal.classList.add(CSS_CLASSES.HIDDEN);
                 if (this.modal.parentElement) this.modal.remove();
-            }, 650);
+            }, 450);
 
             if (this.modal._navActive) { this.modal._navActive = false; navManager.popStateSilently(); }
         };

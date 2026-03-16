@@ -105,7 +105,7 @@ export class SearchDiscoveryUI {
                 modal.remove();
                 modal._isClosing = false;
                 modal.style.pointerEvents = '';
-            }, 650);
+            }, 450);
 
             // Remove from history stack if closed manually
             if (modal._navActive) {

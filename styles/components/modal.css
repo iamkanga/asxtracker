@@ -10,7 +10,8 @@
     z-index: 1 !important;
     opacity: 0;
     visibility: hidden;
-    transition: opacity 0.6s ease, visibility 0.6s ease, backdrop-filter 0.6s ease;
+    transition: opacity 0.4s ease, visibility 0.4s ease, backdrop-filter 0.4s ease;
+    touch-action: manipulation;
 }
 
 .modal {
@@ -29,7 +30,8 @@
     flex-direction: column !important;
     opacity: 0;
     visibility: hidden;
-    transition: opacity 0.6s ease, visibility 0.6s ease;
+    transition: opacity 0.4s ease, visibility 0.4s ease;
+    touch-action: manipulation;
 }
 
 .modal:not(.hidden) {
@@ -56,6 +58,7 @@
     flex-direction: column;
     gap: 15px;
     padding: 0;
+    touch-action: manipulation;
     /* Handled by children mainly */
 }
 
@@ -740,6 +743,7 @@ h1.modal-title,
     transition: all 0.2s ease;
     background-color: transparent;
     padding: 0;
+    touch-action: manipulation;
 }
 
 .watchlist-item:hover .carousel-checkbox {
@@ -863,7 +867,7 @@ h1.modal-title,
 #securityUnlockModal,
 #securitySettingsModal,
 #pin-setup-modal {
-    transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.6s ease, visibility 0.6s ease;
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease, visibility 0.4s ease;
 }
 
 #stock-details-modal.hidden,
@@ -887,7 +891,7 @@ h1.modal-title,
 #pin-setup-modal.hidden {
     opacity: 0 !important;
     visibility: hidden;
-    transition: visibility 0.6s ease, opacity 0.6s ease;
+    transition: visibility 0.4s ease, opacity 0.4s ease;
 }
 
 #stock-details-modal.hidden .modal-overlay,
@@ -912,7 +916,7 @@ h1.modal-title,
 #chart-modal.hidden .modal-overlay {
     opacity: 0;
     visibility: hidden;
-    transition: opacity 0.6s ease, visibility 0.6s ease, backdrop-filter 0.6s ease;
+    transition: opacity 0.4s ease, visibility 0.4s ease, backdrop-filter 0.4s ease;
 }
 
 #stock-details-modal.show .modal-overlay,
@@ -940,7 +944,7 @@ h1.modal-title,
 #snapshot-modal-container.show .modal-overlay {
     opacity: 1;
     visibility: visible;
-    transition: opacity 0.6s ease, visibility 0.6s ease, backdrop-filter 0.6s ease;
+    transition: opacity 0.4s ease, visibility 0.4s ease, backdrop-filter 0.4s ease;
 }
 
 #stock-details-modal .modal-content,
@@ -967,7 +971,8 @@ h1.modal-title,
 #snapshot-modal-container .modal-content {
     transform: translateX(100vw);
     opacity: 0;
-    transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.6s ease;
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease;
+    touch-action: manipulation;
 }
 
 #stock-details-modal.show .modal-content,

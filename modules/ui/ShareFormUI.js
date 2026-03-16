@@ -762,7 +762,7 @@ export class ShareFormUI {
             setTimeout(() => {
                 modal.classList.add(CSS_CLASSES.HIDDEN);
                 modal.remove();
-            }, 650);
+            }, 450);
 
             // Remove from history stack if closed manually
             if (modal._navActive) {

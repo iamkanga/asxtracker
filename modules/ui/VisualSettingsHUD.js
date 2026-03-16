@@ -32,7 +32,7 @@ export class VisualSettingsHUD {
             hud.classList.remove('visible');
             setTimeout(() => {
                 if (hud.parentElement) hud.remove();
-            }, 650);
+            }, 450);
         }
         if (!skipPopState) {
             navManager.popStateSilently();

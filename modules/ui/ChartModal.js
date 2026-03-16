@@ -671,7 +671,7 @@ export class ChartModal {
                 chartComp.destroy();
                 modal.classList.add(CSS_CLASSES.HIDDEN);
                 modal.remove();
-            }, 650);
+            }, 450);
 
             // Navigation Cleanup: If closed manually, sync history stack
             if (modal._navActive) {

@@ -102,7 +102,7 @@ export const SecurityUI = {
                         setTimeout(() => {
                             modal.classList.add(CSS_CLASSES.HIDDEN);
                             modal.remove();
-                        }, 650);
+                        }, 450);
                     } else {
                         // Shake animation
                         modal.querySelector(`.${CSS_CLASSES.SECURITY_PIN_CONTENT}`).classList.add(CSS_CLASSES.SHAKE);
@@ -391,7 +391,7 @@ export const SecurityUI = {
             setTimeout(() => {
                 modal.classList.add(CSS_CLASSES.HIDDEN);
                 if (modal.parentElement) modal.remove();
-            }, 650);
+            }, 450);
 
             // Navigation Cleanup
             if (modal._navActive) {
@@ -461,7 +461,7 @@ export const SecurityUI = {
                             setTimeout(() => {
                                 modal.classList.add(CSS_CLASSES.HIDDEN);
                                 modal.remove();
-                            }, 650);
+                            }, 450);
                             if (onSuccess) onSuccess();
                         } else {
                             ToastManager.error("PINs do not match. Try again.");
@@ -492,7 +492,7 @@ export const SecurityUI = {
             setTimeout(() => {
                 modal.classList.add(CSS_CLASSES.HIDDEN);
                 if (modal.parentElement) modal.remove();
-            }, 650);
+            }, 450);
             
             // Remove from history stack if closed manually
             if (this._navActive) {

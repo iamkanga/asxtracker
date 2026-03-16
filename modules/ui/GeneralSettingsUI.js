@@ -290,7 +290,7 @@ export class GeneralSettingsUI {
         modal.classList.remove(CSS_CLASSES.SHOW);
         setTimeout(() => {
             if (modal.parentElement) modal.remove();
-        }, 650);
+        }, 450);
         if (!skipPopState) {
             navManager.popStateSilently();
         }

@@ -66,7 +66,7 @@ export class SnapshotUI {
         setTimeout(() => {
             modal.classList.add(CSS_CLASSES.HIDDEN);
             if (modal.parentElement) modal.remove();
-        }, 650); // Improved pace: matching 0.6s transition + buffer
+        }, 450); // Improved pace: matching 0.6s transition + buffer
 
         if (modal._navActive) {
             modal._navActive = false;

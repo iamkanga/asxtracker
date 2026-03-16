@@ -499,7 +499,7 @@ export class NotificationUI {
         setTimeout(() => {
             modal.classList.add(CSS_CLASSES.HIDDEN);
             modal.remove();
-        }, 650);
+        }, 450);
         if (modal._navActive) {
             modal._navActive = false;
             navManager.popStateSilently();
@@ -624,7 +624,7 @@ export class NotificationUI {
                             setTimeout(() => {
                                 modal.classList.add(CSS_CLASSES.HIDDEN);
                                 modal.style.pointerEvents = '';
-                            }, 650);
+                            }, 450);
                         }
 
                         const isSaved = (AppState.data.shares || []).some(s => {

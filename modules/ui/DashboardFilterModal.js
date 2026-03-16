@@ -294,7 +294,7 @@ export class DashboardFilterModal {
             setTimeout(() => {
                 if (modal.parentElement) modal.remove();
                 window.dispatchEvent(new Event('dashboard-prefs-changed'));
-            }, 650);
+            }, 450);
 
             // Navigation Cleanup
             if (modal._navActive) {

@@ -94,7 +94,7 @@ export class FavoriteLinksUI {
                 modal.classList.add(CSS_CLASSES.HIDDEN);
                 modal._isClosing = false;
                 modal.style.pointerEvents = '';
-            }, 650);
+            }, 450);
 
             if (modal._navActive) {
                 modal._navActive = false;

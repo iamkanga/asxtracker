@@ -1245,7 +1245,7 @@ export class ViewRenderer {
                 modal.remove();
                 modal._isClosing = false;
                 modal.style.pointerEvents = '';
-            }, 650);
+            }, 450);
 
             // RESTORE PARENT MODALS IF HIDDEN
             const snapshotModal = document.getElementById(IDS.SNAPSHOT_MODAL_CONTAINER);
@@ -1682,7 +1682,7 @@ export class ViewRenderer {
             setTimeout(() => {
                 modal.classList.add(CSS_CLASSES.HIDDEN);
                 if (modal.parentElement) modal.remove();
-            }, 650);
+            }, 450);
 
             // CLEANUP: Specialized handle
             window.removeEventListener(EVENTS.RESEARCH_LINKS_UPDATED, researchUpdateHandler);
@@ -2651,7 +2651,7 @@ export class ViewRenderer {
                 modal.classList.add(CSS_CLASSES.HIDDEN);
                 modal._isClosing = false;
                 modal.style.pointerEvents = '';
-            }, 650);
+            }, 450);
             document.getElementById(IDS.SORT_PICKER_BTN)?.classList.remove(CSS_CLASSES.ACTIVE);
             this.isSortEditMode = false;
             this.sortPickerMode = 'default';
@@ -2756,7 +2756,7 @@ export class ViewRenderer {
                 modal.remove();
                 modal._isClosing = false;
                 modal.style.pointerEvents = '';
-            }, 650);
+            }, 450);
 
             // Remove from history stack if closed manually
             if (modal._navActive) {

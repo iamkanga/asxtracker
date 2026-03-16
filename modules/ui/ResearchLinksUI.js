@@ -121,7 +121,7 @@ export default class ResearchLinksUI {
                 modal.classList.add(CSS_CLASSES.HIDDEN);
                 modal._isClosing = false;
                 modal.style.pointerEvents = '';
-            }, 650);
+            }, 450);
             navManager.popStateSilently();
         }
     }
