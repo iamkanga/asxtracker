@@ -692,56 +692,57 @@ export class ChartModal {
             if (icon) icon.className = 'fas fa-compress';
         }
 
-        // Helper to resize chart - uses viewport dimensions for fullscreen
+        // Helper to resize chart - uses container dimensions to ensure perfect fit
         const resizeChart = () => {
             if (chartComp.chart) {
                 const div = chartComp.container.querySelector(`.${CSS_CLASSES.CHART_CANVAS_CONTAINER}`);
-                const header = content.querySelector('div'); // First div is header
-                const controls = chartComp.container.querySelector(`.${CSS_CLASSES.CHART_CONTROLS}`);
                 if (div) {
-                    void div.offsetHeight; // Force layout
+                    // Use actual container dimensions instead of manual viewport calculations
+                    // This ensures the chart matches the space allocated by flexbox/CSS.
+                    const width = div.clientWidth;
+                    const height = div.clientHeight;
 
-                    // Use visualViewport if available (more reliable on mobile)
-                    const viewportWidth = window.visualViewport ? window.visualViewport.width : window.innerWidth;
-                    const viewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-                    const headerHeight = header ? header.offsetHeight : 50;
-                    const controlsHeight = controls ? controls.offsetHeight : 45;
-                    const width = viewportWidth;
-                    const height = viewportHeight - headerHeight - controlsHeight;
-
-                    chartComp.chart.applyOptions({ width, height });
-                    chartComp.chart.timeScale().fitContent();
+                    if (width > 0 && height > 0) {
+                        chartComp.chart.applyOptions({ width, height });
+                        chartComp.chart.timeScale().fitContent();
+                    }
                 }
             }
         };
 
-        // Apply fullscreen styles
+        // Apply fullscreen styles with strict overrides to prevent theme-based cropping
         const applyFullscreen = () => {
             // Fullscreen the modal backdrop using inset: 0
             modal.style.cssText = `
-                position: fixed;
-                inset: 0;
-                background: var(--card-bg);
+                position: fixed !important;
+                inset: 0 !important;
+                width: 100% !important;
+                height: 100% !important;
+                background: var(--card-bg) !important;
                 z-index: 50000 !important;
-                display: flex;
-                flex-direction: column;
-                margin: 0;
-                padding: 0;
-                overflow: hidden;
+                display: flex !important;
+                flex-direction: column !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                overflow: hidden !important;
             `;
 
-            // Fullscreen the content using inset: 0
+            // Fullscreen the content using inset: 0 and !important to beat .modal-content mobile overrides
             content.style.cssText = `
-                position: absolute;
-                inset: 0;
-                max-width: none;
-                max-height: none;
-                display: flex;
-                flex-direction: column;
-                background: var(--card-bg);
-                border-radius: 0;
-                margin: 0;
-                overflow: hidden;
+                position: absolute !important;
+                inset: 0 !important;
+                width: 100% !important;
+                height: 100% !important;
+                max-width: none !important;
+                max-height: none !important;
+                display: flex !important;
+                flex-direction: column !important;
+                background: var(--card-bg) !important;
+                border-radius: 0 !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                gap: 0 !important;
+                overflow: hidden !important;
             `;
         };
 

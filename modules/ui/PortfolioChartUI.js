@@ -84,10 +84,10 @@ export class PortfolioChartUI {
 
         this.modal.innerHTML = `
             <div class="${CSS_CLASSES.MODAL_OVERLAY}"></div>
-            <div class="${CSS_CLASSES.MODAL_CONTENT} portfolio-chart-content" style="width: 100%; height: 100%; max-width: none; border-radius: 0; display:flex; flex-direction:column; background:var(--card-bg); overflow:hidden;">
+            <div class="${CSS_CLASSES.MODAL_CONTENT} portfolio-chart-content" style="width: 100% !important; height: 100% !important; max-width: none !important; max-height: none !important; border-radius: 0 !important; margin: 0 !important; padding: 0 !important; gap: 0 !important; display:flex; flex-direction:column; background:var(--card-bg); overflow:hidden;">
                 
                 <!-- HEADER: Stacked on Mobile, Row on Desktop -->
-                <div class="${CSS_CLASSES.MODAL_HEADER} chart-header-responsive" style="border-bottom: 1px solid rgba(255,255,255,0.05); padding: 16px 24px; display:flex; align-items:flex-start; justify-content:space-between;">
+                <div class="${CSS_CLASSES.MODAL_HEADER} chart-header-responsive" style="border-bottom: 1px solid rgba(255,255,255,0.05); padding: 16px 24px; display:flex; align-items:flex-start; justify-content:space-between; flex-shrink: 0;">
                     <div class="header-content-wrapper" style="display:flex; flex-grow:1; flex-direction:row; align-items:center; justify-content:space-between; margin-right:16px;">
                         <div style="display:flex; flex-direction:column; gap:4px;">
                             <h2 class="${CSS_CLASSES.MODAL_TITLE}" style="font-size: 1.4rem; display:flex; align-items:center; gap:10px;">
