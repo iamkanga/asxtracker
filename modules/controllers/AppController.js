@@ -2989,8 +2989,20 @@ export class AppController {
                     // Explicitly handle UI overlaps
                     document.getElementById(IDS.ASX_DROPDOWN_MENU)?.classList.remove(CSS_CLASSES.SHOW);
                 } else {
-                    // Fallback: Open Discovery Modal if no local data
-                    document.dispatchEvent(new CustomEvent(EVENTS.OPEN_RESEARCH_MODAL, { detail: { query: code } }));
+                    // Fix: Redirect Dashboard Snapshot / Market Indices to Yahoo (as requested)
+                    const upCode = code.toUpperCase();
+                    const isDashboardSymbol = DASHBOARD_SYMBOLS.includes(upCode) || 
+                                           upCode.startsWith('^') || 
+                                           upCode.endsWith('=F') || 
+                                           upCode.endsWith('=X');
+
+                    if (isDashboardSymbol) {
+                        const url = DASHBOARD_LINKS[upCode] || LinkHelper.getFinanceUrl(upCode);
+                        window.open(url, '_blank', 'noopener,noreferrer');
+                    } else {
+                        // Fallback: Open Discovery Modal if no local data
+                        document.dispatchEvent(new CustomEvent(EVENTS.OPEN_RESEARCH_MODAL, { detail: { query: code } }));
+                    }
                 }
             }, 120);
         });

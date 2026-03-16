@@ -537,7 +537,7 @@ export class ChartComponent {
      * @param {Array} data - Array of candle objects with high/low values
      */
     _updatePeriodStats(data) {
-        const statsEl = this.container.querySelector(`#chartPeriodStats_${this.code}`);
+        const statsEl = this.container.querySelector(`[id="chartPeriodStats_${this.code}"]`);
         if (!statsEl) return;
 
         const highEl = statsEl.querySelector('.chart-period-high');
