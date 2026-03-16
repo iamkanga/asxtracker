@@ -24,7 +24,7 @@ export class ThemeStudio {
         const overlay = document.getElementById(this.ID);
         if (overlay) {
             overlay.classList.remove('visible');
-            setTimeout(() => overlay.remove(), 850);
+            setTimeout(() => overlay.remove(), 650);
         }
     }
 

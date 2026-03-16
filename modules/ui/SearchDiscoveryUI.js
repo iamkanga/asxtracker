@@ -61,6 +61,9 @@ export class SearchDiscoveryUI {
 
         requestAnimationFrame(() => {
             modal.classList.remove(CSS_CLASSES.HIDDEN);
+            requestAnimationFrame(() => {
+                modal.classList.add(CSS_CLASSES.SHOW);
+            });
         });
 
         // Binds
@@ -93,14 +96,16 @@ export class SearchDiscoveryUI {
             if (modal._isClosing) return;
             modal._isClosing = true;
 
-            // Visual Dismissal (Start Animation)
             modal.classList.remove(CSS_CLASSES.SHOW);
             modal.style.pointerEvents = 'none';
 
             // DOM Cleanup
             setTimeout(() => {
+                modal.classList.add(CSS_CLASSES.HIDDEN);
                 modal.remove();
-            }, 850);
+                modal._isClosing = false;
+                modal.style.pointerEvents = '';
+            }, 650);
 
             // Remove from history stack if closed manually
             if (modal._navActive) {

@@ -1234,8 +1234,18 @@ export class ViewRenderer {
 
         // Events
         const close = () => {
-            modal.classList.add(CSS_CLASSES.HIDDEN);
-            setTimeout(() => modal.remove(), 850); // Increased pace to match Snapshot
+            if (modal._isClosing) return;
+            modal._isClosing = true;
+
+            modal.classList.remove(CSS_CLASSES.SHOW);
+            modal.style.pointerEvents = 'none';
+
+            setTimeout(() => {
+                modal.classList.add(CSS_CLASSES.HIDDEN);
+                modal.remove();
+                modal._isClosing = false;
+                modal.style.pointerEvents = '';
+            }, 650);
 
             // RESTORE PARENT MODALS IF HIDDEN
             const snapshotModal = document.getElementById(IDS.SNAPSHOT_MODAL_CONTAINER);
@@ -1247,7 +1257,6 @@ export class ViewRenderer {
             const notifModal = document.getElementById(IDS.NOTIFICATION_MODAL);
             if (notifModal && notifModal.classList.contains(CSS_CLASSES.HIDDEN)) {
                 notifModal.classList.remove(CSS_CLASSES.HIDDEN);
-                // NotificationUI handles its own SHOW logic usually via class presence
             }
 
             // CLEANUP: Always remove specialized listeners
@@ -1401,6 +1410,9 @@ export class ViewRenderer {
 
         requestAnimationFrame(() => {
             modal.classList.remove(CSS_CLASSES.HIDDEN);
+            requestAnimationFrame(() => {
+                modal.classList.add(CSS_CLASSES.SHOW);
+            });
         });
     }
 
@@ -1670,7 +1682,7 @@ export class ViewRenderer {
             setTimeout(() => {
                 modal.classList.add(CSS_CLASSES.HIDDEN);
                 if (modal.parentElement) modal.remove();
-            }, 850);
+            }, 650);
 
             // CLEANUP: Specialized handle
             window.removeEventListener(EVENTS.RESEARCH_LINKS_UPDATED, researchUpdateHandler);
@@ -2639,7 +2651,7 @@ export class ViewRenderer {
                 modal.classList.add(CSS_CLASSES.HIDDEN);
                 modal._isClosing = false;
                 modal.style.pointerEvents = '';
-            }, 850);
+            }, 650);
             document.getElementById(IDS.SORT_PICKER_BTN)?.classList.remove(CSS_CLASSES.ACTIVE);
             this.isSortEditMode = false;
             this.sortPickerMode = 'default';
@@ -2672,7 +2684,11 @@ export class ViewRenderer {
         // Apply trend-based class to the modal content for matching gradients
         const modal = document.createElement('div');
         modal.id = IDS.SUMMARY_DETAIL_MODAL;
-        modal.className = `${CSS_CLASSES.MODAL} ${CSS_CLASSES.HIDDEN} `;
+        modal.className = `${CSS_CLASSES.MODAL} ${CSS_CLASSES.HIDDEN}`;
+        
+        // Ensure Summary Detail is above base UI but below Stock Details (21000)
+        modal.style.setProperty('z-index', '20500', 'important');
+
         const modalContentClass = `${CSS_CLASSES.MODAL_CONTENT} ${CSS_CLASSES.MODAL_CONTENT_MEDIUM} ${trendClass}`;
 
         const rowsHtml = shares.map(share => {
@@ -2729,8 +2745,18 @@ export class ViewRenderer {
 
         // Bind Events
         const close = () => {
-            modal.classList.add(CSS_CLASSES.HIDDEN);
-            setTimeout(() => modal.remove(), 850);
+            if (modal._isClosing) return;
+            modal._isClosing = true;
+
+            modal.classList.remove(CSS_CLASSES.SHOW);
+            modal.style.pointerEvents = 'none';
+
+            setTimeout(() => {
+                modal.classList.add(CSS_CLASSES.HIDDEN);
+                modal.remove();
+                modal._isClosing = false;
+                modal.style.pointerEvents = '';
+            }, 650);
 
             // Remove from history stack if closed manually
             if (modal._navActive) {
@@ -2776,6 +2802,9 @@ export class ViewRenderer {
 
         requestAnimationFrame(() => {
             modal.classList.remove(CSS_CLASSES.HIDDEN);
+            requestAnimationFrame(() => {
+                modal.classList.add(CSS_CLASSES.SHOW);
+            });
         });
     }
 

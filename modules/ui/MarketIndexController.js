@@ -132,7 +132,7 @@ export class MarketIndexController {
             if (!this.modal.classList.contains('show')) {
                 this.modal.classList.add('hidden');
             }
-        }, 850);
+        }, 650);
 
         // If closed via UI (X button) instead of Back Button, sync the browser history
         if (!fromNav) {

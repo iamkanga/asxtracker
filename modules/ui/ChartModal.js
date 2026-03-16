@@ -604,37 +604,43 @@ export class ChartModal {
         const existing = document.getElementById(IDS.CHART_MODAL);
         if (existing) existing.remove();
 
-        // 1. Create Modal Container - using unique chart-modal class to avoid global modal CSS conflicts
+        // 1. Create Modal Container
         const modal = document.createElement('div');
         modal.id = IDS.CHART_MODAL;
-        modal.className = CSS_CLASSES.CHART_MODAL; // NOT using 'modal' class to avoid global CSS !important rules
-
-        // App-specific overrides to make it feel like "App Store" fullscreen
-        modal.style.cssText = `
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85); z-index: 20001;
-            display: flex; align-items: center; justify-content: center;
-            backdrop-filter: blur(5px);
-        `;
+        // Apply 'modal' and 'hidden' for base styles and animation system
+        modal.className = `${CSS_CLASSES.MODAL} ${CSS_CLASSES.HIDDEN}`;
+        
+        // Ensure high z-index via property (matching Constitution's dynamic elevation)
+        // Set to 22000 to ensure it opens ON TOP of Stock Details (21000)
+        modal.style.setProperty('z-index', '22000', 'important');
 
         modal.innerHTML = `
-            <div class="${CSS_CLASSES.CHART_MODAL_CONTENT}" style="width: 95%; height: 85%; max-width: 900px; display:flex; flex-direction:column; background:var(--card-bg); border-radius:12px; overflow:hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
+            <div class="${CSS_CLASSES.MODAL_OVERLAY}"></div>
+            <div class="${CSS_CLASSES.MODAL_CONTENT} ${CSS_CLASSES.CHART_MODAL_CONTENT} modal-content-medium" style="width: 95%; height: 85%; max-width: 900px; display:flex; flex-direction:column; overflow:hidden;">
                 <!-- Header -->
-                <div class="chart-modal-header" style="display:flex; justify-content:space-between; align-items:center; padding:8px 16px; border-bottom:1px solid var(--border-color);">
-                    <div class="card-code-pill" style="background: none; border: none; padding: 0; gap: 8px; display: inline-flex; align-items: center;">
+                <div class="${CSS_CLASSES.MODAL_HEADER}" style="display:flex; justify-content:space-between; align-items:center; padding:8px 16px; border-bottom:1px solid var(--border-color); flex-shrink:0;">
+                    <div style="background: none; border: none; padding: 0; gap: 8px; display: inline-flex; align-items: center;">
                         <img src="https://files.marketindex.com.au/xasx/96x96-png/${code.toLowerCase()}.png" class="favicon-icon" style="width: 20px; height: 20px;" onerror="this.src='${KANGAROO_ICON_SRC}'" alt="">
-                        <h3 style="margin:0; font-size:1.2rem; font-weight:700;">${code}</h3>
+                        <h3 class="${CSS_CLASSES.MODAL_TITLE}" style="margin:0; font-size:1.2rem; font-weight:700;">${code}</h3>
                     </div>
-                    <div style="display:flex; gap:12px;">
-                        <button id="${IDS.CHART_MODAL_CLOSE}" class="${CSS_CLASSES.CHART_BTN}" style="border:none; font-size:1.2rem;"><i class="fas fa-times"></i></button>
+                    <div class="${CSS_CLASSES.MODAL_ACTIONS}" style="display:flex; gap:12px;">
+                        <button id="${IDS.CHART_MODAL_CLOSE}" class="${CSS_CLASSES.MODAL_ACTION_BTN} ${CSS_CLASSES.MODAL_CLOSE_BTN}" style="border:none; font-size:1.2rem;"><i class="fas fa-times"></i></button>
                     </div>
                 </div>
                 <!-- Chart Component Host -->
-                <div id="${IDS.MODAL_CHART_BODY}" style="flex:1; position:relative; width:100%; overflow:hidden;"></div>
+                <div id="${IDS.MODAL_CHART_BODY}" class="${CSS_CLASSES.MODAL_BODY}" style="flex:1; position:relative; width:100%; overflow:hidden; padding: 0;"></div>
             </div>
         `;
 
         document.body.appendChild(modal);
+
+        // Standard Entrance Animation
+        requestAnimationFrame(() => {
+            modal.classList.remove(CSS_CLASSES.HIDDEN);
+            requestAnimationFrame(() => {
+                modal.classList.add(CSS_CLASSES.SHOW);
+            });
+        });
 
         // 2. Instantiate Chart
         const body = modal.querySelector(`#${IDS.MODAL_CHART_BODY}`);
@@ -644,6 +650,13 @@ export class ChartModal {
         let orientationHandler = null;
 
         const close = () => {
+            if (modal._isClosing) return;
+            modal._isClosing = true;
+
+            // Trigger Exit Animation
+            modal.classList.remove(CSS_CLASSES.SHOW);
+            modal.style.pointerEvents = 'none';
+
             // Clean up orientation listener
             if (orientationHandler) {
                 window.removeEventListener('resize', orientationHandler);
@@ -652,8 +665,13 @@ export class ChartModal {
                     window.visualViewport.removeEventListener('resize', orientationHandler);
                 }
             }
-            chartComp.destroy();
-            modal.remove();
+
+            // Deferred Cleanup
+            setTimeout(() => {
+                chartComp.destroy();
+                modal.classList.add(CSS_CLASSES.HIDDEN);
+                modal.remove();
+            }, 650);
 
             // Navigation Cleanup: If closed manually, sync history stack
             if (modal._navActive) {
@@ -704,7 +722,7 @@ export class ChartModal {
                 position: fixed;
                 inset: 0;
                 background: var(--card-bg);
-                z-index: 99999;
+                z-index: 50000 !important;
                 display: flex;
                 flex-direction: column;
                 margin: 0;

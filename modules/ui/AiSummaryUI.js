@@ -154,7 +154,7 @@ export class AiSummaryUI {
         modal.classList.remove('show');
         setTimeout(() => {
             if (modal.parentNode) modal.remove();
-        }, 850);
+        }, 650);
 
         if (modal._navActive) {
             modal._navActive = false;

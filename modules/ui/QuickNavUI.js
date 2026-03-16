@@ -271,7 +271,7 @@ export class QuickNavUI {
             if (!this.isVisible) {
                 this.modal.classList.add(CSS_CLASSES.HIDDEN);
             }
-        }, 850);
+        }, 650);
 
         // Navigation Cleanup: If closed manually, sync history stack
         if (this._navActive) {

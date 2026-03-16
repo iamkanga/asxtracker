@@ -68,7 +68,7 @@ export default class CalculatorUI {
                 modal.classList.add(CSS_CLASSES.HIDDEN);
                 modal.remove();
                 navManager.popStateSilently();
-            }, 850);
+            }, 650);
         };
         modal.querySelector(`.${CSS_CLASSES.MODAL_CLOSE_BTN}`).addEventListener('click', close);
         modal.querySelector(`.${CSS_CLASSES.MODAL_OVERLAY}`).addEventListener('click', close);

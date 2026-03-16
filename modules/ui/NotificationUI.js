@@ -499,7 +499,7 @@ export class NotificationUI {
         setTimeout(() => {
             modal.classList.add(CSS_CLASSES.HIDDEN);
             modal.remove();
-        }, 850);
+        }, 650);
         if (modal._navActive) {
             modal._navActive = false;
             navManager.popStateSilently();
@@ -616,9 +616,16 @@ export class NotificationUI {
 
                     const code = card.dataset.code;
                     if (code) {
-                        // HIDE THE MODAL VISUALLY (allow return navigation)
+                        // SLIDE OFF VISUALLY (allow return navigation via state persistence)
                         const modal = document.getElementById(IDS.NOTIFICATION_MODAL);
-                        if (modal) modal.classList.add(CSS_CLASSES.HIDDEN);
+                        if (modal) {
+                            modal.classList.remove(CSS_CLASSES.SHOW);
+                            modal.style.pointerEvents = 'none';
+                            setTimeout(() => {
+                                modal.classList.add(CSS_CLASSES.HIDDEN);
+                                modal.style.pointerEvents = '';
+                            }, 650);
+                        }
 
                         const isSaved = (AppState.data.shares || []).some(s => {
                             const sCode = s.code || s.shareName || s.symbol;

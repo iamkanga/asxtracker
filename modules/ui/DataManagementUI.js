@@ -145,7 +145,7 @@ export class DataManagementUI {
                         const { GeneralSettingsUI } = require('./GeneralSettingsUI.js');
                         GeneralSettingsUI.showModal();
                     }
-                }, 850);
+                }, 650);
             }
         });
 
@@ -178,7 +178,7 @@ export class DataManagementUI {
                     const { GeneralSettingsUI } = require('./GeneralSettingsUI.js');
                     GeneralSettingsUI.showModal();
                 }
-            }, 850);
+            }, 650);
             navManager.popStateSilently();
         };
         modal.querySelector(`.${CSS_CLASSES.MODAL_CLOSE_BTN}`).addEventListener('click', close);
@@ -479,7 +479,7 @@ export class DataManagementUI {
                 modal.classList.add(CSS_CLASSES.HIDDEN);
                 setTimeout(() => {
                     if (modal.parentElement) modal.remove();
-                }, 850);
+                }, 650);
             }
         });
 
@@ -493,7 +493,7 @@ export class DataManagementUI {
             setTimeout(() => {
                 modal.classList.add(CSS_CLASSES.HIDDEN);
                 if (modal.parentElement) modal.remove();
-            }, 850);
+            }, 650);
             navManager.popStateSilently();
         };
 

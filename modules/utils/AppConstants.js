@@ -545,6 +545,7 @@ export const CSS_CLASSES = {
     // Layout & Utilities
     ACTIVE: 'active',
     HIDDEN: 'hidden',
+    SHOW: 'show',
     MODE_SELECTOR: 'mode-selector',
     REORDER_ACTIVE: 'reorder-active',
     DARK_THEME: 'dark-theme',

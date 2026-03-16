@@ -60,6 +60,7 @@ export class PortfolioChartUI {
         this.modal = document.createElement('div');
         this.modal.id = 'portfolio-chart-modal';
         this.modal.className = `${CSS_CLASSES.MODAL} ${CSS_CLASSES.HIDDEN}`;
+        this.modal.style.setProperty('z-index', '22000', 'important');
 
         // Prepare Category Breakdown Dropdown Items
         const cashByCat = this._getCashByCategory();
@@ -253,7 +254,7 @@ export class PortfolioChartUI {
             setTimeout(() => {
                 this.modal.classList.add(CSS_CLASSES.HIDDEN);
                 if (this.modal.parentElement) this.modal.remove();
-            }, 850);
+            }, 650);
 
             if (this.modal._navActive) { this.modal._navActive = false; navManager.popStateSilently(); }
         };

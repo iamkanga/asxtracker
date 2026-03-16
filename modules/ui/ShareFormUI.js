@@ -110,8 +110,10 @@ export class ShareFormUI {
         document.body.appendChild(modal);
         requestAnimationFrame(() => {
             modal.classList.remove(CSS_CLASSES.HIDDEN);
-            const input = modal.querySelector('#shareName');
-            if (input) input.focus();
+            requestAnimationFrame(() => {
+                modal.classList.add(CSS_CLASSES.SHOW);
+                const input = modal.querySelector('#shareName');
+                if (input) input.focus();
 
             // EDIT MODE: Trigger Live Preview immediately
             if (shareData && shareData.shareName) {
@@ -169,6 +171,7 @@ export class ShareFormUI {
                     }, 200);
                 }
             }
+            });
         });
     }
 
@@ -495,9 +498,10 @@ export class ShareFormUI {
         const currentMemberships = stringMemberships.filter(id => validWatchlistIds.has(id));
         const modal = document.createElement('div');
         modal.id = IDS.ADD_SHARE_MODAL;
-        modal.className = `${CSS_CLASSES.MODAL} ${CSS_CLASSES.HIDDEN} ${CSS_CLASSES.SHOW}`;
+        modal.className = `${CSS_CLASSES.MODAL} ${CSS_CLASSES.HIDDEN}`;
 
-        // FIX: Ensure Edit Modal is on top of Stock Details (21000)
+        // Ensure high z-index via property (matching Constitution's dynamic elevation)
+        // Set to 22000 to ensure it opens ON TOP of Stock Details (21000)
         modal.style.setProperty('z-index', '22000', 'important');
 
         // Determine Title: If we have shareData and are recovering (implied by content), call it "Edit Share"
@@ -758,7 +762,7 @@ export class ShareFormUI {
             setTimeout(() => {
                 modal.classList.add(CSS_CLASSES.HIDDEN);
                 modal.remove();
-            }, 850);
+            }, 650);
 
             // Remove from history stack if closed manually
             if (modal._navActive) {

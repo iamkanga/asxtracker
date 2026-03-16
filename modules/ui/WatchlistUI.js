@@ -96,7 +96,7 @@ export class WatchlistUI {
                 modal.classList.add(CSS_CLASSES.HIDDEN);
                 modal._isClosing = false;
                 modal.style.pointerEvents = '';
-            }, 850);
+            }, 650);
 
             if (this._navActive) {
                 this._navActive = false;

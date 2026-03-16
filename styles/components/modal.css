@@ -8,6 +8,9 @@
     background-color: rgba(0, 0, 0, 0.7) !important;
     backdrop-filter: blur(2px);
     z-index: 1 !important;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.6s ease, visibility 0.6s ease, backdrop-filter 0.6s ease;
 }
 
 .modal {
@@ -23,11 +26,10 @@
     align-items: center !important;
     justify-content: center !important;
     pointer-events: none;
-    /* Hidden modals must not capture clicks */
     flex-direction: column !important;
     opacity: 0;
     visibility: hidden;
-    transition: opacity 0.2s, visibility 0.2s;
+    transition: opacity 0.6s ease, visibility 0.6s ease;
 }
 
 .modal:not(.hidden) {
@@ -861,7 +863,7 @@ h1.modal-title,
 #securityUnlockModal,
 #securitySettingsModal,
 #pin-setup-modal {
-    transition: visibility 0.8s ease;
+    transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.6s ease, visibility 0.6s ease;
 }
 
 #stock-details-modal.hidden,
@@ -883,9 +885,9 @@ h1.modal-title,
 #securityUnlockModal.hidden,
 #securitySettingsModal.hidden,
 #pin-setup-modal.hidden {
-    opacity: 1 !important;
+    opacity: 0 !important;
     visibility: hidden;
-    transition: visibility 0.8s ease, opacity 0s linear 0.8s;
+    transition: visibility 0.6s ease, opacity 0.6s ease;
 }
 
 #stock-details-modal.hidden .modal-overlay,
@@ -906,32 +908,39 @@ h1.modal-title,
 #research-modal.hidden .modal-overlay,
 #securityUnlockModal.hidden .modal-overlay,
 #securitySettingsModal.hidden .modal-overlay,
-#pin-setup-modal.hidden .modal-overlay {
+#pin-setup-modal.hidden .modal-overlay,
+#chart-modal.hidden .modal-overlay {
     opacity: 0;
-    transition: opacity 0.7s ease;
+    visibility: hidden;
+    transition: opacity 0.6s ease, visibility 0.6s ease, backdrop-filter 0.6s ease;
 }
 
-#stock-details-modal:not(.hidden) .modal-overlay,
-#summary-detail-modal:not(.hidden) .modal-overlay,
-#calculator-modal:not(.hidden) .modal-overlay,
-#add-share-modal:not(.hidden) .modal-overlay,
-#cash-asset-modal:not(.hidden) .modal-overlay,
-#discovery-modal:not(.hidden) .modal-overlay,
-#notification-modal:not(.hidden) .modal-overlay,
-#settings-modal:not(.hidden) .modal-overlay,
-#modal-market-stream:not(.hidden) .modal-overlay,
-#modal-create-watchlist:not(.hidden) .modal-overlay,
-#modal-edit-watchlist:not(.hidden) .modal-overlay,
-#watchlistPickerModal:not(.hidden) .modal-overlay,
-#modal-download-data:not(.hidden) .modal-overlay,
-#modal-research-links:not(.hidden) .modal-overlay,
-#sort-picker-modal:not(.hidden) .modal-overlay,
-#research-modal:not(.hidden) .modal-overlay,
-#securityUnlockModal:not(.hidden) .modal-overlay,
-#securitySettingsModal:not(.hidden) .modal-overlay,
-#pin-setup-modal:not(.hidden) .modal-overlay {
+#stock-details-modal.show .modal-overlay,
+#summary-detail-modal.show .modal-overlay,
+#calculator-modal.show .modal-overlay,
+#add-share-modal.show .modal-overlay,
+#cash-asset-modal.show .modal-overlay,
+#discovery-modal.show .modal-overlay,
+#notification-modal.show .modal-overlay,
+#settings-modal.show .modal-overlay,
+#modal-market-stream.show .modal-overlay,
+#modal-create-watchlist.show .modal-overlay,
+#modal-edit-watchlist.show .modal-overlay,
+#watchlistPickerModal.show .modal-overlay,
+#modal-download-data.show .modal-overlay,
+#modal-research-links.show .modal-overlay,
+#sort-picker-modal.show .modal-overlay,
+#research-modal.show .modal-overlay,
+#securityUnlockModal.show .modal-overlay,
+#securitySettingsModal.show .modal-overlay,
+#pin-setup-modal.show .modal-overlay,
+#chart-modal.show .modal-overlay,
+#portfolio-chart-modal.show .modal-overlay,
+#notification-modal.show .modal-overlay,
+#snapshot-modal-container.show .modal-overlay {
     opacity: 1;
-    transition: opacity 0.7s ease;
+    visibility: visible;
+    transition: opacity 0.6s ease, visibility 0.6s ease, backdrop-filter 0.6s ease;
 }
 
 #stock-details-modal .modal-content,
@@ -952,31 +961,37 @@ h1.modal-title,
 #research-modal .modal-content,
 #securityUnlockModal .modal-content,
 #securitySettingsModal .modal-content,
-#pin-setup-modal .modal-content {
+#pin-setup-modal .modal-content,
+#chart-modal .modal-content,
+#portfolio-chart-modal .modal-content,
+#snapshot-modal-container .modal-content {
     transform: translateX(100vw);
     opacity: 0;
-    transition: transform 0.8s cubic-bezier(0.19, 1, 0.22, 1), opacity 0.6s ease;
+    transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.6s ease;
 }
 
-#stock-details-modal:not(.hidden) .modal-content,
-#summary-detail-modal:not(.hidden) .modal-content,
-#calculator-modal:not(.hidden) .modal-content,
-#add-share-modal:not(.hidden) .modal-content,
-#cash-asset-modal:not(.hidden) .modal-content,
-#discovery-modal:not(.hidden) .modal-content,
-#notification-modal:not(.hidden) .modal-content,
-#settings-modal:not(.hidden) .modal-content,
-#modal-market-stream:not(.hidden) .modal-content,
-#modal-create-watchlist:not(.hidden) .modal-content,
-#modal-edit-watchlist:not(.hidden) .modal-content,
-#watchlistPickerModal:not(.hidden) .modal-content,
-#modal-download-data:not(.hidden) .modal-content,
-#modal-research-links:not(.hidden) .modal-content,
-#sort-picker-modal:not(.hidden) .modal-content,
-#research-modal:not(.hidden) .modal-content,
-#securityUnlockModal:not(.hidden) .modal-content,
-#securitySettingsModal:not(.hidden) .modal-content,
-#pin-setup-modal:not(.hidden) .modal-content {
+#stock-details-modal.show .modal-content,
+#summary-detail-modal.show .modal-content,
+#calculator-modal.show .modal-content,
+#add-share-modal.show .modal-content,
+#cash-asset-modal.show .modal-content,
+#discovery-modal.show .modal-content,
+#notification-modal.show .modal-content,
+#settings-modal.show .modal-content,
+#modal-market-stream.show .modal-content,
+#modal-create-watchlist.show .modal-content,
+#modal-edit-watchlist.show .modal-content,
+#watchlistPickerModal.show .modal-content,
+#modal-download-data.show .modal-content,
+#modal-research-links.show .modal-content,
+#sort-picker-modal.show .modal-content,
+#research-modal.show .modal-content,
+#securityUnlockModal.show .modal-content,
+#securitySettingsModal.show .modal-content,
+#pin-setup-modal.show .modal-content,
+#chart-modal.show .modal-content,
+#portfolio-chart-modal.show .modal-content,
+#snapshot-modal-container.show .modal-content {
     transform: translateX(0);
     opacity: 1;
 }

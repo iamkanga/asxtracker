@@ -23,8 +23,8 @@ export class SnapshotUI {
         }
 
         const modal = this._renderModal();
-        // Force high z-index to clear all other UI
-        modal.style.zIndex = '100001';
+        // Match standard modal z-index to allow stacking (Details modal opens on top)
+        modal.style.zIndex = '20000';
         document.body.appendChild(modal);
 
         // Initial Render: Load Preference
@@ -45,7 +45,9 @@ export class SnapshotUI {
 
         requestAnimationFrame(() => {
             modal.classList.remove(CSS_CLASSES.HIDDEN);
-            modal.classList.add(CSS_CLASSES.SHOW);
+            requestAnimationFrame(() => {
+                modal.classList.add(CSS_CLASSES.SHOW);
+            });
         });
     }
 
@@ -64,7 +66,7 @@ export class SnapshotUI {
         setTimeout(() => {
             modal.classList.add(CSS_CLASSES.HIDDEN);
             if (modal.parentElement) modal.remove();
-        }, 850); // Improved pace: matching 0.8s transition + buffer
+        }, 650); // Improved pace: matching 0.6s transition + buffer
 
         if (modal._navActive) {
             modal._navActive = false;
