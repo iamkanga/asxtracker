@@ -839,6 +839,10 @@ export class NotificationStore {
                             // If there's an underlying mover alert, it will survive and become master.
                             return false;
                         }
+                    } else {
+                        // TARGET IS 0 OR PRICE IS 0: Drop this alert.
+                        // User has disabled the alert (0) or data is invalid.
+                        return false;
                     }
                 }
             }
