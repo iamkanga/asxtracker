@@ -25,14 +25,21 @@ export const DRAWDOWN_TABLE = Object.freeze([
 ]);
 
 // ─────────────────────────────────────────────
-// 2. Contribution Caps (indexed annually by ATO)
+// 2. Contribution Caps & Thresholds (Indexed)
 // ─────────────────────────────────────────────
 // Key = financial year ending (e.g. 2024 = FY 2023-24)
 export const CONTRIBUTION_CAPS = Object.freeze({
-    2024: { concessional: 27500, nonConcessional: 110000 },
-    2025: { concessional: 30000, nonConcessional: 120000 },
-    2026: { concessional: 30000, nonConcessional: 120000 }
+    2024: { concessional: 27500, nonConcessional: 110000, tbc: 1900000 },
+    2025: { concessional: 30000, nonConcessional: 120000, tbc: 1900000 },
+    2026: { concessional: 30000, nonConcessional: 120000, tbc: 2000000 }
 });
+
+export function getCapData(financialYearEnding) {
+    const caps = CONTRIBUTION_CAPS[financialYearEnding];
+    if (caps) return caps;
+    const years = Object.keys(CONTRIBUTION_CAPS).map(Number).sort((a, b) => b - a);
+    return CONTRIBUTION_CAPS[years[0]] || { concessional: 30000, nonConcessional: 120000, tbc: 2000000 };
+}
 
 // ─────────────────────────────────────────────
 // 2b. Re-Contribution & Bring-Forward Rules
@@ -41,13 +48,10 @@ export const CONTRIBUTION_CAPS = Object.freeze({
 // back into accumulation as a non-concessional contribution (NCC).
 // Brighter Super treats this as a pension restart — the account stays open.
 export const RECONTRIBUTION_RULES = Object.freeze({
-    // Bring-forward: 3-year window (3x NCC cap in year 1, nil in years 2 & 3)
-    bringForwardMultiplier: 3,
+    // Bring-forward: up to 3-year window
     bringForwardWindowYears: 3,
-    // Re-contribution window: complete within same FY as closure (or up to 28 days per fund policy)
-    maxDaysAfterClosure: 28,
-    // Total super balance threshold: NCC is nil if TSB >= threshold at prior June 30
-    totalSuperBalanceThreshold: 1900000
+    // Re-contribution window: complete within same FY as closure
+    maxDaysAfterClosure: 28
 });
 
 /**
@@ -80,15 +84,20 @@ export function isBringForwardAvailable(bringForwardTriggeredFY, currentFY) {
  * @returns {{ eligible: boolean, maxAmount: number, bringForwardStatus: object, reason: string }}
  */
 export function checkRecontributionEligibility(totalSuperBalance, financialYearEnding, bringForwardTriggeredFY = null) {
-    const caps = getContributionCaps(financialYearEnding);
+    const caps = getCapData(financialYearEnding);
+    
+    // Legislative TSB Tiering Limits
+    const tier1Limit = caps.tbc;
+    const tier2Limit = caps.tbc - caps.nonConcessional;
+    const tier3Limit = caps.tbc - (caps.nonConcessional * 2);
 
-    // TSB check: no NCC if balance exceeds threshold at prior June 30
-    if (totalSuperBalance >= RECONTRIBUTION_RULES.totalSuperBalanceThreshold) {
+    // TSB check: no NCC if balance exceeds general TSB threshold
+    if (totalSuperBalance >= tier1Limit) {
         return {
             eligible: false,
             maxAmount: 0,
             bringForwardStatus: { available: false, nextAvailableFY: null, yearsRemaining: 0 },
-            reason: `Total super balance ($${totalSuperBalance.toLocaleString()}) exceeds $${RECONTRIBUTION_RULES.totalSuperBalanceThreshold.toLocaleString()} threshold — non-concessional contributions not permitted this FY.`
+            reason: `Total super balance ($${totalSuperBalance.toLocaleString()}) exceeds the $${tier1Limit.toLocaleString()} threshold. Non-concessional contributions not permitted this FY.`
         };
     }
 
@@ -96,16 +105,27 @@ export function checkRecontributionEligibility(totalSuperBalance, financialYearE
 
     let maxAmount;
     let reason;
+    let eligible = false;
+
     if (bfStatus.available) {
-        maxAmount = caps.nonConcessional * RECONTRIBUTION_RULES.bringForwardMultiplier;
-        reason = `Bring-forward available. You can re-contribute up to $${maxAmount.toLocaleString()} (3 × $${caps.nonConcessional.toLocaleString()}) in a single FY. This locks out NCCs for the following ${RECONTRIBUTION_RULES.bringForwardWindowYears - 1} years.`;
+        eligible = true;
+        if (totalSuperBalance < tier3Limit) {
+            maxAmount = caps.nonConcessional * 3;
+            reason = `Full Bring-Forward. You can contribute up to $${maxAmount.toLocaleString()} (3 × $${caps.nonConcessional.toLocaleString()}) because TSB is under $${tier3Limit.toLocaleString()}. Locks out NCCs for the next 2 years.`;
+        } else if (totalSuperBalance < tier2Limit) {
+            maxAmount = caps.nonConcessional * 2;
+            reason = `Partial Bring-Forward. You can contribute up to $${maxAmount.toLocaleString()} (2 × $${caps.nonConcessional.toLocaleString()}) because TSB is under $${tier2Limit.toLocaleString()}. Locks out NCCs for the next 1 year.`;
+        } else {
+            maxAmount = caps.nonConcessional;
+            reason = `Bring-Forward Unavailable. TSB is between $${tier2Limit.toLocaleString()} and $${tier1Limit.toLocaleString()}. You are limited to the standard $${maxAmount.toLocaleString()} annual cap.`;
+        }
     } else {
         maxAmount = 0;
         reason = `Bring-forward window active (triggered FY${bringForwardTriggeredFY}). NCC not available until FY${bfStatus.nextAvailableFY} (${bfStatus.yearsRemaining} year${bfStatus.yearsRemaining > 1 ? 's' : ''} remaining).`;
     }
 
     return {
-        eligible: bfStatus.available,
+        eligible,
         maxAmount,
         bringForwardStatus: bfStatus,
         reason
@@ -123,11 +143,8 @@ export const SUPER_THRESHOLDS = Object.freeze({
     // Brighter Super: Minimum balance to RESTART a pension (closed/commenced)
     minPensionRestart: 50000,
     // ATO threshold where fees are capped at 3% for balances under this amount
-    autoFeeCapThreshold: 6000,
-    // Transfer Balance Cap (TBC) — lifetime limit on tax-free phase transfers
-    transferBalanceCap: 1900000, 
-    // Total Super Balance threshold for non-concessional eligibility
-    totalSuperBalanceThreshold: 1900000
+    autoFeeCapThreshold: 6000
+    // Note: TBC and TSB limits are handled dynamically via getCapData()
 });
 
 // ─────────────────────────────────────────────
@@ -193,15 +210,10 @@ export function isJune1stRuleApplicable(commencementDate) {
 /**
  * Gets contribution caps for a given financial year.
  * @param {number} financialYearEnding - e.g. 2026 for FY 2025-26.
- * @returns {{ concessional: number, nonConcessional: number }}
+ * @returns {{ concessional: number, nonConcessional: number, tbc: number }}
  */
 export function getContributionCaps(financialYearEnding) {
-    // Fall back to latest known year if requested year isn't in the table
-    const caps = CONTRIBUTION_CAPS[financialYearEnding];
-    if (caps) return caps;
-
-    const years = Object.keys(CONTRIBUTION_CAPS).map(Number).sort((a, b) => b - a);
-    return CONTRIBUTION_CAPS[years[0]] || { concessional: 30000, nonConcessional: 120000 };
+    return getCapData(financialYearEnding);
 }
 
 /**

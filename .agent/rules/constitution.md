@@ -77,6 +77,10 @@ Styles are now strictly categorized. New code must be injected into the specific
 VI. ZERO GLOBAL POLLUTION
 Never attach variables or functions to window. Instances must be scoped to `main.js` or passed via dependency injection.
 
+VII. THE SUPERANNUATION DATA RULE (Anti-Hallucination)
+Because superannuation legislation, contribution caps (e.g., NCC), and Transfer Balance Cap (TBC) indexation change frequently, you are FORBIDDEN from relying solely on your internal training data for any legislative limits.
+**Mandate**: You MUST always run a live web search (against ATO/government sources) to verify the exact, current financial year figures before implementing or updating any superannuation strategy calculations.
+
 4. Operational Rules for the Executor
 | Rule | Action |
 | :--- | :--- |

@@ -892,7 +892,7 @@ export default class SuperStrategyUI {
                 <div style="background: rgba(255,255,255,0.03); border-radius: 10px; padding: 14px; margin-bottom: 8px;">
                     <div style="font-size: 0.82rem; font-weight: 700; color: #fff; margin-bottom: 4px;">Transfer Balance Cap (TBC)</div>
                     <div style="font-size: 0.78rem; color: var(--text-muted); line-height: 1.5;">
-                        The maximum amount you can transfer into the tax-free pension phase over your lifetime. Currently <strong style="color: #fff;">${formatCurrency(SUPER_THRESHOLDS.transferBalanceCap)}</strong>.
+                        The maximum amount you can transfer into the tax-free pension phase over your lifetime. For FY${fy}, the general cap is <strong style="color: #fff;">${formatCurrency(calc.contributionCaps.tbc)}</strong>.
                     </div>
                 </div>
 
@@ -916,8 +916,8 @@ export default class SuperStrategyUI {
                         After the pension restart payout, you re-contribute the remaining balance back into accumulation as a <strong style="color: #fff;">non-concessional contribution (NCC)</strong>. This is combined with any new concessional contributions to form the new pension balance.
                     </div>
                     <div style="font-size: 0.78rem; color: var(--text-muted); line-height: 1.5;">
-                        <div style="margin-bottom: 6px;"><strong style="color: var(--color-accent);">Bring-Forward Rule:</strong> You can use up to <strong style="color: #fff;">3× the NCC cap</strong> ($${(calc.contributionCaps.nonConcessional * 3).toLocaleString()}) in a single year, but this locks out NCCs for the following 2 years.</div>
-                        <div style="margin-bottom: 6px;"><strong style="color: var(--color-accent);">TSB Threshold:</strong> NCCs are not permitted if your total super balance was ≥ $${RECONTRIBUTION_RULES.totalSuperBalanceThreshold.toLocaleString()} as at the prior 30 June.</div>
+                        <div style="margin-bottom: 6px;"><strong style="color: var(--color-accent);">Bring-Forward Rule:</strong> You can use up to <strong style="color: #fff;">3× the NCC cap</strong> ($${(calc.contributionCaps.nonConcessional * 3).toLocaleString()}) in a single year, subject to tiered limits based on your Total Super Balance (TSB) being below the general Transfer Balance Cap of $${calc.contributionCaps.tbc.toLocaleString()}.</div>
+                        <div style="margin-bottom: 6px;"><strong style="color: var(--color-accent);">TSB Threshold:</strong> NCCs are not permitted if your TSB was ≥ $${calc.contributionCaps.tbc.toLocaleString()} as at the prior 30 June.</div>
                         <div><strong style="color: var(--color-accent);">Timing:</strong> Re-contribute within the same FY as closure (or ${RECONTRIBUTION_RULES.maxDaysAfterClosure} days per fund policy).</div>
                     </div>
                 </div>
