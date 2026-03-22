@@ -260,8 +260,8 @@ export class SidebarCommandCenter {
                         <button class="command-grid-item" id="nav-calculator" title="Calculators">
                             <i class="fas ${UI_ICONS.CALCULATOR} command-icon"></i>
                         </button>
-                        <button class="command-grid-item" id="nav-visuals" title="Visual Style">
-                            <i class="fas fa-palette command-icon"></i>
+                        <button class="command-grid-item" id="nav-super-strategy" title="Super Strategy">
+                            <i class="fas fa-shield-alt command-icon"></i>
                         </button>
                         <button class="command-grid-item" id="nav-favorites" title="Favorite Links">
                             <i class="fas fa-link command-icon"></i>
@@ -324,6 +324,9 @@ export class SidebarCommandCenter {
                         </button>
                         <button class="command-grid-item" id="nav-settings" title="App Settings">
                             <i class="fas fa-cog command-icon"></i>
+                        </button>
+                        <button class="command-grid-item" id="nav-visuals" title="Visual Style">
+                            <i class="fas fa-palette command-icon"></i>
                         </button>
 
                     </div>
@@ -430,6 +433,11 @@ export class SidebarCommandCenter {
             case 'nav-market-pulse':
                 this._closeSidebar();
                 document.dispatchEvent(new CustomEvent(EVENTS.OPEN_MARKET_PULSE));
+                break;
+
+            case 'nav-super-strategy':
+                this._closeSidebar();
+                document.dispatchEvent(new CustomEvent(EVENTS.OPEN_SUPER_STRATEGY));
                 break;
 
             case 'nav-reload':

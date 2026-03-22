@@ -103,7 +103,10 @@ export const STORAGE_KEYS = {
     VIEW_CONFIGS: 'ASX_NEXT_viewConfigs', // Per-watchlist Map
     LAST_SNAPSHOT_TIME: 'ASX_NEXT_lastSnapshotTime',
     WIDGET_CONFIG: 'ASX_NEXT_widgetConfig',
-    WIDGET_DASHBOARD_ITEMS: 'ASX_NEXT_widgetDashboardItems'
+    WIDGET_DASHBOARD_ITEMS: 'ASX_NEXT_widgetDashboardItems',
+
+    // Superannuation Strategy Engine
+    SUPER_STRATEGY: 'ASX_NEXT_superStrategy'
 };
 
 export const EVENTS = {
@@ -180,7 +183,13 @@ export const EVENTS = {
     OPEN_CREATE_WATCHLIST: 'open-create-watchlist',
     OPEN_EDIT_WATCHLIST: 'open-edit-watchlist',
     WIDGET_TOGGLE: 'widget-toggle',
-    WIDGET_CONFIG_CHANGED: 'widget-config-changed'
+    WIDGET_CONFIG_CHANGED: 'widget-config-changed',
+
+    // Super Strategy Engine
+    OPEN_SUPER_STRATEGY: 'open-super-strategy',
+    SUPER_STATE_CHANGED: 'super-state-changed',
+    SUPER_SUSTAINABILITY_ALERT: 'super-sustainability-alert',
+    SUPER_READY: 'super-ready'
 };
 
 export const SORT_OPTIONS = {
@@ -1353,7 +1362,24 @@ export const CSS_CLASSES = {
     CHART_CONTROLS: 'chart-controls',
     CHART_BTN: 'chart-btn',
     CHART_SELECT: 'chart-select',
-    CHART_OVERLAY_LOADER: 'chart-overlay-loader'
+    CHART_OVERLAY_LOADER: 'chart-overlay-loader',
+
+    // Super Strategy Engine
+    SUPER_MODAL: 'super-strategy-modal',
+    SUPER_PROGRESS_BAR: 'super-progress-bar',
+    SUPER_STEP: 'super-step',
+    SUPER_STEP_ACTIVE: 'super-step-active',
+    SUPER_STEP_COMPLETE: 'super-step-complete',
+    SUPER_STEP_LOCKED: 'super-step-locked',
+    SUPER_STEP_CONNECTOR: 'super-step-connector',
+    SUPER_LEDGER: 'super-ledger',
+    SUPER_LEDGER_CARD: 'super-ledger-card',
+    SUPER_DETAIL_PANEL: 'super-detail-panel',
+    SUPER_SIM_PANEL: 'super-sim-panel',
+    SUPER_SIM_RESULT: 'super-sim-result',
+    SUPER_ALERT_BANNER: 'super-alert-banner',
+    SUPER_QUICK_LINKS: 'super-quick-links',
+    SUPER_REMINDER_ROW: 'super-reminder-row'
 };
 
 export const ANIMATIONS = {
@@ -1649,7 +1675,26 @@ export const IDS = {
 
     BTN_ANNOUNCEMENTS: 'btn-announcements',
     AI_SUMMARY_MODAL: 'ai-summary-modal',
-    AI_PROMPT_EDITOR: 'ai-prompt-editor-container'
+    AI_PROMPT_EDITOR: 'ai-prompt-editor-container',
+
+    // Super Strategy Engine
+    SUPER_STRATEGY_MODAL: 'super-strategy-modal',
+    SUPER_STATE_PROGRESS: 'super-state-progress',
+    SUPER_ACCUMULATION_INPUT: 'super-accumulation-input',
+    SUPER_PENSION_INPUT: 'super-pension-input',
+    SUPER_SAFETY_FLOOR_INPUT: 'super-safety-floor-input',
+    SUPER_AGE_INPUT: 'super-age-input',
+    SUPER_SIMULATION_DATE: 'super-simulation-date',
+    SUPER_SIMULATION_RESULTS: 'super-simulation-results',
+    SUPER_STEP_DETAIL: 'super-step-detail',
+    SUPER_CONTRIBUTION_AMOUNT: 'super-contribution-amount',
+    SUPER_CONTRIBUTION_DATE: 'super-contribution-date',
+    SUPER_NOI_DATE: 'super-noi-date',
+    SUPER_NOI_AMOUNT: 'super-noi-amount',
+    SUPER_ACK_CHECKBOX: 'super-ack-checkbox',
+    SUPER_CLOSURE_DATE: 'super-closure-date',
+    SUPER_COMMENCE_DATE: 'super-commence-date',
+    BTN_SUPER_STRATEGY: 'btn-super-strategy'
 };
 
 export const UI_LABELS = {

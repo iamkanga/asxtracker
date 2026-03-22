@@ -312,6 +312,13 @@ export class AppController {
             });
         });
 
+        // Super Strategy Engine
+        document.addEventListener(EVENTS.OPEN_SUPER_STRATEGY, () => {
+            import('../ui/SuperStrategyUI.js').then(module => {
+                module.default.showModal();
+            });
+        });
+
         document.addEventListener('open-visual-settings', () => {
             GeneralSettingsUI.showAppearanceModal();
         });

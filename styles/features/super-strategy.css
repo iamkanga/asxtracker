@@ -1,0 +1,206 @@
+/**
+ * super-strategy.css
+ * Styles for the Superannuation Strategy Engine modal.
+ * Constitution Compliance: Modular CSS Standard (styles/features/)
+ */
+
+/* ─────────────────────────────────────────────
+   Progress Bar & Steps
+   ───────────────────────────────────────────── */
+
+.super-progress-bar {
+    display: flex;
+    align-items: flex-start;
+    padding: 16px 8px;
+    margin-bottom: 16px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 12px;
+}
+
+.super-step {
+    transition: opacity 0.2s ease, transform 0.15s ease;
+}
+
+.super-step:hover:not(.super-step-locked) {
+    transform: scale(1.05);
+}
+
+.super-step-active > div:first-child {
+    box-shadow: 0 0 12px rgba(var(--accent-rgb, 100, 100, 255), 0.4);
+    animation: superPulse 2s infinite;
+}
+
+.super-step-complete > div:first-child {
+    box-shadow: 0 2px 8px rgba(var(--accent-rgb, 100, 100, 255), 0.3);
+}
+
+.super-step-locked {
+    pointer-events: none;
+}
+
+.super-step-connector {
+    transition: background 0.3s ease;
+}
+
+@keyframes superPulse {
+    0%, 100% { box-shadow: 0 0 8px rgba(var(--accent-rgb, 100, 100, 255), 0.3); }
+    50% { box-shadow: 0 0 18px rgba(var(--accent-rgb, 100, 100, 255), 0.6); }
+}
+
+/* ─────────────────────────────────────────────
+   Ledger Cards
+   ───────────────────────────────────────────── */
+
+.super-ledger {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.super-ledger-card {
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 12px;
+    padding: 14px;
+    transition: background 0.2s ease;
+}
+
+.super-ledger-card:focus-within {
+    background: rgba(255, 255, 255, 0.06);
+    outline: 1px solid rgba(var(--accent-rgb, 100, 100, 255), 0.3);
+}
+
+/* ─────────────────────────────────────────────
+   Detail Panel
+   ───────────────────────────────────────────── */
+
+.super-detail-panel {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 14px;
+    padding: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* ─────────────────────────────────────────────
+   Simulation Panel
+   ───────────────────────────────────────────── */
+
+.super-sim-panel {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 14px;
+    padding: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.super-sim-result {
+    animation: fadeSlideIn 0.3s ease;
+}
+
+@keyframes fadeSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ─────────────────────────────────────────────
+   Alert Banner
+   ───────────────────────────────────────────── */
+
+.super-alert-banner {
+    animation: alertFlash 0.4s ease;
+}
+
+@keyframes alertFlash {
+    0% { opacity: 0; transform: scale(0.97); }
+    100% { opacity: 1; transform: scale(1); }
+}
+
+/* ─────────────────────────────────────────────
+   Quick Links
+   ───────────────────────────────────────────── */
+
+.super-quick-links a:hover {
+    background: rgba(255, 255, 255, 0.08) !important;
+}
+
+.super-quick-links a:active {
+    transform: scale(0.97);
+}
+
+/* ─────────────────────────────────────────────
+   Reminder Row
+   ───────────────────────────────────────────── */
+
+.super-reminder-row {
+    transition: all 0.2s ease;
+}
+
+/* ─────────────────────────────────────────────
+   Tab Buttons
+   ───────────────────────────────────────────── */
+
+.super-tab-btn {
+    transition: all 0.2s ease !important;
+}
+
+.super-tab-btn:hover {
+    background: rgba(255, 255, 255, 0.06) !important;
+}
+
+.super-tab-btn.active {
+    background: rgba(255, 255, 255, 0.1) !important;
+    color: #fff !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* ─────────────────────────────────────────────
+   Table Styles (Reference Tab)
+   ───────────────────────────────────────────── */
+
+#super-strategy-modal table tr:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+/* ─────────────────────────────────────────────
+   Input Overrides (inside super modal)
+   ───────────────────────────────────────────── */
+
+#super-strategy-modal input[type="number"],
+#super-strategy-modal input[type="date"] {
+    color: #fff;
+    font-family: inherit;
+}
+
+#super-strategy-modal input[type="number"]:focus,
+#super-strategy-modal input[type="date"]:focus {
+    outline: 1px solid var(--color-accent);
+    border-color: var(--color-accent);
+}
+
+#super-strategy-modal input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(0.7);
+}
+
+/* ─────────────────────────────────────────────
+   Responsive
+   ───────────────────────────────────────────── */
+
+@media (max-width: 480px) {
+    .super-ledger {
+        grid-template-columns: 1fr;
+    }
+
+    .super-progress-bar {
+        padding: 12px 4px;
+    }
+
+    .super-step > div:last-child {
+        font-size: 0.5rem !important;
+        max-width: 45px !important;
+    }
+}
