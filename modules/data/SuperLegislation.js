@@ -275,12 +275,30 @@ export function daysUntilEOFY(date = new Date()) {
  * @param {Date}   params.proposedRestartDate
  * @param {number} params.safetyFloor
  * @param {number} [params.contributionAmount] - New contribution being added.
+ * @param {boolean} [params.isDeductible] - Whether the contribution is claimed as a tax deduction (NOI).
+ * @param {number} [params.bringForwardTriggeredFY] - FY when BF was triggered.
+ * @param {object} [params.pipelineContribution] - { amount, fy } of current pipeline payment.
  * @returns {object} Simulation results.
  */
-export function runSimulation({ accumulationBalance, pensionBalance, ageAtJuly1, proposedRestartDate, safetyFloor, contributionAmount = 0 }) {
+export function runSimulation({
+    accumulationBalance,
+    pensionBalance,
+    ageAtJuly1,
+    proposedRestartDate,
+    safetyFloor,
+    contributionAmount = 0,
+    isDeductible = false,
+    bringForwardTriggeredFY = null,
+    pipelineContribution = null
+}) {
     const fy = getCurrentFinancialYear(proposedRestartDate);
     const fyStart = new Date(fy - 1, 6, 1);
     const fyEnd = new Date(fy, 5, 30);
+
+    // 0. Contribution Tax (if deductible)
+    const taxRate = 0.15;
+    const taxAmount = isDeductible ? (contributionAmount * taxRate) : 0;
+    const netContribution = contributionAmount - taxAmount;
 
     // 1. Pre-closure payout (pro-rata minimum on existing pension)
     const preClosure = pensionBalance > 0
@@ -289,7 +307,7 @@ export function runSimulation({ accumulationBalance, pensionBalance, ageAtJuly1,
 
     // 2. New pension balance after closure payout + contribution
     const postClosureBalance = pensionBalance - preClosure.amount;
-    const newPensionBalance = postClosureBalance + accumulationBalance + contributionAmount;
+    const newPensionBalance = postClosureBalance + accumulationBalance + netContribution;
 
     // 3. New pension minimum (considering June 1st rule)
     const june1stApplies = isJune1stRuleApplicable(proposedRestartDate);
@@ -302,8 +320,40 @@ export function runSimulation({ accumulationBalance, pensionBalance, ageAtJuly1,
     const totalAfterAllDrawdowns = newPensionBalance - newMinimum.amount;
     const floorCheck = checkSafetyFloor(totalAfterAllDrawdowns, 0, safetyFloor);
 
-    // 5. Contribution caps
-    const caps = getContributionCaps(fy);
+    // 5. Cap Analysis
+    const caps = getCapData(fy);
+    const bfStatus = isBringForwardAvailable(bringForwardTriggeredFY, fy);
+
+    // Calculate non-concessional utilization
+    let totalNCCUsed = 0;
+    let pipelineUtilization = 0;
+
+    if (pipelineContribution && pipelineContribution.amount > 0) {
+        // If in same FY OR within active bring-forward window
+        const pipelineFY = pipelineContribution.fy;
+        const sameFY = pipelineFY === fy;
+        const inBFWindow = !bfStatus.available && fy < (bringForwardTriggeredFY + RECONTRIBUTION_RULES.bringForwardWindowYears);
+
+        if (sameFY || inBFWindow) {
+            pipelineUtilization = pipelineContribution.amount;
+            totalNCCUsed += pipelineUtilization;
+        }
+    }
+
+    const nccLimit = !bfStatus.available ? (caps.nonConcessional * 3) : caps.nonConcessional;
+    const nccRemaining = Math.max(0, nccLimit - totalNCCUsed);
+    const nccOverflow = Math.max(0, (!isDeductible ? contributionAmount : 0) - nccRemaining);
+
+    const capAnalysis = {
+        concessionalCap: caps.concessional,
+        nonConcessionalCap: nccLimit,
+        utilizedInPipeline: pipelineUtilization,
+        remainingNCC: nccRemaining,
+        isOverCap: !isDeductible && contributionAmount > nccRemaining,
+        nccOverflow,
+        bringForwardActive: !bfStatus.available,
+        bfStartedFY: bringForwardTriggeredFY
+    };
 
     return {
         preClosurePayout: preClosure,
@@ -314,6 +364,11 @@ export function runSimulation({ accumulationBalance, pensionBalance, ageAtJuly1,
         safetyFloorCheck: floorCheck,
         contributionCaps: caps,
         financialYear: fy,
-        daysRemaining: daysUntilEOFY(proposedRestartDate)
+        daysRemaining: daysUntilEOFY(proposedRestartDate),
+        contributionTax: taxAmount,
+        isDeductible,
+        grossContribution: contributionAmount,
+        netContribution,
+        capAnalysis
     };
 }

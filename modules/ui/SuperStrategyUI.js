@@ -745,12 +745,25 @@ export default class SuperStrategyUI {
                 </div>
 
                 <div class="${CSS_CLASSES.FORM_GROUP}" style="margin-bottom: 12px;">
-                    <label class="${CSS_CLASSES.FORM_GROUP}" style="font-size: 0.75rem;">Re-Contribution to Accumulation ($)</label>
+                    <label class="${CSS_CLASSES.FORM_GROUP}" style="font-size: 0.75rem;">Re-Contribution Amount ($)</label>
                     <input type="number" id="super-sim-contribution" class="${CSS_CLASSES.FORM_CONTROL}"
                            placeholder="0.00" step="0.01"
                            style="border-radius: 8px; padding: 10px;">
                     <div style="font-size: 0.68rem; color: var(--text-muted); margin-top: 4px; line-height: 1.4;">
-                        The pension balance being re-contributed back into accumulation as a non-concessional contribution. Getting this into accumulation early gives you flexibility — you can then choose the optimal moment to restart the pension (e.g. wait until June 1 for zero minimum drawdown).
+                        The amount being added to your super during this restart.
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 16px; background: rgba(255,255,255,0.03); padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
+                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                        <div>
+                            <div style="font-size: 0.8rem; font-weight: 700; color: #fff;">Claim as Tax Deduction (NOI)</div>
+                            <div style="font-size: 0.65rem; color: var(--text-muted); margin-top: 2px;">Shifts amount to $30k concessional cap. Incurs 15% tax.</div>
+                        </div>
+                        <label class="switch-small">
+                            <input type="checkbox" id="${IDS.SUPER_SIM_DEDUCTIBLE}">
+                            <span class="slider-small round"></span>
+                        </label>
                     </div>
                 </div>
 
@@ -791,6 +804,23 @@ export default class SuperStrategyUI {
                     </div>
                 </div>
 
+                <!-- Contribution Net -->
+                <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                    <span style="font-size: 0.8rem; color: var(--text-muted);">
+                        ${results.isDeductible ? 'Concessional (Deductible)' : 'Non-Concessional'}
+                    </span>
+                    <span style="font-size: 0.9rem; font-weight: 700; color: #fff;">
+                        ${formatCurrency(results.grossContribution)}
+                    </span>
+                </div>
+
+                ${results.isDeductible ? `
+                <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                    <span style="font-size: 0.75rem; color: #ff3b30; font-weight: 600;">Less 15% Contribution Tax</span>
+                    <span style="font-size: 0.85rem; font-weight: 700; color: #ff3b30;">-${formatCurrency(results.contributionTax)}</span>
+                </div>
+                ` : ''}
+
                 <!-- Pre-Closure Payout -->
                 <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
                     <span style="font-size: 0.8rem; color: var(--text-muted);">Pre-Closure Payout</span>
@@ -812,13 +842,46 @@ export default class SuperStrategyUI {
                     </span>
                 </div>
 
-                <!-- Contribution Caps -->
+                <!-- Cap Analysis -->
                 <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.08);">
-                    <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;">FY ${results.financialYear} Caps</div>
-                    <div style="display: flex; gap: 10px;">
-                        <div style="flex: 1; font-size: 0.78rem; color: var(--text-muted);">Concessional: <strong style="color: #fff;">${formatCurrency(results.contributionCaps.concessional)}</strong></div>
-                        <div style="flex: 1; font-size: 0.78rem; color: var(--text-muted);">Non-CC: <strong style="color: #fff;">${formatCurrency(results.contributionCaps.nonConcessional)}</strong></div>
+                    <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">
+                        FY ${results.financialYear} Cap Analysis
                     </div>
+                    
+                    <div style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 12px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                            <span style="font-size: 0.75rem; color: var(--text-muted);">Total Non-CC Cap</span>
+                            <span style="font-size: 0.75rem; font-weight: 700; color: #fff;">${formatCurrency(results.capAnalysis.nonConcessionalCap)}</span>
+                        </div>
+
+                        ${results.capAnalysis.utilizedInPipeline > 0 ? `
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                            <span style="font-size: 0.75rem; color: var(--color-accent);">Utilized in Pipeline</span>
+                            <span style="font-size: 0.75rem; font-weight: 700; color: var(--color-accent);">${formatCurrency(results.capAnalysis.utilizedInPipeline)}</span>
+                        </div>
+                        ` : ''}
+
+                        <div style="display: flex; justify-content: space-between; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.05);">
+                            <span style="font-size: 0.75rem; color: var(--text-muted);">Remaining for Sim</span>
+                            <span style="font-size: 0.75rem; font-weight: 700; color: ${results.capAnalysis.isOverCap ? 'var(--color-negative)' : 'var(--color-positive)'};">
+                                ${formatCurrency(results.capAnalysis.remainingNCC)}
+                            </span>
+                        </div>
+                    </div>
+
+                    ${results.capAnalysis.isOverCap ? `
+                        <div style="margin-top: 10px; padding: 8px; background: rgba(255, 59, 48, 0.1); border-radius: 6px; border: 1px solid rgba(255, 59, 48, 0.2); display: flex; gap: 8px; align-items: center;">
+                            <i class="fas fa-exclamation-triangle" style="color: #ff3b30; font-size: 0.8rem;"></i>
+                            <div style="font-size: 0.7rem; color: #ff3b30; font-weight: 600; line-height: 1.3;">
+                                Exceeds remaining cap by ${formatCurrency(results.capAnalysis.nccOverflow)}. 
+                                ${results.capAnalysis.bringForwardActive ? `Using active Bring-Forward window (from FY ${results.capAnalysis.bfStartedFY}).` : ''}
+                            </div>
+                        </div>
+                    ` : results.capAnalysis.bringForwardActive ? `
+                        <div style="margin-top: 8px; font-size: 0.65rem; color: var(--color-accent);">
+                            <i class="fas fa-info-circle"></i> Active Bring-Forward window detected (Started FY ${results.capAnalysis.bfStartedFY}).
+                        </div>
+                    ` : ''}
                 </div>
 
                 <div style="margin-top: 10px; font-size: 0.7rem; color: var(--text-muted); text-align: center;">
@@ -1105,11 +1168,13 @@ export default class SuperStrategyUI {
             simBtn.addEventListener('click', () => {
                 const dateInput = this.container.querySelector(`#${IDS.SUPER_SIMULATION_DATE}`);
                 const contribInput = this.container.querySelector('#super-sim-contribution');
+                const deductibleInput = this.container.querySelector(`#${IDS.SUPER_SIM_DEDUCTIBLE}`);
                 if (!dateInput?.value) return;
 
                 const results = superStrategyStore.runSimulation(
                     dateInput.value,
-                    parseFloat(contribInput?.value) || 0
+                    parseFloat(contribInput?.value) || 0,
+                    deductibleInput ? deductibleInput.checked : false
                 );
                 this._renderSimulationResults(results);
             });

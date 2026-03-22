@@ -1685,6 +1685,7 @@ export const IDS = {
     SUPER_SAFETY_FLOOR_INPUT: 'super-safety-floor-input',
     SUPER_AGE_INPUT: 'super-age-input',
     SUPER_SIMULATION_DATE: 'super-simulation-date',
+    SUPER_SIM_DEDUCTIBLE: 'super-sim-deductible',
     SUPER_SIMULATION_RESULTS: 'super-simulation-results',
     SUPER_STEP_DETAIL: 'super-step-detail',
     SUPER_CONTRIBUTION_AMOUNT: 'super-contribution-amount',

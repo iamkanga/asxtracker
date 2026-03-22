@@ -430,14 +430,30 @@ class SuperStrategyStore {
     // Simulation
     // ─────────────────────────────────────────
 
-    runSimulation(proposedRestartDate, contributionAmount = 0) {
+    runSimulation(proposedRestartDate, contributionAmount = 0, isDeductible = false) {
+        const restartDate = new Date(proposedRestartDate);
+        const simFY = getCurrentFinancialYear(restartDate);
+
+        // Extract current pipeline contribution info
+        const contribData = this.data.stateData[SUPER_STATES.CONTRIBUTION_CLEARANCE];
+        let pipelineContribution = null;
+        if (contribData && contribData.amount > 0 && contribData.clearedDate) {
+            pipelineContribution = {
+                amount: contribData.amount,
+                fy: getCurrentFinancialYear(new Date(contribData.clearedDate))
+            };
+        }
+
         return runSimulation({
             accumulationBalance: this.data.accumulationBalance,
             pensionBalance: this.data.pensionBalance,
             ageAtJuly1: this.data.ageAtJuly1,
-            proposedRestartDate: new Date(proposedRestartDate),
+            proposedRestartDate: restartDate,
             safetyFloor: this.data.capitalSafetyFloor,
-            contributionAmount
+            contributionAmount,
+            isDeductible,
+            bringForwardTriggeredFY: this.data.bringForwardTriggeredFY,
+            pipelineContribution
         });
     }
 
