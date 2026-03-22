@@ -373,37 +373,18 @@ class SuperStrategyStore {
 
     getActiveReminders() {
         const daysLeft = daysUntilEOFY();
-        const presetReminders = (this.data.reminderPresets || []).map(weeks => {
-            const triggerDays = weeks * 7;
-            return {
-                type: 'preset',
-                label: `${weeks}w before EOFY`,
-                weeks,
-                triggerDays,
-                isTriggered: daysLeft <= triggerDays,
-                daysUntilTrigger: Math.max(0, triggerDays - daysLeft),
-                daysUntilEOFY: daysLeft
-            };
-        });
+        const weeksLeft = Math.ceil(daysLeft / 7);
+        
+        // Only trigger countdown if within the final 6 weeks of the FY
+        if (weeksLeft > 6 || weeksLeft <= 0) return [];
 
-        // Custom date reminder
-        if (this.data.customReminderDate) {
-            const customDate = new Date(this.data.customReminderDate);
-            const now = new Date();
-            const msPerDay = 86400000;
-            const daysUntilCustom = Math.ceil((customDate - now) / msPerDay);
-            presetReminders.push({
-                type: 'custom',
-                label: `Custom: ${customDate.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}`,
-                weeks: null,
-                triggerDays: null,
-                isTriggered: daysUntilCustom <= 0,
-                daysUntilTrigger: Math.max(0, daysUntilCustom),
-                daysUntilEOFY: daysLeft
-            });
-        }
-
-        return presetReminders;
+        return [{
+            type: 'countdown',
+            label: `EOFY Countdown: ${weeksLeft} Week${weeksLeft > 1 ? 's' : ''} Remaining`,
+            weeks: weeksLeft,
+            isTriggered: true,
+            daysUntilEOFY: daysLeft
+        }];
     }
 
     /**

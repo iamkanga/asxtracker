@@ -171,9 +171,19 @@ export default class SuperStrategyUI {
 
     _renderPipelineTab(data, calc) {
         return `
+            <div style="font-size: 1.05rem; font-weight: 900; color: var(--color-accent); letter-spacing: 1.5px; border-left: 4px solid var(--color-accent); padding-left: 14px; margin: 12px 0 24px 4px; text-transform: uppercase;">
+                Your Member Position
+            </div>
             ${this._renderBalanceHeader(data, calc)}
-            ${this._renderProgressBar()}
-            ${this._renderActiveStepDetail(data)}
+
+            <div style="font-size: 1.05rem; font-weight: 900; color: var(--color-accent); letter-spacing: 1.5px; border-left: 4px solid var(--color-accent); padding-left: 14px; margin: 32px 0 24px 4px; text-transform: uppercase;">
+                Strategy Execution
+            </div>
+            <div style="background: rgba(255,255,255,0.03); border-radius: 16px; padding: 20px; border: 1px solid rgba(255,255,255,0.06); box-shadow: var(--shadow-strong);">
+                ${this._renderProgressBar()}
+                ${this._renderActiveStepDetail(data)}
+            </div>
+            
             ${this._renderTimingStrategies(data, calc)}
             ${this._renderSafetyFloorBanner(data, calc)}
             ${this._renderReminderStatus(calc)}
@@ -184,92 +194,84 @@ export default class SuperStrategyUI {
     _renderBalanceHeader(data, calc) {
         const floorPct = data.capitalSafetyFloor > 0 ? (calc.safetyFloorStatus.safe ? 'safe' : 'warning') : 'none';
         const floorColor = floorPct === 'safe' ? 'var(--color-positive)' : floorPct === 'warning' ? 'var(--color-negative)' : 'var(--text-muted)';
-        const fy = calc.financialYear;
-
+        
         return `
-            <div class="${CSS_CLASSES.SUPER_LEDGER}" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px;">
-                <!-- Accumulation Column -->
-                <div>
-                    <div class="${CSS_CLASSES.SUPER_LEDGER_CARD}" style="background: rgba(255,255,255,0.04); border-radius: 12px; padding: 14px; height: 100%; box-sizing: border-box; display: flex; flex-direction: column;">
-                        <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;">Accumulation</div>
-                        <div style="font-size: 0.58rem; color: var(--text-muted); margin-bottom: 6px; font-weight: 400;">Balance as at 1 July</div>
+            <div style="background: rgba(255,255,255,0.04); border-radius: 20px; padding: 20px; border: 1px solid rgba(255,255,255,0.08); box-shadow: var(--shadow-strong); margin-bottom: 20px; overflow: hidden; position: relative;">
+                <!-- Subtle Gradient Background -->
+                <div style="position: absolute; top: 0; left: 0; right: 0; height: 100px; background: linear-gradient(180deg, rgba(var(--color-accent-rgb), 0.05) 0%, transparent 100%); pointer-events: none;"></div>
+
+                <!-- Hero Balance Section -->
+                <div style="text-align: center; margin-bottom: 24px; position: relative;">
+                    <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 4px;">Total Member Balance</div>
+                    <div style="font-size: 2.2rem; font-weight: 900; color: #fff; text-shadow: 0 4px 10px rgba(0,0,0,0.3); line-height: 1;">${formatCurrency(calc.totalBalance)}</div>
+                    
+                    ${data.capitalSafetyFloor > 0 ? `
+                        <div style="margin-top: 10px; display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; background: rgba(0,0,0,0.2); border-radius: 20px; border: 1px solid ${floorColor}44;">
+                            <span style="font-size: 0.65rem; font-weight: 700; color: var(--text-muted);">SAFETY FLOOR:</span>
+                            <span style="font-size: 0.75rem; font-weight: 800; color: ${floorColor};">${formatCurrency(data.capitalSafetyFloor)}</span>
+                            <i class="fas ${calc.safetyFloorStatus.safe ? 'fa-check' : 'fa-exclamation'}" style="color: ${floorColor}; font-size: 0.7rem;"></i>
+                        </div>
+                    ` : ''}
+                </div>
+
+                <!-- Ledger Breakdown -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+                    <!-- Accumulation -->
+                    <div style="background: rgba(0,0,0,0.2); border-radius: 14px; padding: 12px; border: 1px solid rgba(255,255,255,0.03);">
+                        <div style="font-size: 0.6rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;">Accumulation</div>
                         <input type="number" id="${IDS.SUPER_ACCUMULATION_INPUT}" class="${CSS_CLASSES.FORM_CONTROL}"
                                value="${data.accumulationBalance || ''}" placeholder="0.00"
-                               style="font-size: 1.1rem; font-weight: 700; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 8px 10px; width: 100%; box-sizing: border-box;">
-                        
-                        <!-- Minimum Balance Indicator -->
-                        <div style="margin-top: auto; padding-top: 10px; text-align: left; font-size: 0.6rem; color: ${data.accumulationBalance < SUPER_THRESHOLDS.minAccumulationBalance ? '#ff3b30' : 'var(--text-muted)'}; opacity: 0.7; font-weight: 600;">
-                            Min: ${formatCurrency(SUPER_THRESHOLDS.minAccumulationBalance)}
-                        </div>
+                               style="font-size: 1.1rem; font-weight: 700; background: transparent; border: none; padding: 0; color: #fff; width: 100%;">
+                        <div style="font-size: 0.55rem; color: var(--text-muted); display: inline-block; padding: 0; font-weight: 800; margin-top: 4px; text-transform: uppercase; opacity: 0.7;">1 July Start</div>
                     </div>
-                </div>
 
-                <!-- Pension Column -->
-                <div>
-                    <div class="${CSS_CLASSES.SUPER_LEDGER_CARD}" style="background: rgba(255,255,255,0.04); border-radius: 12px; padding: 14px; height: 100%; box-sizing: border-box;">
-                        <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;">Pension</div>
-                        <div style="font-size: 0.58rem; color: var(--text-muted); margin-bottom: 6px; font-weight: 400;">Balance as at 1 July</div>
+                    <!-- Pension -->
+                    <div style="background: rgba(0,0,0,0.2); border-radius: 14px; padding: 12px; border: 1px solid rgba(255,255,255,0.03);">
+                        <div style="font-size: 0.6rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;">Pension</div>
                         <input type="number" id="${IDS.SUPER_PENSION_INPUT}" class="${CSS_CLASSES.FORM_CONTROL}"
                                value="${data.pensionBalance || ''}" placeholder="0.00"
-                               style="font-size: 1.1rem; font-weight: 700; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 8px 10px; width: 100%; box-sizing: border-box;">
+                               style="font-size: 1.1rem; font-weight: 700; background: transparent; border: none; padding: 0; color: #fff; width: 100%;">
+                        <div style="font-size: 0.55rem; color: var(--text-muted); display: inline-block; padding: 0; font-weight: 800; margin-top: 4px; text-transform: uppercase; opacity: 0.7;">1 July Start</div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Safety Floor Row -->
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: rgba(255,255,255,0.03); border-radius: 10px; margin-bottom: 16px;">
-                <div>
-                    <div style="font-size: 0.65rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">Total Balance</div>
-                    <div style="font-size: 1.3rem; font-weight: 800; color: #fff;">${formatCurrency(calc.totalBalance)}</div>
-                </div>
-                <div style="text-align: right;">
-                    <div style="font-size: 0.65rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">Safety Floor</div>
-                    <div style="display: flex; align-items: center; gap: 6px; justify-content: flex-end;">
-                        <input type="number" id="${IDS.SUPER_SAFETY_FLOOR_INPUT}"
-                               value="${data.capitalSafetyFloor || ''}" placeholder="Optional"
-                               style="width: 110px; font-size: 1rem; font-weight: 700; color: ${floorColor}; background: transparent; border: none; text-align: right; padding: 0;">
-                        ${data.capitalSafetyFloor > 0 ? `<i class="fas ${calc.safetyFloorStatus.safe ? 'fa-check-circle' : 'fa-exclamation-triangle'}" style="color: ${floorColor}; font-size: 0.9rem;"></i>` : ''}
-                    </div>
-                </div>
-            </div>
-
-            <!-- Age + Min Rate Row -->
-            <div style="display: flex; gap: 10px; margin-bottom: 12px;">
-                <div style="flex: 1; background: rgba(255,255,255,0.03); border-radius: 10px; padding: 10px 12px;">
-                    <div style="font-size: 0.65rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">Age at 1 July</div>
-                    <input type="number" id="${IDS.SUPER_AGE_INPUT}" value="${data.ageAtJuly1 || 65}" min="0" max="120"
-                           style="width: 60px; font-size: 1.1rem; font-weight: 700; background: transparent; border: none; color: #fff; padding: 0;">
-                </div>
-                <div style="flex: 1; background: rgba(255,255,255,0.03); border-radius: 10px; padding: 10px 12px;">
-                    <div style="font-size: 0.65rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">Minimum Drawdown Rate</div>
-                    <div style="font-size: 1.1rem; font-weight: 700; color: var(--color-accent);">${(calc.drawdownRate * 100).toFixed(0)}%</div>
-                </div>
-            </div>
-
-            <!-- Bring-Forward Tracking Row (Always Visible) -->
-            <div style="padding: 12px 14px; background: rgba(255,255,255,0.03); border-radius: 10px; margin-bottom: 16px; border: 1px solid rgba(255,255,255,0.05);">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
-                    <div>
-                        <div style="font-size: 0.65rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px;">Bring-Forward Started</div>
-                        <input type="number" id="${IDS.SUPER_BRING_FORWARD_FY}"
-                               value="${data.bringForwardTriggeredFY || ''}" placeholder="None" min="2000" max="2099"
-                               style="width: 90px; font-size: 1rem; font-weight: 700; color: #fff; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 4px 8px;">
-                    </div>
-                    <div style="text-align: right;">
-                        <div style="font-size: 0.65rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">Availability</div>
-                        <div style="font-size: 0.82rem; font-weight: 700; color: ${calc.recontributionEligibility?.eligible ? 'var(--color-positive)' : 'var(--color-warning)'}; display: flex; align-items: center; justify-content: flex-end; gap: 4px;">
-                            <i class="fas ${calc.recontributionEligibility?.eligible ? 'fa-check-circle' : (calc.recontributionEligibility?.bringForwardStatus?.nextAvailableFY ? 'fa-hourglass-half' : 'fa-ban')}"></i>
-                            ${calc.recontributionEligibility?.eligible ? 'Available' : (calc.recontributionEligibility?.bringForwardStatus?.nextAvailableFY ? 'Rule Active' : 'Not Eligible')}
+                <!-- Profile Attributes (Age, Rule Status) -->
+                <div style="display: grid; grid-template-columns: 0.8fr 1.2fr; gap: 10px;">
+                    <div style="background: rgba(255,255,255,0.03); border-radius: 12px; padding: 10px; border: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 8px;">
+                        <div style="background: rgba(var(--color-accent-rgb), 0.1); width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--color-accent);">
+                            <i class="fas fa-birthday-cake" style="font-size: 0.8rem;"></i>
                         </div>
-                        ${calc.recontributionEligibility?.eligible 
-                            ? `<div style="font-size: 1.05rem; font-weight: 800; color: #fff; margin-top: 2px; line-height: 1;">${formatCurrency(calc.recontributionEligibility.maxAmount)}</div>`
-                            : (calc.recontributionEligibility?.bringForwardStatus?.nextAvailableFY 
-                                ? `<div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">Resets FY ${calc.recontributionEligibility.bringForwardStatus.nextAvailableFY - 1}/${String(calc.recontributionEligibility.bringForwardStatus.nextAvailableFY).slice(-2)}</div>` 
-                                : '')}
+                        <div>
+                            <div style="font-size: 0.55rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Current Age</div>
+                            <input type="number" id="${IDS.SUPER_AGE_INPUT}" value="${data.ageAtJuly1 || 65}" min="0" max="120"
+                                   style="width: 40px; font-size: 0.9rem; font-weight: 800; background: transparent; border: none; color: #fff; padding: 0;">
+                        </div>
+                    </div>
+
+                    <div style="background: rgba(255,255,255,0.03); border-radius: 12px; padding: 10px; border: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 10px;">
+                        <div style="background: ${calc.recontributionEligibility?.eligible ? 'rgba(6,255,79,0.1)' : 'rgba(255,193,7,0.1)'}; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: ${calc.recontributionEligibility?.eligible ? 'var(--color-positive)' : 'var(--color-warning)'}">
+                            <i class="fas ${calc.recontributionEligibility?.eligible ? 'fa-check' : 'fa-lock'}" style="font-size: 0.8rem;"></i>
+                        </div>
+                        <div style="flex: 1;">
+                            <div style="font-size: 0.55rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Contribution Status</div>
+                            <div style="font-size: 0.8rem; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 4px;">
+                                ${calc.recontributionEligibility?.eligible ? 'Available' : 'Cap Used'}
+                                ${calc.recontributionEligibility?.eligible ? `<span style="font-size: 0.7rem; color: var(--color-positive);">${formatCurrency(calc.recontributionEligibility.maxAmount)}</span>` : ''}
+                            </div>
+                            ${!calc.recontributionEligibility?.eligible && calc.recontributionEligibility?.bringForwardStatus?.nextAvailableFY ? 
+                                `<div style="font-size: 0.6rem; color: var(--color-warning); font-weight: 700;">Resets FY ${calc.recontributionEligibility.bringForwardStatus.nextAvailableFY - 1}/${String(calc.recontributionEligibility.bringForwardStatus.nextAvailableFY).slice(-2)}</div>` : ''}
+                        </div>
                     </div>
                 </div>
-                <div style="font-size: 0.68rem; color: var(--text-muted); line-height: 1.4; opacity: 0.8;">
-                    ${calc.recontributionEligibility?.reason || 'Status unavailable'}
+
+                <!-- Expandable Bring-Forward Entry -->
+                <div style="margin-top: 15px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.05);">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <label style="font-size: 0.65rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">Bring-Forward started (FY Ending)</label>
+                        <input type="number" id="${IDS.SUPER_BRING_FORWARD_FY}"
+                               value="${data.bringForwardTriggeredFY || ''}" placeholder="FY (e.g. 2025)" min="2000" max="2099"
+                               style="width: 105px; font-size: 0.8rem; font-weight: 700; color: #fff; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; padding: 4px 8px; text-align: right;">
+                    </div>
                 </div>
             </div>
         `;
@@ -343,9 +345,11 @@ export default class SuperStrategyUI {
                     </div>
                     <div class="${CSS_CLASSES.FORM_GROUP}" style="margin-bottom: 12px;">
                         <label class="${CSS_CLASSES.FORM_GROUP}" style="font-size: 0.75rem;">Date Cleared</label>
-                        <input type="date" id="${IDS.SUPER_CONTRIBUTION_DATE}" class="${CSS_CLASSES.FORM_CONTROL}"
-                               value="${stateData.clearedDate || ''}"
-                               style="border-radius: 8px; padding: 10px;">
+                        <input type="${stateData.clearedDate ? 'date' : 'text'}" id="${IDS.SUPER_CONTRIBUTION_DATE}" class="${CSS_CLASSES.FORM_CONTROL}"
+                               value="${stateData.clearedDate || ''}" placeholder=" "
+                               onfocus="(this.type='date'); if('showPicker' in this) this.showPicker()"
+                               onblur="if(!this.value) this.type='text'"
+                               style="border-radius: 8px; padding: 10px; cursor: pointer;">
                     </div>
                 `;
                 break;
@@ -360,9 +364,11 @@ export default class SuperStrategyUI {
                     </div>
                     <div class="${CSS_CLASSES.FORM_GROUP}" style="margin-bottom: 12px;">
                         <label class="${CSS_CLASSES.FORM_GROUP}" style="font-size: 0.75rem;">Date Submitted</label>
-                        <input type="date" id="${IDS.SUPER_NOI_DATE}" class="${CSS_CLASSES.FORM_CONTROL}"
-                               value="${stateData.submittedDate || ''}"
-                               style="border-radius: 8px; padding: 10px;">
+                        <input type="${stateData.submittedDate ? 'date' : 'text'}" id="${IDS.SUPER_NOI_DATE}" class="${CSS_CLASSES.FORM_CONTROL}"
+                               value="${stateData.submittedDate || ''}" placeholder=" "
+                               onfocus="(this.type='date'); if('showPicker' in this) this.showPicker()"
+                               onblur="if(!this.value) this.type='text'"
+                               style="border-radius: 8px; padding: 10px; cursor: pointer;">
                     </div>
                 `;
                 break;
@@ -391,9 +397,11 @@ export default class SuperStrategyUI {
                 fieldsHtml = `
                     <div class="${CSS_CLASSES.FORM_GROUP}" style="margin-bottom: 12px;">
                         <label class="${CSS_CLASSES.FORM_GROUP}" style="font-size: 0.75rem;">Closure Date</label>
-                        <input type="date" id="${IDS.SUPER_CLOSURE_DATE}" class="${CSS_CLASSES.FORM_CONTROL}"
-                               value="${stateData.closureDate || ''}"
-                               style="border-radius: 8px; padding: 10px;">
+                        <input type="${stateData.closureDate ? 'date' : 'text'}" id="${IDS.SUPER_CLOSURE_DATE}" class="${CSS_CLASSES.FORM_CONTROL}"
+                               value="${stateData.closureDate || ''}" placeholder=" "
+                               onfocus="(this.type='date'); if('showPicker' in this) this.showPicker()"
+                               onblur="if(!this.value) this.type='text'"
+                               style="border-radius: 8px; padding: 10px; cursor: pointer;">
                     </div>
                     ${proRata ? `
                         <div style="background: rgba(255,255,255,0.04); border-radius: 10px; padding: 14px; margin-top: 8px;">
@@ -416,9 +424,11 @@ export default class SuperStrategyUI {
                 fieldsHtml = `
                     <div class="${CSS_CLASSES.FORM_GROUP}" style="margin-bottom: 12px;">
                         <label class="${CSS_CLASSES.FORM_GROUP}" style="font-size: 0.75rem;">Commencement Date</label>
-                        <input type="date" id="${IDS.SUPER_COMMENCE_DATE}" class="${CSS_CLASSES.FORM_CONTROL}"
-                               value="${stateData.commencementDate || ''}"
-                               style="border-radius: 8px; padding: 10px;">
+                        <input type="${stateData.commencementDate ? 'date' : 'text'}" id="${IDS.SUPER_COMMENCE_DATE}" class="${CSS_CLASSES.FORM_CONTROL}"
+                               value="${stateData.commencementDate || ''}" placeholder=" "
+                               onfocus="(this.type='date'); if('showPicker' in this) this.showPicker()"
+                               onblur="if(!this.value) this.type='text'"
+                               style="border-radius: 8px; padding: 10px; cursor: pointer;">
                     </div>
                     ${stateData.commencementDate ? this._renderCommencementPreview(data, stateData.commencementDate) : ''}
                 `;
@@ -548,10 +558,11 @@ export default class SuperStrategyUI {
         return `
             <div id="${IDS.SUPER_STEP_DETAIL}" class="${CSS_CLASSES.SUPER_DETAIL_PANEL}"
                  style="background: rgba(255,255,255,0.03); border-radius: 14px; padding: 18px; margin-bottom: 16px; border: 1px solid rgba(255,255,255,0.06);">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 12px;">
                     <div>
-                        <div style="font-size: 1rem; font-weight: 800; color: #fff; margin-bottom: 4px;">${label}</div>
-                        <div style="font-size: 0.78rem; color: var(--text-muted); line-height: 1.4;">${desc}</div>
+                        <div style="font-size: 0.75rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 6px;">Active Step</div>
+                        <div style="font-size: 1.15rem; font-weight: 900; color: #fff; margin-bottom: 4px; line-height: 1.2;">${label}</div>
+                        <div style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.5; opacity: 0.8; font-weight: 500;">${desc}</div>
                     </div>
                 </div>
                 ${fieldsHtml}
@@ -676,32 +687,45 @@ export default class SuperStrategyUI {
         const daysLeft = calc.daysUntilEOFY;
         const reminders = superStrategyStore.getActiveReminders();
         const data = superStrategyStore.data;
+        const isCountdownActive = reminders.some(r => r.type === 'countdown');
 
         return `
-            <div style="background: rgba(255,255,255,0.03); border-radius: 12px; padding: 14px; margin-bottom: 16px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                    <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">EOFY Countdown</div>
-                    <div style="font-size: 1rem; font-weight: 800; color: ${daysLeft <= 30 ? '#ff3b30' : daysLeft <= 60 ? '#ffa500' : 'var(--color-accent)'};">${daysLeft} days</div>
+            <div style="background: rgba(255,255,255,0.03); border-radius: 16px; padding: 18px; border: 1px solid rgba(255,255,255,0.06); margin-bottom: 24px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 12px;">
+                    <div>
+                        <div style="font-size: 0.75rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px;">Weekly EOFY Sequence</div>
+                        <div style="font-size: 0.72rem; color: var(--color-accent); font-weight: 600; opacity: 0.8;">Alerts trigger every Monday starting 6 weeks before EOFY</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-size: 1.1rem; font-weight: 900; color: ${daysLeft <= 30 ? '#ff3b30' : daysLeft <= 60 ? '#ffa500' : 'var(--color-positive)'};">${daysLeft} Days to EOFY</div>
+                    </div>
                 </div>
 
-                <!-- Preset Reminders -->
-                <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px;">
-                    ${reminders.map(r => `
-                        <span class="${CSS_CLASSES.SUPER_REMINDER_ROW}" style="padding: 4px 10px; border-radius: 6px; font-size: 0.72rem; font-weight: 600;
-                                      background: ${r.isTriggered ? 'rgba(255,165,0,0.15)' : 'rgba(255,255,255,0.04)'};
-                                      color: ${r.isTriggered ? '#ffa500' : 'var(--text-muted)'};
-                                      border: 1px solid ${r.isTriggered ? 'rgba(255,165,0,0.25)' : 'transparent'};">
-                            ${r.label} ${r.isTriggered ? '⚠' : '✓'}
-                        </span>
-                    `).join('')}
-                </div>
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 20px;">
+                    <!-- Active Logic Block -->
+                    <div style="flex: 1; display: flex; align-items: center; gap: 12px;">
+                        <div style="background: ${isCountdownActive ? 'rgba(255,165,0,0.1)' : 'rgba(255,255,255,0.04)'}; width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: ${isCountdownActive ? '#ffa500' : 'var(--text-muted)'}; border: 1px solid ${isCountdownActive ? 'rgba(255,165,0,0.2)' : 'transparent'};">
+                            <i class="fas ${isCountdownActive ? 'fa-bell' : 'fa-bell-slash'}" style="font-size: 1rem;"></i>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.85rem; font-weight: 800; color: #fff;">
+                                ${isCountdownActive ? reminders[0].label.replace('EOFY Countdown:', 'Weekly Alert: Active') : 'Weekly Alert: Inactive'}
+                            </div>
+                            <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 600;">
+                                ${isCountdownActive ? 'Notifications sent weekly' : ''}
+                            </div>
+                        </div>
+                    </div>
 
-                <!-- Custom Reminder Date -->
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <label style="font-size: 0.72rem; color: var(--text-muted); font-weight: 600; white-space: nowrap;">Custom:</label>
-                    <input type="date" id="${IDS.SUPER_CUSTOM_REMINDER_DATE}"
-                           value="${data.customReminderDate || ''}"
-                           style="flex: 1; font-size: 0.78rem; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; padding: 6px 8px; color: #fff;">
+                    <!-- Compact Custom Date Trigger (Ghost Style) -->
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <label style="font-size: 0.7rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Custom Reminder:</label>
+                        <input type="${data.customReminderDate ? 'date' : 'text'}" id="${IDS.SUPER_CUSTOM_REMINDER_DATE}"
+                               value="${data.customReminderDate || ''}" placeholder=" "
+                               onfocus="(this.type='date'); if('showPicker' in this) this.showPicker()"
+                               onblur="if(!this.value) this.type='text'"
+                               style="width: 100px; font-size: 0.78rem; font-weight: 800; color: #fff; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 6px 10px; cursor: pointer; text-align: center;">
+                    </div>
                 </div>
             </div>
         `;
@@ -732,16 +756,25 @@ export default class SuperStrategyUI {
 
     _renderSimulationTab(data, calc) {
         return `
-            <div style="margin-bottom: 20px;">
-                <div style="font-size: 0.9rem; font-weight: 700; color: #fff; margin-bottom: 8px;">What-If Simulator</div>
-                <div style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 16px; line-height: 1.5;">
-                    Model the impact of restarting your pension on a specific date. See how the timing affects your pre-closure drawdown, new pension minimum, and capital sustainability.
+            <div style="font-size: 1.05rem; font-weight: 900; color: var(--color-accent); letter-spacing: 1.5px; border-left: 4px solid var(--color-accent); padding-left: 14px; margin: 12px 0 24px 4px; text-transform: uppercase;">
+                Your Member Position
+            </div>
+            ${this._renderBalanceHeader(data, calc)}
+
+            <div style="font-size: 1.05rem; font-weight: 900; color: var(--color-accent); letter-spacing: 1.5px; border-left: 4px solid var(--color-accent); padding-left: 14px; margin: 32px 0 24px 4px; text-transform: uppercase;">
+                What-If Simulator
+            </div>
+            <div style="margin-bottom: 24px; background: rgba(255,255,255,0.03); border-radius: 16px; padding: 20px; border: 1px solid rgba(255,255,255,0.06); box-shadow: var(--shadow-strong);">
+                <div style="font-size: 0.82rem; color: var(--text-muted); line-height: 1.6; font-weight: 500;">
+                    Model the impact of restarting your pension on a specific date. See how timing affects your pre-closure drawdown, new pension minimum, and capital sustainability.
                 </div>
 
                 <div class="${CSS_CLASSES.FORM_GROUP}" style="margin-bottom: 12px;">
                     <label class="${CSS_CLASSES.FORM_GROUP}" style="font-size: 0.75rem;">Proposed Restart Date</label>
-                    <input type="date" id="${IDS.SUPER_SIMULATION_DATE}" class="${CSS_CLASSES.FORM_CONTROL}"
-                           style="border-radius: 8px; padding: 10px;">
+                    <input type="text" id="${IDS.SUPER_SIMULATION_DATE}" class="${CSS_CLASSES.FORM_CONTROL}"
+                           placeholder=" " onfocus="(this.type='date'); if('showPicker' in this) this.showPicker()"
+                           onblur="if(!this.value) this.type='text'"
+                           style="border-radius: 8px; padding: 10px; cursor: pointer;">
                 </div>
 
                 <div class="${CSS_CLASSES.FORM_GROUP}" style="margin-bottom: 12px;">
@@ -913,24 +946,6 @@ export default class SuperStrategyUI {
         `).join('');
 
         return `
-            <!-- Drawdown Table -->
-            <div style="margin-bottom: 20px;">
-                <div style="font-size: 0.85rem; font-weight: 700; color: #fff; margin-bottom: 10px;">
-                    <i class="fas fa-table" style="margin-right: 6px; color: var(--color-accent);"></i>
-                    Minimum Drawdown Rates
-                </div>
-                <div style="font-size: 0.72rem; color: var(--text-muted); margin-bottom: 8px; line-height: 1.5;">Based on your age as at 1 July of the financial year. The rate applies to your pension balance as at 1 July.</div>
-                <table style="width: 100%; border-collapse: collapse; background: rgba(255,255,255,0.02); border-radius: 10px; overflow: hidden;">
-                    <thead>
-                        <tr style="background: rgba(255,255,255,0.04);">
-                            <th style="padding: 10px 12px; font-size: 0.7rem; text-align: left; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">Age at 1 July</th>
-                            <th style="padding: 10px 12px; font-size: 0.7rem; text-align: right; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">Min %</th>
-                        </tr>
-                    </thead>
-                    <tbody>${tableRows}</tbody>
-                </table>
-            </div>
-
             <!-- Key Rules -->
             <div style="margin-bottom: 20px;">
                 <div style="font-size: 0.85rem; font-weight: 700; color: #fff; margin-bottom: 10px;">
@@ -999,7 +1014,7 @@ export default class SuperStrategyUI {
                     <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 4px;">
                         <div style="font-size: 0.8rem; color: ${eligibility.eligible ? 'var(--color-positive)' : 'var(--color-warning)'}; font-weight: 700;">
                             <i class="fas ${eligibility.eligible ? 'fa-check-circle' : (eligibility.bringForwardStatus.nextAvailableFY ? 'fa-hourglass-half' : 'fa-ban')}" style="margin-right: 4px;"></i>
-                            ${eligibility.eligible ? 'Available' : (eligibility.bringForwardStatus.nextAvailableFY ? 'Rule Active' : 'Not Eligible')}
+                            ${eligibility.eligible ? 'Available' : (eligibility.bringForwardStatus.nextAvailableFY ? 'Cap Used' : 'Not Eligible')}
                         </div>
                         ${eligibility.eligible 
                             ? `<div style="font-size: 1rem; font-weight: 800; color: #fff;">${formatCurrency(eligibility.maxAmount)}</div>`
@@ -1041,25 +1056,43 @@ export default class SuperStrategyUI {
             </div>
 
             <!-- Your Current Values -->
-            <div style="margin-bottom: 20px;">
-                <div style="font-size: 0.85rem; font-weight: 700; color: #fff; margin-bottom: 10px;">
-                    <i class="fas fa-calculator" style="margin-right: 6px; color: var(--color-accent);"></i>
-                    Your Numbers
+            <div style="margin-bottom: 24px;">
+                <div style="font-size: 0.85rem; font-weight: 700; color: #fff; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-calculator" style="color: var(--color-accent);"></i>
+                    Your Strategy Numbers
                 </div>
-                <div style="background: rgba(255,255,255,0.03); border-radius: 10px; padding: 14px;">
-                    <div style="display: flex; justify-content: space-between; padding: 6px 0; font-size: 0.8rem;">
-                        <span style="color: var(--text-muted);">Annual Minimum Drawdown</span>
-                        <span style="font-weight: 700; color: #fff;">${formatCurrency(calc.annualMinimum)}</span>
+                <div style="background: rgba(255,255,255,0.03); border-radius: 12px; padding: 16px; border: 1px solid rgba(255,255,255,0.05);">
+                    <div style="display: flex; justify-content: space-between; padding: 8px 0; font-size: 0.8rem; border-bottom: 1px solid rgba(255,255,255,0.04);">
+                        <span style="color: var(--text-muted); font-weight: 600;">Annual Minimum Drawdown</span>
+                        <span style="font-weight: 800; color: #fff;">${formatCurrency(calc.annualMinimum)}</span>
                     </div>
-                    <div style="display: flex; justify-content: space-between; padding: 6px 0; font-size: 0.8rem;">
-                        <span style="color: var(--text-muted);">Drawdown Rate</span>
-                        <span style="font-weight: 700; color: #fff;">${(calc.drawdownRate * 100).toFixed(0)}%</span>
+                    <div style="display: flex; justify-content: space-between; padding: 8px 0; font-size: 0.8rem; border-bottom: 1px solid rgba(255,255,255,0.04);">
+                        <span style="color: var(--text-muted); font-weight: 600;">Standard Drawdown Rate</span>
+                        <span style="font-weight: 800; color: #fff;">${(calc.drawdownRate * 100).toFixed(0)}%</span>
                     </div>
-                    <div style="display: flex; justify-content: space-between; padding: 6px 0; font-size: 0.8rem;">
-                        <span style="color: var(--text-muted);">Days to EOFY</span>
-                        <span style="font-weight: 700; color: #fff;">${calc.daysUntilEOFY}</span>
+                    <div style="display: flex; justify-content: space-between; padding: 8px 0; font-size: 0.8rem;">
+                        <span style="color: var(--text-muted); font-weight: 600;">Days remaining to EOFY</span>
+                        <span style="font-weight: 800; color: #fff;">${calc.daysUntilEOFY}</span>
                     </div>
                 </div>
+            </div>
+
+            <!-- Drawdown Table (Last Section) -->
+            <div style="margin-top: 32px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 24px;">
+                <div style="font-size: 0.85rem; font-weight: 700; color: #fff; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-table" style="color: var(--color-accent);"></i>
+                    Minimum Drawdown Rates
+                </div>
+                <div style="font-size: 0.72rem; color: var(--text-muted); margin-bottom: 12px; line-height: 1.5;">The rate is determined by your age as at 1 July of the financial year. Its applied to the balance as at 1 July (or date of commencement).</div>
+                <table style="width: 100%; border-collapse: collapse; background: rgba(0,0,0,0.2); border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.05);">
+                    <thead>
+                        <tr style="background: rgba(255,255,255,0.05);">
+                            <th style="padding: 12px; font-size: 0.7rem; text-align: left; color: var(--text-muted); font-weight: 800; text-transform: uppercase;">Age at 1 July</th>
+                            <th style="padding: 12px; font-size: 0.7rem; text-align: right; color: var(--text-muted); font-weight: 800; text-transform: uppercase;">Min %</th>
+                        </tr>
+                    </thead>
+                    <tbody>${tableRows}</tbody>
+                </table>
             </div>
         `;
     }

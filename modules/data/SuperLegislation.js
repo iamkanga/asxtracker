@@ -122,7 +122,7 @@ export function checkRecontributionEligibility(totalSuperBalance, financialYearE
         }
     } else {
         maxAmount = Math.max(0, (caps.nonConcessional * 3) - bringForwardUsedAmount);
-        reason = `Active Bring-Forward Window (started FY ${bringForwardTriggeredFY - 1}/${String(bringForwardTriggeredFY).slice(-2)}). Your remaining limit is $${maxAmount.toLocaleString()} after accounting for historical utilization ($${bringForwardUsedAmount.toLocaleString()}). A fresh 3-year window will reset in FY ${bfStatus.nextAvailableFY - 1}/${String(bfStatus.nextAvailableFY).slice(-2)} (${bfStatus.yearsRemaining} year${bfStatus.yearsRemaining > 1 ? 's' : ''} remaining).`;
+        reason = `Cap Used: Active 3-Year Window (started FY ${bringForwardTriggeredFY - 1}/${String(bringForwardTriggeredFY).slice(-2)}). Your remaining limit is $${maxAmount.toLocaleString()} after accounting for historical utilization ($${bringForwardUsedAmount.toLocaleString()}). A fresh window resets in FY ${bfStatus.nextAvailableFY - 1}/${String(bfStatus.nextAvailableFY).slice(-2)} (${bfStatus.yearsRemaining} year${bfStatus.yearsRemaining > 1 ? 's' : ''} remaining).`;
     }
 
     return {
