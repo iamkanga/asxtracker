@@ -27,11 +27,11 @@ export const DRAWDOWN_TABLE = Object.freeze([
 // ─────────────────────────────────────────────
 // 2. Contribution Caps (indexed annually by ATO)
 // ─────────────────────────────────────────────
-// Key = financial year ending (e.g. 2026 = FY 2025-26)
+// Key = financial year ending (e.g. 2024 = FY 2023-24)
 export const CONTRIBUTION_CAPS = Object.freeze({
+    2024: { concessional: 27500, nonConcessional: 110000 },
     2025: { concessional: 30000, nonConcessional: 120000 },
-    2026: { concessional: 30000, nonConcessional: 120000 },
-    2027: { concessional: 30000, nonConcessional: 120000 }
+    2026: { concessional: 30000, nonConcessional: 120000 }
 });
 
 // ─────────────────────────────────────────────
@@ -116,14 +116,16 @@ export function checkRecontributionEligibility(totalSuperBalance, financialYearE
 // 3. Thresholds & Defaults
 // ─────────────────────────────────────────────
 export const SUPER_THRESHOLDS = Object.freeze({
-    // Minimum balance to keep an accumulation account open (fund-specific buffer)
-    minAccumulationBalance: 2000,
+    // Brighter Super: Minimum balance to keep an accumulation account open
+    minAccumulationBalance: 8000,
+    // Brighter Super: Minimum balance to COMMENCE a new pension
+    minPensionCommencement: 20000,
+    // Brighter Super: Minimum balance to RESTART a pension (closed/commenced)
+    minPensionRestart: 50000,
     // ATO threshold where fees are capped at 3% for balances under this amount
     autoFeeCapThreshold: 6000,
-    // Minimum balance to commence an account-based pension (general ATO)
-    minPensionBalance: 0,
-    // Transfer Balance Cap (TBC) — used for sustainability alerts
-    transferBalanceCap: 1900000, // FY 2024-25 indexed value
+    // Transfer Balance Cap (TBC) — lifetime limit on tax-free phase transfers
+    transferBalanceCap: 1900000, 
     // Total Super Balance threshold for non-concessional eligibility
     totalSuperBalanceThreshold: 1900000
 });

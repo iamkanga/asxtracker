@@ -196,11 +196,10 @@ export default class SuperStrategyUI {
                     <input type="number" id="${IDS.SUPER_ACCUMULATION_INPUT}" class="${CSS_CLASSES.FORM_CONTROL}"
                            value="${data.accumulationBalance || ''}" placeholder="0.00"
                            style="font-size: 1.1rem; font-weight: 700; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 8px 10px; width: 100%; box-sizing: border-box;">
-                    ${data.accumulationBalance < SUPER_THRESHOLDS.minAccumulationBalance ? `
-                        <div style="font-size: 0.6rem; color: #ff3b30; margin-top: 4px; display: flex; align-items: center; gap: 4px;">
-                            <i class="fas fa-exclamation-triangle"></i> Below keep-open buffer
-                        </div>
-                    ` : ''}
+                    <div style="font-size: 0.6rem; color: ${data.accumulationBalance < SUPER_THRESHOLDS.minAccumulationBalance ? '#ff3b30' : 'var(--text-muted)'}; margin-top: 4px; display: flex; align-items: center; gap: 4px; opacity: 0.8;">
+                        <i class="fas ${data.accumulationBalance < SUPER_THRESHOLDS.minAccumulationBalance ? 'fa-exclamation-triangle' : 'fa-info-circle'}"></i>
+                        ${data.accumulationBalance < SUPER_THRESHOLDS.minAccumulationBalance ? 'Below Brighter Super keep-open buffer' : 'Brighter Super keep-open buffer'}
+                    </div>
                 </div>
                 <div class="${CSS_CLASSES.SUPER_LEDGER_CARD}" style="background: rgba(255,255,255,0.04); border-radius: 12px; padding: 14px;">
                     <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">Pension</div>
@@ -432,12 +431,90 @@ export default class SuperStrategyUI {
                         </div>
                     </div>
 
+                    <!-- Brighter Super Thresholds -->
+                    <div style="margin-bottom: 24px;">
+                        <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px;">Account Thresholds</div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+                            <div style="background: rgba(255,255,255,0.03); border-radius: 10px; padding: 12px; border-left: 3px solid var(--color-accent);">
+                                <div style="font-size: 0.6rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px;">Accumulation Min</div>
+                                <div style="font-size: 1rem; font-weight: 800; color: #fff;">${formatCurrency(SUPER_THRESHOLDS.minAccumulationBalance)}</div>
+                                <div style="font-size: 0.65rem; color: var(--text-muted); margin-top: 4px;">To keep the account open for future contributions.</div>
+                            </div>
+                            <div style="background: rgba(255,255,255,0.03); border-radius: 10px; padding: 12px; border-left: 3px solid var(--color-accent);">
+                                <div style="font-size: 0.6rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px;">Pension Restart Min</div>
+                                <div style="font-size: 1rem; font-weight: 800; color: #fff;">${formatCurrency(SUPER_THRESHOLDS.minPensionRestart)}</div>
+                                <div style="font-size: 0.65rem; color: var(--text-muted); margin-top: 4px;">Required to commencement a new pension after closure.</div>
+                            </div>
+                        </div>
+                        <div style="padding: 12px; background: rgba(255,255,255,0.03); border-radius: 10px;">
+                            <div style="font-size: 0.6rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px;">Fee Protection Limit</div>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div style="font-size: 0.9rem; font-weight: 700; color: #fff;">${formatCurrency(SUPER_THRESHOLDS.autoFeeCapThreshold)}</div>
+                                <div style="font-size: 0.75rem; color: var(--text-muted);">ATO fee cap: 3% p.a.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pension Restart Model -->
+                    <div style="margin-bottom: 24px;">
+                        <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px;">The Restart Model</div>
+                        <div style="font-size: 0.78rem; color: var(--text-muted); line-height: 1.5;">
+                            Brighter Super follows a <strong>Restart</strong> process rather than simple closure:
+                            <ul style="padding-left: 18px; margin: 8px 0;">
+                                <li>Existing pension is closed (triggering a pro-rata drawdown).</li>
+                                <li>Funds move to accumulation and are merged with new contributions.</li>
+                                <li>A <strong>new pension</strong> is commenced using the consolidated balance.</li>
+                                <li>Drawdown requirements reset based on this new (larger) balance.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- NCC Multi-Year Caps -->
+                    <div style="margin-bottom: 24px;">
+                        <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px;">NCC Contribution Caps</div>
+                        <table style="width: 100%; border-collapse: collapse; font-size: 0.78rem; color: var(--text-muted);">
+                            <thead>
+                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.1); text-align: left;">
+                                    <th style="padding: 6px 0;">Fin. Year</th>
+                                    <th style="padding: 6px 0;">Standard Cap</th>
+                                    <th style="padding: 6px 0;">Bring-Forward</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                                    <td style="padding: 8px 0;">FY23-24</td>
+                                    <td style="padding: 8px 0;">$110,000</td>
+                                    <td style="padding: 8px 0;">$330,000</td>
+                                </tr>
+                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                                    <td style="padding: 8px 0;">FY24-25</td>
+                                    <td style="padding: 8px 0;">$120,000</td>
+                                    <td style="padding: 8px 0;">$360,000</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 8px 0;">FY25-26*</td>
+                                    <td style="padding: 8px 0;">$120,000</td>
+                                    <td style="padding: 8px 0;">$360,000</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div style="font-size: 0.65rem; color: var(--text-muted); margin-top: 6px; font-style: italic;">*Subject to indexation and TSB thresholds ($1.9M).</div>
+                    </div>
+
+                    <!-- Transfer Balance Cap -->
+                    <div style="margin-bottom: 12px; padding: 12px; background: rgba(255,255,255,0.03); border-radius: 10px;">
+                        <div style="color: var(--color-accent); font-size: 0.85rem; font-weight: 700; margin-bottom: 4px;">Transfer Balance Cap (TBC)</div>
+                        <div style="font-size: 0.78rem; color: var(--text-muted); line-height: 1.4;">
+                            A lifetime limit ($1.9M for 2024-25) on the total amount you can move into the tax-free pension phase. Every "restart" is tracked against this cap.
+                        </div>
+                    </div>
+
                     <!-- Available to Re-Contribute -->
                     ${closedBalance > 0 ? `
                         <div style="background: rgba(255,255,255,0.04); border-radius: 10px; padding: 12px; margin-bottom: 12px;">
                             <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">Post-Closure Pension Balance</div>
-                            <div style="font-size: 1rem; font-weight: 700; color: #fff;">${formatCurrency(closedBalance)}</div>
-                            <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 4px;">This is the amount available to re-contribute to accumulation.</div>
+                            <div style="font-size: 1rem; font-weight: 800; color: #fff;">${formatCurrency(closedBalance)}</div>
+                            <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 4px;">Available for re-contribution. Note: Brighter Super requires **${formatCurrency(SUPER_THRESHOLDS.minPensionRestart)}** minimum to restart the pension.</div>
                         </div>
                     ` : ''}
 
@@ -687,31 +764,30 @@ export default class SuperStrategyUI {
         const floorColor = results.safetyFloorCheck.safe ? 'var(--color-positive)' : 'var(--color-negative)';
 
         el.innerHTML = `
-            <div style="background: rgba(255,255,255,0.03); border-radius: 14px; padding: 18px; border: 1px solid rgba(255,255,255,0.06);">
-                <div style="font-size: 0.85rem; font-weight: 800; color: #fff; margin-bottom: 14px;">
-                    <i class="fas fa-chart-line" style="margin-right: 6px; color: var(--color-accent);"></i> Simulation Results
+            <div style="background: rgba(255,255,255,0.04); border-radius: 10px; padding: 14px; margin-bottom: 16px; border: 1px solid rgba(255,255,255,0.08);">
+                <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px;">Simulation Results</div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px;">
+                    <div style="padding: 10px; background: rgba(0,0,0,0.2); border-radius: 8px;">
+                        <div style="font-size: 0.6rem; color: var(--text-muted); text-transform: uppercase;">New Pension Balance</div>
+                        <div style="font-size: 1.1rem; font-weight: 800; color: #fff;">${formatCurrency(results.newPensionBalance)}</div>
+                        ${results.newPensionBalance < SUPER_THRESHOLDS.minPensionRestart ? `
+                            <div style="font-size: 0.55rem; color: #ff3b30; font-weight: 700; margin-top: 2px;">
+                                <i class="fas fa-exclamation-triangle"></i> Below Brighter Super ${formatCurrency(SUPER_THRESHOLDS.minPensionRestart)} Min
+                            </div>
+                        ` : ''}
+                    </div>
+                    <div style="padding: 10px; background: rgba(0,0,0,0.2); border-radius: 8px;">
+                        <div style="font-size: 0.6rem; color: var(--text-muted); text-transform: uppercase;">New Min Drawdown</div>
+                        <div style="font-size: 1.1rem; font-weight: 800; color: var(--color-accent);">${formatCurrency(results.newMinimumDrawdown.amount)}</div>
+                        <div style="font-size: 0.55rem; color: var(--text-muted); margin-top: 2px;">${results.june1stRuleApplies ? 'June 1st Rule ($0)' : `Pro-rata (${results.newMinimumDrawdown.days} days)`}</div>
+                    </div>
                 </div>
 
                 <!-- Pre-Closure Payout -->
                 <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
                     <span style="font-size: 0.8rem; color: var(--text-muted);">Pre-Closure Payout</span>
                     <span style="font-size: 0.9rem; font-weight: 700; color: #fff;">${formatCurrency(results.preClosurePayout.amount)}</span>
-                </div>
-
-                <!-- New Pension Balance -->
-                <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
-                    <span style="font-size: 0.8rem; color: var(--text-muted);">New Pension Balance</span>
-                    <span style="font-size: 0.9rem; font-weight: 700; color: #fff;">${formatCurrency(results.newPensionBalance)}</span>
-                </div>
-
-                <!-- New Minimum Drawdown -->
-                <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
-                    <span style="font-size: 0.8rem; color: var(--text-muted);">
-                        New Minimum ${results.june1stRuleApplies ? '<span style="color: var(--color-positive); font-size: 0.7rem;">(June 1st Rule)</span>' : ''}
-                    </span>
-                    <span style="font-size: 0.9rem; font-weight: 700; color: ${results.june1stRuleApplies ? 'var(--color-positive)' : '#fff'};">
-                        ${results.june1stRuleApplies ? '$0.00' : formatCurrency(results.newMinimumDrawdown.amount)}
-                    </span>
                 </div>
 
                 <!-- Projected Balance -->
