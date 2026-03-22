@@ -8,6 +8,7 @@ import { IDS, CSS_CLASSES, DASHBOARD_SYMBOLS, STORAGE_KEYS, DASHBOARD_LINKS, UI_
 import { AppState } from '../state/AppState.js';
 import { DashboardFilterModal } from './DashboardFilterModal.js';
 import { LinkHelper } from '../utils/LinkHelper.js';
+import { superStrategyStore } from '../state/SuperStrategyStore.js';
 
 export class DashboardViewRenderer {
     constructor() {
@@ -56,7 +57,29 @@ export class DashboardViewRenderer {
         const viewMode = (AppState.viewMode || 'TABLE').toUpperCase();
         const viewModeClass = CSS_CLASSES[`VIEW_MODE_${viewMode}`] || CSS_CLASSES.VIEW_MODE_TABLE;
 
+        let superAlertsHtml = '';
+        if (superStrategyStore.isReady) {
+            const activeReminders = superStrategyStore.getActiveReminders().filter(r => r.isTriggered);
+            if (activeReminders.length > 0) {
+                const alertsList = activeReminders.map(r => `<strong>${r.label}</strong>`).join(', ');
+                superAlertsHtml = `
+                    <div style="background: rgba(255,165,0,0.1); border: 1px solid rgba(255,165,0,0.3); border-radius: 12px; padding: 14px 16px; margin: 16px; display: flex; align-items: center; gap: 14px; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(255,165,0,0.1);"
+                         onclick="document.getElementById('nav-super').click()"
+                         onmouseover="this.style.background='rgba(255,165,0,0.15)'"
+                         onmouseout="this.style.background='rgba(255,165,0,0.1)'">
+                        <i class="fas fa-calendar-exclamation" style="color: #ffa500; font-size: 1.6rem; filter: drop-shadow(0 0 8px rgba(255,165,0,0.4));"></i>
+                        <div style="flex: 1;">
+                            <div style="font-size: 0.9rem; font-weight: 800; color: #ffa500; margin-bottom: 2px;">Super Strategy Deadline</div>
+                            <div style="font-size: 0.8rem; color: rgba(255,255,255,0.9); line-height: 1.4;">Active trigger: ${alertsList}</div>
+                        </div>
+                        <div style="font-size: 0.75rem; color: #ffa500; font-weight: 700; background: rgba(255,165,0,0.2); padding: 6px 10px; border-radius: 6px;">View</div>
+                    </div>
+                `;
+            }
+        }
+
         let html = `
+            ${superAlertsHtml}
             <div class="${CSS_CLASSES.DASHBOARD_CONTAINER} ${this.reorderMode ? CSS_CLASSES.REORDER_ACTIVE : ''} ${viewModeClass}">
         `;
 

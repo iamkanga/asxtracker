@@ -315,8 +315,13 @@ class SuperStrategyStore {
         this._save();
     }
 
-    setAge(age) {
-        this.data.ageAtJuly1 = parseInt(age) || 65;
+    setAge(val) {
+        this.data.ageAtJuly1 = parseInt(val) || 0;
+        this._save();
+    }
+
+    setCustomReminderDate(val) {
+        this.data.customReminderDate = val || null;
         this._save();
     }
 

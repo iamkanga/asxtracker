@@ -1064,6 +1064,15 @@ export default class SuperStrategyUI {
         if (ageInput) ageInput.addEventListener('change', (e) => { superStrategyStore.setAge(e.target.value); this.render(); });
         if (bfFYInput) bfFYInput.addEventListener('change', (e) => { superStrategyStore.setBringForwardTriggeredFY(e.target.value || null); this.render(); });
 
+        const customDateInput = this.container.querySelector(`#${IDS.SUPER_CUSTOM_REMINDER_DATE}`);
+        if (customDateInput) {
+            customDateInput.addEventListener('change', (e) => {
+                superStrategyStore.setCustomReminderDate(e.target.value);
+                this.render(); // Re-render local UI
+                document.dispatchEvent(new CustomEvent('dashboard-prefs-changed')); // Force refresh dashboard banner
+            });
+        }
+
         // Step-specific inputs
         this._bindStepInputs();
 
