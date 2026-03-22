@@ -184,13 +184,15 @@ export default class SuperStrategyUI {
         return `
             <div class="${CSS_CLASSES.SUPER_LEDGER}" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px;">
                 <div class="${CSS_CLASSES.SUPER_LEDGER_CARD}" style="background: rgba(255,255,255,0.04); border-radius: 12px; padding: 14px;">
-                    <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;">Accumulation <span style="font-weight: 400; text-transform: none; letter-spacing: 0;">(as at 1 Jul)</span></div>
+                    <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">Accumulation</div>
+                    <div style="font-size: 0.58rem; color: var(--text-muted); margin-bottom: 6px; font-weight: 400;">Balance as at 1 July</div>
                     <input type="number" id="${IDS.SUPER_ACCUMULATION_INPUT}" class="${CSS_CLASSES.FORM_CONTROL}"
                            value="${data.accumulationBalance || ''}" placeholder="0.00"
                            style="font-size: 1.1rem; font-weight: 700; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 8px 10px; width: 100%; box-sizing: border-box;">
                 </div>
                 <div class="${CSS_CLASSES.SUPER_LEDGER_CARD}" style="background: rgba(255,255,255,0.04); border-radius: 12px; padding: 14px;">
-                    <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;">Pension <span style="font-weight: 400; text-transform: none; letter-spacing: 0;">(as at 1 Jul)</span></div>
+                    <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">Pension</div>
+                    <div style="font-size: 0.58rem; color: var(--text-muted); margin-bottom: 6px; font-weight: 400;">Balance as at 1 July</div>
                     <input type="number" id="${IDS.SUPER_PENSION_INPUT}" class="${CSS_CLASSES.FORM_CONTROL}"
                            value="${data.pensionBalance || ''}" placeholder="0.00"
                            style="font-size: 1.1rem; font-weight: 700; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 8px 10px; width: 100%; box-sizing: border-box;">
