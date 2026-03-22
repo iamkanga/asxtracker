@@ -190,16 +190,17 @@ export default class SuperStrategyUI {
             <div class="${CSS_CLASSES.SUPER_LEDGER}" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px;">
                 <!-- Accumulation Column -->
                 <div>
-                    <div class="${CSS_CLASSES.SUPER_LEDGER_CARD}" style="background: rgba(255,255,255,0.04); border-radius: 12px; padding: 14px; height: 100%; box-sizing: border-box;">
+                    <div class="${CSS_CLASSES.SUPER_LEDGER_CARD}" style="background: rgba(255,255,255,0.04); border-radius: 12px; padding: 14px; height: 100%; box-sizing: border-box; display: flex; flex-direction: column;">
                         <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;">Accumulation</div>
                         <div style="font-size: 0.58rem; color: var(--text-muted); margin-bottom: 6px; font-weight: 400;">Balance as at 1 July</div>
                         <input type="number" id="${IDS.SUPER_ACCUMULATION_INPUT}" class="${CSS_CLASSES.FORM_CONTROL}"
                                value="${data.accumulationBalance || ''}" placeholder="0.00"
                                style="font-size: 1.1rem; font-weight: 700; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 8px 10px; width: 100%; box-sizing: border-box;">
-                    </div>
-                    <!-- Minimum Balance Indicator -->
-                    <div style="margin-top: 6px; padding: 0 4px; text-align: left; font-size: 0.65rem; color: ${data.accumulationBalance < SUPER_THRESHOLDS.minAccumulationBalance ? '#ff3b30' : 'var(--text-muted)'}; opacity: 0.8; font-weight: 600;">
-                        Min: ${formatCurrency(SUPER_THRESHOLDS.minAccumulationBalance)}
+                        
+                        <!-- Minimum Balance Indicator -->
+                        <div style="margin-top: auto; padding-top: 10px; text-align: left; font-size: 0.6rem; color: ${data.accumulationBalance < SUPER_THRESHOLDS.minAccumulationBalance ? '#ff3b30' : 'var(--text-muted)'}; opacity: 0.7; font-weight: 600;">
+                            Min: ${formatCurrency(SUPER_THRESHOLDS.minAccumulationBalance)}
+                        </div>
                     </div>
                 </div>
 
