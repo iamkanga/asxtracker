@@ -361,7 +361,7 @@ export function runSimulation({
         remainingNCC: nccRemaining,
         isOverCap,
         overflow,
-        bringForwardActive: !bfStatus.available,
+        bringForwardActive: !eligibility.bringForwardStatus.available,
         bfStartedFY: bringForwardTriggeredFY
     };
 
