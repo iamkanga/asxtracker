@@ -121,7 +121,7 @@ export function checkRecontributionEligibility(totalSuperBalance, financialYearE
         }
     } else {
         maxAmount = 0; // The engine cannot calculate remaining cap without historical contribution data
-        reason = `Active Bring-Forward Window (triggered FY${bringForwardTriggeredFY}). You are not completely locked out; your remaining limit depends on how much of the multi-year cap you have already utilized. A fresh 3-year window will reset in FY${bfStatus.nextAvailableFY} (${bfStatus.yearsRemaining} year${bfStatus.yearsRemaining > 1 ? 's' : ''} remaining).`;
+        reason = `Active Bring-Forward Window (started FY ${bringForwardTriggeredFY - 1}/${String(bringForwardTriggeredFY).slice(-2)}). Your remaining limit depends on how much of the multi-year cap you have already utilized. A fresh 3-year window will reset in FY ${bfStatus.nextAvailableFY - 1}/${String(bfStatus.nextAvailableFY).slice(-2)} (${bfStatus.yearsRemaining} year${bfStatus.yearsRemaining > 1 ? 's' : ''} remaining).`;
     }
 
     return {

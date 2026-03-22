@@ -127,6 +127,9 @@ export default class SuperStrategyUI {
         const fy = calc.financialYear;
 
         this.container.innerHTML = `
+            <div style="text-align: center; margin-top: 16px; color: var(--color-accent); font-size: 0.75rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;">
+                <i class="fas fa-calendar-day" style="margin-right: 6px;"></i>Financial Year ${fy - 1}/${String(fy).slice(-2)}
+            </div>
             ${this._renderTabs()}
             <div class="${CSS_CLASSES.SUPER_DETAIL_PANEL}" style="padding: 16px;">
                 ${this.activeTab === 'pipeline' ? this._renderPipelineTab(data, calc) : ''}
@@ -185,28 +188,30 @@ export default class SuperStrategyUI {
 
         return `
             <div class="${CSS_CLASSES.SUPER_LEDGER}" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px;">
-                <div class="${CSS_CLASSES.SUPER_LEDGER_CARD}" style="background: rgba(255,255,255,0.04); border-radius: 12px; padding: 14px;">
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                        <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">Accumulation</div>
-                        <div style="font-size: 0.65rem; color: ${data.accumulationBalance < SUPER_THRESHOLDS.minAccumulationBalance ? '#ff3b30' : 'var(--text-muted)'}; font-weight: 600;">
-                            Min: ${formatCurrency(SUPER_THRESHOLDS.minAccumulationBalance)}
-                        </div>
+                <!-- Accumulation Column -->
+                <div>
+                    <div class="${CSS_CLASSES.SUPER_LEDGER_CARD}" style="background: rgba(255,255,255,0.04); border-radius: 12px; padding: 14px; height: 100%; box-sizing: border-box;">
+                        <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;">Accumulation</div>
+                        <div style="font-size: 0.58rem; color: var(--text-muted); margin-bottom: 6px; font-weight: 400;">Balance as at 1 July</div>
+                        <input type="number" id="${IDS.SUPER_ACCUMULATION_INPUT}" class="${CSS_CLASSES.FORM_CONTROL}"
+                               value="${data.accumulationBalance || ''}" placeholder="0.00"
+                               style="font-size: 1.1rem; font-weight: 700; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 8px 10px; width: 100%; box-sizing: border-box;">
                     </div>
-                    <div style="font-size: 0.58rem; color: var(--text-muted); margin-bottom: 6px; font-weight: 400;">Balance as at 1 July</div>
-                    <input type="number" id="${IDS.SUPER_ACCUMULATION_INPUT}" class="${CSS_CLASSES.FORM_CONTROL}"
-                           value="${data.accumulationBalance || ''}" placeholder="0.00"
-                           style="font-size: 1.1rem; font-weight: 700; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 8px 10px; width: 100%; box-sizing: border-box;">
-                    <div style="font-size: 0.6rem; color: ${data.accumulationBalance < SUPER_THRESHOLDS.minAccumulationBalance ? '#ff3b30' : 'var(--text-muted)'}; margin-top: 4px; display: flex; align-items: center; gap: 4px; opacity: 0.8;">
-                        <i class="fas ${data.accumulationBalance < SUPER_THRESHOLDS.minAccumulationBalance ? 'fa-exclamation-triangle' : 'fa-info-circle'}"></i>
-                        ${data.accumulationBalance < SUPER_THRESHOLDS.minAccumulationBalance ? 'Below Brighter Super keep-open buffer' : 'Brighter Super keep-open buffer'}
+                    <!-- Minimum Balance Indicator -->
+                    <div style="margin-top: 6px; padding: 0 4px; text-align: left; font-size: 0.65rem; color: ${data.accumulationBalance < SUPER_THRESHOLDS.minAccumulationBalance ? '#ff3b30' : 'var(--text-muted)'}; opacity: 0.8; font-weight: 600;">
+                        Min: ${formatCurrency(SUPER_THRESHOLDS.minAccumulationBalance)}
                     </div>
                 </div>
-                <div class="${CSS_CLASSES.SUPER_LEDGER_CARD}" style="background: rgba(255,255,255,0.04); border-radius: 12px; padding: 14px;">
-                    <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">Pension</div>
-                    <div style="font-size: 0.58rem; color: var(--text-muted); margin-bottom: 6px; font-weight: 400;">Balance as at 1 July</div>
-                    <input type="number" id="${IDS.SUPER_PENSION_INPUT}" class="${CSS_CLASSES.FORM_CONTROL}"
-                           value="${data.pensionBalance || ''}" placeholder="0.00"
-                           style="font-size: 1.1rem; font-weight: 700; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 8px 10px; width: 100%; box-sizing: border-box;">
+
+                <!-- Pension Column -->
+                <div>
+                    <div class="${CSS_CLASSES.SUPER_LEDGER_CARD}" style="background: rgba(255,255,255,0.04); border-radius: 12px; padding: 14px; height: 100%; box-sizing: border-box;">
+                        <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;">Pension</div>
+                        <div style="font-size: 0.58rem; color: var(--text-muted); margin-bottom: 6px; font-weight: 400;">Balance as at 1 July</div>
+                        <input type="number" id="${IDS.SUPER_PENSION_INPUT}" class="${CSS_CLASSES.FORM_CONTROL}"
+                               value="${data.pensionBalance || ''}" placeholder="0.00"
+                               style="font-size: 1.1rem; font-weight: 700; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 8px 10px; width: 100%; box-sizing: border-box;">
+                    </div>
                 </div>
             </div>
 
@@ -227,7 +232,7 @@ export default class SuperStrategyUI {
                 </div>
             </div>
 
-            <!-- Age + FY Row -->
+            <!-- Age + Min Rate Row -->
             <div style="display: flex; gap: 10px; margin-bottom: 12px;">
                 <div style="flex: 1; background: rgba(255,255,255,0.03); border-radius: 10px; padding: 10px 12px;">
                     <div style="font-size: 0.65rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">Age at 1 July</div>
@@ -235,11 +240,7 @@ export default class SuperStrategyUI {
                            style="width: 60px; font-size: 1.1rem; font-weight: 700; background: transparent; border: none; color: #fff; padding: 0;">
                 </div>
                 <div style="flex: 1; background: rgba(255,255,255,0.03); border-radius: 10px; padding: 10px 12px;">
-                    <div style="font-size: 0.65rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">Financial Year</div>
-                    <div style="font-size: 1.1rem; font-weight: 700; color: #fff;">FY ${fy - 1}/${String(fy).slice(-2)}</div>
-                </div>
-                <div style="flex: 1; background: rgba(255,255,255,0.03); border-radius: 10px; padding: 10px 12px;">
-                    <div style="font-size: 0.65rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">Min Rate</div>
+                    <div style="font-size: 0.65rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">Minimum Drawdown Rate</div>
                     <div style="font-size: 1.1rem; font-weight: 700; color: var(--color-accent);">${(calc.drawdownRate * 100).toFixed(0)}%</div>
                 </div>
             </div>
@@ -248,17 +249,22 @@ export default class SuperStrategyUI {
             <div style="padding: 12px 14px; background: rgba(255,255,255,0.03); border-radius: 10px; margin-bottom: 16px; border: 1px solid rgba(255,255,255,0.05);">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
                     <div>
-                        <div style="font-size: 0.65rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px;">Bring-Forward Triggered (FY)</div>
+                        <div style="font-size: 0.65rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px;">Bring-Forward Started</div>
                         <input type="number" id="${IDS.SUPER_BRING_FORWARD_FY}"
                                value="${data.bringForwardTriggeredFY || ''}" placeholder="None" min="2000" max="2099"
                                style="width: 90px; font-size: 1rem; font-weight: 700; color: #fff; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 4px 8px;">
                     </div>
                     <div style="text-align: right;">
-                        <div style="font-size: 0.65rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">Status</div>
-                        <div style="font-size: 0.82rem; font-weight: 700; color: ${calc.recontributionEligibility?.eligible ? 'var(--color-positive)' : 'var(--color-warning)'};">
-                            <i class="fas ${calc.recontributionEligibility?.eligible ? 'fa-check-circle' : (calc.recontributionEligibility?.bringForwardStatus?.nextAvailableFY ? 'fa-hourglass-half' : 'fa-ban')}" style="margin-right: 4px;"></i>
-                            ${calc.recontributionEligibility?.eligible ? 'Available' : (calc.recontributionEligibility?.bringForwardStatus?.nextAvailableFY ? `Active Window (Resets FY${calc.recontributionEligibility.bringForwardStatus.nextAvailableFY})` : 'Unavailable')}
+                        <div style="font-size: 0.65rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">Availability</div>
+                        <div style="font-size: 0.82rem; font-weight: 700; color: ${calc.recontributionEligibility?.eligible ? 'var(--color-positive)' : 'var(--color-warning)'}; display: flex; align-items: center; justify-content: flex-end; gap: 4px;">
+                            <i class="fas ${calc.recontributionEligibility?.eligible ? 'fa-check-circle' : (calc.recontributionEligibility?.bringForwardStatus?.nextAvailableFY ? 'fa-hourglass-half' : 'fa-ban')}"></i>
+                            ${calc.recontributionEligibility?.eligible ? 'Available' : (calc.recontributionEligibility?.bringForwardStatus?.nextAvailableFY ? 'Rule Active' : 'Not Eligible')}
                         </div>
+                        ${calc.recontributionEligibility?.eligible 
+                            ? `<div style="font-size: 1.05rem; font-weight: 800; color: #fff; margin-top: 2px; line-height: 1;">${formatCurrency(calc.recontributionEligibility.maxAmount)}</div>`
+                            : (calc.recontributionEligibility?.bringForwardStatus?.nextAvailableFY 
+                                ? `<div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">Resets FY ${calc.recontributionEligibility.bringForwardStatus.nextAvailableFY - 1}/${String(calc.recontributionEligibility.bringForwardStatus.nextAvailableFY).slice(-2)}</div>` 
+                                : '')}
                     </div>
                 </div>
                 <div style="font-size: 0.68rem; color: var(--text-muted); line-height: 1.4; opacity: 0.8;">
@@ -925,11 +931,18 @@ export default class SuperStrategyUI {
                 <!-- Current Bring-Forward Status -->
                 <div style="background: rgba(255,255,255,0.04); border-radius: 10px; padding: 12px;">
                     <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;">Your Bring-Forward Status</div>
-                    <div style="font-size: 0.8rem; color: ${eligibility.eligible ? 'var(--color-positive)' : 'var(--color-warning)'}; font-weight: 700; margin-bottom: 4px;">
-                        <i class="fas ${eligibility.eligible ? 'fa-check-circle' : (eligibility.bringForwardStatus.nextAvailableFY ? 'fa-hourglass-half' : 'fa-ban')}" style="margin-right: 4px;"></i>
-                        ${eligibility.eligible ? 'Available' : (eligibility.bringForwardStatus.nextAvailableFY ? `Active Window (Resets FY${eligibility.bringForwardStatus.nextAvailableFY})` : 'Unavailable')}
+                    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 4px;">
+                        <div style="font-size: 0.8rem; color: ${eligibility.eligible ? 'var(--color-positive)' : 'var(--color-warning)'}; font-weight: 700;">
+                            <i class="fas ${eligibility.eligible ? 'fa-check-circle' : (eligibility.bringForwardStatus.nextAvailableFY ? 'fa-hourglass-half' : 'fa-ban')}" style="margin-right: 4px;"></i>
+                            ${eligibility.eligible ? 'Available' : (eligibility.bringForwardStatus.nextAvailableFY ? 'Rule Active' : 'Not Eligible')}
+                        </div>
+                        ${eligibility.eligible 
+                            ? `<div style="font-size: 1rem; font-weight: 800; color: #fff;">${formatCurrency(eligibility.maxAmount)}</div>`
+                            : (eligibility.bringForwardStatus.nextAvailableFY 
+                                ? `<div style="font-size: 0.75rem; color: var(--text-muted);">Resets FY ${eligibility.bringForwardStatus.nextAvailableFY - 1}/${String(eligibility.bringForwardStatus.nextAvailableFY).slice(-2)}</div>` 
+                                : '')}
                     </div>
-                    ${bfFY ? `<div style="font-size: 0.72rem; color: var(--text-muted);">Last triggered: FY${bfFY - 1}/${String(bfFY).slice(-2)}</div>` : `<div style="font-size: 0.72rem; color: var(--text-muted);">No bring-forward on record.</div>`}
+                    ${bfFY ? `<div style="font-size: 0.72rem; color: var(--text-muted);">Started: FY ${bfFY - 1}/${String(bfFY).slice(-2)}</div>` : `<div style="font-size: 0.72rem; color: var(--text-muted);">No bring-forward on record.</div>`}
                 </div>
             </div>
 
