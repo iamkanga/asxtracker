@@ -1695,6 +1695,7 @@ export const IDS = {
     SUPER_CLOSURE_DATE: 'super-closure-date',
     SUPER_RECONTRIBUTION_AMOUNT: 'super-recontribution-amount',
     SUPER_RECONTRIBUTION_DATE: 'super-recontribution-date',
+    SUPER_BRING_FORWARD_FY: 'super-bring-forward-fy',
     SUPER_COMMENCE_DATE: 'super-commence-date',
     SUPER_CUSTOM_REMINDER_DATE: 'super-custom-reminder-date',
     BTN_SUPER_STRATEGY: 'btn-super-strategy'

@@ -35,33 +35,51 @@ export const CONTRIBUTION_CAPS = Object.freeze({
 });
 
 // ─────────────────────────────────────────────
-// 2b. Re-Contribution Eligibility Rules
+// 2b. Re-Contribution & Bring-Forward Rules
 // ─────────────────────────────────────────────
-// When you close a pension and want to re-contribute the balance back
-// into accumulation (as a non-concessional contribution), these rules apply.
+// When you restart a pension, the closed pension balance is re-contributed
+// back into accumulation as a non-concessional contribution (NCC).
+// Brighter Super treats this as a pension restart — the account stays open.
 export const RECONTRIBUTION_RULES = Object.freeze({
-    // Under-75 age rule: can re-contribute without a work test
-    noWorkTestMaxAge: 74,
-    // 75+ work test: must have worked 40hrs in 30 consecutive days within the FY
-    workTestRequiredAge: 75,
-    // Bring-forward: under-75 can use 3-year bring-forward (3x NCC cap)
-    bringForwardMaxAge: 74,
+    // Bring-forward: 3-year window (3x NCC cap in year 1, nil in years 2 & 3)
     bringForwardMultiplier: 3,
-    // Maximum re-contribution window: must be completed within the same FY
-    // as the pension closure (or up to 28 days after in some fund policies)
+    bringForwardWindowYears: 3,
+    // Re-contribution window: complete within same FY as closure (or up to 28 days per fund policy)
     maxDaysAfterClosure: 28,
     // Total super balance threshold: NCC is nil if TSB >= threshold at prior June 30
     totalSuperBalanceThreshold: 1900000
 });
 
 /**
+ * Checks whether the bring-forward rule is available based on the last FY it was used.
+ * The bring-forward is a 3-year rolling window. If triggered in FY2024, it covers
+ * FY2024 + FY2025 + FY2026. New NCCs are available again from FY2027.
+ *
+ * @param {number|null} bringForwardTriggeredFY - The FY ending year when bring-forward was last triggered (e.g. 2024). Null if never used.
+ * @param {number} currentFY - The current FY ending year.
+ * @returns {{ available: boolean, nextAvailableFY: number|null, yearsRemaining: number }}
+ */
+export function isBringForwardAvailable(bringForwardTriggeredFY, currentFY) {
+    if (!bringForwardTriggeredFY) {
+        return { available: true, nextAvailableFY: null, yearsRemaining: 0 };
+    }
+    const windowEnd = bringForwardTriggeredFY + RECONTRIBUTION_RULES.bringForwardWindowYears;
+    const available = currentFY >= windowEnd;
+    return {
+        available,
+        nextAvailableFY: available ? null : windowEnd,
+        yearsRemaining: available ? 0 : windowEnd - currentFY
+    };
+}
+
+/**
  * Checks re-contribution eligibility for a member.
- * @param {number} ageAtJuly1 - Member's age at most recent July 1.
  * @param {number} totalSuperBalance - Member's total super balance as at prior 30 June.
  * @param {number} financialYearEnding - The FY ending year (e.g. 2026).
- * @returns {{ eligible: boolean, maxAmount: number, needsWorkTest: boolean, bringForwardAvailable: boolean, reason: string }}
+ * @param {number|null} bringForwardTriggeredFY - FY when bring-forward was last triggered.
+ * @returns {{ eligible: boolean, maxAmount: number, bringForwardStatus: object, reason: string }}
  */
-export function checkRecontributionEligibility(ageAtJuly1, totalSuperBalance, financialYearEnding) {
+export function checkRecontributionEligibility(totalSuperBalance, financialYearEnding, bringForwardTriggeredFY = null) {
     const caps = getContributionCaps(financialYearEnding);
 
     // TSB check: no NCC if balance exceeds threshold at prior June 30
@@ -69,26 +87,28 @@ export function checkRecontributionEligibility(ageAtJuly1, totalSuperBalance, fi
         return {
             eligible: false,
             maxAmount: 0,
-            needsWorkTest: false,
-            bringForwardAvailable: false,
-            reason: `Total super balance ($${totalSuperBalance.toLocaleString()}) exceeds $${RECONTRIBUTION_RULES.totalSuperBalanceThreshold.toLocaleString()} threshold — non-concessional contributions not permitted.`
+            bringForwardStatus: { available: false, nextAvailableFY: null, yearsRemaining: 0 },
+            reason: `Total super balance ($${totalSuperBalance.toLocaleString()}) exceeds $${RECONTRIBUTION_RULES.totalSuperBalanceThreshold.toLocaleString()} threshold — non-concessional contributions not permitted this FY.`
         };
     }
 
-    const needsWorkTest = ageAtJuly1 >= RECONTRIBUTION_RULES.workTestRequiredAge;
-    const bringForwardAvailable = ageAtJuly1 <= RECONTRIBUTION_RULES.bringForwardMaxAge;
-    const maxAmount = bringForwardAvailable
-        ? caps.nonConcessional * RECONTRIBUTION_RULES.bringForwardMultiplier
-        : caps.nonConcessional;
+    const bfStatus = isBringForwardAvailable(bringForwardTriggeredFY, financialYearEnding);
+
+    let maxAmount;
+    let reason;
+    if (bfStatus.available) {
+        maxAmount = caps.nonConcessional * RECONTRIBUTION_RULES.bringForwardMultiplier;
+        reason = `Bring-forward available. You can re-contribute up to $${maxAmount.toLocaleString()} (3 × $${caps.nonConcessional.toLocaleString()}) in a single FY. This locks out NCCs for the following ${RECONTRIBUTION_RULES.bringForwardWindowYears - 1} years.`;
+    } else {
+        maxAmount = 0;
+        reason = `Bring-forward window active (triggered FY${bringForwardTriggeredFY}). NCC not available until FY${bfStatus.nextAvailableFY} (${bfStatus.yearsRemaining} year${bfStatus.yearsRemaining > 1 ? 's' : ''} remaining).`;
+    }
 
     return {
-        eligible: true,
+        eligible: bfStatus.available,
         maxAmount,
-        needsWorkTest,
-        bringForwardAvailable,
-        reason: needsWorkTest
-            ? `Age ${ageAtJuly1}: Work test required (40hrs in 30 consecutive days within the FY).`
-            : `Age ${ageAtJuly1}: No work test required. ${bringForwardAvailable ? `Bring-forward available (up to $${maxAmount.toLocaleString()}).` : `Standard NCC cap applies ($${caps.nonConcessional.toLocaleString()}).`}`
+        bringForwardStatus: bfStatus,
+        reason
     };
 }
 
@@ -96,8 +116,10 @@ export function checkRecontributionEligibility(ageAtJuly1, totalSuperBalance, fi
 // 3. Thresholds & Defaults
 // ─────────────────────────────────────────────
 export const SUPER_THRESHOLDS = Object.freeze({
-    // Minimum balance to keep an accumulation account viable (fund-specific, editable)
-    minAccumulationBalance: 6000,
+    // Minimum balance to keep an accumulation account open (fund-specific buffer)
+    minAccumulationBalance: 2000,
+    // ATO threshold where fees are capped at 3% for balances under this amount
+    autoFeeCapThreshold: 6000,
     // Minimum balance to commence an account-based pension (general ATO)
     minPensionBalance: 0,
     // Transfer Balance Cap (TBC) — used for sustainability alerts

@@ -90,6 +90,9 @@ function getDefaultData() {
         // Safety Floor (user's personal minimum — starts blank, not a legislative requirement)
         capitalSafetyFloor: 0,
 
+        // Bring-Forward Tracking (FY ending year when bring-forward was last triggered)
+        bringForwardTriggeredFY: null,
+
         // Reminders: presets (weeks before EOFY) + optional custom date
         reminderPresets: [4, 2, 1], // Default: 4 weeks, 2 weeks, 1 week before June 30
         customReminderDate: null,    // ISO date string for a specific custom reminder
@@ -394,10 +397,19 @@ class SuperStrategyStore {
     getRecontributionEligibility() {
         const fy = getCurrentFinancialYear();
         return checkRecontributionEligibility(
-            this.data.ageAtJuly1,
             this.getTotalBalance(),
-            fy
+            fy,
+            this.data.bringForwardTriggeredFY
         );
+    }
+
+    /**
+     * Sets the FY when bring-forward was last triggered.
+     * @param {number|null} fy - e.g. 2024 for FY2023-24. Null to clear.
+     */
+    setBringForwardTriggeredFY(fy) {
+        this.data.bringForwardTriggeredFY = fy ? parseInt(fy) : null;
+        this._save();
     }
 
     // ─────────────────────────────────────────
