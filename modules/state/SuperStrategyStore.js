@@ -93,6 +93,7 @@ function getDefaultData() {
 
         // Bring-Forward Tracking (FY ending year when bring-forward was last triggered)
         bringForwardTriggeredFY: null,
+        bringForwardUsedAmount: 0, // Total NCC used across the 3-year window
 
         // Reminders: presets (weeks before EOFY) + optional custom date
         reminderPresets: [4, 2, 1], // Default: 4 weeks, 2 weeks, 1 week before June 30
@@ -426,6 +427,11 @@ class SuperStrategyStore {
         this._save();
     }
 
+    setBringForwardUsedAmount(amount) {
+        this.data.bringForwardUsedAmount = parseFloat(amount) || 0;
+        this._save();
+    }
+
     // ─────────────────────────────────────────
     // Simulation
     // ─────────────────────────────────────────
@@ -436,11 +442,15 @@ class SuperStrategyStore {
 
         // Extract current pipeline contribution info
         const contribData = this.data.stateData[SUPER_STATES.CONTRIBUTION_CLEARANCE];
+        const noiData = this.data.stateData[SUPER_STATES.NOI_SUBMISSION];
+        
         let pipelineContribution = null;
-        if (contribData && contribData.amount > 0 && contribData.clearedDate) {
+        if (contribData && contribData.amount > 0) {
             pipelineContribution = {
                 amount: contribData.amount,
-                fy: getCurrentFinancialYear(new Date(contribData.clearedDate))
+                fy: getCurrentFinancialYear(new Date(contribData.clearedDate || new Date())),
+                // If NOI step has a deduction amount matching or exceeding the clearance amount, mark as deductible
+                isDeductible: noiData && noiData.deductionAmount >= contribData.amount
             };
         }
 
@@ -453,6 +463,7 @@ class SuperStrategyStore {
             contributionAmount,
             isDeductible,
             bringForwardTriggeredFY: this.data.bringForwardTriggeredFY,
+            bringForwardUsedAmount: this.data.bringForwardUsedAmount || 0,
             pipelineContribution
         });
     }

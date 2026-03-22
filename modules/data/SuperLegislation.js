@@ -277,7 +277,8 @@ export function daysUntilEOFY(date = new Date()) {
  * @param {number} [params.contributionAmount] - New contribution being added.
  * @param {boolean} [params.isDeductible] - Whether the contribution is claimed as a tax deduction (NOI).
  * @param {number} [params.bringForwardTriggeredFY] - FY when BF was triggered.
- * @param {object} [params.pipelineContribution] - { amount, fy } of current pipeline payment.
+ * @param {number} [params.bringForwardUsedAmount] - Cumulative NCC used in current BF window.
+ * @param {object} [params.pipelineContribution] - { amount, fy, isDeductible } of current pipeline payment.
  * @returns {object} Simulation results.
  */
 export function runSimulation({
@@ -289,6 +290,7 @@ export function runSimulation({
     contributionAmount = 0,
     isDeductible = false,
     bringForwardTriggeredFY = null,
+    bringForwardUsedAmount = 0,
     pipelineContribution = null
 }) {
     const fy = getCurrentFinancialYear(proposedRestartDate);
@@ -324,11 +326,14 @@ export function runSimulation({
     const caps = getCapData(fy);
     const bfStatus = isBringForwardAvailable(bringForwardTriggeredFY, fy);
 
-    // Calculate non-concessional utilization
-    let totalNCCUsed = 0;
+    // Concessional Analysis
+    const concessionalRemaining = Math.max(0, caps.concessional); // Simple for now, can add pipeline check if needed
+    
+    // Non-Concessional Analysis
+    let totalNCCUsed = bringForwardUsedAmount;
     let pipelineUtilization = 0;
 
-    if (pipelineContribution && pipelineContribution.amount > 0) {
+    if (pipelineContribution && pipelineContribution.amount > 0 && !pipelineContribution.isDeductible) {
         // If in same FY OR within active bring-forward window
         const pipelineFY = pipelineContribution.fy;
         const sameFY = pipelineFY === fy;
@@ -342,15 +347,19 @@ export function runSimulation({
 
     const nccLimit = !bfStatus.available ? (caps.nonConcessional * 3) : caps.nonConcessional;
     const nccRemaining = Math.max(0, nccLimit - totalNCCUsed);
-    const nccOverflow = Math.max(0, (!isDeductible ? contributionAmount : 0) - nccRemaining);
+    
+    // Validation for THIS simulation
+    const isOverCap = !isDeductible ? (contributionAmount > nccRemaining) : (contributionAmount > caps.concessional);
+    const overflow = !isDeductible ? Math.max(0, contributionAmount - nccRemaining) : Math.max(0, contributionAmount - caps.concessional);
 
     const capAnalysis = {
         concessionalCap: caps.concessional,
         nonConcessionalCap: nccLimit,
+        historicalUtilization: bringForwardUsedAmount,
         utilizedInPipeline: pipelineUtilization,
         remainingNCC: nccRemaining,
-        isOverCap: !isDeductible && contributionAmount > nccRemaining,
-        nccOverflow,
+        isOverCap,
+        overflow,
         bringForwardActive: !bfStatus.available,
         bfStartedFY: bringForwardTriggeredFY
     };

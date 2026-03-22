@@ -854,6 +854,13 @@ export default class SuperStrategyUI {
                             <span style="font-size: 0.75rem; font-weight: 700; color: #fff;">${formatCurrency(results.capAnalysis.nonConcessionalCap)}</span>
                         </div>
 
+                        ${results.capAnalysis.historicalUtilization > 0 ? `
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                            <span style="font-size: 0.75rem; color: var(--text-muted);">Historical Utilization</span>
+                            <span style="font-size: 0.75rem; font-weight: 700; color: #fff;">${formatCurrency(results.capAnalysis.historicalUtilization)}</span>
+                        </div>
+                        ` : ''}
+
                         ${results.capAnalysis.utilizedInPipeline > 0 ? `
                         <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
                             <span style="font-size: 0.75rem; color: var(--color-accent);">Utilized in Pipeline</span>
@@ -862,7 +869,7 @@ export default class SuperStrategyUI {
                         ` : ''}
 
                         <div style="display: flex; justify-content: space-between; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.05);">
-                            <span style="font-size: 0.75rem; color: var(--text-muted);">Remaining for Sim</span>
+                            <span style="font-size: 0.75rem; color: var(--text-muted);">Remaining Room</span>
                             <span style="font-size: 0.75rem; font-weight: 700; color: ${results.capAnalysis.isOverCap ? 'var(--color-negative)' : 'var(--color-positive)'};">
                                 ${formatCurrency(results.capAnalysis.remainingNCC)}
                             </span>
@@ -873,16 +880,10 @@ export default class SuperStrategyUI {
                         <div style="margin-top: 10px; padding: 8px; background: rgba(255, 59, 48, 0.1); border-radius: 6px; border: 1px solid rgba(255, 59, 48, 0.2); display: flex; gap: 8px; align-items: center;">
                             <i class="fas fa-exclamation-triangle" style="color: #ff3b30; font-size: 0.8rem;"></i>
                             <div style="font-size: 0.7rem; color: #ff3b30; font-weight: 600; line-height: 1.3;">
-                                Exceeds remaining cap by ${formatCurrency(results.capAnalysis.nccOverflow)}. 
-                                ${results.capAnalysis.bringForwardActive ? `Using active Bring-Forward window (from FY ${results.capAnalysis.bfStartedFY}).` : ''}
+                                ${results.isDeductible ? 'Concessional' : 'Non-Concessional'} simulation exceeds cap by ${formatCurrency(results.capAnalysis.overflow)}.
                             </div>
                         </div>
-                    ` : results.capAnalysis.bringForwardActive ? `
-                        <div style="margin-top: 8px; font-size: 0.65rem; color: var(--color-accent);">
-                            <i class="fas fa-info-circle"></i> Active Bring-Forward window detected (Started FY ${results.capAnalysis.bfStartedFY}).
-                        </div>
                     ` : ''}
-                </div>
 
                 <div style="margin-top: 10px; font-size: 0.7rem; color: var(--text-muted); text-align: center;">
                     ${results.daysRemaining} days remaining in FY
@@ -1006,7 +1007,16 @@ export default class SuperStrategyUI {
                                 ? `<div style="font-size: 0.75rem; color: var(--text-muted);">Resets FY ${eligibility.bringForwardStatus.nextAvailableFY - 1}/${String(eligibility.bringForwardStatus.nextAvailableFY).slice(-2)}</div>` 
                                 : '')}
                     </div>
-                    ${bfFY ? `<div style="font-size: 0.72rem; color: var(--text-muted);">Started: FY ${bfFY - 1}/${String(bfFY).slice(-2)}</div>` : `<div style="font-size: 0.72rem; color: var(--text-muted);">No bring-forward on record.</div>`}
+                    ${bfFY ? `
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.04);">
+                            <div style="font-size: 0.72rem; color: var(--text-muted);">Started: FY ${bfFY - 1}/${String(bfFY).slice(-2)}</div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase;">Window Used:</span>
+                                <input id="super-bf-used-amount" type="number" value="${data.bringForwardUsedAmount || 0}" 
+                                       style="width: 85px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: #fff; border-radius: 4px; padding: 2px 6px; font-size: 0.75rem; font-weight: 700; text-align: right;">
+                            </div>
+                        </div>
+                    ` : `<div style="font-size: 0.72rem; color: var(--text-muted);">No bring-forward on record.</div>`}
                 </div>
             </div>
 
@@ -1126,6 +1136,12 @@ export default class SuperStrategyUI {
         if (floorInput) floorInput.addEventListener('change', (e) => { superStrategyStore.setSafetyFloor(e.target.value); this.render(); });
         if (ageInput) ageInput.addEventListener('change', (e) => { superStrategyStore.setAge(e.target.value); this.render(); });
         if (bfFYInput) bfFYInput.addEventListener('change', (e) => { superStrategyStore.setBringForwardTriggeredFY(e.target.value || null); this.render(); });
+
+        const bfUsedInput = this.container.querySelector('#super-bf-used-amount');
+        if (bfUsedInput) bfUsedInput.addEventListener('change', (e) => {
+            superStrategyStore.setBringForwardUsedAmount(e.target.value);
+            this.render();
+        });
 
         const customDateInput = this.container.querySelector(`#${IDS.SUPER_CUSTOM_REMINDER_DATE}`);
         if (customDateInput) {
