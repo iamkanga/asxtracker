@@ -177,19 +177,20 @@ export default class SuperStrategyUI {
     }
 
     _renderBalanceHeader(data, calc) {
-        const floorPct = calc.safetyFloorStatus.safe ? 'safe' : 'warning';
-        const floorColor = floorPct === 'safe' ? 'var(--color-positive)' : 'var(--color-negative)';
+        const floorPct = data.capitalSafetyFloor > 0 ? (calc.safetyFloorStatus.safe ? 'safe' : 'warning') : 'none';
+        const floorColor = floorPct === 'safe' ? 'var(--color-positive)' : floorPct === 'warning' ? 'var(--color-negative)' : 'var(--text-muted)';
+        const fy = calc.financialYear;
 
         return `
             <div class="${CSS_CLASSES.SUPER_LEDGER}" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px;">
                 <div class="${CSS_CLASSES.SUPER_LEDGER_CARD}" style="background: rgba(255,255,255,0.04); border-radius: 12px; padding: 14px;">
-                    <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;">Accumulation</div>
+                    <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;">Accumulation <span style="font-weight: 400; text-transform: none; letter-spacing: 0;">(as at 1 Jul)</span></div>
                     <input type="number" id="${IDS.SUPER_ACCUMULATION_INPUT}" class="${CSS_CLASSES.FORM_CONTROL}"
                            value="${data.accumulationBalance || ''}" placeholder="0.00"
                            style="font-size: 1.1rem; font-weight: 700; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 8px 10px; width: 100%; box-sizing: border-box;">
                 </div>
                 <div class="${CSS_CLASSES.SUPER_LEDGER_CARD}" style="background: rgba(255,255,255,0.04); border-radius: 12px; padding: 14px;">
-                    <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;">Pension</div>
+                    <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;">Pension <span style="font-weight: 400; text-transform: none; letter-spacing: 0;">(as at 1 Jul)</span></div>
                     <input type="number" id="${IDS.SUPER_PENSION_INPUT}" class="${CSS_CLASSES.FORM_CONTROL}"
                            value="${data.pensionBalance || ''}" placeholder="0.00"
                            style="font-size: 1.1rem; font-weight: 700; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 8px 10px; width: 100%; box-sizing: border-box;">
@@ -197,7 +198,7 @@ export default class SuperStrategyUI {
             </div>
 
             <!-- Total + Safety Floor Row -->
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: rgba(255,255,255,0.03); border-radius: 10px; margin-bottom: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: rgba(255,255,255,0.03); border-radius: 10px; margin-bottom: 10px;">
                 <div>
                     <div style="font-size: 0.65rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">Total Balance</div>
                     <div style="font-size: 1.3rem; font-weight: 800; color: #fff;">${formatCurrency(calc.totalBalance)}</div>
@@ -206,11 +207,17 @@ export default class SuperStrategyUI {
                     <div style="font-size: 0.65rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">Safety Floor</div>
                     <div style="display: flex; align-items: center; gap: 6px; justify-content: flex-end;">
                         <input type="number" id="${IDS.SUPER_SAFETY_FLOOR_INPUT}"
-                               value="${data.capitalSafetyFloor || ''}" placeholder="0"
+                               value="${data.capitalSafetyFloor || ''}" placeholder="Optional"
                                style="width: 110px; font-size: 1rem; font-weight: 700; color: ${floorColor}; background: transparent; border: none; text-align: right; padding: 0;">
-                        <i class="fas ${calc.safetyFloorStatus.safe ? 'fa-check-circle' : 'fa-exclamation-triangle'}" style="color: ${floorColor}; font-size: 0.9rem;"></i>
+                        ${data.capitalSafetyFloor > 0 ? `<i class="fas ${calc.safetyFloorStatus.safe ? 'fa-check-circle' : 'fa-exclamation-triangle'}" style="color: ${floorColor}; font-size: 0.9rem;"></i>` : ''}
                     </div>
                 </div>
+            </div>
+
+            <!-- Safety Floor Explanation -->
+            <div style="padding: 8px 14px; margin-bottom: 16px; font-size: 0.72rem; color: var(--text-muted); line-height: 1.5; opacity: 0.7;">
+                <i class="fas fa-info-circle" style="margin-right: 4px;"></i>
+                <strong>Safety Floor</strong> is your personal minimum — the balance you don't want to drop below. It's not a legislative requirement, just a guardrail for sustainability. Leave blank if not needed.
             </div>
 
             <!-- Age + FY Row -->
@@ -219,10 +226,11 @@ export default class SuperStrategyUI {
                     <div style="font-size: 0.65rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">Age at 1 July</div>
                     <input type="number" id="${IDS.SUPER_AGE_INPUT}" value="${data.ageAtJuly1 || 65}" min="0" max="120"
                            style="width: 60px; font-size: 1.1rem; font-weight: 700; background: transparent; border: none; color: #fff; padding: 0;">
+                    <div style="font-size: 0.6rem; color: var(--text-muted); margin-top: 2px;">Drawdown rate is based on your age as at 1 July of the FY</div>
                 </div>
                 <div style="flex: 1; background: rgba(255,255,255,0.03); border-radius: 10px; padding: 10px 12px;">
                     <div style="font-size: 0.65rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">Financial Year</div>
-                    <div style="font-size: 1.1rem; font-weight: 700; color: #fff;">FY ${calc.financialYear - 1}/${String(calc.financialYear).slice(-2)}</div>
+                    <div style="font-size: 1.1rem; font-weight: 700; color: #fff;">FY ${fy - 1}/${String(fy).slice(-2)}</div>
                 </div>
                 <div style="flex: 1; background: rgba(255,255,255,0.03); border-radius: 10px; padding: 10px 12px;">
                     <div style="font-size: 0.65rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">Min Rate</div>
@@ -380,6 +388,52 @@ export default class SuperStrategyUI {
                     ${stateData.commencementDate ? this._renderCommencementPreview(data, stateData.commencementDate) : ''}
                 `;
                 break;
+
+            case SUPER_STATES.RECONTRIBUTION: {
+                const eligibility = superStrategyStore.getRecontributionEligibility();
+                const closureData = superStrategyStore.getStateData(SUPER_STATES.PENSION_CLOSURE);
+                const closedBalance = data.pensionBalance - (closureData?.proRataPayout || 0);
+                fieldsHtml = `
+                    <!-- Eligibility Status -->
+                    <div style="display: flex; align-items: flex-start; gap: 10px; padding: 14px; background: rgba(${eligibility.eligible ? '6,255,79,0.08' : '255,59,48,0.08'}); border-radius: 10px; margin-bottom: 14px; border: 1px solid rgba(${eligibility.eligible ? '6,255,79,0.15' : '255,59,48,0.15'});">
+                        <i class="fas ${eligibility.eligible ? 'fa-check-circle' : 'fa-times-circle'}" style="color: ${eligibility.eligible ? 'var(--color-positive)' : '#ff3b30'}; font-size: 1rem; margin-top: 2px;"></i>
+                        <div style="flex: 1;">
+                            <div style="font-weight: 700; font-size: 0.82rem; color: ${eligibility.eligible ? 'var(--color-positive)' : '#ff3b30'}; margin-bottom: 3px;">
+                                ${eligibility.eligible ? 'Eligible to Re-Contribute' : 'Not Eligible'}
+                            </div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted); line-height: 1.5;">${eligibility.reason}</div>
+                            ${eligibility.eligible ? `<div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">Max NCC: <strong style="color: #fff;">${formatCurrency(eligibility.maxAmount)}</strong></div>` : ''}
+                        </div>
+                    </div>
+
+                    <!-- Available to Re-Contribute -->
+                    ${closedBalance > 0 ? `
+                        <div style="background: rgba(255,255,255,0.04); border-radius: 10px; padding: 12px; margin-bottom: 12px;">
+                            <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">Post-Closure Pension Balance</div>
+                            <div style="font-size: 1rem; font-weight: 700; color: #fff;">${formatCurrency(closedBalance)}</div>
+                            <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 4px;">This is the amount available to re-contribute to accumulation (as a non-concessional contribution).</div>
+                        </div>
+                    ` : ''}
+
+                    <div class="${CSS_CLASSES.FORM_GROUP}" style="margin-bottom: 12px;">
+                        <label class="${CSS_CLASSES.FORM_GROUP}" style="font-size: 0.75rem;">Re-Contribution Amount ($)</label>
+                        <input type="number" id="${IDS.SUPER_RECONTRIBUTION_AMOUNT}" class="${CSS_CLASSES.FORM_CONTROL}"
+                               value="${stateData.recontributionAmount || ''}" placeholder="0.00" step="0.01"
+                               ${!eligibility.eligible ? 'disabled' : ''}
+                               max="${eligibility.maxAmount}"
+                               style="border-radius: 8px; padding: 10px; ${!eligibility.eligible ? 'opacity: 0.4;' : ''}">
+                        ${eligibility.eligible && eligibility.needsWorkTest ? '<div style="font-size: 0.7rem; color: #ffa500; margin-top: 4px;"><i class="fas fa-exclamation-triangle" style="margin-right: 4px;"></i>Work test required: 40hrs in 30 consecutive days within the FY.</div>' : ''}
+                    </div>
+                    <div class="${CSS_CLASSES.FORM_GROUP}" style="margin-bottom: 12px;">
+                        <label class="${CSS_CLASSES.FORM_GROUP}" style="font-size: 0.75rem;">Re-Contribution Date</label>
+                        <input type="date" id="${IDS.SUPER_RECONTRIBUTION_DATE}" class="${CSS_CLASSES.FORM_CONTROL}"
+                               value="${stateData.recontributionDate || ''}"
+                               ${!eligibility.eligible ? 'disabled' : ''}
+                               style="border-radius: 8px; padding: 10px; ${!eligibility.eligible ? 'opacity: 0.4;' : ''}">
+                    </div>
+                `;
+                break;
+            }
         }
 
         return `
@@ -428,9 +482,7 @@ export default class SuperStrategyUI {
     _renderReminderStatus(calc) {
         const daysLeft = calc.daysUntilEOFY;
         const reminders = superStrategyStore.getActiveReminders();
-        if (!reminders.length) return '';
-
-        const active = reminders.filter(r => r.isTriggered);
+        const data = superStrategyStore.data;
 
         return `
             <div style="background: rgba(255,255,255,0.03); border-radius: 12px; padding: 14px; margin-bottom: 16px;">
@@ -438,15 +490,25 @@ export default class SuperStrategyUI {
                     <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">EOFY Countdown</div>
                     <div style="font-size: 1rem; font-weight: 800; color: ${daysLeft <= 30 ? '#ff3b30' : daysLeft <= 60 ? '#ffa500' : 'var(--color-accent)'};">${daysLeft} days</div>
                 </div>
-                <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+
+                <!-- Preset Reminders -->
+                <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px;">
                     ${reminders.map(r => `
                         <span class="${CSS_CLASSES.SUPER_REMINDER_ROW}" style="padding: 4px 10px; border-radius: 6px; font-size: 0.72rem; font-weight: 600;
                                       background: ${r.isTriggered ? 'rgba(255,165,0,0.15)' : 'rgba(255,255,255,0.04)'};
                                       color: ${r.isTriggered ? '#ffa500' : 'var(--text-muted)'};
                                       border: 1px solid ${r.isTriggered ? 'rgba(255,165,0,0.25)' : 'transparent'};">
-                            ${r.weeks}w ${r.isTriggered ? '⚠' : '✓'}
+                            ${r.label} ${r.isTriggered ? '⚠' : '✓'}
                         </span>
                     `).join('')}
+                </div>
+
+                <!-- Custom Reminder Date -->
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <label style="font-size: 0.72rem; color: var(--text-muted); font-weight: 600; white-space: nowrap;">Custom:</label>
+                    <input type="date" id="${IDS.SUPER_CUSTOM_REMINDER_DATE}"
+                           value="${data.customReminderDate || ''}"
+                           style="flex: 1; font-size: 0.78rem; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; padding: 6px 8px; color: #fff;">
                 </div>
             </div>
         `;
@@ -630,6 +692,18 @@ export default class SuperStrategyUI {
                     <div style="font-size: 0.82rem; font-weight: 700; color: #fff; margin-bottom: 4px;">Transfer Balance Cap</div>
                     <div style="font-size: 0.78rem; color: var(--text-muted); line-height: 1.5;">
                         Current TBC: <strong style="color: #fff;">${formatCurrency(SUPER_THRESHOLDS.transferBalanceCap)}</strong>
+                    </div>
+                </div>
+
+                <div style="background: rgba(255,255,255,0.03); border-radius: 10px; padding: 14px; margin-top: 8px;">
+                    <div style="font-size: 0.82rem; font-weight: 700; color: #fff; margin-bottom: 4px;">Re-Contribution Strategy</div>
+                    <div style="font-size: 0.78rem; color: var(--text-muted); line-height: 1.5;">
+                        After closing a pension, you can re-contribute the balance back into accumulation as a <strong style="color: #fff;">non-concessional contribution</strong>, then start a new pension with the consolidated amount.
+                    </div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 8px; line-height: 1.5;">
+                        <div style="margin-bottom: 4px;"><strong style="color: var(--color-accent);">Under 75:</strong> No work test required. 3-year bring-forward available (up to $${(120000 * 3).toLocaleString()}).</div>
+                        <div style="margin-bottom: 4px;"><strong style="color: var(--color-accent);">75+:</strong> Work test applies (40hrs in 30 consecutive days within the FY).</div>
+                        <div><strong style="color: var(--color-accent);">TSB threshold:</strong> NCC is nil if total super balance ≥ $${(1900000).toLocaleString()} at prior 30 June.</div>
                     </div>
                 </div>
             </div>
@@ -843,6 +917,20 @@ export default class SuperStrategyUI {
                 break;
             }
 
+            case SUPER_STATES.RECONTRIBUTION: {
+                const amountEl = this.container.querySelector(`#${IDS.SUPER_RECONTRIBUTION_AMOUNT}`);
+                const dateEl = this.container.querySelector(`#${IDS.SUPER_RECONTRIBUTION_DATE}`);
+                if (amountEl) amountEl.addEventListener('change', (e) => {
+                    superStrategyStore.updateStateData(current, { recontributionAmount: parseFloat(e.target.value) || 0 });
+                    this.render();
+                });
+                if (dateEl) dateEl.addEventListener('change', (e) => {
+                    superStrategyStore.updateStateData(current, { recontributionDate: e.target.value });
+                    this.render();
+                });
+                break;
+            }
+
             case SUPER_STATES.PENSION_COMMENCEMENT: {
                 const dateEl = this.container.querySelector(`#${IDS.SUPER_COMMENCE_DATE}`);
                 if (dateEl) dateEl.addEventListener('change', (e) => {
@@ -851,6 +939,15 @@ export default class SuperStrategyUI {
                 });
                 break;
             }
+        }
+
+        // Custom reminder date binding (present on pipeline tab)
+        const customReminderEl = this.container?.querySelector(`#${IDS.SUPER_CUSTOM_REMINDER_DATE}`);
+        if (customReminderEl) {
+            customReminderEl.addEventListener('change', (e) => {
+                superStrategyStore.setReminders(superStrategyStore.data.reminderPresets, e.target.value || null);
+                this.render();
+            });
         }
     }
 }

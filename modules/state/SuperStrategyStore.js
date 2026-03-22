@@ -20,7 +20,8 @@ import {
     checkSafetyFloor,
     getCurrentFinancialYear,
     daysUntilEOFY,
-    runSimulation
+    runSimulation,
+    checkRecontributionEligibility
 } from '../data/SuperLegislation.js';
 
 // ─────────────────────────────────────────────
@@ -31,6 +32,7 @@ export const SUPER_STATES = Object.freeze({
     NOI_SUBMISSION: 'NOI_SUBMISSION',
     FUND_ACKNOWLEDGEMENT: 'FUND_ACKNOWLEDGEMENT',
     PENSION_CLOSURE: 'PENSION_CLOSURE',
+    RECONTRIBUTION: 'RECONTRIBUTION',
     PENSION_COMMENCEMENT: 'PENSION_COMMENCEMENT'
 });
 
@@ -39,6 +41,7 @@ const STATE_ORDER = [
     SUPER_STATES.NOI_SUBMISSION,
     SUPER_STATES.FUND_ACKNOWLEDGEMENT,
     SUPER_STATES.PENSION_CLOSURE,
+    SUPER_STATES.RECONTRIBUTION,
     SUPER_STATES.PENSION_COMMENCEMENT
 ];
 
@@ -47,6 +50,7 @@ const STATE_LABELS = Object.freeze({
     [SUPER_STATES.NOI_SUBMISSION]: 'NOI Submission',
     [SUPER_STATES.FUND_ACKNOWLEDGEMENT]: 'Fund Acknowledgement',
     [SUPER_STATES.PENSION_CLOSURE]: 'Pension Closure',
+    [SUPER_STATES.RECONTRIBUTION]: 'Re-Contribution',
     [SUPER_STATES.PENSION_COMMENCEMENT]: 'Pension Commencement'
 });
 
@@ -55,6 +59,7 @@ const STATE_DESCRIPTIONS = Object.freeze({
     [SUPER_STATES.NOI_SUBMISSION]: 'Submit Notice of Intent to claim a tax deduction on the contribution.',
     [SUPER_STATES.FUND_ACKNOWLEDGEMENT]: 'Waiting for fund acknowledgement of NOI. This is a manual/API verification gate.',
     [SUPER_STATES.PENSION_CLOSURE]: 'Calculate and execute mandatory pro-rata drawdowns for existing pension accounts.',
+    [SUPER_STATES.RECONTRIBUTION]: 'Re-contribute pension balance back into accumulation as a non-concessional contribution, then consolidate for the new pension.',
     [SUPER_STATES.PENSION_COMMENCEMENT]: 'Initiate the restarted pension account with the consolidated balance.'
 });
 
@@ -70,22 +75,24 @@ function getDefaultData() {
             [SUPER_STATES.NOI_SUBMISSION]: { status: 'pending', completedAt: null, submittedDate: null, deductionAmount: 0 },
             [SUPER_STATES.FUND_ACKNOWLEDGEMENT]: { status: 'pending', completedAt: null, acknowledged: false, acknowledgedDate: null },
             [SUPER_STATES.PENSION_CLOSURE]: { status: 'pending', completedAt: null, proRataPayout: 0, closureDate: null },
+            [SUPER_STATES.RECONTRIBUTION]: { status: 'pending', completedAt: null, recontributionAmount: 0, recontributionDate: null },
             [SUPER_STATES.PENSION_COMMENCEMENT]: { status: 'pending', completedAt: null, commencementDate: null, newBalance: 0 }
         },
 
-        // Dual Ledger
+        // Dual Ledger — Values as at 1 July of the current financial year
         accumulationBalance: 0,
         pensionBalance: 0,
 
         // Member Info
         dateOfBirth: null, // ISO string
-        ageAtJuly1: 65,    // Derived or user-entered
+        ageAtJuly1: 65,    // Derived or user-entered (age as at 1 July)
 
-        // Safety Floor
-        capitalSafetyFloor: 600000,
+        // Safety Floor (user's personal minimum — starts blank, not a legislative requirement)
+        capitalSafetyFloor: 0,
 
-        // Reminders (weeks before EOFY)
-        reminders: [4, 2, 1], // Default: 4 weeks, 2 weeks, 1 week before June 30
+        // Reminders: presets (weeks before EOFY) + optional custom date
+        reminderPresets: [4, 2, 1], // Default: 4 weeks, 2 weeks, 1 week before June 30
+        customReminderDate: null,    // ISO date string for a specific custom reminder
 
         // External Links
         fundPortalUrl: 'https://brightersuper.com.au/login',
@@ -189,6 +196,11 @@ class SuperStrategyStore {
             case SUPER_STATES.PENSION_CLOSURE:
                 if (!sd.closureDate) return { valid: false, message: 'Confirm the pension closure date.' };
                 return { valid: true, message: 'Pension closure executed.' };
+
+            case SUPER_STATES.RECONTRIBUTION:
+                if (!sd.recontributionAmount || sd.recontributionAmount <= 0) return { valid: false, message: 'Enter the amount being re-contributed.' };
+                if (!sd.recontributionDate) return { valid: false, message: 'Enter the re-contribution date.' };
+                return { valid: true, message: 'Re-contribution recorded.' };
 
             case SUPER_STATES.PENSION_COMMENCEMENT:
                 if (!sd.commencementDate) return { valid: false, message: 'Set the pension commencement date.' };
@@ -331,18 +343,23 @@ class SuperStrategyStore {
     // Reminders
     // ─────────────────────────────────────────
 
-    setReminders(weeksBefore) {
-        if (Array.isArray(weeksBefore)) {
-            this.data.reminders = weeksBefore.filter(w => w > 0).sort((a, b) => b - a);
-            this._save();
+    setReminders(presets, customDate = null) {
+        if (Array.isArray(presets)) {
+            this.data.reminderPresets = presets.filter(w => w > 0).sort((a, b) => b - a);
         }
+        if (customDate !== undefined) {
+            this.data.customReminderDate = customDate;
+        }
+        this._save();
     }
 
     getActiveReminders() {
         const daysLeft = daysUntilEOFY();
-        return (this.data.reminders || []).map(weeks => {
+        const presetReminders = (this.data.reminderPresets || []).map(weeks => {
             const triggerDays = weeks * 7;
             return {
+                type: 'preset',
+                label: `${weeks}w before EOFY`,
                 weeks,
                 triggerDays,
                 isTriggered: daysLeft <= triggerDays,
@@ -350,6 +367,37 @@ class SuperStrategyStore {
                 daysUntilEOFY: daysLeft
             };
         });
+
+        // Custom date reminder
+        if (this.data.customReminderDate) {
+            const customDate = new Date(this.data.customReminderDate);
+            const now = new Date();
+            const msPerDay = 86400000;
+            const daysUntilCustom = Math.ceil((customDate - now) / msPerDay);
+            presetReminders.push({
+                type: 'custom',
+                label: `Custom: ${customDate.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}`,
+                weeks: null,
+                triggerDays: null,
+                isTriggered: daysUntilCustom <= 0,
+                daysUntilTrigger: Math.max(0, daysUntilCustom),
+                daysUntilEOFY: daysLeft
+            });
+        }
+
+        return presetReminders;
+    }
+
+    /**
+     * Gets re-contribution eligibility based on current member data.
+     */
+    getRecontributionEligibility() {
+        const fy = getCurrentFinancialYear();
+        return checkRecontributionEligibility(
+            this.data.ageAtJuly1,
+            this.getTotalBalance(),
+            fy
+        );
     }
 
     // ─────────────────────────────────────────

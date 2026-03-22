@@ -30,8 +30,67 @@ export const DRAWDOWN_TABLE = Object.freeze([
 // Key = financial year ending (e.g. 2026 = FY 2025-26)
 export const CONTRIBUTION_CAPS = Object.freeze({
     2025: { concessional: 30000, nonConcessional: 120000 },
-    2026: { concessional: 30000, nonConcessional: 120000 }
+    2026: { concessional: 30000, nonConcessional: 120000 },
+    2027: { concessional: 30000, nonConcessional: 120000 }
 });
+
+// ─────────────────────────────────────────────
+// 2b. Re-Contribution Eligibility Rules
+// ─────────────────────────────────────────────
+// When you close a pension and want to re-contribute the balance back
+// into accumulation (as a non-concessional contribution), these rules apply.
+export const RECONTRIBUTION_RULES = Object.freeze({
+    // Under-75 age rule: can re-contribute without a work test
+    noWorkTestMaxAge: 74,
+    // 75+ work test: must have worked 40hrs in 30 consecutive days within the FY
+    workTestRequiredAge: 75,
+    // Bring-forward: under-75 can use 3-year bring-forward (3x NCC cap)
+    bringForwardMaxAge: 74,
+    bringForwardMultiplier: 3,
+    // Maximum re-contribution window: must be completed within the same FY
+    // as the pension closure (or up to 28 days after in some fund policies)
+    maxDaysAfterClosure: 28,
+    // Total super balance threshold: NCC is nil if TSB >= threshold at prior June 30
+    totalSuperBalanceThreshold: 1900000
+});
+
+/**
+ * Checks re-contribution eligibility for a member.
+ * @param {number} ageAtJuly1 - Member's age at most recent July 1.
+ * @param {number} totalSuperBalance - Member's total super balance as at prior 30 June.
+ * @param {number} financialYearEnding - The FY ending year (e.g. 2026).
+ * @returns {{ eligible: boolean, maxAmount: number, needsWorkTest: boolean, bringForwardAvailable: boolean, reason: string }}
+ */
+export function checkRecontributionEligibility(ageAtJuly1, totalSuperBalance, financialYearEnding) {
+    const caps = getContributionCaps(financialYearEnding);
+
+    // TSB check: no NCC if balance exceeds threshold at prior June 30
+    if (totalSuperBalance >= RECONTRIBUTION_RULES.totalSuperBalanceThreshold) {
+        return {
+            eligible: false,
+            maxAmount: 0,
+            needsWorkTest: false,
+            bringForwardAvailable: false,
+            reason: `Total super balance ($${totalSuperBalance.toLocaleString()}) exceeds $${RECONTRIBUTION_RULES.totalSuperBalanceThreshold.toLocaleString()} threshold — non-concessional contributions not permitted.`
+        };
+    }
+
+    const needsWorkTest = ageAtJuly1 >= RECONTRIBUTION_RULES.workTestRequiredAge;
+    const bringForwardAvailable = ageAtJuly1 <= RECONTRIBUTION_RULES.bringForwardMaxAge;
+    const maxAmount = bringForwardAvailable
+        ? caps.nonConcessional * RECONTRIBUTION_RULES.bringForwardMultiplier
+        : caps.nonConcessional;
+
+    return {
+        eligible: true,
+        maxAmount,
+        needsWorkTest,
+        bringForwardAvailable,
+        reason: needsWorkTest
+            ? `Age ${ageAtJuly1}: Work test required (40hrs in 30 consecutive days within the FY).`
+            : `Age ${ageAtJuly1}: No work test required. ${bringForwardAvailable ? `Bring-forward available (up to $${maxAmount.toLocaleString()}).` : `Standard NCC cap applies ($${caps.nonConcessional.toLocaleString()}).`}`
+    };
+}
 
 // ─────────────────────────────────────────────
 // 3. Thresholds & Defaults

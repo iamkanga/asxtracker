@@ -1693,7 +1693,10 @@ export const IDS = {
     SUPER_NOI_AMOUNT: 'super-noi-amount',
     SUPER_ACK_CHECKBOX: 'super-ack-checkbox',
     SUPER_CLOSURE_DATE: 'super-closure-date',
+    SUPER_RECONTRIBUTION_AMOUNT: 'super-recontribution-amount',
+    SUPER_RECONTRIBUTION_DATE: 'super-recontribution-date',
     SUPER_COMMENCE_DATE: 'super-commence-date',
+    SUPER_CUSTOM_REMINDER_DATE: 'super-custom-reminder-date',
     BTN_SUPER_STRATEGY: 'btn-super-strategy'
 };
 
