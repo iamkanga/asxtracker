@@ -414,7 +414,8 @@ class SuperStrategyStore {
         return checkRecontributionEligibility(
             this.getTotalBalance(),
             fy,
-            this.data.bringForwardTriggeredFY
+            this.data.bringForwardTriggeredFY,
+            this.data.bringForwardUsedAmount || 0
         );
     }
 

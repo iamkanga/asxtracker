@@ -81,9 +81,10 @@ export function isBringForwardAvailable(bringForwardTriggeredFY, currentFY) {
  * @param {number} totalSuperBalance - Member's total super balance as at prior 30 June.
  * @param {number} financialYearEnding - The FY ending year (e.g. 2026).
  * @param {number|null} bringForwardTriggeredFY - FY when bring-forward was last triggered.
+ * @param {number} [bringForwardUsedAmount=0] - Cumulative NCC used in current BF window.
  * @returns {{ eligible: boolean, maxAmount: number, bringForwardStatus: object, reason: string }}
  */
-export function checkRecontributionEligibility(totalSuperBalance, financialYearEnding, bringForwardTriggeredFY = null) {
+export function checkRecontributionEligibility(totalSuperBalance, financialYearEnding, bringForwardTriggeredFY = null, bringForwardUsedAmount = 0) {
     const caps = getCapData(financialYearEnding);
     
     // Legislative TSB Tiering Limits
@@ -120,8 +121,8 @@ export function checkRecontributionEligibility(totalSuperBalance, financialYearE
             reason = `Bring-Forward Unavailable. TSB is between $${tier2Limit.toLocaleString()} and $${tier1Limit.toLocaleString()}. You are limited to the standard $${maxAmount.toLocaleString()} annual cap.`;
         }
     } else {
-        maxAmount = 0; // The engine cannot calculate remaining cap without historical contribution data
-        reason = `Active Bring-Forward Window (started FY ${bringForwardTriggeredFY - 1}/${String(bringForwardTriggeredFY).slice(-2)}). Your remaining limit depends on how much of the multi-year cap you have already utilized. A fresh 3-year window will reset in FY ${bfStatus.nextAvailableFY - 1}/${String(bfStatus.nextAvailableFY).slice(-2)} (${bfStatus.yearsRemaining} year${bfStatus.yearsRemaining > 1 ? 's' : ''} remaining).`;
+        maxAmount = Math.max(0, (caps.nonConcessional * 3) - bringForwardUsedAmount);
+        reason = `Active Bring-Forward Window (started FY ${bringForwardTriggeredFY - 1}/${String(bringForwardTriggeredFY).slice(-2)}). Your remaining limit is $${maxAmount.toLocaleString()} after accounting for historical utilization ($${bringForwardUsedAmount.toLocaleString()}). A fresh 3-year window will reset in FY ${bfStatus.nextAvailableFY - 1}/${String(bfStatus.nextAvailableFY).slice(-2)} (${bfStatus.yearsRemaining} year${bfStatus.yearsRemaining > 1 ? 's' : ''} remaining).`;
     }
 
     return {
@@ -323,30 +324,30 @@ export function runSimulation({
     const floorCheck = checkSafetyFloor(totalAfterAllDrawdowns, 0, safetyFloor);
 
     // 5. Cap Analysis
-    const caps = getCapData(fy);
-    const bfStatus = isBringForwardAvailable(bringForwardTriggeredFY, fy);
-
+    const totalBalanceBeforeSim = accumulationBalance + pensionBalance;
+    const eligibility = checkRecontributionEligibility(totalBalanceBeforeSim, fy, bringForwardTriggeredFY, bringForwardUsedAmount);
+    
     // Concessional Analysis
-    const concessionalRemaining = Math.max(0, caps.concessional); // Simple for now, can add pipeline check if needed
+    const caps = getCapData(fy);
+    const concessionalRemaining = Math.max(0, caps.concessional); 
     
     // Non-Concessional Analysis
-    let totalNCCUsed = bringForwardUsedAmount;
     let pipelineUtilization = 0;
 
     if (pipelineContribution && pipelineContribution.amount > 0 && !pipelineContribution.isDeductible) {
         // If in same FY OR within active bring-forward window
         const pipelineFY = pipelineContribution.fy;
         const sameFY = pipelineFY === fy;
+        const bfStatus = isBringForwardAvailable(bringForwardTriggeredFY, fy);
         const inBFWindow = !bfStatus.available && fy < (bringForwardTriggeredFY + RECONTRIBUTION_RULES.bringForwardWindowYears);
 
         if (sameFY || inBFWindow) {
             pipelineUtilization = pipelineContribution.amount;
-            totalNCCUsed += pipelineUtilization;
         }
     }
 
-    const nccLimit = !bfStatus.available ? (caps.nonConcessional * 3) : caps.nonConcessional;
-    const nccRemaining = Math.max(0, nccLimit - totalNCCUsed);
+    const nccLimit = eligibility.maxAmount; // Already accounts for TSB and bring-forward used amount
+    const nccRemaining = Math.max(0, nccLimit - pipelineUtilization);
     
     // Validation for THIS simulation
     const isOverCap = !isDeductible ? (contributionAmount > nccRemaining) : (contributionAmount > caps.concessional);
