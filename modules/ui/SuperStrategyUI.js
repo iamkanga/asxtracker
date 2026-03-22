@@ -255,9 +255,9 @@ export default class SuperStrategyUI {
                     </div>
                     <div style="text-align: right;">
                         <div style="font-size: 0.65rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">Status</div>
-                        <div style="font-size: 0.82rem; font-weight: 700; color: ${calc.recontributionEligibility?.eligible ? 'var(--color-positive)' : '#ff3b30'};">
-                            <i class="fas ${calc.recontributionEligibility?.eligible ? 'fa-check-circle' : 'fa-clock'}" style="margin-right: 4px;"></i>
-                            ${calc.recontributionEligibility?.eligible ? 'Available' : `Locked until FY${calc.recontributionEligibility?.bringForwardStatus?.nextAvailableFY || '?'}`}
+                        <div style="font-size: 0.82rem; font-weight: 700; color: ${calc.recontributionEligibility?.eligible ? 'var(--color-positive)' : 'var(--color-warning)'};">
+                            <i class="fas ${calc.recontributionEligibility?.eligible ? 'fa-check-circle' : (calc.recontributionEligibility?.bringForwardStatus?.nextAvailableFY ? 'fa-hourglass-half' : 'fa-ban')}" style="margin-right: 4px;"></i>
+                            ${calc.recontributionEligibility?.eligible ? 'Available' : (calc.recontributionEligibility?.bringForwardStatus?.nextAvailableFY ? `Active Window (Resets FY${calc.recontributionEligibility.bringForwardStatus.nextAvailableFY})` : 'Unavailable')}
                         </div>
                     </div>
                 </div>
@@ -925,9 +925,9 @@ export default class SuperStrategyUI {
                 <!-- Current Bring-Forward Status -->
                 <div style="background: rgba(255,255,255,0.04); border-radius: 10px; padding: 12px;">
                     <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;">Your Bring-Forward Status</div>
-                    <div style="font-size: 0.8rem; color: ${eligibility.eligible ? 'var(--color-positive)' : '#ff3b30'}; font-weight: 700; margin-bottom: 4px;">
-                        <i class="fas ${eligibility.eligible ? 'fa-check-circle' : 'fa-clock'}" style="margin-right: 4px;"></i>
-                        ${eligibility.eligible ? 'Available' : `Locked until FY${eligibility.bringForwardStatus.nextAvailableFY}`}
+                    <div style="font-size: 0.8rem; color: ${eligibility.eligible ? 'var(--color-positive)' : 'var(--color-warning)'}; font-weight: 700; margin-bottom: 4px;">
+                        <i class="fas ${eligibility.eligible ? 'fa-check-circle' : (eligibility.bringForwardStatus.nextAvailableFY ? 'fa-hourglass-half' : 'fa-ban')}" style="margin-right: 4px;"></i>
+                        ${eligibility.eligible ? 'Available' : (eligibility.bringForwardStatus.nextAvailableFY ? `Active Window (Resets FY${eligibility.bringForwardStatus.nextAvailableFY})` : 'Unavailable')}
                     </div>
                     ${bfFY ? `<div style="font-size: 0.72rem; color: var(--text-muted);">Last triggered: FY${bfFY - 1}/${String(bfFY).slice(-2)}</div>` : `<div style="font-size: 0.72rem; color: var(--text-muted);">No bring-forward on record.</div>`}
                 </div>

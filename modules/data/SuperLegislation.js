@@ -120,8 +120,8 @@ export function checkRecontributionEligibility(totalSuperBalance, financialYearE
             reason = `Bring-Forward Unavailable. TSB is between $${tier2Limit.toLocaleString()} and $${tier1Limit.toLocaleString()}. You are limited to the standard $${maxAmount.toLocaleString()} annual cap.`;
         }
     } else {
-        maxAmount = 0;
-        reason = `Bring-forward window active (triggered FY${bringForwardTriggeredFY}). NCC not available until FY${bfStatus.nextAvailableFY} (${bfStatus.yearsRemaining} year${bfStatus.yearsRemaining > 1 ? 's' : ''} remaining).`;
+        maxAmount = 0; // The engine cannot calculate remaining cap without historical contribution data
+        reason = `Active Bring-Forward Window (triggered FY${bringForwardTriggeredFY}). You are not completely locked out; your remaining limit depends on how much of the multi-year cap you have already utilized. A fresh 3-year window will reset in FY${bfStatus.nextAvailableFY} (${bfStatus.yearsRemaining} year${bfStatus.yearsRemaining > 1 ? 's' : ''} remaining).`;
     }
 
     return {
