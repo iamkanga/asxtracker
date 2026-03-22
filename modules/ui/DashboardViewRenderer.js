@@ -64,7 +64,7 @@ export class DashboardViewRenderer {
                 const alertsList = activeReminders.map(r => `<strong>${r.label}</strong>`).join(', ');
                 superAlertsHtml = `
                     <div style="background: rgba(255,165,0,0.1); border: 1px solid rgba(255,165,0,0.3); border-radius: 12px; padding: 14px 16px; margin: 16px; display: flex; align-items: center; gap: 14px; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(255,165,0,0.1);"
-                         onclick="document.getElementById('nav-super').click()"
+                         onclick="document.dispatchEvent(new CustomEvent('open-super-strategy'))"
                          onmouseover="this.style.background='rgba(255,165,0,0.15)'"
                          onmouseout="this.style.background='rgba(255,165,0,0.1)'">
                         <i class="fas fa-calendar-exclamation" style="color: #ffa500; font-size: 1.6rem; filter: drop-shadow(0 0 8px rgba(255,165,0,0.4));"></i>
