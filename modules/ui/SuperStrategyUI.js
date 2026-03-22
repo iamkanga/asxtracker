@@ -255,14 +255,14 @@ export default class SuperStrategyUI {
                     </div>
                     <div style="text-align: right;">
                         <div style="font-size: 0.65rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">Status</div>
-                        <div style="font-size: 0.82rem; font-weight: 700; color: ${calc.recontributionEligibility.eligible ? 'var(--color-positive)' : '#ff3b30'};">
-                            <i class="fas ${calc.recontributionEligibility.eligible ? 'fa-check-circle' : 'fa-clock'}" style="margin-right: 4px;"></i>
-                            ${calc.recontributionEligibility.eligible ? 'Available' : `Locked until FY${calc.recontributionEligibility.bringForwardStatus.nextAvailableFY}`}
+                        <div style="font-size: 0.82rem; font-weight: 700; color: ${calc.recontributionEligibility?.eligible ? 'var(--color-positive)' : '#ff3b30'};">
+                            <i class="fas ${calc.recontributionEligibility?.eligible ? 'fa-check-circle' : 'fa-clock'}" style="margin-right: 4px;"></i>
+                            ${calc.recontributionEligibility?.eligible ? 'Available' : `Locked until FY${calc.recontributionEligibility?.bringForwardStatus?.nextAvailableFY || '?'}`}
                         </div>
                     </div>
                 </div>
                 <div style="font-size: 0.68rem; color: var(--text-muted); line-height: 1.4; opacity: 0.8;">
-                    ${calc.recontributionEligibility.reason}
+                    ${calc.recontributionEligibility?.reason || 'Status unavailable'}
                 </div>
             </div>
         `;

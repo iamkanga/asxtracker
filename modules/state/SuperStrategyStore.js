@@ -443,6 +443,7 @@ class SuperStrategyStore {
             annualMinimum: annual.annualMinimum,
             drawdownRate: annual.rate,
             contributionCaps: caps,
+            recontributionEligibility: this.getRecontributionEligibility(),
             financialYear: fy,
             daysUntilEOFY: daysLeft,
             safetyFloorStatus: floorCheck,
