@@ -1069,7 +1069,7 @@ export default class SuperStrategyUI {
             customDateInput.addEventListener('change', (e) => {
                 superStrategyStore.setCustomReminderDate(e.target.value);
                 this.render(); // Re-render local UI
-                document.dispatchEvent(new CustomEvent('dashboard-prefs-changed')); // Force refresh dashboard banner
+                window.dispatchEvent(new CustomEvent('dashboard-prefs-changed')); // Force refresh dashboard banner
             });
         }
 

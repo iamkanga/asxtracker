@@ -372,7 +372,8 @@ export const AppState = {
                 oneTapResearch: this.preferences.oneTapResearch || false,
                 aiPromptTemplates: this.preferences.aiPromptTemplates || {},
                 widgetConfig: this.preferences.widgetConfig || null,
-                widgetDashboardItems: this.preferences.widgetDashboardItems || null
+                widgetDashboardItems: this.preferences.widgetDashboardItems || null,
+                superStrategy: this.preferences.superStrategy || null
             };
             this.onPersistenceUpdate(payload);
         } else {

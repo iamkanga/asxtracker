@@ -12,6 +12,7 @@
  */
 
 import { EVENTS, STORAGE_KEYS } from '../utils/AppConstants.js';
+import { AppState } from './AppState.js';
 import {
     calculateProRataMinimum,
     calculateAnnualMinimum,
@@ -112,6 +113,14 @@ class SuperStrategyStore {
         this.isReady = false;
         this.data = getDefaultData();
         this._listeners = [];
+
+        // Attach Cloud Sync Listener for Multi-Device Hydration
+        document.addEventListener('cloud-preferences-loaded', (e) => {
+            const prefs = e.detail;
+            if (prefs && prefs.superStrategy) {
+                this.hydrateFromCloud(prefs.superStrategy);
+            }
+        });
     }
 
     // ─────────────────────────────────────────
@@ -482,8 +491,32 @@ class SuperStrategyStore {
                 this.data.createdAt = this.data.lastUpdated;
             }
             localStorage.setItem(STORAGE_KEYS.SUPER_STRATEGY, JSON.stringify(this.data));
+
+            // Firebase Sync Integration
+            if (AppState && AppState.preferences) {
+                AppState.preferences.superStrategy = this.data;
+                AppState.triggerSync();
+            }
         } catch (e) {
             console.error('[SuperStrategyStore] Save failed:', e);
+        }
+    }
+
+    hydrateFromCloud(cloudData) {
+        if (!cloudData) return;
+        
+        const cloudTime = new Date(cloudData.lastUpdated || 0).getTime();
+        const localTime = new Date(this.data.lastUpdated || 0).getTime();
+        
+        // Only overwrite if cloud data is STRICTLY newer
+        if (cloudTime > localTime) {
+            this.data = { ...getDefaultData(), ...cloudData };
+            localStorage.setItem(STORAGE_KEYS.SUPER_STRATEGY, JSON.stringify(this.data));
+            this._dispatch(EVENTS.SUPER_STATE_CHANGED);
+            console.log('[SuperStrategyStore] Hydrated from cloud sync');
+            
+            // Re-trigger global refresh for dashboard banners
+            window.dispatchEvent(new CustomEvent('dashboard-prefs-changed'));
         }
     }
 

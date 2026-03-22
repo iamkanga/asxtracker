@@ -915,6 +915,9 @@ export class AppController {
             // Mark as loaded before processing specific updates so handleSecurityLock works
             this._cloudPrefsLoaded = true;
 
+            // Broadcast cloud prefs to decoupled stores (e.g., SuperStrategy)
+            document.dispatchEvent(new CustomEvent('cloud-preferences-loaded', { detail: prefs }));
+
             let needsRender = false;
 
             // 0. Sync Security Prefs (CRITICAL: Prioritize this)
