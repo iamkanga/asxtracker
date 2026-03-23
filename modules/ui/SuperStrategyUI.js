@@ -1179,6 +1179,7 @@ export default class SuperStrategyUI {
         this._bindStepInputs();
 
         // Advance button
+        const advanceBtn = this.container.querySelector('#super-advance-btn');
         if (advanceBtn) {
             advanceBtn.addEventListener('click', () => {
                 const current = superStrategyStore.getCurrentState();
