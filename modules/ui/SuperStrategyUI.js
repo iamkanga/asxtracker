@@ -350,10 +350,8 @@ export default class SuperStrategyUI {
                     </div>
                     <div class="${CSS_CLASSES.FORM_GROUP}" style="margin-bottom:14px;">
                         <label style="font-size:0.62rem;color:var(--text-muted);font-weight:800;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;display:block;opacity:0.55;">Date Cleared</label>
-                        <input type="${stateData.clearedDate ? 'date' : 'text'}" id="${IDS.SUPER_CONTRIBUTION_DATE}" class="${CSS_CLASSES.FORM_CONTROL}"
-                               value="${stateData.clearedDate || ''}" placeholder="Set date"
-                               onfocus="(this.type='date'); if('showPicker' in this) this.showPicker()"
-                               onblur="if(!this.value) this.type='text'"
+                        <input type="date" id="${IDS.SUPER_CONTRIBUTION_DATE}" class="${CSS_CLASSES.FORM_CONTROL}"
+                               value="${stateData.clearedDate || ''}"
                                style="border-radius:10px;padding:11px;cursor:pointer;font-weight:700;outline:none;">
                     </div>
                 `;
@@ -369,10 +367,8 @@ export default class SuperStrategyUI {
                     </div>
                     <div class="${CSS_CLASSES.FORM_GROUP}" style="margin-bottom:14px;">
                         <label style="font-size:0.62rem;color:var(--text-muted);font-weight:800;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;display:block;opacity:0.55;">Date Submitted</label>
-                        <input type="${stateData.submittedDate ? 'date' : 'text'}" id="${IDS.SUPER_NOI_DATE}" class="${CSS_CLASSES.FORM_CONTROL}"
-                               value="${stateData.submittedDate || ''}" placeholder="Set date"
-                               onfocus="(this.type='date'); if('showPicker' in this) this.showPicker()"
-                               onblur="if(!this.value) this.type='text'"
+                        <input type="date" id="${IDS.SUPER_NOI_DATE}" class="${CSS_CLASSES.FORM_CONTROL}"
+                               value="${stateData.submittedDate || ''}"
                                style="border-radius:10px;padding:11px;cursor:pointer;font-weight:700;">
                     </div>
                 `;
@@ -410,10 +406,8 @@ export default class SuperStrategyUI {
 
                         <div class="${CSS_CLASSES.FORM_GROUP}" style="margin-bottom:20px;">
                             <label style="font-size:0.62rem;color:var(--text-muted);font-weight:800;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;display:block;opacity:0.55;">Planned Closure Date</label>
-                            <input type="${stateData.closureDate ? 'date' : 'text'}" id="${IDS.SUPER_CLOSURE_DATE}" class="${CSS_CLASSES.FORM_CONTROL}"
-                                   value="${stateData.closureDate || ''}" placeholder="Set date"
-                                   onfocus="(this.type='date'); if('showPicker' in this) this.showPicker()"
-                                   onblur="if(!this.value) this.type='text'"
+                            <input type="date" id="${IDS.SUPER_CLOSURE_DATE}" class="${CSS_CLASSES.FORM_CONTROL}"
+                                   value="${stateData.closureDate || ''}"
                                    style="border-radius:10px;padding:12px;cursor:pointer;font-weight:700;outline:none;">
                         </div>
 
@@ -440,15 +434,35 @@ export default class SuperStrategyUI {
                 fieldsHtml = `
                     <div class="${CSS_CLASSES.FORM_GROUP}" style="margin-bottom:14px;">
                         <label style="font-size:0.62rem;color:var(--text-muted);font-weight:800;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;display:block;opacity:0.55;">Commencement Date</label>
-                        <input type="${stateData.commencementDate ? 'date' : 'text'}" id="${IDS.SUPER_COMMENCE_DATE}" class="${CSS_CLASSES.FORM_CONTROL}"
-                               value="${stateData.commencementDate || ''}" placeholder="Set date"
-                               onfocus="(this.type='date'); if('showPicker' in this) this.showPicker()"
-                               onblur="if(!this.value) this.type='text'"
+                        <input type="date" id="${IDS.SUPER_COMMENCE_DATE}" class="${CSS_CLASSES.FORM_CONTROL}"
+                               value="${stateData.commencementDate || ''}"
                                style="border-radius:10px;padding:11px;cursor:pointer;font-weight:700;outline:none;">
                     </div>
                     ${stateData.commencementDate ? this._renderCommencementPreview(data, stateData.commencementDate) : ''}
                 `;
                 break;
+
+            case SUPER_STATES.FINALISED:
+                return `
+                    <div id="${IDS.SUPER_STEP_DETAIL}" style="text-align: center; padding: 40px 24px; background: rgba(6,255,79,0.04); border-radius: 20px; border: 1px solid rgba(6,255,79,0.1); margin: 12px 0 24px; box-shadow: var(--shadow-strong);">
+                        <div style="width: 72px; height: 72px; background: rgba(6,255,79,0.12); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--color-positive); margin: 0 auto 24px;">
+                            <i class="fas fa-check-double" style="font-size: 2.22rem;"></i>
+                        </div>
+                        <h3 style="font-size: 1.4rem; font-weight: 950; color: #fff; margin-bottom: 12px; letter-spacing: -0.5px;">Strategy Finalized</h3>
+                        <p style="font-size: 0.88rem; color: var(--text-muted); line-height: 1.6; max-width: 320px; margin: 0 auto 28px; font-weight: 500; opacity: 0.9;">
+                            Your pension restart has been successfully modeled and recorded. All legislative requirements have been accounted for.
+                        </p>
+                        
+                        <div style="background: rgba(0,0,0,0.2); border-radius: 16px; padding: 20px; margin-bottom: 32px; text-align: left; border: 1px solid rgba(255,255,255,0.03);">
+                            <div style="font-size:0.65rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);opacity:0.6;margin-bottom:10px;">Consolidated Restart Balance</div>
+                            <div style="font-size:1.6rem;font-weight:950;color:var(--color-positive);line-height:1;">${formatCurrency(superStrategyStore.getTotalBalance())}</div>
+                        </div>
+
+                        <button id="super-final-reset-btn" class="${CSS_CLASSES.PRIMARY_PILL_BTN}" style="width: 100%; border-radius: 12px; padding: 14px; font-weight: 800; font-size: 0.85rem; background: var(--color-accent); color: #000; border: none; cursor: pointer;">
+                            Restart New Pipeline
+                        </button>
+                    </div>
+                `;
 
             case SUPER_STATES.RECONTRIBUTION: {
                 const eligibility = superStrategyStore.getRecontributionEligibility();
@@ -570,7 +584,6 @@ export default class SuperStrategyUI {
                                value="${stateData.recontributionDate || ''}"
                                ${!eligibility.eligible ? 'disabled' : ''}
                                style="border-radius: 12px; padding: 12px; font-weight: 700; ${!eligibility.eligible ? 'opacity: 0.4;' : ''}">
-                    </div>
                 `;
                 break;
             }
@@ -732,10 +745,8 @@ export default class SuperStrategyUI {
                     </div>
                     <div style="${CARD}">
                         <div style="${SL}">Custom Date</div>
-                        <input type="${data.customReminderDate ? 'date' : 'text'}" id="${IDS.SUPER_CUSTOM_REMINDER_DATE}"
-                               value="${data.customReminderDate || ''}" placeholder="Set date"
-                               onfocus="(this.type='date'); if('showPicker' in this) this.showPicker()"
-                               onblur="if(!this.value) this.type='text'"
+                        <input type="date" id="${IDS.SUPER_CUSTOM_REMINDER_DATE}"
+                               value="${data.customReminderDate || ''}"
                                style="font-size:1.1rem;font-weight:900;color:#fff;background:transparent;border:none;padding:0;cursor:pointer;outline:none;width:100%;">
                     </div>
                 </div>
@@ -782,9 +793,7 @@ export default class SuperStrategyUI {
 
                 <div class="${CSS_CLASSES.FORM_GROUP}" style="margin-bottom:14px;">
                     <label style="font-size:0.62rem;color:var(--text-muted);font-weight:800;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;display:block;opacity:0.55;">Simulation Start</label>
-                    <input type="text" id="${IDS.SUPER_SIMULATION_DATE}" class="${CSS_CLASSES.FORM_CONTROL}"
-                           placeholder="Set date" onfocus="(this.type='date'); if('showPicker' in this) this.showPicker()"
-                           onblur="if(!this.value) this.type='text'"
+                    <input type="date" id="${IDS.SUPER_SIMULATION_DATE}" class="${CSS_CLASSES.FORM_CONTROL}"
                            style="border-radius:10px;padding:11px;cursor:pointer;font-weight:700;outline:none;">
                 </div>
 
@@ -1170,15 +1179,22 @@ export default class SuperStrategyUI {
         this._bindStepInputs();
 
         // Advance button
-        const advanceBtn = this.container.querySelector('#super-advance-btn');
         if (advanceBtn) {
             advanceBtn.addEventListener('click', () => {
+                const current = superStrategyStore.getCurrentState();
                 const result = superStrategyStore.advanceState();
                 if (!result.success) {
-                    // Could show toast, but for now the button text shows the message
                     console.warn('[SuperStrategyUI]', result.message);
                 }
-                // Re-render happens via SUPER_STATE_CHANGED event
+            });
+        }
+        
+        const finalResetBtn = this.container.querySelector('#super-final-reset-btn');
+        if (finalResetBtn) {
+            finalResetBtn.addEventListener('click', () => {
+                if (confirm('Are you sure you want to reset the strategy and start fresh? All implementation dates will be cleared.')) {
+                    superStrategyStore.resetStateMachine();
+                }
             });
         }
 
@@ -1220,11 +1236,9 @@ export default class SuperStrategyUI {
                 const dateEl = this.container.querySelector(`#${IDS.SUPER_CONTRIBUTION_DATE}`);
                 if (amountEl) amountEl.addEventListener('change', (e) => {
                     superStrategyStore.updateStateData(current, { amount: parseFloat(e.target.value) || 0 });
-                    this.render();
                 });
                 if (dateEl) dateEl.addEventListener('change', (e) => {
                     superStrategyStore.updateStateData(current, { clearedDate: e.target.value });
-                    this.render();
                 });
                 break;
             }
@@ -1234,11 +1248,9 @@ export default class SuperStrategyUI {
                 const dateEl = this.container.querySelector(`#${IDS.SUPER_NOI_DATE}`);
                 if (amountEl) amountEl.addEventListener('change', (e) => {
                     superStrategyStore.updateStateData(current, { deductionAmount: parseFloat(e.target.value) || 0 });
-                    this.render();
                 });
                 if (dateEl) dateEl.addEventListener('change', (e) => {
                     superStrategyStore.updateStateData(current, { submittedDate: e.target.value });
-                    this.render();
                 });
                 break;
             }
@@ -1250,7 +1262,6 @@ export default class SuperStrategyUI {
                         acknowledged: e.target.checked,
                         acknowledgedDate: e.target.checked ? new Date().toISOString() : null
                     });
-                    this.render();
                 });
                 break;
             }
@@ -1259,7 +1270,6 @@ export default class SuperStrategyUI {
                 const dateEl = this.container.querySelector(`#${IDS.SUPER_CLOSURE_DATE}`);
                 if (dateEl) dateEl.addEventListener('change', (e) => {
                     superStrategyStore.updateStateData(current, { closureDate: e.target.value });
-                    this.render();
                 });
                 break;
             }
@@ -1270,11 +1280,9 @@ export default class SuperStrategyUI {
                 const bfFYEl = this.container.querySelector(`#${IDS.SUPER_BRING_FORWARD_FY}`);
                 if (amountEl) amountEl.addEventListener('change', (e) => {
                     superStrategyStore.updateStateData(current, { recontributionAmount: parseFloat(e.target.value) || 0 });
-                    this.render();
                 });
                 if (dateEl) dateEl.addEventListener('change', (e) => {
                     superStrategyStore.updateStateData(current, { recontributionDate: e.target.value });
-                    this.render();
                 });
                 break;
             }
@@ -1283,7 +1291,6 @@ export default class SuperStrategyUI {
                 const dateEl = this.container.querySelector(`#${IDS.SUPER_COMMENCE_DATE}`);
                 if (dateEl) dateEl.addEventListener('change', (e) => {
                     superStrategyStore.updateStateData(current, { commencementDate: e.target.value });
-                    this.render();
                 });
                 break;
             }

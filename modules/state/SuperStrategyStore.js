@@ -34,7 +34,8 @@ export const SUPER_STATES = Object.freeze({
     FUND_ACKNOWLEDGEMENT: 'FUND_ACKNOWLEDGEMENT',
     PENSION_CLOSURE: 'PENSION_CLOSURE',
     RECONTRIBUTION: 'RECONTRIBUTION',
-    PENSION_COMMENCEMENT: 'PENSION_COMMENCEMENT'
+    PENSION_COMMENCEMENT: 'PENSION_COMMENCEMENT',
+    FINALISED: 'FINALISED'
 });
 
 const STATE_ORDER = [
@@ -43,7 +44,8 @@ const STATE_ORDER = [
     SUPER_STATES.FUND_ACKNOWLEDGEMENT,
     SUPER_STATES.PENSION_CLOSURE,
     SUPER_STATES.RECONTRIBUTION,
-    SUPER_STATES.PENSION_COMMENCEMENT
+    SUPER_STATES.PENSION_COMMENCEMENT,
+    SUPER_STATES.FINALISED
 ];
 
 const STATE_LABELS = Object.freeze({
@@ -52,7 +54,8 @@ const STATE_LABELS = Object.freeze({
     [SUPER_STATES.FUND_ACKNOWLEDGEMENT]: 'Fund Acknowledgement',
     [SUPER_STATES.PENSION_CLOSURE]: 'Pension Closure & Payment Confirmation',
     [SUPER_STATES.RECONTRIBUTION]: 'Re-Contribution',
-    [SUPER_STATES.PENSION_COMMENCEMENT]: 'Pension Commencement'
+    [SUPER_STATES.PENSION_COMMENCEMENT]: 'Pension Commencement',
+    [SUPER_STATES.FINALISED]: 'Strategy Complete'
 });
 
 const STATE_DESCRIPTIONS = Object.freeze({
@@ -61,7 +64,8 @@ const STATE_DESCRIPTIONS = Object.freeze({
     [SUPER_STATES.FUND_ACKNOWLEDGEMENT]: 'Waiting for fund acknowledgement of NOI. This is a manual/API verification gate.',
     [SUPER_STATES.PENSION_CLOSURE]: 'Confirm and facilitate mandatory pro-rata drawdown payments before account closure.',
     [SUPER_STATES.RECONTRIBUTION]: 'Re-contribute pension balance back into accumulation as a non-concessional contribution, then consolidate for the new pension.',
-    [SUPER_STATES.PENSION_COMMENCEMENT]: 'Initiate the restarted pension account with the consolidated balance.'
+    [SUPER_STATES.PENSION_COMMENCEMENT]: 'Initiate the restarted pension account with the consolidated balance.',
+    [SUPER_STATES.FINALISED]: 'Your superannuation strategy has been successfully implemented and finalized.'
 });
 
 // ─────────────────────────────────────────────
@@ -77,7 +81,8 @@ function getDefaultData() {
             [SUPER_STATES.FUND_ACKNOWLEDGEMENT]: { status: 'pending', completedAt: null, acknowledged: false, acknowledgedDate: null },
             [SUPER_STATES.PENSION_CLOSURE]: { status: 'pending', completedAt: null, proRataPayout: 0, closureDate: null },
             [SUPER_STATES.RECONTRIBUTION]: { status: 'pending', completedAt: null, recontributionAmount: 0, recontributionDate: null },
-            [SUPER_STATES.PENSION_COMMENCEMENT]: { status: 'pending', completedAt: null, commencementDate: null, newBalance: 0 }
+            [SUPER_STATES.PENSION_COMMENCEMENT]: { status: 'pending', completedAt: null, commencementDate: null, newBalance: 0 },
+            [SUPER_STATES.FINALISED]: { status: 'pending', completedAt: null }
         },
 
         // Dual Ledger — Values as at 1 July of the current financial year
@@ -224,6 +229,9 @@ class SuperStrategyStore {
             case SUPER_STATES.PENSION_COMMENCEMENT:
                 if (!sd.commencementDate) return { valid: false, message: 'Set the pension commencement date.' };
                 return { valid: true, message: 'Pension commenced.' };
+            
+            case SUPER_STATES.FINALISED:
+                return { valid: true, message: 'Strategy finalised.' };
 
             default:
                 return { valid: false, message: 'Unknown state.' };
@@ -260,16 +268,15 @@ class SuperStrategyStore {
             this.data.currentState = nextState;
             if (this.data.stateData[nextState]) {
                 this.data.stateData[nextState].status = 'active';
+                if (nextState === SUPER_STATES.FINALISED) {
+                    this.data.stateData[nextState].status = 'complete';
+                    this.data.stateData[nextState].completedAt = new Date().toISOString();
+                }
             }
             this._save();
             this._dispatch(EVENTS.SUPER_STATE_CHANGED, { from: currentState, to: nextState });
             return { success: true, message: `Advanced to ${STATE_LABELS[nextState]}.`, newState: nextState };
         }
-
-        // All complete
-        this._save();
-        this._dispatch(EVENTS.SUPER_STATE_CHANGED, { from: currentState, to: 'COMPLETE' });
-        return { success: true, message: 'All steps complete! Pension commencement finalised.', newState: 'COMPLETE' };
     }
 
     /**
