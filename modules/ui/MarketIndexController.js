@@ -212,6 +212,7 @@ export class MarketIndexController {
                             <span class="stream-time">${dateStr}</span>
                         </div>
                         <div class="stream-title" style="color: var(--text-color);">${alert.title || alert.headline}</div>
+                        ${alert.summary ? `<div class="stream-summary" style="margin-top: 5px;">${alert.summary}</div>` : ''}
                         <div class="stream-footer" style="padding-bottom: 4px;">
                             <span class="stream-source"><i class="fas fa-rss"></i> Market Index</span>
                             <i class="fas fa-external-link-alt" style="font-size: 0.7rem; opacity: 0.4; color: var(--color-accent);"></i>
