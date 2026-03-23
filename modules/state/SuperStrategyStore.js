@@ -50,7 +50,7 @@ const STATE_LABELS = Object.freeze({
     [SUPER_STATES.CONTRIBUTION_CLEARANCE]: 'Contribution Clearance',
     [SUPER_STATES.NOI_SUBMISSION]: 'NOI Submission',
     [SUPER_STATES.FUND_ACKNOWLEDGEMENT]: 'Fund Acknowledgement',
-    [SUPER_STATES.PENSION_CLOSURE]: 'Pension Closure',
+    [SUPER_STATES.PENSION_CLOSURE]: 'Pension Closure & Payment Confirmation',
     [SUPER_STATES.RECONTRIBUTION]: 'Re-Contribution',
     [SUPER_STATES.PENSION_COMMENCEMENT]: 'Pension Commencement'
 });
@@ -59,7 +59,7 @@ const STATE_DESCRIPTIONS = Object.freeze({
     [SUPER_STATES.CONTRIBUTION_CLEARANCE]: 'Verify that contribution funds have cleared in the accumulation account.',
     [SUPER_STATES.NOI_SUBMISSION]: 'Submit Notice of Intent to claim a tax deduction on the contribution.',
     [SUPER_STATES.FUND_ACKNOWLEDGEMENT]: 'Waiting for fund acknowledgement of NOI. This is a manual/API verification gate.',
-    [SUPER_STATES.PENSION_CLOSURE]: 'Calculate and execute mandatory pro-rata drawdowns for existing pension accounts.',
+    [SUPER_STATES.PENSION_CLOSURE]: 'Confirm and facilitate mandatory pro-rata drawdown payments before account closure.',
     [SUPER_STATES.RECONTRIBUTION]: 'Re-contribute pension balance back into accumulation as a non-concessional contribution, then consolidate for the new pension.',
     [SUPER_STATES.PENSION_COMMENCEMENT]: 'Initiate the restarted pension account with the consolidated balance.'
 });
@@ -210,10 +210,16 @@ class SuperStrategyStore {
                 if (!sd.closureDate) return { valid: false, message: 'Confirm the pension closure date.' };
                 return { valid: true, message: 'Pension closure executed.' };
 
-            case SUPER_STATES.RECONTRIBUTION:
+            case SUPER_STATES.RECONTRIBUTION: {
+                const eligibility = this.getRecontributionEligibility();
+                // If not eligible, they MUST proceed with 0 (skip re-contribution)
+                if (!eligibility.eligible) {
+                    return { valid: true, message: 'No re-contribution possible (Cap used). Advance to consolidated restart.' };
+                }
                 if (!sd.recontributionAmount || sd.recontributionAmount <= 0) return { valid: false, message: 'Enter the amount being re-contributed.' };
                 if (!sd.recontributionDate) return { valid: false, message: 'Enter the re-contribution date.' };
                 return { valid: true, message: 'Re-contribution recorded.' };
+            }
 
             case SUPER_STATES.PENSION_COMMENCEMENT:
                 if (!sd.commencementDate) return { valid: false, message: 'Set the pension commencement date.' };

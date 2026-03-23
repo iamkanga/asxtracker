@@ -147,7 +147,7 @@ export default class SuperStrategyUI {
 
     _renderTabs() {
         const tabs = [
-            { id: 'pipeline', label: 'Pipeline', icon: 'fa-tasks' },
+            { id: 'pipeline', label: 'Strategy', icon: 'fa-tasks' },
             { id: 'simulation', label: 'What-If', icon: 'fa-flask' },
             { id: 'info', label: 'Reference', icon: 'fa-book' }
         ];
@@ -172,9 +172,9 @@ export default class SuperStrategyUI {
     _renderPipelineTab(data, calc) {
         // Section divider header — shared across the whole page
         const H = (t) => `<div style="font-size:0.62rem;font-weight:800;text-transform:uppercase;letter-spacing:2px;color:var(--text-muted);opacity:0.5;margin:20px 0 12px 2px;">${t}</div>`;
+        
         return `
-            ${H('Your Member Position')}
-            ${this._renderBalanceHeader(data, calc)}
+            ${this._renderBalanceHeader(data, calc, true)}
             
             ${H('Strategy Execution')}
             <div style="background:rgba(255,255,255,0.04);border-radius:16px;padding:16px;border:1px solid rgba(255,255,255,0.06);">
@@ -194,7 +194,7 @@ export default class SuperStrategyUI {
         `;
     }
 
-    _renderBalanceHeader(data, calc) {
+    _renderBalanceHeader(data, calc, isEditable = true) {
         const floorPct = data.capitalSafetyFloor > 0 ? (calc.safetyFloorStatus.safe ? 'safe' : 'warning') : 'none';
         const floorColor = floorPct === 'safe' ? 'var(--color-positive)' : floorPct === 'warning' ? 'var(--color-negative)' : 'var(--text-muted)';
 
@@ -204,20 +204,16 @@ export default class SuperStrategyUI {
         const CST = 'font-size:0.7rem;font-weight:600;color:var(--text-muted);opacity:0.7;margin-top:3px;'; // card subtext
         const CARD = 'background:rgba(255,255,255,0.04);border-radius:14px;padding:14px 16px;border:1px solid rgba(255,255,255,0.06);';
 
+        const fy = calc.financialYear;
+        // Explainer: Details as of the 1st of July
         
         return `
-            <div style="background:rgba(255,255,255,0.04);border-radius:16px;padding:20px;border:1px solid rgba(255,255,255,0.06);margin-bottom:20px;">
+            <div style="background:rgba(255,255,255,0.04);border-radius:16px;padding:20px;border:1px solid rgba(255,255,255,0.06);margin-bottom:20px; ${!isEditable ? 'opacity: 0.6; filter: grayscale(0.3);' : ''}">
 
-                <!-- Hero Balance -->
-                <div style="text-align:center;padding-bottom:20px;margin-bottom:16px;border-bottom:1px solid rgba(255,255,255,0.05);">
-                    <div style="${SL}display:block;margin-bottom:8px;">Total Member Balance</div>
-                    <div style="font-size:2rem;font-weight:950;color:#fff;line-height:1;">${formatCurrency(calc.totalBalance)}</div>
-                    ${data.capitalSafetyFloor > 0 ? `
-                        <div style="margin-top:10px;display:inline-flex;align-items:center;gap:6px;padding:4px 12px;background:rgba(0,0,0,0.2);border-radius:20px;border:1px solid ${floorColor}33;">
-                            <i class="fas ${calc.safetyFloorStatus.safe ? 'fa-check' : 'fa-exclamation'}" style="color:${floorColor};font-size:0.6rem;"></i>
-                            <span style="font-size:0.65rem;font-weight:800;color:${floorColor};">Floor: ${formatCurrency(data.capitalSafetyFloor)}</span>
-                        </div>
-                    ` : ''}
+                <!-- Header with Explainer -->
+                <div style="margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 12px;">
+                    <div style="font-size: 0.9rem; font-weight: 950; color: #fff; text-transform: uppercase; letter-spacing: 1px;">Your Member Position</div>
+                    <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700; opacity: 0.7; margin-top: 2px;">Details as of 1st July</div>
                 </div>
 
                 <!-- Accumulation + Pension — identical card structure -->
@@ -226,23 +222,39 @@ export default class SuperStrategyUI {
                         <div style="${SL}">Accumulation</div>
                         <input type="number" id="${IDS.SUPER_ACCUMULATION_INPUT}" class="${CSS_CLASSES.FORM_CONTROL}"
                                value="${data.accumulationBalance || ''}" placeholder="0.00"
+                               ${!isEditable ? 'readonly style="pointer-events:none; opacity:0.8;"' : ''}
                                style="font-size:1.1rem;font-weight:900;background:transparent;border:none;padding:0;color:#fff;width:100%;outline:none;">
-                        <div style="${CST}">1 July balance</div>
                     </div>
                     <div style="${CARD}">
                         <div style="${SL}">Pension</div>
                         <input type="number" id="${IDS.SUPER_PENSION_INPUT}" class="${CSS_CLASSES.FORM_CONTROL}"
                                value="${data.pensionBalance || ''}" placeholder="0.00"
+                               ${!isEditable ? 'readonly style="pointer-events:none; opacity:0.8;"' : ''}
                                style="font-size:1.1rem;font-weight:900;background:transparent;border:none;padding:0;color:#fff;width:100%;outline:none;">
-                        <div style="${CST}">1 July balance</div>
                     </div>
                 </div>
+
+                <!-- Total Member Balance - Moved Underneath -->
+                <div style="text-align:center; padding: 18px 0; margin-top: 4px; border-top: 1px solid rgba(255,255,255,0.05);">
+                    <div style="${SL}display:block;margin-bottom:8px; opacity:0.4;">Total Member Balance</div>
+                    <div style="font-size:1.8rem;font-weight:950;color:#fff;line-height:1;">${formatCurrency(calc.totalBalance)}</div>
+                    ${data.capitalSafetyFloor > 0 ? `
+                        <div style="margin-top:10px;display:inline-flex;align-items:center;gap:6px;padding:4px 12px;background:rgba(0,0,0,0.2);border-radius:20px;border:1px solid ${floorColor}33;">
+                            <i class="fas ${calc.safetyFloorStatus.safe ? 'fa-check' : 'fa-exclamation'}" style="color:${floorColor};font-size:0.6rem;"></i>
+                            <span style="font-size:0.65rem;font-weight:800;color:${floorColor};">Floor: ${formatCurrency(data.capitalSafetyFloor)}</span>
+                        </div>
+                    ` : ''}
+                </div>
+
+                <!-- Spacer -->
+                <div style="height: 12px;"></div>
 
                 <!-- Age + Contribution Status — identical card structure -->
                 <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(130px, 1fr));gap:10px;margin-bottom:10px;">
                     <div style="${CARD}">
-                        <div style="${SL}">Age (1 July)</div>
+                        <div style="${SL}">Age</div>
                         <input type="number" id="${IDS.SUPER_AGE_INPUT}" value="${data.ageAtJuly1 || 65}" min="0" max="120"
+                               ${!isEditable ? 'readonly style="pointer-events:none; opacity:0.8;"' : ''}
                                style="font-size:1.1rem;font-weight:900;background:transparent;border:none;padding:0;color:#fff;outline:none;width:60px;">
                     </div>
                     <div style="${CARD}">
@@ -258,11 +270,12 @@ export default class SuperStrategyUI {
 
                 <!-- Bring-Forward — same card structure -->
                 <div style="${CARD}">
-                    <div style="${SL}">Bring-Forward Start</div>
+                    <div style="${SL} margin-bottom: 2px;">Bring-Forward Started</div>
+                    <div style="${SL} opacity: 0.35; margin-bottom: 8px;">Financial Year Ending</div>
                     <input type="number" id="${IDS.SUPER_BRING_FORWARD_FY}"
                            value="${data.bringForwardTriggeredFY || ''}" placeholder="e.g. 2025" min="2000" max="2099"
+                           ${!isEditable ? 'readonly style="pointer-events:none; opacity:0.8;"' : ''}
                            style="font-size:1.1rem;font-weight:900;background:transparent;border:none;padding:0;color:#fff;outline:none;width:100%;">
-                    <div style="${CST}">(Financial Year Ending)</div>
                 </div>
 
             </div>
@@ -389,27 +402,36 @@ export default class SuperStrategyUI {
                     ? this._getProRataPreview(data)
                     : null;
                 fieldsHtml = `
-                    <div class="${CSS_CLASSES.FORM_GROUP}" style="margin-bottom:14px;">
-                        <label style="font-size:0.62rem;color:var(--text-muted);font-weight:800;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;display:block;opacity:0.55;">Closure Date</label>
-                        <input type="${stateData.closureDate ? 'date' : 'text'}" id="${IDS.SUPER_CLOSURE_DATE}" class="${CSS_CLASSES.FORM_CONTROL}"
-                               value="${stateData.closureDate || ''}" placeholder="Set date"
-                               onfocus="(this.type='date'); if('showPicker' in this) this.showPicker()"
-                               onblur="if(!this.value) this.type='text'"
-                               style="border-radius:10px;padding:11px;cursor:pointer;font-weight:700;outline:none;">
-                    </div>
-                    ${proRata ? `
-                        <div style="background:rgba(255,255,255,0.04);border-radius:14px;padding:14px 16px;border:1px solid rgba(255,255,255,0.06);margin-top:10px;">
-                            <div style="font-size:0.62rem;color:var(--text-muted);font-weight:800;text-transform:uppercase;letter-spacing:1.5px;opacity:0.55;margin-bottom:10px;">Pro-Rata Requirement</div>
-                            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;">
-                                <span style="font-size:0.78rem;color:var(--text-muted);font-weight:600;">Required Payout</span>
-                                <span style="font-size:1.1rem;font-weight:900;color:var(--color-accent);">${formatCurrency(proRata.amount)}</span>
-                            </div>
-                            <div style="display:flex;justify-content:space-between;font-size:0.7rem;color:var(--text-muted);font-weight:700;opacity:0.7;">
-                                <span>${proRata.days} days elapsed</span>
-                                <span>Rate: ${(proRata.rate * 100).toFixed(0)}%</span>
-                            </div>
+                    <div style="margin-bottom: 24px;">
+                        <div style="font-size: 0.78rem; color: var(--color-warning); line-height: 1.5; font-weight: 700; background: rgba(255,165,0,0.08); padding: 16px; border-radius: 12px; border: 1px solid rgba(255,165,0,0.15); margin-bottom: 20px;">
+                            <i class="fas fa-info-circle" style="margin-right: 8px;"></i>
+                            Every pension closure requires a final pro-rata drawdown payment to be confirmed first. This ensures regulatory compliance before the accounts are closed and merged back into accumulation.
                         </div>
-                    ` : ''}
+
+                        <div class="${CSS_CLASSES.FORM_GROUP}" style="margin-bottom:20px;">
+                            <label style="font-size:0.62rem;color:var(--text-muted);font-weight:800;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;display:block;opacity:0.55;">Planned Closure Date</label>
+                            <input type="${stateData.closureDate ? 'date' : 'text'}" id="${IDS.SUPER_CLOSURE_DATE}" class="${CSS_CLASSES.FORM_CONTROL}"
+                                   value="${stateData.closureDate || ''}" placeholder="Set date"
+                                   onfocus="(this.type='date'); if('showPicker' in this) this.showPicker()"
+                                   onblur="if(!this.value) this.type='text'"
+                                   style="border-radius:10px;padding:12px;cursor:pointer;font-weight:700;outline:none;">
+                        </div>
+
+                        ${proRata ? `
+                            <div style="background: linear-gradient(135deg, rgba(255,165,0,0.1) 0%, rgba(255,165,0,0.05) 100%); border-radius:16px; padding:20px; border:1px solid rgba(255,165,0,0.2); box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                                <div style="font-size:0.65rem;color:#ffa500;font-weight:900;text-transform:uppercase;letter-spacing:2px;margin-bottom:12px;">Mandatory Pro-Rata Payment</div>
+                                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                                    <span style="font-size:0.85rem;color:#fff;font-weight:700;">Required Payout</span>
+                                    <span style="font-size:1.6rem;font-weight:950;color:#ffa500;">${formatCurrency(proRata.amount)}</span>
+                                </div>
+                                <div style="height:1px; background:rgba(255,165,0,0.2); margin:12px 0;"></div>
+                                <div style="display:flex;justify-content:space-between;font-size:0.75rem;color:var(--text-muted);font-weight:700;opacity:0.8;">
+                                    <span>${proRata.days} days elapsed in FY</span>
+                                    <span style="color:#ffa500; opacity:1;">Rate: ${(proRata.rate * 100).toFixed(0)}%</span>
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
                 `;
                 break;
             }
@@ -442,7 +464,7 @@ export default class SuperStrategyUI {
                         <div style="flex: 1;">
                             <div style="font-size: 0.65rem; color: ${eligibility.eligible ? 'var(--color-positive)' : '#ff3b30'}; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 4px;">Contrib. Eligibility</div>
                             <div style="font-size: 0.85rem; font-weight: 900; color: #fff; line-height: 1.2;">
-                                ${eligibility.eligible ? `Eligible: ${formatCurrency(eligibility.maxAmount)}` : 'Cap Used (Try next FY)'}
+                                ${eligibility.eligible ? `Eligible: ${formatCurrency(eligibility.maxAmount)}` : `Cap Used (Available FY ${eligibility.bringForwardStatus?.nextAvailableFY - 1}/${String(eligibility.bringForwardStatus?.nextAvailableFY).slice(-2)})`}
                             </div>
                         </div>
                     </div>
@@ -521,7 +543,7 @@ export default class SuperStrategyUI {
                     <div style="margin-bottom: 24px; padding: 18px; background: rgba(255,255,255,0.03); border-radius: 16px; border: 1px solid rgba(255,255,255,0.05);">
                         <div style="color: var(--color-accent); font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; opacity: 0.9;">Transfer Balance Cap</div>
                         <div style="font-size: 0.78rem; color: var(--text-muted); line-height: 1.5; font-weight: 600; opacity: 0.85;">
-                            Lifetime limit ($1.9M) on tax-free pension assets. Every restart consumes this cap based on the full value.
+                            The maximum lifetime limit ($1.9M) you can transfer into tax-free pensions. Each restart counts the full amount against this total limit.
                         </div>
                     </div>
 
@@ -750,8 +772,7 @@ export default class SuperStrategyUI {
     _renderSimulationTab(data, calc) {
         const H = (t) => `<div style="font-size:0.62rem;font-weight:800;text-transform:uppercase;letter-spacing:2px;color:var(--text-muted);opacity:0.5;margin:20px 0 12px 2px;">${t}</div>`;
         return `
-            ${H('Your Member Position')}
-            ${this._renderBalanceHeader(data, calc)}
+            ${this._renderBalanceHeader(data, calc, false)}
 
             ${H('What-If Simulator')}
             <div style="margin-bottom:32px;background:rgba(255,255,255,0.04);border-radius:16px;padding:20px;border:1px solid rgba(255,255,255,0.06);box-shadow:var(--shadow-strong);">
