@@ -48,7 +48,10 @@ export default class SuperStrategyUI {
                 <div class="${CSS_CLASSES.MODAL_HEADER}">
                     <div class="${CSS_CLASSES.MODAL_HEADER_LEFT}">
                         <h2 class="${CSS_CLASSES.MODAL_TITLE}">
-                            <i class="fas fa-shield-alt" style="margin-right: 8px; color: var(--color-accent);"></i>
+                            <div style="display: inline-flex; align-items: center; justify-content: center; width: 1.2rem; height: 1.2rem; position: relative; margin-right: 12px; vertical-align: middle;">
+                                <i class="fas ${UI_ICONS.SUPER_STRATEGY}" style="position: absolute; font-size: 1.2rem; color: var(--color-accent);"></i>
+                                <span style="position: relative; color: var(--bg-color); font-weight: 950; font-size: 0.55rem; z-index: 10; font-family: 'Inter', sans-serif; margin-top: 1px;">S</span>
+                            </div>
                             Super Strategy
                         </h2>
                     </div>
@@ -694,8 +697,9 @@ export default class SuperStrategyUI {
         return `
             <div class="${CSS_CLASSES.SUPER_ALERT_BANNER}"
                  style="display:flex;align-items:center;gap:14px;padding:16px;background:rgba(255,59,48,0.06);border-radius:14px;margin-bottom:16px;border:1px solid rgba(255,59,48,0.1);">
-                <div style="background:rgba(255,59,48,0.12);width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#ff3b30;flex-shrink:0;">
-                    <i class="fas fa-shield-alt" style="font-size:1.2rem;"></i>
+                <div style="background:rgba(255,59,48,0.12);width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#ff3b30;flex-shrink:0;position:relative;">
+                    <i class="fas ${UI_ICONS.SUPER_STRATEGY}" style="position:absolute;font-size:1.2rem;"></i>
+                    <span style="position:relative;color:#121212;font-weight:950;font-size:0.55rem;z-index:10;font-family:'Inter', sans-serif;margin-top:1px;">S</span>
                 </div>
                 <div style="flex:1;">
                     <div style="font-size:0.62rem;color:#ff3b30;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:4px;">Floor Breached</div>

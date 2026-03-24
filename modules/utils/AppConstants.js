@@ -435,7 +435,8 @@ export const UI_ICONS = {
     MARK_READ: 'fa-check-double',
     SYNC: 'fa-sync-alt',
     ANNOUNCEMENTS: 'fa-satellite-dish',
-    CALCULATOR: 'fa-calculator'
+    CALCULATOR: 'fa-calculator',
+    SUPER_STRATEGY: 'fa-shield-alt'
 };
 
 export const HTML_TEMPLATES = {
