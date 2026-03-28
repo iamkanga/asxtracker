@@ -377,7 +377,7 @@
     max-width: 80px;
     height: 3px;
     background-color: rgba(255, 255, 255, 0.15);
-    border-radius: 2px;
+    border-radius: 0;
     position: relative;
 }
 
@@ -388,7 +388,7 @@
     width: 8px;
     height: 8px;
     background-color: var(--color-accent) !important;
-    border-radius: 50%;
+    border-radius: 0;
     z-index: 5;
     box-shadow: 0 0 0 1px #fff, 0 2px 4px rgba(0, 0, 0, 0.5);
 }
@@ -585,7 +585,7 @@
 .summary-status-indicator {
     width: 6px;
     height: 6px;
-    border-radius: 50%;
+    border-radius: 0;
     background: var(--color-neutral);
     opacity: 0.3;
 }
@@ -639,7 +639,7 @@
     padding: 2px 6px;
     background: rgba(var(--color-accent-rgb, 164, 147, 147), 0.1);
     color: var(--color-accent);
-    border-radius: 10px;
+    border-radius: var(--radius-container);
     border: 1px solid rgba(var(--color-accent-rgb, 164, 147, 147), 0.2);
 }
 

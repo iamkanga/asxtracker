@@ -3,7 +3,7 @@
     width: 100%;
     padding: 10px;
     border: 1px solid #ddd;
-    border-radius: 0;
+    border-radius: var(--radius-container);
     background-color: #fff;
     cursor: pointer;
     display: flex;
@@ -33,7 +33,7 @@
 .watchlist-dropdown {
     border: 1px solid #ddd;
     border-top: none;
-    border-radius: 0;
+    border-radius: var(--radius-container);
     background-color: var(--card-bg);
     max-height: 200px;
     overflow-y: auto;
@@ -75,7 +75,7 @@
     width: 20px;
     height: 20px;
     border: 2px solid #ccc;
-    border-radius: 0;
+    border-radius: var(--radius-container);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -93,7 +93,7 @@
     width: 10px;
     height: 10px;
     background-color: var(--primary-color);
-    border-radius: 0;
+    border-radius: var(--radius-container);
     display: block;
 }
 
@@ -146,7 +146,7 @@
     background-color: var(--card-bg);
     min-width: 220px;
     border: 1px solid var(--border-color);
-    border-radius: 0;
+    border-radius: var(--radius-container);
     padding: 8px 0;
     z-index: 2000;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);

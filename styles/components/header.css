@@ -338,7 +338,7 @@ h1#dynamicWatchlistTitle.active {
     border: 1px solid #ff4444;
     color: #ff4444;
     padding: 4px 10px;
-    border-radius: 12px;
+    border-radius: 0;
     font-size: 0.75rem;
     font-weight: 600;
     cursor: pointer;
@@ -353,7 +353,7 @@ h1#dynamicWatchlistTitle.active {
     width: 6px;
     height: 6px;
     background-color: #ff4444;
-    border-radius: 50%;
+    border-radius: 0;
     animation: pulse-red 2s infinite;
 }
 
@@ -382,7 +382,7 @@ h1#dynamicWatchlistTitle.active {
     display: inline-block;
     width: 10px;
     height: 10px;
-    border-radius: 50%;
+    border-radius: 0;
     margin-right: 8px;
     background-color: var(--color-negative);
     box-shadow: 0 0 5px var(--color-negative);

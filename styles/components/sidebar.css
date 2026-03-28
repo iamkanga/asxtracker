@@ -1,4 +1,4 @@
-﻿/* ==========================================================================
+/* ==========================================================================
    SIDEBAR & COMMAND CENTER
    Extracted from style.css monolith during CSS Rebuild Phase 4.
    ========================================================================== */
@@ -368,7 +368,7 @@
     color: var(--text-color);
     font-size: 1rem;
     cursor: pointer;
-    border-radius: 8px;
+    border-radius: var(--radius-container);
     transition: background-color 0.2s;
     text-align: left;
 }
@@ -409,7 +409,7 @@
     display: flex;
     background-color: var(--bg-color);
     /* Matches app input background */
-    border-radius: 20px;
+    border-radius: var(--radius-container);
     padding: 3px;
     width: 100%;
     margin-top: 0;
@@ -421,7 +421,7 @@
     flex: 1;
     text-align: center;
     padding: 6px 12px;
-    border-radius: 16px;
+    border-radius: var(--radius-container);
     cursor: pointer;
     font-size: 0.85rem;
     color: var(--text-muted);
@@ -545,7 +545,7 @@
     opacity: 0;
     background: rgba(var(--color-accent-rgb), 0.03);
     backdrop-filter: blur(0px);
-    border-radius: 0 0 12px 12px;
+    border-radius: 0;
     margin: 0 4px;
 }
 
@@ -626,7 +626,7 @@
 
 .sentiment-tile {
     padding: 16px;
-    border-radius: 16px;
+    border-radius: var(--radius-container);
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.08);
     position: relative;
@@ -662,7 +662,7 @@
     font-size: 0.6rem;
     font-weight: 800;
     padding: 2px 6px;
-    border-radius: 4px;
+    border-radius: var(--radius-container);
     letter-spacing: 0.5px;
 }
 
@@ -748,7 +748,7 @@
 .command-grid-item {
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 14px;
+    border-radius: var(--radius-container);
     padding: 14px 8px;
     display: flex;
     flex-direction: column;

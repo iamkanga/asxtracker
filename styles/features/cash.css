@@ -11,7 +11,7 @@
     width: 100%;
     max-width: 1000px;
     margin: 0 auto 40px auto;
-    border-radius: 0;
+    border-radius: var(--radius-container);
 }
 
 .cash-view-two-column {
@@ -28,7 +28,7 @@
     background: #252525;
     padding: 12px 16px;
     /* padding-left: 16px; Removed - Border handles visual spacing now */
-    border-radius: 0 !important;
+    border-radius: var(--radius-container) !important;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     display: grid;
     grid-template-columns: 1fr auto;
@@ -219,7 +219,7 @@
 .cash-total-header {
     background: var(--card-bg);
     padding: 20px;
-    border-radius: 0 !important;
+    border-radius: var(--radius-container) !important;
     margin: 40px auto 20px auto !important;
     max-width: 1000px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
@@ -305,7 +305,7 @@
     border: 1px solid var(--border-color);
     color: var(--text-color);
     padding: 10px;
-    border-radius: 0;
+    border-radius: var(--radius-container);
     width: 100%;
     box-sizing: border-box;
     font-family: inherit;

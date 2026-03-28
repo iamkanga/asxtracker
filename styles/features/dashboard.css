@@ -188,7 +188,7 @@
     height: 3px;
     background: var(--color-accent);
     box-shadow: 0 0 10px rgba(var(--color-accent-rgb), 0.4);
-    border-radius: 3px 3px 0 0;
+    border-radius: 0;
 }
 
 .segmented-control-minimal .segment:not(.active):hover {
@@ -499,7 +499,7 @@ body.dark-theme .dashboard-row.clickable:hover {
     flex: 1;
     height: 2px;
     background: rgba(var(--color-accent-rgb), 0.1);
-    border-radius: 1px;
+    border-radius: 0;
     position: relative;
 }
 
@@ -510,7 +510,7 @@ body.dark-theme .dashboard-row.clickable:hover {
     width: 6px;
     height: 6px;
     background: var(--color-accent);
-    border-radius: 50%;
+    border-radius: 0;
     box-shadow: 0 0 3px rgba(var(--color-accent-rgb), 0.5);
 }
 
@@ -601,7 +601,7 @@ body.dark-theme .dashboard-row.clickable:hover {
     width: 5px;
     height: 5px;
     background: var(--color-accent);
-    border-radius: 50%;
+    border-radius: 0;
 }
 
 .range-value {

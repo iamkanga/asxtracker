@@ -32,7 +32,7 @@
     flex: 1;
     height: 4px;
     background-color: rgba(255, 255, 255, 0.1);
-    border-radius: 2px;
+    border-radius: 0;
     position: relative;
     overflow: hidden;
 }
@@ -45,7 +45,7 @@
     background-color: var(--color-accent);
     /* Coffee Marker */
     transform: translateX(-50%);
-    border-radius: 2px;
+    border-radius: 0;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -478,7 +478,7 @@
     /* Taller track as requested */
     background-color: rgba(255, 255, 255, 0.15);
     /* Slightly lighter for visibility */
-    border-radius: 8px;
+    border-radius: 0;
     /* Rounded track */
     position: relative;
     margin: 0 4px;

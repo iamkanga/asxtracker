@@ -31,7 +31,7 @@
 .segmented-control {
     display: flex;
     background-color: rgba(0, 0, 0, 0.05);
-    border-radius: 0 !important;
+    border-radius: var(--radius-container) !important;
     padding: 2px;
     gap: 2px;
     width: 100%;
@@ -45,7 +45,7 @@
     font-size: 0.9rem;
     font-weight: 500;
     color: var(--text-muted);
-    border-radius: 0 !important;
+    border-radius: var(--radius-container) !important;
     cursor: pointer;
     transition: all 0.2s ease;
     text-align: center;
@@ -80,7 +80,7 @@
 .calc-key {
     background-color: var(--card-bg);
     border: 1px solid var(--border-color);
-    border-radius: 0;
+    border-radius: var(--radius-container);
     height: 55px;
     font-size: 1.4rem;
     font-weight: 500;
@@ -120,7 +120,7 @@
 
 .calc-display-container {
     background-color: var(--bg-color);
-    border-radius: 0;
+    border-radius: var(--radius-container);
     padding: 15px;
     text-align: right;
     margin-bottom: 10px;
@@ -148,7 +148,7 @@
 
 .calc-result-card {
     background-color: rgba(0, 0, 0, 0.02);
-    border-radius: 0;
+    border-radius: var(--radius-container);
     padding: 15px;
     border: 1px solid var(--border-color);
 }
@@ -260,7 +260,7 @@ body.dark-theme .calc-result-card {
     box-shadow: 0 0 1px rgba(255, 255, 255, 0.5);
     /* Subtle highlight for contrast */
     pointer-events: none;
-    border-radius: 2px;
+    border-radius: 0;
     opacity: 0.6;
     /* Ghosted to match icon */
 }
@@ -298,7 +298,7 @@ body.dark-theme .calc-result-card {
     width: 8px;
     height: 8px;
     background-color: var(--color-accent);
-    border-radius: 50%;
+    border-radius: 0;
     box-shadow: 0 0 0 2px var(--card-bg);
 }
 

@@ -50,7 +50,7 @@
     width: 95% !important;
     max-width: 500px;
     background-color: var(--modal-content-bg);
-    border-radius: 0;
+    border-radius: var(--radius-container);
     border: none !important;
     /* GLOBAL MODAL BORDER REMOVAL */
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -254,7 +254,7 @@ h1.modal-title,
     color: #fff;
     border: none;
     padding: 10px 20px;
-    border-radius: 0;
+    border-radius: var(--radius-container);
     font-weight: 600;
     cursor: pointer;
     transition: opacity 0.2s, background-color 0.2s;
@@ -274,7 +274,7 @@ h1.modal-title,
     color: var(--text-color);
     border: 1px solid var(--border-color);
     padding: 10px 20px;
-    border-radius: 0;
+    border-radius: var(--radius-container);
     font-weight: 600;
     cursor: pointer;
     transition: background-color 0.2s;
@@ -331,7 +331,7 @@ h1.modal-title,
     background-color: #222;
     /* Dark Theme Requirement */
     border: 1px solid var(--border-color);
-    border-radius: 0;
+    border-radius: var(--radius-container);
     font-size: 1rem;
     color: #eee;
     /* Light Text for Dark Input */
@@ -360,7 +360,7 @@ h1.modal-title,
     justify-content: space-between;
     padding: 12px 15px;
     background: rgba(255, 255, 255, 0.03);
-    border-radius: 8px;
+    border-radius: var(--radius-container);
     transition: background 0.2s;
 }
 
@@ -436,7 +436,7 @@ h1.modal-title,
     background-color: var(--bg-secondary);
     color: var(--text-color);
     border: 1px solid var(--border-color);
-    border-radius: 0;
+    border-radius: var(--radius-container);
     position: relative;
     left: auto;
     transform: none;
@@ -736,7 +736,7 @@ h1.modal-title,
     width: 20px;
     height: 20px;
     border: 2px solid #555;
-    border-radius: 50%;
+    border-radius: var(--radius-pill);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -811,7 +811,7 @@ h1.modal-title,
     background-color: var(--color-accent);
     color: #ffffff;
     border: none;
-    border-radius: 50px;
+    border-radius: 0;
     padding: 12px 30px;
     font-size: 1.1rem;
     font-weight: 600;

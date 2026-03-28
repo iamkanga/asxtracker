@@ -14,7 +14,7 @@
     width: 100%;
     padding: 10px;
     border: 1px solid #ddd;
-    border-radius: 0;
+    border-radius: var(--radius-container);
     font-size: 1rem;
     box-sizing: border-box;
     transition: border-color 0.2s;
@@ -33,7 +33,7 @@
     color: white;
     border: none;
     padding: 10px 20px;
-    border-radius: 0;
+    border-radius: var(--radius-container);
     cursor: pointer;
     font-size: 16px;
     display: inline-flex;
@@ -72,7 +72,7 @@
 /* Accordion */
 .accordion {
     border: 1px solid var(--border-color);
-    border-radius: 0;
+    border-radius: var(--radius-container);
     overflow: hidden;
     margin-bottom: 20px;
 }
@@ -126,7 +126,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border-radius: 0;
+    border-radius: var(--radius-container);
     padding: 6px 12px;
     font-size: 13px;
     font-weight: 500;
@@ -157,7 +157,7 @@
 .notes-dark-bg {
     background-color: transparent;
     padding: 15px;
-    border-radius: 0;
+    border-radius: var(--radius-container);
 }
 
 .note-container {
@@ -171,7 +171,7 @@
     color: var(--text-color);
     border: none;
     padding: 12px;
-    border-radius: 0;
+    border-radius: var(--radius-container);
     resize: vertical;
     font-family: inherit;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
@@ -265,9 +265,9 @@ input:checked + .slider-small:before {
 }
 
 .slider-small.round {
-    border-radius: 20px;
+    border-radius: 0;
 }
 
 .slider-small.round:before {
-    border-radius: 50%;
+    border-radius: 0;
 }

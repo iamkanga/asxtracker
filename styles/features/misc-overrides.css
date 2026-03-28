@@ -76,7 +76,7 @@
     border: 1px solid rgba(255, 255, 255, 0.1);
     color: var(--text-muted);
     padding: 8px 12px;
-    border-radius: 6px;
+    border-radius: 0;
     font-size: 0.8rem;
     cursor: pointer;
     transition: all 0.2s;
@@ -115,7 +115,7 @@
     font-size: 0.85rem;
     background: #212529;
     /* Match modal/sidebar bg to create "cutout" look */
-    border-radius: 50%;
+    border-radius: 0;
     padding: 1px;
     color: var(--color-accent) !important;
     /* Force Coffee Color as requested */
