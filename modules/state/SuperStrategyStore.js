@@ -280,6 +280,33 @@ class SuperStrategyStore {
     }
 
     /**
+     * Regresses the state machine to the previous step.
+     */
+    regressState() {
+        const currentIndex = this.getCurrentStateIndex();
+        if (currentIndex <= 0) return { success: false, message: 'Already at the first step.' };
+
+        const currentState = this.data.currentState;
+        const prevState = STATE_ORDER[currentIndex - 1];
+
+        // Mark current as pending (we are leaving it)
+        if (this.data.stateData[currentState]) {
+            this.data.stateData[currentState].status = 'pending';
+        }
+
+        // Mark previous as active
+        if (this.data.stateData[prevState]) {
+            this.data.stateData[prevState].status = 'active';
+        }
+
+        this.data.currentState = prevState;
+        this._save();
+        this._dispatch(EVENTS.SUPER_STATE_CHANGED, { from: currentState, to: prevState });
+        
+        return { success: true, message: `Regressed to ${STATE_LABELS[prevState]}.`, newState: prevState };
+    }
+
+    /**
      * Resets the state machine back to the beginning.
      */
     resetStateMachine() {

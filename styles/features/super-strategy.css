@@ -5,46 +5,102 @@
  */
 
 /* ─────────────────────────────────────────────
-   Progress Bar & Steps
+   Progress Bar & Steps (Modular System)
    ───────────────────────────────────────────── */
 
-.super-progress-bar {
+.super-pipeline-layout {
     display: flex;
-    align-items: flex-start;
-    padding: 16px 8px;
-    margin-bottom: 16px;
+    gap: 24px;
+    margin-top: 12px;
+}
+
+.super-pipeline-sidebar {
+    width: 160px; /* Desktop width */
+    flex-shrink: 0;
     background: rgba(255, 255, 255, 0.02);
+    border-radius: 16px;
+    padding: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.super-pipeline-content {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 16px;
+    padding: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    min-height: 380px;
+}
+
+.super-mobile-active-phase {
+    display: none; /* Desktop hidden */
+    background: rgba(var(--accent-rgb, 100, 100, 255), 0.15);
+    border: 1px solid rgba(var(--accent-rgb, 100, 100, 255), 0.3);
+    color: var(--color-accent);
+    padding: 10px 16px;
     border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 20px;
+    text-align: center;
+    box-shadow: var(--shadow-small);
 }
 
-.super-step {
-    transition: opacity 0.2s ease, transform 0.15s ease;
+.super-vertical-stepper {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 
-.super-step:hover:not(.super-step-locked) {
-    transform: scale(1.05);
+.super-step-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px;
+    border-radius: 10px;
+    transition: all 0.2s ease;
+    cursor: default;
 }
 
-.super-step-active > div:first-child {
-    box-shadow: 0 0 12px rgba(var(--accent-rgb, 100, 100, 255), 0.4);
-    animation: superPulse 2s infinite;
+.super-step-item.active {
+    background: rgba(255, 255, 255, 0.04);
 }
 
-.super-step-complete > div:first-child {
-    box-shadow: 0 2px 8px rgba(var(--accent-rgb, 100, 100, 255), 0.3);
+.super-step-ball {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-weight: 800;
+    transition: all 0.2s ease;
 }
 
-.super-step-locked {
-    pointer-events: none;
+.super-step-label {
+    font-size: 0.68rem;
+    font-weight: 800;
+    line-height: 1.1;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: color 0.2s ease;
 }
 
 .super-step-connector {
+    width: 2px;
+    height: 12px;
+    margin-left: 23px;
+    margin-top: -4px;
+    margin-bottom: -4px;
     transition: background 0.3s ease;
 }
 
-@keyframes superPulse {
-    0%, 100% { box-shadow: 0 0 8px rgba(var(--accent-rgb, 100, 100, 255), 0.3); }
-    50% { box-shadow: 0 0 18px rgba(var(--accent-rgb, 100, 100, 255), 0.6); }
+.super-step-wrapper {
+    display: flex;
+    flex-direction: column;
 }
 
 /* ─────────────────────────────────────────────
@@ -187,20 +243,156 @@
 }
 
 /* ─────────────────────────────────────────────
-   Responsive
+   Mobile Responsive Redesign (Staggered Horizontal)
    ───────────────────────────────────────────── */
 
-@media (max-width: 480px) {
-    .super-ledger {
-        grid-template-columns: 1fr;
+@media (max-width: 600px) {
+    /* Break out of modal padding for true full-width */
+    #super-strategy-modal .modal-content {
+        width: 100% !important;
+        max-width: none !important;
+        margin: 0 !important;
+        border-radius: 0 !important;
     }
 
-    .super-progress-bar {
-        padding: 12px 4px;
+    #super-strategy-modal .modal-body {
+        padding-left: 0 !important;
+        padding-right: 0 !important;
     }
 
-    .super-step > div:last-child {
-        font-size: 0.5rem !important;
-        max-width: 45px !important;
+    /* Ensure other components still have padding, but the pipeline does NOT */
+    .super-modal-header, 
+    .super-detail-panel,
+    .super-ledger,
+    .super-sim-panel,
+    .super-quick-links,
+    .super-strategy-header {
+        padding-left: 16px !important;
+        padding-right: 16px !important;
+    }
+
+    .super-pipeline-layout {
+        display: block !important; 
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    .super-pipeline-sidebar {
+        width: 100% !important;
+        margin: 0 !important;
+        margin-top: 20px !important;
+        margin-bottom: 45px !important;
+        padding: 55px 0 !important; /* Vertical space for labels */
+        background: transparent !important; /* NO BACKGROUND on mobile to avoid 3/4 look */
+        border: none !important;
+        overflow: visible;
+        border-radius: 0;
+    }
+
+    .super-pipeline-content {
+        width: 100% !important;
+        margin: 0 !important;
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+    }
+
+    .super-vertical-stepper {
+        display: grid !important;
+        grid-template-columns: repeat(7, 1fr) !important; /* Perfect 7-way split */
+        width: 100% !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        gap: 0 !important;
+    }
+
+    .super-step-wrapper {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        width: 100% !important;
+        z-index: 1;
+    }
+
+    .super-step-item {
+        padding: 0 !important;
+        background: transparent !important;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        position: relative;
+    }
+
+    .super-step-ball {
+        width: 26px;
+        height: 26px;
+        font-size: 0.7rem;
+        z-index: 2;
+        background: var(--bg-deep) !important;
+        border: 2px solid rgba(255, 255, 255, 0.1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+    }
+
+    .super-step-item.active .super-step-ball {
+        border-color: var(--color-accent);
+        box-shadow: 0 0 12px rgba(var(--accent-rgb, 100, 100, 255), 0.4);
+    }
+
+    .super-step-label {
+        display: block !important;
+        position: absolute;
+        width: auto;
+        min-width: 80px;
+        max-width: 110px; 
+        font-size: 0.48rem !important;
+        font-weight: 950 !important;
+        text-align: center;
+        text-transform: uppercase;
+        line-height: 1;
+        white-space: nowrap; /* Single line */
+        left: 50%;
+        transform: translateX(-50%);
+        opacity: 0.8;
+    }
+
+    .super-step-item.active .super-step-label {
+        opacity: 1;
+        color: var(--color-accent) !important;
+    }
+
+    /* Staggered positioning (Above/Below) */
+    .super-step-wrapper:nth-child(odd) .super-step-label {
+        bottom: 34px;
+    }
+
+    .super-step-wrapper:nth-child(even) .super-step-label {
+        top: 34px;
+    }
+
+    .super-step-connector {
+        position: absolute;
+        width: 100%;
+        height: 2px;
+        top: 13px;
+        left: 50%;
+        margin: 0;
+        z-index: 0;
+        background: rgba(255, 255, 255, 0.15);
+    }
+
+    .super-step-wrapper:last-child .super-step-connector {
+        display: none;
+    }
+
+    .super-mobile-active-phase {
+        display: none !important;
     }
 }

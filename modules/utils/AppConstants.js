@@ -643,6 +643,11 @@ export const CSS_CLASSES = {
     VIEW_SNAPSHOT: 'view-snapshot',
     SNAPSHOT_POSITIVE: 'snapshot-positive',
     SNAPSHOT_NEGATIVE: 'snapshot-negative',
+    SUPER_VERTICAL_STEPPER: 'super-vertical-stepper',
+    SUPER_STEP_ITEM: 'super-v-step',
+    SUPER_STEP_BALL: 'super-step-ball',
+    SUPER_STEP_LABEL: 'super-step-label',
+    SUPER_MOBILE_ACTIVE_PHASE: 'super-mobile-active-phase',
 
     // Layout Component Classes
     HAMBURGER_BTN: 'hamburger-btn',

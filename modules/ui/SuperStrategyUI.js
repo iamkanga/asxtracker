@@ -179,10 +179,14 @@ export default class SuperStrategyUI {
         return `
             ${this._renderBalanceHeader(data, calc, true)}
             
-            ${H('Strategy Execution')}
-            <div style="background:rgba(255,255,255,0.04);border-radius:16px;padding:16px;border:1px solid rgba(255,255,255,0.06);">
-                ${this._renderProgressBar()}
-                ${this._renderActiveStepDetail(data)}
+            ${H('Strategy Execution Pipeline')}
+            <div class="super-pipeline-layout">
+                <div class="super-pipeline-sidebar">
+                    ${this._renderVerticalStepper()}
+                </div>
+                <div class="super-pipeline-content">
+                    ${this._renderActiveStepDetail(data)}
+                </div>
             </div>
             
             ${H('Timing Strategies')}
@@ -285,50 +289,48 @@ export default class SuperStrategyUI {
         `;
     }
 
-    _renderProgressBar() {
+    _renderVerticalStepper() {
         const states = superStrategyStore.getStates();
 
-        const stepsHtml = states.map((s, i) => {
-            let statusClass = CSS_CLASSES.SUPER_STEP_LOCKED;
-            let iconHtml = `<span style="font-size: 0.75rem; font-weight: 700;">${i + 1}</span>`;
-            let opacity = '0.35';
-
-            if (s.isComplete) {
-                statusClass = CSS_CLASSES.SUPER_STEP_COMPLETE;
-                iconHtml = `<i class="fas fa-check" style="font-size: 0.7rem;"></i>`;
-                opacity = '0.7';
-            } else if (s.isCurrent) {
-                statusClass = CSS_CLASSES.SUPER_STEP_ACTIVE;
-                opacity = '1';
-            }
-
-            const connector = i < states.length - 1
-                ? `<div class="${CSS_CLASSES.SUPER_STEP_CONNECTOR}" style="flex: 1; height: 2px; background: ${s.isComplete ? 'var(--color-accent)' : 'rgba(255,255,255,0.1)'}; margin: 0 2px;"></div>`
-                : '';
-
-            return `
-                <div style="display: flex; align-items: center; flex: 1;">
-                    <div class="${CSS_CLASSES.SUPER_STEP} ${statusClass}" data-step-index="${i}"
-                         style="display: flex; flex-direction: column; align-items: center; cursor: ${s.isLocked ? 'default' : 'pointer'}; opacity: ${opacity}; transition: opacity 0.2s;">
-                        <div style="width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-                                    background: ${s.isComplete ? 'var(--color-accent)' : s.isCurrent ? 'rgba(var(--accent-rgb, 100,100,255), 0.25)' : 'rgba(255,255,255,0.06)'};
-                                    border: 2px solid ${s.isComplete ? 'var(--color-accent)' : s.isCurrent ? 'var(--color-accent)' : 'rgba(255,255,255,0.1)'};
-                                    color: ${s.isComplete ? '#000' : '#fff'}; font-size: 0.8rem; font-weight: 700;">
-                            ${iconHtml}
-                        </div>
-                        <div style="font-size: 0.55rem; font-weight: 800; color: var(--text-muted); margin-top: 6px; text-align: center; max-width: 60px; line-height: 1.1; text-transform: uppercase; letter-spacing: 0.5px;">
-                            ${s.label.includes('Contribution') && i > 0 ? 'Re-Contrib' : s.label.split(' ')[0]}
-                        </div>
-                    </div>
-                    ${connector}
-                </div>
-            `;
-        }).join('');
-
         return `
-            <div class="${CSS_CLASSES.SUPER_PROGRESS_BAR}" id="${IDS.SUPER_STATE_PROGRESS}"
-                 style="display: flex; align-items: flex-start; padding: 16px 8px; margin-bottom: 16px; background: rgba(255,255,255,0.02); border-radius: 12px;">
-                ${stepsHtml}
+            <div class="${CSS_CLASSES.SUPER_VERTICAL_STEPPER}">
+                ${states.map((s, i) => {
+                    const isActive = s.isCurrent;
+                    const isComplete = s.isComplete;
+                    
+                    let iconHtml = `<span style="font-size: 0.65rem;">${i + 1}</span>`;
+                    let color = 'var(--text-muted)';
+                    let border = 'rgba(255,255,255,0.1)';
+                    let bg = 'rgba(255,255,255,0.04)';
+
+                    if (isComplete) {
+                        iconHtml = `<i class="fas fa-check" style="font-size: 0.6rem;"></i>`;
+                        color = 'var(--color-accent)';
+                        bg = 'rgba(var(--accent-rgb, 100,100,255), 0.1)';
+                    } else if (isActive) {
+                        color = '#fff';
+                        border = 'var(--color-accent)';
+                        bg = 'rgba(var(--accent-rgb, 100,100,255), 0.2)';
+                    }
+
+                    const connector = i < states.length - 1
+                        ? `<div class="super-step-connector" style="background: ${isComplete ? 'var(--color-accent)' : 'rgba(255,255,255,0.08)'};"></div>`
+                        : '';
+
+                    return `
+                        <div class="super-step-wrapper">
+                            <div class="${CSS_CLASSES.SUPER_STEP_ITEM} ${isActive ? 'active' : ''}">
+                                <div class="${CSS_CLASSES.SUPER_STEP_BALL}" style="background: ${bg}; border: 1.5px solid ${border}; color: ${isComplete ? 'var(--color-accent)' : '#fff'};">
+                                    ${iconHtml}
+                                </div>
+                                <div class="${CSS_CLASSES.SUPER_STEP_LABEL}" style="color: ${color};">
+                                    ${s.label.split(' ')[0]}
+                                </div>
+                            </div>
+                            ${connector}
+                        </div>
+                    `;
+                }).join('')}
             </div>
         `;
     }
@@ -461,8 +463,11 @@ export default class SuperStrategyUI {
                             <div style="font-size:1.6rem;font-weight:950;color:var(--color-positive);line-height:1;">${formatCurrency(superStrategyStore.getTotalBalance())}</div>
                         </div>
 
-                        <button id="super-final-reset-btn" class="${CSS_CLASSES.PRIMARY_PILL_BTN}" style="width: 100%; border-radius: 12px; padding: 14px; font-weight: 800; font-size: 0.85rem; background: var(--color-accent); color: #000; border: none; cursor: pointer;">
+                         <button id="super-final-reset-btn" class="${CSS_CLASSES.PRIMARY_PILL_BTN}" style="width: 100%; border-radius: 12px; padding: 14px; font-weight: 800; font-size: 0.85rem; background: var(--color-accent); color: #000; border: none; cursor: pointer; margin-bottom: 12px;">
                             Restart New Pipeline
+                        </button>
+                        <button id="super-back-btn" style="width: 100%; padding: 12px; border-radius: 12px; background: rgba(255,255,255,0.05); color: var(--text-muted); border: 1px solid rgba(255,255,255,0.1); cursor: pointer; font-weight: 600; font-size: 0.8rem; transition: all 0.2s;">
+                            <i class="fas fa-arrow-left" style="margin-right: 8px; font-size: 0.75rem;"></i>Back to Commencement
                         </button>
                     </div>
                 `;
@@ -601,7 +606,12 @@ export default class SuperStrategyUI {
                     <div style="font-size:0.75rem;color:var(--text-muted);line-height:1.5;opacity:0.8;font-weight:500;">${desc}</div>
                 </div>
                 ${fieldsHtml}
-                <div style="display:flex;gap:8px;margin-top:16px;">
+                 <div style="display:flex;gap:8px;margin-top:16px;">
+                    ${superStrategyStore.getCurrentStateIndex() > 0 ? `
+                        <button id="super-back-btn" style="padding:12px 14px;border-radius:10px;background:rgba(255,255,255,0.06);color:var(--text-muted);border:1px solid rgba(255,255,255,0.08);cursor:pointer;font-weight:600;font-size:0.8rem;display:flex;align-items:center;gap:6px;">
+                            <i class="fas fa-chevron-left" style="font-size:0.75rem;"></i>
+                        </button>
+                    ` : ''}
                     <button id="super-advance-btn" class="${CSS_CLASSES.PRIMARY_PILL_BTN}"
                             style="flex:1;padding:12px;border-radius:10px;font-weight:700;font-size:0.82rem;cursor:pointer;
                                    background:${validation.valid ? 'var(--color-accent)' : 'rgba(255,255,255,0.06)'};
@@ -609,8 +619,8 @@ export default class SuperStrategyUI {
                                    opacity:${validation.valid ? '1' : '0.5'};">
                         ${validation.valid ? 'Complete &amp; Advance →' : validation.message}
                     </button>
-                    <button id="super-reset-btn" style="padding:12px 16px;border-radius:10px;background:rgba(255,59,48,0.12);color:#ff3b30;border:none;cursor:pointer;font-weight:600;font-size:0.8rem;">
-                        <i class="fas fa-undo" style="font-size:0.75rem;"></i>
+                    <button id="super-reset-btn" style="padding:12px 16px;border-radius:10px;background:rgba(255,59,48,0.12);color:#ff3b30;border:none;cursor:pointer;font-weight:600;font-size:0.8rem;" title="Reset Pipeline">
+                        <i class="fas fa-sync-alt" style="font-size:0.75rem;"></i>
                     </button>
                 </div>
             </div>
@@ -1191,6 +1201,14 @@ export default class SuperStrategyUI {
                 if (!result.success) {
                     console.warn('[SuperStrategyUI]', result.message);
                 }
+            });
+        }
+
+        // Back button
+        const backBtn = this.container.querySelector('#super-back-btn');
+        if (backBtn) {
+            backBtn.addEventListener('click', () => {
+                superStrategyStore.regressState();
             });
         }
         
