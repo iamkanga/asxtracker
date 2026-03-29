@@ -1315,6 +1315,10 @@ export const CSS_CLASSES = {
     // Notification UI (Constitution Compliance)
     NOTIFICATION_BADGE: 'notification-badge',
     DISMISS_ICON_WRAPPER: 'dismiss-icon-wrapper',
+    STREAM_ITEM_WRAPPER: 'market-stream-item-wrapper',
+    STREAM_ITEM: 'market-stream-item',
+    STREAM_DISMISS_BTN: 'stream-dismiss-btn',
+    HAS_CODE_PILL: 'has-code-pill',
     NOTIF_HEADER_SURFACE: 'notif-header-surface',
     STATUS_TITLE_ROW: 'status-title-row',
     STATUS_MONITORS_ROW: 'status-monitors-row',

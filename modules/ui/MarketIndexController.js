@@ -1,5 +1,5 @@
 import { notificationStore } from '../state/NotificationStore.js';
-import { EVENTS } from '../utils/AppConstants.js';
+import { EVENTS, CSS_CLASSES } from '../utils/AppConstants.js';
 import { navManager } from '../utils/NavigationManager.js';
 import { LinkHelper } from '../utils/LinkHelper.js';
 
@@ -56,11 +56,11 @@ export class MarketIndexController {
             // Update read classes in place instead of full re-render
             // This prevents destroying the DOM elements while the user is clicking them!
             if (this.modal && !this.modal.classList.contains('hidden') && this.listContainer) {
-                const wrappers = this.listContainer.querySelectorAll('.market-stream-item-wrapper');
+                const wrappers = this.listContainer.querySelectorAll('.' + (CSS_CLASSES.STREAM_ITEM_WRAPPER || 'market-stream-item-wrapper'));
                 wrappers.forEach(wrapper => {
                     const id = wrapper.getAttribute('data-alert-id');
                     if (id && notificationStore.readAnnouncements.has(id)) {
-                        wrapper.classList.add('is-read');
+                        wrapper.classList.add(CSS_CLASSES.IS_READ || 'is-read');
                     }
                 });
             }
@@ -83,14 +83,7 @@ export class MarketIndexController {
 
         // Immediate Visual Feedback (Direct & Class-based)
         if (wrapperElement) {
-            wrapperElement.classList.add('is-read');
-            const bodyLink = wrapperElement.querySelector('.market-stream-item');
-            if (bodyLink) {
-                bodyLink.style.opacity = '0.35';
-                bodyLink.style.filter = 'grayscale(80%)';
-            }
-            const dismissBtn = wrapperElement.querySelector('.stream-dismiss-btn');
-            if (dismissBtn) dismissBtn.style.opacity = '0.2';
+            wrapperElement.classList.add(CSS_CLASSES.IS_READ || 'is-read');
         }
     }
 
@@ -200,33 +193,31 @@ export class MarketIndexController {
             const target = alert.link ? '_blank' : '_self';
 
             const isRead = notificationStore.readAnnouncements?.has(id);
-            const readClass = isRead ? 'is-read' : '';
-            const readStyle1 = isRead ? 'opacity: 0.35; filter: grayscale(80%);' : '';
-            const readStyle2 = isRead ? 'opacity: 0.2;' : 'opacity: 0.3;';
+            const readClass = isRead ? (CSS_CLASSES.IS_READ || 'is-read') : '';
+            const codePillClass = isCompany ? (CSS_CLASSES.HAS_CODE_PILL || 'has-code-pill') : '';
 
             return `
-                <div class="market-stream-item-wrapper ${readClass}" data-alert-id="${id}">
-                    <a href="${href}" target="${target}" class="market-stream-item" style="${readStyle1}">
+                <div class="${CSS_CLASSES.STREAM_ITEM_WRAPPER} ${readClass} ${codePillClass}" data-alert-id="${id}">
+                   <a href="${href}" target="${target}" class="${CSS_CLASSES.STREAM_ITEM}">
                         <div class="stream-meta">
                             <span class="stream-badge ${badgeClass}">${badgeText}</span>
                             <span class="stream-time">${dateStr}</span>
                         </div>
-                        <div class="stream-title" style="color: var(--text-color);">${alert.title || alert.headline}</div>
-                        ${alert.summary ? `<div class="stream-summary" style="margin-top: 5px;">${alert.summary}</div>` : ''}
-                        <div class="stream-footer" style="padding-bottom: 4px;">
+                        <div class="stream-title">${alert.title || alert.headline}</div>
+                        ${alert.summary ? `<div class="stream-summary">${alert.summary}</div>` : ''}
+                        <div class="stream-footer">
                             <span class="stream-source"><i class="fas fa-rss"></i> Market Index</span>
                             <i class="fas fa-external-link-alt" style="font-size: 0.7rem; opacity: 0.4; color: var(--color-accent);"></i>
                         </div>
                     </a>
                     
                     ${isCompany ? `
-                    <button class="code-pill" data-code="${extractedCode}" style="position: absolute; bottom: 8px; left: 16px; z-index: 10; border: 1px solid rgba(var(--color-accent-rgb, 100, 150, 255), 0.4); border-radius: 4px; background: rgba(30, 30, 30, 0.9); color: var(--color-accent, #6496ff); padding: 4px 10px; font-size: 0.75rem; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.2);" title="View ${extractedCode} Details">
+                    <button class="code-pill" data-code="${extractedCode}" title="View ${extractedCode} Details">
                         <i class="fas fa-search-dollar"></i> View ${extractedCode}
                     </button>
                     ` : ''}
-                    <button class="stream-dismiss-btn" data-id="${id}" title="Dismiss"
-                        style="position: absolute; top: 12px; right: 12px; background: transparent; border: none; color: var(--text-muted); cursor: pointer; padding: 5px; z-index: 5; transition: opacity 0.2s; ${readStyle2}">
-                        <i class="fas fa-times" style="font-size: 0.8rem;"></i>
+                    <button class="${CSS_CLASSES.STREAM_DISMISS_BTN}" data-id="${id}" title="Dismiss">
+                        <i class="fas fa-times"></i>
                     </button>
                 </div>
             `;
