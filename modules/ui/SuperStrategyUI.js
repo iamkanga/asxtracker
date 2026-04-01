@@ -157,13 +157,18 @@ export default class SuperStrategyUI {
 
         return `
             <div class="${CSS_CLASSES.SEGMENTED_CONTROL}" style="display: flex; background: rgba(255,255,255,0.04); margin: 12px 16px; border-radius: 0; padding: 4px;">
-                ${tabs.map(t => `
+                ${tabs.map(t => {
+                    const isFinalised = t.id === 'pipeline' && superStrategyStore.getCurrentState() === SUPER_STATES.FINALISED;
+                    return `
                     <button class="super-tab-btn ${this.activeTab === t.id ? CSS_CLASSES.ACTIVE : ''}"
                             data-tab="${t.id}"
-                            style="flex: 1; padding: 10px 8px; border: none; background: ${this.activeTab === t.id ? 'rgba(255,255,255,0.1)' : 'transparent'}; color: ${this.activeTab === t.id ? '#fff' : 'var(--text-muted)'}; font-weight: 600; border-radius: 0; cursor: pointer; transition: all 0.2s; font-size: 0.85rem;">
-                        <i class="fas ${t.icon}" style="margin-right: 5px; font-size: 0.8rem;"></i>${t.label}
+                            style="flex: 1; padding: 10px 8px; border: none; background: ${this.activeTab === t.id ? 'rgba(255,255,255,0.1)' : 'transparent'}; color: ${this.activeTab === t.id ? '#fff' : 'var(--text-muted)'}; font-weight: 600; border-radius: 0; cursor: pointer; transition: all 0.2s; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                        <i class="fas ${t.icon}" style="font-size: 0.8rem; ${isFinalised ? 'color: var(--color-positive);' : ''}"></i>
+                        ${t.label}
+                        ${isFinalised ? '<i class="fas fa-check-circle" style="color: var(--color-positive); font-size: 0.7rem;"></i>' : ''}
                     </button>
-                `).join('')}
+                    `;
+                }).join('')}
             </div>
         `;
     }
@@ -265,7 +270,7 @@ export default class SuperStrategyUI {
                                style="font-size:1.1rem;font-weight:900;background:transparent;border:none;padding:0;color:#fff;outline:none;width:60px;">
                     </div>
                     <div style="${CARD}">
-                        <div style="${SL}">Contrib. Cap Status</div>
+                        <div style="${SL}">Contribution Cap Status</div>
                         <div style="${CV}${calc.recontributionEligibility?.eligible ? 'color:var(--color-positive);' : 'color:var(--color-warning);'}">
                             ${calc.recontributionEligibility?.eligible ? 'Available' : 'Cap Used'}
                         </div>
@@ -275,14 +280,24 @@ export default class SuperStrategyUI {
                     </div>
                 </div>
 
-                <!-- Bring-Forward — same card structure -->
-                <div style="${CARD}">
-                    <div style="${SL} margin-bottom: 2px;">Bring-Forward Started</div>
-                    <div style="${SL} opacity: 0.35; margin-bottom: 8px;">Financial Year Ending</div>
-                    <input type="number" id="${IDS.SUPER_BRING_FORWARD_FY}"
-                           value="${data.bringForwardTriggeredFY || ''}" placeholder="e.g. 2025" min="2000" max="2099"
-                           ${!isEditable ? 'readonly style="pointer-events:none; opacity:0.8;"' : ''}
-                           style="font-size:1.1rem;font-weight:900;background:transparent;border:none;padding:0;color:#fff;outline:none;width:100%;">
+                <!-- Bring-Forward Configuration -->
+                <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(130px, 1fr));gap:10px;">
+                    <div style="${CARD}">
+                        <div style="${SL} margin-bottom: 2px;">Bring-Forward Started</div>
+                        <div style="${SL} opacity: 0.35; margin-bottom: 8px;">Financial Year Ending</div>
+                        <input type="number" id="${IDS.SUPER_BRING_FORWARD_FY}"
+                               value="${data.bringForwardTriggeredFY || ''}" placeholder="e.g. 2025" min="2000" max="2099"
+                               ${!isEditable ? 'readonly style="pointer-events:none; opacity:0.8;"' : ''}
+                               style="font-size:1.1rem;font-weight:900;background:transparent;border:none;padding:0;color:#fff;outline:none;width:100%;">
+                    </div>
+                    <div style="${CARD}">
+                        <div style="${SL}">Contribution Cap Used</div>
+                        <div style="${SL} opacity: 0.35; margin-bottom: 8px;">In Current Window</div>
+                        <input type="number" id="${IDS.SUPER_USED_AMOUNT}"
+                               value="${data.bringForwardUsedAmount || 0}" placeholder="0.00"
+                               ${!isEditable ? 'readonly style="pointer-events:none; opacity:0.8;"' : ''}
+                               style="font-size:1.1rem;font-weight:900;background:transparent;border:none;padding:0;color:#fff;outline:none;width:100%;">
+                    </div>
                 </div>
 
             </div>
@@ -409,11 +424,21 @@ export default class SuperStrategyUI {
                     <div style="margin-bottom: 24px;">
                         <div style="font-size: 0.78rem; color: var(--color-warning); line-height: 1.5; font-weight: 700; background: rgba(255,165,0,0.08); padding: 16px; border-radius: 0; border: 1px solid rgba(255,165,0,0.15); margin-bottom: 20px;">
                             <i class="fas fa-info-circle" style="margin-right: 8px;"></i>
-                            Every pension closure requires a final pro-rata drawdown payment to be confirmed first. This ensures regulatory compliance before the accounts are closed and merged back into accumulation.
+                            Brighter Super requires you to have received your <strong>mandatory minimum annual pension income payment</strong> for the current financial year before closing the account.
                         </div>
 
+                        <!-- Mandatory Checkpoint -->
+                        <label style="display: flex; align-items: flex-start; gap: 12px; cursor: pointer; padding: 16px; background: rgba(255,255,255,0.03); border-radius: 0; border: 1px solid rgba(255,255,255,0.05); transition: all 0.2s; margin-bottom: 20px;">
+                            <input type="checkbox" id="${IDS.SUPER_MINPENSION_CHECKBOX}" ${stateData.minPayoutConfirmed ? 'checked' : ''}
+                                   style="width: 20px; height: 20px; accent-color: var(--color-accent); cursor: pointer; margin-top: 2px;">
+                            <div>
+                                <span style="font-size: 0.85rem; font-weight: 800; color: #fff;">Minimum Payout Confirmed</span>
+                                <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 600; opacity: 0.7; margin-top: 4px;">I have checked my bank account/fund portal and confirmed my min drawdown is complete.</div>
+                            </div>
+                        </label>
+
                         <div class="${CSS_CLASSES.FORM_GROUP}" style="margin-bottom:20px;" onclick="this.querySelector('input').click(); this.querySelector('input').showPicker?.();">
-                            <label style="font-size:0.62rem;color:var(--text-muted);font-weight:800;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;display:block;opacity:0.55;">Planned Closure Date</label>
+                            <label style="font-size:0.62rem;color:var(--text-muted);font-weight:800;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;display:block;opacity:0.55;">Planned Closure Date & P10 Form Preparation</label>
                             <input type="${stateData.closureDate ? 'date' : 'text'}" 
                                    id="${IDS.SUPER_CLOSURE_DATE}" 
                                    class="${CSS_CLASSES.FORM_CONTROL}"
@@ -422,6 +447,9 @@ export default class SuperStrategyUI {
                                    onfocus="(this.type='date'); this.showPicker?.();"
                                    onblur="if(!this.value) this.type='text';"
                                    style="border-radius:0;padding:12px;cursor:pointer;font-weight:700;outline:none;width:100%;">
+                            <div style="font-size: 0.65rem; color: var(--text-muted); margin-top: 8px; font-weight: 600; font-style: italic; opacity: 0.6;">
+                                Preparation: Download Brighter Super <strong>Form P10</strong> (Restart Your Pension Account) from the portal to submit with this closure request.
+                            </div>
                         </div>
 
                         ${proRata ? `
@@ -446,7 +474,7 @@ export default class SuperStrategyUI {
             case SUPER_STATES.PENSION_COMMENCEMENT:
                 fieldsHtml = `
                     <div class="${CSS_CLASSES.FORM_GROUP}" style="margin-bottom:14px;" onclick="this.querySelector('input').click(); this.querySelector('input').showPicker?.();">
-                        <label style="font-size:0.62rem;color:var(--text-muted);font-weight:800;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;display:block;opacity:0.55;">Commencement Date</label>
+                        <label style="font-size:0.62rem;color:var(--text-muted);font-weight:800;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;display:block;opacity:0.55;">Final Commencement Date</label>
                         <input type="${stateData.commencementDate ? 'date' : 'text'}" 
                                id="${IDS.SUPER_COMMENCE_DATE}" 
                                class="${CSS_CLASSES.FORM_CONTROL}"
@@ -455,7 +483,30 @@ export default class SuperStrategyUI {
                                onfocus="(this.type='date'); this.showPicker?.();"
                                onblur="if(!this.value) this.type='text';"
                                style="border-radius:0;padding:11px;cursor:pointer;font-weight:700;outline:none;width:100%;">
+                        <div style="font-size: 0.65rem; color: var(--text-muted); margin-top: 8px; font-weight: 600; font-style: italic; opacity: 0.6;">
+                            Final Step: Submit <strong>Form P10</strong> (prepared in Stage 4) to Brighter Super with your chosen commencement date.
+                        </div>
                     </div>
+
+                    ${(() => {
+                        const restartBal = superStrategyStore.getConsolidatedRestartBalance();
+                        if (restartBal < 50000) {
+                            return `
+                                <div style="display: flex; align-items: flex-start; gap: 12px; padding: 16px; background: rgba(255,59,48,0.06); border-radius: 0; border: 1px solid rgba(255,59,48,0.15); margin-bottom: 20px;">
+                                    <i class="fas fa-exclamation-octagon" style="color: #ff3b30; font-size: 1.1rem; margin-top: 2px;"></i>
+                                    <div>
+                                        <div style="font-size: 0.75rem; color: #ff3b30; font-weight: 800; text-transform: uppercase;">Fund Minimum Warning</div>
+                                        <div style="font-size: 0.78rem; color: var(--text-muted); line-height: 1.4; font-weight: 600;">
+                                            Brighter Super generally requires a minimum of <strong>$50,000</strong> to open a new Pension account. Your calculated restart balance is <strong>${formatCurrency(restartBal)}</strong>. 
+                                            You may need to consolidate additional accumulation funds to meet this threshold.
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                        return '';
+                    })()}
+                    
                     ${stateData.commencementDate ? this._renderCommencementPreview(data, stateData.commencementDate) : ''}
                 `;
                 break;
@@ -470,14 +521,27 @@ export default class SuperStrategyUI {
                         <p style="font-size: 0.88rem; color: var(--text-muted); line-height: 1.6; max-width: 320px; margin: 0 auto 28px; font-weight: 500; opacity: 0.9;">
                             Your pension restart has been successfully modeled and recorded. All legislative requirements have been accounted for.
                         </p>
+
+                        <!-- Strategic Reset Note -->
+                        <div style="background: rgba(255,165,0,0.04); border: 1px solid rgba(255,165,0,0.1); padding: 16px; margin-bottom: 24px; text-align: left;">
+                            <div style="font-size: 0.65rem; color: #ffa500; font-weight: 900; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px;">July 1st Strategic Reset</div>
+                            <div style="font-size: 0.78rem; color: var(--text-muted); line-height: 1.4; font-weight: 600;">
+                                On July 1st, your fund will reset your minimum drawdown based on your new balance. 
+                                To wash next year's contributions, use the <strong>Clear & Reset</strong> button below once the new financial year starts.
+                            </div>
+                        </div>
+                        
+                         <button id="super-carry-forward-btn" class="${CSS_CLASSES.PRIMARY_PILL_BTN}" style="width: 100%; border-radius: 0; padding: 16px; font-weight: 900; font-size: 0.9rem; background: var(--color-positive); color: #000; border: none; cursor: pointer; margin-bottom: 24px; box-shadow: 0 4px 15px rgba(6,255,79,0.2);">
+                            <i class="fas fa-arrow-right" style="margin-right: 8px;"></i>Carry Forward to Next FY
+                        </button>
                         
                         <div style="background: rgba(0,0,0,0.2); border-radius: 0; padding: 20px; margin-bottom: 32px; text-align: left; border: 1px solid rgba(255,255,255,0.03);">
                             <div style="font-size:0.65rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);opacity:0.6;margin-bottom:10px;">Consolidated Restart Balance</div>
-                            <div style="font-size:1.6rem;font-weight:950;color:var(--color-positive);line-height:1;">${formatCurrency(superStrategyStore.getTotalBalance())}</div>
+                            <div style="font-size:1.6rem;font-weight:950;color:var(--color-positive);line-height:1;">${formatCurrency(superStrategyStore.getConsolidatedRestartBalance())}</div>
                         </div>
 
-                         <button id="super-final-reset-btn" class="${CSS_CLASSES.PRIMARY_PILL_BTN}" style="width: 100%; border-radius: 0; padding: 14px; font-weight: 800; font-size: 0.85rem; background: var(--color-accent); color: #000; border: none; cursor: pointer; margin-bottom: 12px;">
-                            Restart New Pipeline
+                         <button id="super-final-reset-btn" class="${CSS_CLASSES.PRIMARY_PILL_BTN}" style="width: 100%; border-radius: 0; padding: 14px; font-weight: 800; font-size: 0.85rem; background: rgba(255,255,255,0.05); color: var(--text-muted); border: 1px solid rgba(255,255,255,0.1); cursor: pointer; margin-bottom: 12px; transition: all 0.2s;">
+                            <i class="fas fa-trash-alt" style="margin-right: 8px; font-size: 0.75rem; opacity: 0.7;"></i>Clear All & Reset Strategy
                         </button>
                         <button id="super-back-btn" style="width: 100%; padding: 12px; border-radius: 0; background: rgba(255,255,255,0.05); color: var(--text-muted); border: 1px solid rgba(255,255,255,0.1); cursor: pointer; font-weight: 600; font-size: 0.8rem; transition: all 0.2s;">
                             <i class="fas fa-arrow-left" style="margin-right: 8px; font-size: 0.75rem;"></i>Back to Commencement
@@ -488,18 +552,24 @@ export default class SuperStrategyUI {
             case SUPER_STATES.RECONTRIBUTION: {
                 const eligibility = superStrategyStore.getRecontributionEligibility();
                 const closureData = superStrategyStore.getStateData(SUPER_STATES.PENSION_CLOSURE);
-                const closedBalance = data.pensionBalance - (closureData?.proRataPayout || 0);
+                const contribData = superStrategyStore.getStateData(SUPER_STATES.CONTRIBUTION_CLEARANCE);
+                
+                // Define Live Reality variables for dynamic consolidation Fact-Sheet
+                const livePen = closureData?.liveBalance ? parseFloat(closureData.liveBalance) : data.pensionBalance;
+                const liveAcc = stateData.liveAccumulationBalance ? parseFloat(stateData.liveAccumulationBalance) : data.accumulationBalance;
+                const closedBalance = livePen - (closureData?.proRataPayout || 0);
+                const totalAvailable = liveAcc + (contribData?.amount || 0) + closedBalance;
 
                 fieldsHtml = `
                     <!-- Eligibility Status Tile -->
-                    <div style="display: flex; align-items: center; gap: 14px; padding: 18px; background: rgba(${eligibility.eligible ? '6,255,79,0.06' : '255,59,48,0.06'}); border-radius: 0; border: 1px solid rgba(${eligibility.eligible ? '6,255,79,0.1' : '255,59,48,0.1'}); margin-bottom: 24px;">
-                        <div style="background: rgba(${eligibility.eligible ? '6,255,79,0.12' : '255,59,48,0.12'}); width: 44px; height: 44px; border-radius: 0; display: flex; align-items: center; justify-content: center; color: ${eligibility.eligible ? 'var(--color-positive)' : '#ff3b30'}; flex-shrink: 0;">
-                            <i class="fas ${eligibility.eligible ? 'fa-check-circle' : 'fa-times-circle'}" style="font-size: 1.3rem;"></i>
+                    <div style="display: flex; align-items: center; gap: 14px; padding: 18px; background: rgba(${eligibility.eligible ? '6,255,79,0.06' : '255,165,0,0.06'}); border-radius: 0; border: 1px solid rgba(${eligibility.eligible ? '6,255,79,0.1' : '255,165,0,0.1'}); margin-bottom: 24px;">
+                        <div style="background: rgba(${eligibility.eligible ? '6,255,79,0.12' : '255,165,0,0.12'}); width: 44px; height: 44px; border-radius: 0; display: flex; align-items: center; justify-content: center; color: ${eligibility.eligible ? 'var(--color-positive)' : 'var(--color-warning)'}; flex-shrink: 0;">
+                            <i class="fas ${eligibility.eligible ? 'fa-check-circle' : 'fa-exclamation-circle'}" style="font-size: 1.3rem;"></i>
                         </div>
                         <div style="flex: 1;">
-                            <div style="font-size: 0.65rem; color: ${eligibility.eligible ? 'var(--color-positive)' : '#ff3b30'}; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 4px;">Contrib. Eligibility</div>
-                            <div style="font-size: 0.85rem; font-weight: 900; color: #fff; line-height: 1.2;">
-                                ${eligibility.eligible ? `Eligible: ${formatCurrency(eligibility.maxAmount)}` : `Cap Used (Available FY ${eligibility.bringForwardStatus?.nextAvailableFY - 1}/${String(eligibility.bringForwardStatus?.nextAvailableFY).slice(-2)})`}
+                            <div style="font-size: 0.65rem; color: ${eligibility.eligible ? 'var(--color-positive)' : 'var(--color-warning)'}; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 4px;">Contribution Eligibility</div>
+                            <div style="font-size: 0.75rem; font-weight: 700; color: #fff; line-height: 1.4; opacity: 0.9;">
+                                ${eligibility.reason}
                             </div>
                         </div>
                     </div>
@@ -582,29 +652,87 @@ export default class SuperStrategyUI {
                         </div>
                     </div>
 
-                    <!-- Available to Re-Contribute Tile -->
-                    ${closedBalance > 0 ? `
-                        <div style="background: rgba(255,255,255,0.04); border-radius: 0; padding: 18px; margin-bottom: 24px; border: 1px solid rgba(255,255,255,0.05);">
-                            <div style="font-size: 0.65rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; opacity: 0.6;">Consolidated Entry Balance</div>
-                            <div style="font-size: 1.3rem; font-weight: 950; color: #fff; margin-bottom: 4px;">${formatCurrency(closedBalance)}</div>
-                            <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 600; opacity: 0.7;">Full balance available for re-entry. Min ${formatCurrency(SUPER_THRESHOLDS.minPensionRestart)} is required.</div>
+                    ${!eligibility.eligible ? `
+                        <!-- Consolidation Fact Sheet (When Cap is Used) -->
+                        <div style="margin-bottom: 24px;">
+                            <div class="${CSS_CLASSES.FORM_GROUP}" style="margin-bottom: 20px;">
+                                <label style="font-size: 0.7rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; display: block; opacity: 0.7;">Statement Check: Actual Accumulation Balance Today</label>
+                                <input type="number" id="${IDS.SUPER_LIVE_ACCUMULATION_BALANCE}" class="${CSS_CLASSES.FORM_CONTROL}"
+                                       value="${stateData.liveAccumulationBalance || ''}" placeholder="${data.accumulationBalance.toFixed(2)}" step="0.01"
+                                       style="border-radius: 0; padding: 12px; font-weight: 700;">
+                                <div style="font-size: 0.65rem; color: var(--text-muted); margin-top: 6px; opacity: 0.6;">Enter your live accumulation balance (excluding the incoming pension return) to account for earnings and employer super.</div>
+                            </div>
                         </div>
-                    ` : ''}
 
-                    <div class="${CSS_CLASSES.FORM_GROUP}" style="margin-bottom: 20px;">
-                        <label style="font-size: 0.7rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; display: block; opacity: 0.7;">Re-Contribution Amount</label>
-                        <input type="number" id="${IDS.SUPER_RECONTRIBUTION_AMOUNT}" class="${CSS_CLASSES.FORM_CONTROL}"
-                               value="${stateData.recontributionAmount || ''}" placeholder="0.00" step="0.01"
-                               ${!eligibility.eligible ? 'disabled' : ''}
-                               max="${eligibility.maxAmount}"
-                               style="border-radius: 0; padding: 12px; font-weight: 700; ${!eligibility.eligible ? 'opacity: 0.4;' : ''}">
-                    </div>
-                    <div class="${CSS_CLASSES.FORM_GROUP}" style="margin-bottom: 20px;">
-                        <label style="font-size: 0.7rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; display: block; opacity: 0.7;">Re-Contribution Date</label>
-                        <input type="date" id="${IDS.SUPER_RECONTRIBUTION_DATE}" class="${CSS_CLASSES.FORM_CONTROL}"
-                               value="${stateData.recontributionDate || ''}"
-                               ${!eligibility.eligible ? 'disabled' : ''}
-                               style="border-radius: 0; padding: 12px; font-weight: 700; ${!eligibility.eligible ? 'opacity: 0.4;' : ''}">
+                        <div style="margin-bottom: 28px; padding: 20px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 0;">
+                            <div style="font-size: 0.7rem; color: var(--color-accent); font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 16px;">Consolidation Facts</div>
+                            
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 0.8rem; font-weight: 600;">
+                                <span style="color: var(--text-muted);">Live Accumulation Balance</span>
+                                <span style="color: #fff;">${formatCurrency(liveAcc)}</span>
+                            </div>
+                            
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 0.8rem; font-weight: 600;">
+                                <span style="color: var(--text-muted);">Stage 1 Contribution</span>
+                                <span style="color: #fff;">+ ${formatCurrency(contribData?.amount || 0)}</span>
+                            </div>
+                            
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.8rem; font-weight: 600;">
+                                <span style="color: var(--text-muted);">Returned from Closed Pension</span>
+                                <span style="color: #fff;">+ ${formatCurrency(closedBalance)}</span>
+                            </div>
+                            
+                            <div style="font-size: 0.72rem; color: var(--text-muted); line-height: 1.5; font-style: italic; opacity: 0.7; margin-bottom: 20px;">
+                                Note: Pro-rata is calculated based on ${formatCurrency(data.pensionBalance)} (1 July balance) as per statutory requirements.
+                            </div>
+
+                            <div class="${CSS_CLASSES.FORM_GROUP}" style="margin-bottom: 20px;">
+                                <label style="font-size: 0.7rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; display: block; opacity: 0.7;">Statement Check: Actual Pension Balance Today</label>
+                                <input type="number" id="${IDS.SUPER_LIVE_PENSION_BALANCE}" class="${CSS_CLASSES.FORM_CONTROL}"
+                                       value="${superStrategyStore.getStateData(SUPER_STATES.PENSION_CLOSURE).liveBalance || ''}" 
+                                       placeholder="${data.pensionBalance.toFixed(2)}" step="0.01"
+                                       style="border-radius: 0; padding: 12px; font-weight: 700;">
+                                <div style="font-size: 0.65rem; color: var(--text-muted); margin-top: 6px; opacity: 0.6;">Use your latest fund statement/portal balance to account for earnings/drawdowns since July 1st.</div>
+                            </div>
+                            
+                            <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                                <span style="font-size: 0.7rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase;">New Pension Start Balance</span>
+                                <span style="font-size: 1.4rem; font-weight: 950; color: var(--color-positive);">${formatCurrency(totalAvailable)}</span>
+                            </div>
+                            
+                            <div style="margin-top: 20px; font-size: 0.72rem; color: var(--text-muted); line-height: 1.5; font-style: italic; opacity: 0.7;">
+                                Note: Because your contribution cap is fully utilized, no additional funds can be washed. Your strategy focus is now on the <strong>Consolidated Restart</strong> to reset your minimums.
+                            </div>
+                        </div>
+                    ` : `
+                        <div class="${CSS_CLASSES.FORM_GROUP}" style="margin-bottom: 20px;">
+                            <label style="font-size: 0.7rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; display: block; opacity: 0.7;">Re-Contribution Amount (Non-Concessional)</label>
+                            <input type="number" id="${IDS.SUPER_RECONTRIBUTION_AMOUNT}" class="${CSS_CLASSES.FORM_CONTROL}"
+                                   value="${stateData.recontributionAmount || ''}" placeholder="0.00" step="0.01"
+                                   max="${eligibility.maxAmount}"
+                                   style="border-radius: 0; padding: 12px; font-weight: 700;">
+                        </div>
+                        <div class="${CSS_CLASSES.FORM_GROUP}" style="margin-bottom: 24px;">
+                            <label style="font-size: 0.7rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; display: block; opacity: 0.7;">Re-Contribution Date</label>
+                            <input type="date" id="${IDS.SUPER_RECONTRIBUTION_DATE}" class="${CSS_CLASSES.FORM_CONTROL}"
+                                   value="${stateData.recontributionDate || ''}"
+                                   style="border-radius: 0; padding: 12px; font-weight: 700;">
+                        </div>
+
+                        <!-- Accumulation Safety Gate -->
+                        <div style="background: rgba(0,196,255,0.06); padding: 16px; border: 1px solid rgba(0,196,255,0.15); margin-bottom: 20px;">
+                            <label style="display: flex; align-items: flex-start; gap: 12px; cursor: pointer;">
+                                <input type="checkbox" id="${IDS.SUPER_ACC_SAFETY_CHECKBOX}" ${stateData.accSafetyConfirmed ? 'checked' : ''}
+                                       style="width: 20px; height: 20px; accent-color: var(--color-accent); cursor: pointer; margin-top: 2px;">
+                                <div>
+                                    <span style="font-size: 0.85rem; font-weight: 800; color: #fff;">Maintain $8,000 Accumulation Buffer</span>
+                                    <div style="font-size: 0.7rem; color: var(--text-muted); line-height: 1.4; margin-top: 4px; font-weight: 600;">
+                                        I confirm that at least $8,000 will remain in my accumulation account to ensure it stays active for future contributions.
+                                    </div>
+                                </div>
+                            </label>
+                        </div>
+                    `}
                 `;
                 break;
             }
@@ -1150,11 +1278,13 @@ export default class SuperStrategyUI {
             const june1st = commenceDate.getMonth() === 5 && commenceDate.getDate() >= 1;
             if (june1st) {
                 return `
-                    <div style="display: flex; align-items: center; gap: 10px; padding: 14px; background: rgba(6,255,79,0.08); border-radius: 0; margin-top: 10px; border: 1px solid rgba(6,255,79,0.15);">
-                        <i class="fas fa-check-circle" style="color: var(--color-positive); font-size: 1.1rem;"></i>
-                        <div>
-                            <div style="font-weight: 700; color: var(--color-positive); font-size: 0.85rem;">June 1st Rule Applies</div>
-                            <div style="font-size: 0.78rem; color: var(--text-muted);">Minimum drawdown for remainder of this FY is <strong>$0.00</strong>.</div>
+                    <div style="padding: 14px; background: rgba(6,255,79,0.08); border-radius: 0; margin-top: 10px; border: 1px solid rgba(6,255,79,0.15);">
+                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                            <i class="fas fa-check-circle" style="color: var(--color-positive); font-size: 1.1rem;"></i>
+                            <div style="font-weight: 700; color: var(--color-positive); font-size: 0.85rem;">June 1st Rule Activated</div>
+                        </div>
+                        <div style="font-size: 0.78rem; color: var(--text-muted); line-height: 1.4;">
+                            Minimum drawdown for this FY is <strong>$0.00</strong>. Your full drawdown obligations will begin on <strong>July 1st</strong> based on your new consolidated balance.
                         </div>
                     </div>
                 `;
@@ -1193,8 +1323,8 @@ export default class SuperStrategyUI {
         if (ageInput) ageInput.addEventListener('change', (e) => { superStrategyStore.setAge(e.target.value); this.render(); });
         if (bfFYInput) bfFYInput.addEventListener('change', (e) => { superStrategyStore.setBringForwardTriggeredFY(e.target.value || null); this.render(); });
 
-        const bfUsedInput = this.container.querySelector('#super-bf-used-amount');
-        if (bfUsedInput) bfUsedInput.addEventListener('change', (e) => {
+        const usedAmountInput = this.container.querySelector(`#${IDS.SUPER_USED_AMOUNT}`);
+        if (usedAmountInput) usedAmountInput.addEventListener('change', (e) => {
             superStrategyStore.setBringForwardUsedAmount(e.target.value);
             this.render();
         });
@@ -1310,8 +1440,17 @@ export default class SuperStrategyUI {
 
             case SUPER_STATES.PENSION_CLOSURE: {
                 const dateEl = this.container.querySelector(`#${IDS.SUPER_CLOSURE_DATE}`);
+                const liveBalEl = this.container.querySelector(`#${IDS.SUPER_LIVE_PENSION_BALANCE}`);
+                const checkEl = this.container.querySelector(`#${IDS.SUPER_MINPENSION_CHECKBOX}`);
+
                 if (dateEl) dateEl.addEventListener('change', (e) => {
                     superStrategyStore.updateStateData(current, { closureDate: e.target.value });
+                });
+                if (liveBalEl) liveBalEl.addEventListener('change', (e) => {
+                    superStrategyStore.updateStateData(current, { liveBalance: parseFloat(e.target.value) || 0 });
+                });
+                if (checkEl) checkEl.addEventListener('change', (e) => {
+                    superStrategyStore.updateStateData(current, { minPayoutConfirmed: e.target.checked });
                 });
                 break;
             }
@@ -1319,12 +1458,25 @@ export default class SuperStrategyUI {
             case SUPER_STATES.RECONTRIBUTION: {
                 const amountEl = this.container.querySelector(`#${IDS.SUPER_RECONTRIBUTION_AMOUNT}`);
                 const dateEl = this.container.querySelector(`#${IDS.SUPER_RECONTRIBUTION_DATE}`);
-                const bfFYEl = this.container.querySelector(`#${IDS.SUPER_BRING_FORWARD_FY}`);
+                const liveAccEl = this.container.querySelector(`#${IDS.SUPER_LIVE_ACCUMULATION_BALANCE}`);
+                const livePenEl = this.container.querySelector(`#${IDS.SUPER_LIVE_PENSION_BALANCE}`);
+                const safetyEl = this.container.querySelector(`#${IDS.SUPER_ACC_SAFETY_CHECKBOX}`);
+
                 if (amountEl) amountEl.addEventListener('change', (e) => {
                     superStrategyStore.updateStateData(current, { recontributionAmount: parseFloat(e.target.value) || 0 });
                 });
                 if (dateEl) dateEl.addEventListener('change', (e) => {
                     superStrategyStore.updateStateData(current, { recontributionDate: e.target.value });
+                });
+                if (liveAccEl) liveAccEl.addEventListener('change', (e) => {
+                    superStrategyStore.updateStateData(current, { liveAccumulationBalance: parseFloat(e.target.value) || 0 });
+                });
+                if (livePenEl) livePenEl.addEventListener('change', (e) => {
+                    // Update PENSION_CLOSURE state data, as that is the source of truth for the pension fact.
+                    superStrategyStore.updateStateData(SUPER_STATES.PENSION_CLOSURE, { liveBalance: parseFloat(e.target.value) || 0 });
+                });
+                if (safetyEl) safetyEl.addEventListener('change', (e) => {
+                    superStrategyStore.updateStateData(current, { accSafetyConfirmed: e.target.checked });
                 });
                 break;
             }
@@ -1334,6 +1486,37 @@ export default class SuperStrategyUI {
                 if (dateEl) dateEl.addEventListener('change', (e) => {
                     superStrategyStore.updateStateData(current, { commencementDate: e.target.value });
                 });
+                break;
+            }
+
+            case SUPER_STATES.FINALISED: {
+                const carryBtn = this.container.querySelector('#super-carry-forward-btn');
+                if (carryBtn) {
+                    carryBtn.addEventListener('click', () => {
+                        if (confirm('This will move your new pension balance to your 1 July baseline and reset the implementation dates for the next financial year. Proceed?')) {
+                            superStrategyStore.carryForwardToNextYear();
+                            this.render();
+                        }
+                    });
+                }
+
+                const resetBtn = this.container.querySelector('#super-final-reset-btn');
+                if (resetBtn) {
+                    resetBtn.addEventListener('click', () => {
+                        if (confirm('Are you sure? This will clear ALL strategy data and start over from Step 1.')) {
+                            superStrategyStore.reset();
+                            this.render();
+                        }
+                    });
+                }
+
+                const backBtn = this.container.querySelector('#super-back-btn');
+                if (backBtn) {
+                    backBtn.addEventListener('click', () => {
+                        superStrategyStore.regressState();
+                        this.render();
+                    });
+                }
                 break;
             }
         }
