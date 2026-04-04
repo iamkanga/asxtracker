@@ -52,9 +52,9 @@ const STATE_LABELS = Object.freeze({
     [SUPER_STATES.CONTRIBUTION_CLEARANCE]: 'Contribution Clearance',
     [SUPER_STATES.NOI_SUBMISSION]: 'NOI Submission',
     [SUPER_STATES.FUND_ACKNOWLEDGEMENT]: 'Fund Acknowledgement',
-    [SUPER_STATES.PENSION_CLOSURE]: 'Pension Closure & P10 Preparation',
+    [SUPER_STATES.PENSION_CLOSURE]: 'Pension Closure & Payment Confirmation',
     [SUPER_STATES.RECONTRIBUTION]: 'Re-Contribution',
-    [SUPER_STATES.PENSION_COMMENCEMENT]: 'Pension Commencement (P10 Submission)',
+    [SUPER_STATES.PENSION_COMMENCEMENT]: 'Pension Commencement',
     [SUPER_STATES.FINALISED]: 'Strategy Complete'
 });
 
@@ -79,8 +79,8 @@ function getDefaultData() {
             [SUPER_STATES.CONTRIBUTION_CLEARANCE]: { status: 'active', completedAt: null, amount: 0, clearedDate: null },
             [SUPER_STATES.NOI_SUBMISSION]: { status: 'pending', completedAt: null, submittedDate: null, deductionAmount: 0 },
             [SUPER_STATES.FUND_ACKNOWLEDGEMENT]: { status: 'pending', completedAt: null, acknowledged: false, acknowledgedDate: null },
-            [SUPER_STATES.PENSION_CLOSURE]: { status: 'pending', completedAt: null, proRataPayout: 0, closureDate: null, liveBalance: null, minPayoutConfirmed: false },
-            [SUPER_STATES.RECONTRIBUTION]: { status: 'pending', completedAt: null, recontributionAmount: 0, recontributionDate: null, liveAccumulationBalance: null, accSafetyConfirmed: false },
+            [SUPER_STATES.PENSION_CLOSURE]: { status: 'pending', completedAt: null, proRataPayout: 0, closureDate: null },
+            [SUPER_STATES.RECONTRIBUTION]: { status: 'pending', completedAt: null, recontributionAmount: 0, recontributionDate: null },
             [SUPER_STATES.PENSION_COMMENCEMENT]: { status: 'pending', completedAt: null, commencementDate: null, newBalance: 0 },
             [SUPER_STATES.FINALISED]: { status: 'pending', completedAt: null }
         },
@@ -99,7 +99,7 @@ function getDefaultData() {
         // Bring-Forward Tracking (FY ending year when bring-forward was last triggered)
         bringForwardTriggeredFY: null,
         bringForwardUsedAmount: 0, // Total NCC used across the 3-year window
-        
+
         // Reminders: presets (weeks before EOFY) + optional custom date
         reminderPresets: [4, 2, 1], // Default: 4 weeks, 2 weeks, 1 week before June 30
         customReminderDate: null,    // ISO date string for a specific custom reminder
@@ -212,9 +212,8 @@ class SuperStrategyStore {
                 return { valid: true, message: 'Fund has acknowledged NOI.' };
 
             case SUPER_STATES.PENSION_CLOSURE:
-                if (!sd.closureDate) return { valid: false, message: 'Set the planned closure date.' };
-                if (!sd.minPayoutConfirmed) return { valid: false, message: 'Must confirm minimum payout received.' };
-                return { valid: true, message: 'Closure & P10 ready.' };
+                if (!sd.closureDate) return { valid: false, message: 'Confirm the pension closure date.' };
+                return { valid: true, message: 'Pension closure executed.' };
 
             case SUPER_STATES.RECONTRIBUTION: {
                 const eligibility = this.getRecontributionEligibility();
@@ -224,7 +223,6 @@ class SuperStrategyStore {
                 }
                 if (!sd.recontributionAmount || sd.recontributionAmount <= 0) return { valid: false, message: 'Enter the amount being re-contributed.' };
                 if (!sd.recontributionDate) return { valid: false, message: 'Enter the re-contribution date.' };
-                if (!sd.accSafetyConfirmed) return { valid: false, message: 'Must confirm $8,000 remains in accumulation.' };
                 return { valid: true, message: 'Re-contribution recorded.' };
             }
 
@@ -282,32 +280,6 @@ class SuperStrategyStore {
     }
 
     /**
-     * Carries the consolidated restart balance forward as the new 1 July baseline
-     * for the next financial year and resets the pipeline.
-     */
-    carryForwardToNextYear() {
-        // 1. Capture the contribution from the year being finalized
-        const finalContribution = this.data.stateData[SUPER_STATES.RECONTRIBUTION]?.recontributionAmount || 0;
-        this.data.bringForwardUsedAmount = (this.data.bringForwardUsedAmount || 0) + finalContribution;
-
-        // 2. Clear old pipeline data but keep the new balance as the baseline
-        const newPension = this.getConsolidatedRestartBalance();
-        this.data.pensionBalance = newPension;
-        this.data.accumulationBalance = 0; 
-        
-        // 3. Age Progression: Increment age for the new financial year calculations
-        if (typeof this.data.ageAtJuly1 === 'number') {
-            this.data.ageAtJuly1++;
-        }
-        
-        // 4. Reset the pipeline while preserving long-term strategic state
-        this.resetStateMachine();
-        
-        console.log('[SuperStrategyStore] Carried forward to next FY. Age:', this.data.ageAtJuly1, 'Hist. Cap:', this.data.bringForwardHistoricalUsed);
-        this._dispatch(EVENTS.SUPER_STATE_CHANGED);
-    }
-
-    /**
      * Regresses the state machine to the previous step.
      */
     regressState() {
@@ -338,18 +310,7 @@ class SuperStrategyStore {
      * Resets the state machine back to the beginning.
      */
     resetStateMachine() {
-        this.data = { 
-            ...this.data, 
-            ...getDefaultData(), 
-            accumulationBalance: this.data.accumulationBalance, 
-            pensionBalance: this.data.pensionBalance, 
-            capitalSafetyFloor: this.data.capitalSafetyFloor, 
-            dateOfBirth: this.data.dateOfBirth, 
-            ageAtJuly1: this.data.ageAtJuly1, 
-            bringForwardTriggeredFY: this.data.bringForwardTriggeredFY, // Preserve contribution cap history
-            bringForwardUsedAmount: this.data.bringForwardUsedAmount,   // Preserve past contributions
-            reminders: this.data.reminders 
-        };
+        this.data = { ...this.data, ...getDefaultData(), accumulationBalance: this.data.accumulationBalance, pensionBalance: this.data.pensionBalance, capitalSafetyFloor: this.data.capitalSafetyFloor, dateOfBirth: this.data.dateOfBirth, ageAtJuly1: this.data.ageAtJuly1, reminders: this.data.reminders };
         this._save();
         this._dispatch(EVENTS.SUPER_STATE_CHANGED, { from: null, to: SUPER_STATES.CONTRIBUTION_CLEARANCE });
     }
@@ -383,22 +344,6 @@ class SuperStrategyStore {
 
     getTotalBalance() {
         return this.data.accumulationBalance + this.data.pensionBalance;
-    }
-
-    /**
-     * Calculates the actual consolidated balance for the restart,
-     * accounting for user-entered 'Live Reality' overrides.
-     */
-    getConsolidatedRestartBalance() {
-        const closureData = this.getStateData(SUPER_STATES.PENSION_CLOSURE);
-        const recontData = this.getStateData(SUPER_STATES.RECONTRIBUTION);
-        const contribData = this.getStateData(SUPER_STATES.CONTRIBUTION_CLEARANCE);
-
-        const livePen = closureData?.liveBalance ? parseFloat(closureData.liveBalance) : this.data.pensionBalance;
-        const liveAcc = recontData?.liveAccumulationBalance ? parseFloat(recontData.liveAccumulationBalance) : this.data.accumulationBalance;
-        const closedBalance = livePen - (closureData?.proRataPayout || 0);
-
-        return liveAcc + (contribData?.amount || 0) + closedBalance;
     }
 
     // ─────────────────────────────────────────
@@ -489,24 +434,23 @@ class SuperStrategyStore {
         const fy = getCurrentFinancialYear();
         return checkRecontributionEligibility(
             this.getTotalBalance(),
-            this.data.ageAtJuly1,
             fy,
             this.data.bringForwardTriggeredFY,
             this.data.bringForwardUsedAmount || 0
         );
     }
 
+    /**
+     * Sets the FY when bring-forward was last triggered.
+     * @param {number|null} fy - e.g. 2024 for FY2023-24. Null to clear.
+     */
     setBringForwardTriggeredFY(fy) {
         this.data.bringForwardTriggeredFY = fy ? parseInt(fy) : null;
         this._save();
     }
 
-    /**
-     * Sets the amount of non-concessional cap used in the current BF window.
-     * @param {number|string} amount
-     */
     setBringForwardUsedAmount(amount) {
-        this.data.bringForwardUsedAmount = amount === '' ? 0 : parseFloat(amount) || 0;
+        this.data.bringForwardUsedAmount = parseFloat(amount) || 0;
         this._save();
     }
 
@@ -580,10 +524,8 @@ class SuperStrategyStore {
 
         const fy = getCurrentFinancialYear(new Date(sd.closureDate));
         const fyStart = new Date(fy - 1, 6, 1);
-        
-        // STATUTORY Minimum is ALWAYS based on 1 July balance
         const result = calculateProRataMinimum(
-            this.data.pensionBalance, 
+            this.data.pensionBalance,
             this.data.ageAtJuly1,
             fyStart,
             new Date(sd.closureDate)
