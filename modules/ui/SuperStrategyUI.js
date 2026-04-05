@@ -605,11 +605,7 @@ export default class SuperStrategyUI {
                             </div>
                         ` : ''}
 
-                        <!-- Strategic Guidance -->
-                        <div style="font-size:0.68rem; color:var(--text-muted); line-height:1.4; opacity:0.8; margin-top: 24px; margin-bottom: 24px;">
-                             <i class="fas fa-info-circle" style="margin-right:4px; color:var(--color-accent);"></i>
-                             <strong>Note:</strong> Brighter Super pro-rata is 100% tax-free. Current market valuations for the consolidated restart are now managed in <strong>Step 5 (Re-contribution Hub)</strong> to ensure real-time accuracy.
-                        </div>
+
 
                         ${proRata ? `
                             <div style="background: linear-gradient(135deg, rgba(255,165,0,0.1) 0%, rgba(255,165,0,0.05) 100%); border-radius:0; padding:20px; border:1px solid rgba(255,165,0,0.2); box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
