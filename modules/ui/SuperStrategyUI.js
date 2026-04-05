@@ -42,27 +42,65 @@ export default class SuperStrategyUI {
 
         const modal = document.createElement('div');
         modal.id = IDS.SUPER_STRATEGY_MODAL;
-        modal.className = `${CSS_CLASSES.MODAL} ${CSS_CLASSES.HIDDEN}`;
-        modal.innerHTML = `
-            <div class="${CSS_CLASSES.MODAL_OVERLAY}"></div>
-            <div class="${CSS_CLASSES.MODAL_CONTENT} ${CSS_CLASSES.MODAL_CONTENT_MEDIUM}" style="height: 90vh; max-height: 850px; display: flex; flex-direction: column;">
-                <div class="${CSS_CLASSES.MODAL_HEADER}">
-                    <div class="${CSS_CLASSES.MODAL_HEADER_LEFT}">
-                        <h2 class="${CSS_CLASSES.MODAL_TITLE}">
-                            <div style="display: inline-flex; align-items: center; justify-content: center; width: 1.2rem; height: 1.2rem; position: relative; margin-right: 12px; vertical-align: middle;">
-                                <i class="fas ${UI_ICONS.SUPER_STRATEGY}" style="position: absolute; font-size: 1.2rem; color: var(--color-accent);"></i>
-                                <span style="position: relative; color: var(--bg-color); font-weight: 950; font-size: 0.55rem; z-index: 10; font-family: 'Inter', sans-serif; margin-top: 1px;">S</span>
-                            </div>
-                            Super Strategy
-                        </h2>
-                    </div>
-                    <button class="${CSS_CLASSES.MODAL_CLOSE_BTN}"><i class="fas ${UI_ICONS.CLOSE}"></i></button>
-                </div>
-                <div id="super-modal-body" class="${CSS_CLASSES.MODAL_BODY}" style="flex: 1; overflow-y: auto; padding: 0;"></div>
-            </div>
+        modal.className = `${CSS_CLASSES.WIDGET_PANEL} widget-hidden`;
+        modal.style.cssText = `
+            position: fixed;
+            top: 60px;
+            right: 0;
+            width: 380px;
+            height: calc(100vh - 60px);
+            background: #000000;
+            z-index: 20000;
+            display: flex;
+            flex-direction: column;
+            border-left: 1px solid rgba(255,255,255,0.05);
+            box-shadow: -10px 0 50px rgba(0, 0, 0, 1);
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+            transform: translateX(100%);
+            opacity: 0;
+            overflow: hidden;
         `;
 
+        const overlay = document.createElement('div');
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0,0,0,0.4);
+            backdrop-filter: blur(4px);
+            z-index: 19999;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        `;
+
+        modal.innerHTML = `
+            <!-- HEADER -->
+            <div class="widget-header" style="padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02); cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                <div class="${CSS_CLASSES.MODAL_HEADER_LEFT}">
+                    <h2 class="widget-title" style="font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: var(--color-accent); margin: 0; display: flex; align-items: center; gap: 10px;">
+                        <i class="fas ${UI_ICONS.SUPER_STRATEGY}"></i>
+                        Super Strategy
+                    </h2>
+                </div>
+                <div class="widget-header-actions">
+                    <button class="widget-close-btn" style="background: none; border: none; color: rgba(255,255,255,0.5); cursor: pointer; font-size: 1.1rem; padding: 6px 8px;">
+                        <i class="fas ${UI_ICONS.CLOSE}"></i>
+                    </button>
+                </div>
+            </div>
+            <!-- BODY -->
+            <div id="super-modal-body" class="widget-scroll-container" style="flex: 1; overflow-y: auto; padding: 0;"></div>
+        `;
+
+        document.body.appendChild(overlay);
         document.body.appendChild(modal);
+
+        // Mobile Responsiveness Override
+        if (window.innerWidth <= 480) {
+            modal.style.width = '100%';
+        }
 
         // Initialize store if needed
         if (!superStrategyStore.isReady) {
@@ -76,30 +114,48 @@ export default class SuperStrategyUI {
 
         // Animate in
         requestAnimationFrame(() => {
-            modal.classList.remove(CSS_CLASSES.HIDDEN);
-            requestAnimationFrame(() => modal.classList.add(CSS_CLASSES.SHOW));
+            // First frame: ensure it's painted off-screen
+            modal.style.display = 'flex';
+            requestAnimationFrame(() => {
+                // Second frame: trigger the slide-in
+                modal.classList.remove('widget-hidden');
+                modal.style.opacity = '1';
+                overlay.style.opacity = '1';
+                overlay.style.visibility = 'visible';
+            });
         });
 
         // Nav hook
         navManager.pushState(() => {
-            if (modal.parentElement) modal.remove();
+            if (modal.parentElement) {
+                overlay.remove();
+                modal.remove();
+            }
         });
 
         // Close logic
         const close = () => {
             if (modal._isClosing) return;
             modal._isClosing = true;
-            modal.classList.remove(CSS_CLASSES.SHOW);
-            modal.style.pointerEvents = 'none';
+            
+            // Trigger standard Side-Drawer slide-out
+            modal.classList.add('widget-hidden');
+            modal.style.opacity = '0';
+            overlay.style.opacity = '0';
+            overlay.style.visibility = 'hidden';
+
             setTimeout(() => {
-                modal.classList.add(CSS_CLASSES.HIDDEN);
                 modal.remove();
+                overlay.remove();
                 navManager.popStateSilently();
-            }, 450);
+            }, 300);
         };
 
-        modal.querySelector(`.${CSS_CLASSES.MODAL_CLOSE_BTN}`).addEventListener('click', close);
-        modal.querySelector(`.${CSS_CLASSES.MODAL_OVERLAY}`).addEventListener('click', close);
+        const titleBar = modal.querySelector('.widget-header');
+        if (titleBar) titleBar.addEventListener('click', close);
+
+        modal.querySelector('.widget-close-btn').addEventListener('click', close);
+        overlay.addEventListener('click', close);
 
         // Listen for state changes to re-render
         const onStateChange = () => instance.render();
@@ -134,7 +190,12 @@ export default class SuperStrategyUI {
             <div style="text-align: center; margin-top: 16px; color: var(--color-accent); font-size: 0.75rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;">
                 <i class="fas fa-calendar-day" style="margin-right: 6px;"></i>Financial Year ${fy - 1}/${String(fy).slice(-2)}
             </div>
+
+            <!-- GLOBAL MEMBER SUMMARY (Shown only when position is confirmed) -->
+            ${data.isPositionConfirmed ? this._renderCompactMemberSummary(data, calc) : ''}
+
             ${this._renderTabs()}
+            
             <div class="${CSS_CLASSES.SUPER_DETAIL_PANEL}" style="padding: 16px;">
                 ${this.activeTab === 'pipeline' ? this._renderPipelineTab(data, calc) : ''}
                 ${this.activeTab === 'simulation' ? this._renderSimulationTab(data, calc) : ''}
@@ -177,9 +238,11 @@ export default class SuperStrategyUI {
         // Section divider header — shared across the whole page
         const H = (t) => `<div style="font-size:0.62rem;font-weight:800;text-transform:uppercase;letter-spacing:2px;color:var(--text-muted);opacity:0.5;margin:20px 0 12px 2px;">${t}</div>`;
         
+        if (!data.isPositionConfirmed) {
+            return this._renderPositionSetupStep(data, calc);
+        }
+
         return `
-            ${this._renderBalanceHeader(data, calc, true)}
-            
             ${H('Strategy Execution Pipeline')}
             <div class="super-pipeline-layout" style="display: block; margin-top: 4px;">
                 <div class="super-pipeline-stepper-top" style="margin-bottom: 8px;">
@@ -190,15 +253,50 @@ export default class SuperStrategyUI {
                 </div>
             </div>
             
-            ${H('Timing Strategies')}
-            ${this._renderTimingStrategies(data, calc)}
             ${this._renderSafetyFloorBanner(data, calc)}
-            
-            ${H('EOFY Reminders')}
-            ${this._renderReminderStatus(calc)}
-            
-            ${H('Quick Access')}
-            ${this._renderQuickLinks(data)}
+        `;
+    }
+
+    _renderPositionSetupStep(data, calc) {
+        return `
+            <div style="padding: 10px 0;">
+                <div style="background: rgba(255,165,0,0.06); border: 1px solid rgba(255,165,0,0.15); padding: 18px; margin-bottom: 24px; border-radius: 0;">
+                    <div style="font-size: 0.65rem; color: #ffa500; font-weight: 850; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px;">Step 0: Foundation</div>
+                    <div style="font-size: 0.82rem; color: #fff; font-weight: 700; line-height: 1.4; opacity: 0.9;">
+                        Confirm your member position as of 1st July 2025 to initialize the strategy pipeline.
+                    </div>
+                </div>
+
+                ${this._renderBalanceHeader(data, calc, true)}
+
+                <button id="super-confirm-position-btn" 
+                        class="${CSS_CLASSES.PRIMARY_PILL_BTN}" 
+                        style="width: 100%; padding: 16px; font-weight: 950; font-size: 0.9rem; background: var(--color-accent); color: #000; border: none; border-radius: 0; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); margin-bottom: 40px;">
+                    Confirm Position & Start Strategy →
+                </button>
+            </div>
+        `;
+    }
+
+    _renderCompactMemberSummary(data, calc) {
+        return `
+            <div style="background: rgba(255,255,255,0.04); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.08); padding: 16px; margin: 12px 0 24px; border-radius: 0; display: flex; justify-content: space-between; align-items: center; box-shadow: var(--shadow-soft);">
+                <div style="display: flex; gap: 24px;">
+                    <div>
+                        <div style="font-size: 0.58rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase; letter-spacing: 1px; opacity: 0.6; margin-bottom: 4px;">Member Totals</div>
+                        <div style="font-size: 0.95rem; font-weight: 950; color: #fff;">${formatCurrency(calc.totalBalance)}</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.58rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase; letter-spacing: 1px; opacity: 0.6; margin-bottom: 4px;">Position Status</div>
+                        <div style="font-size: 0.72rem; font-weight: 800; color: var(--color-positive); display: flex; align-items: center; gap: 5px; margin-top: 3px;">
+                            <i class="fas fa-check-circle"></i> Foundation Active
+                        </div>
+                    </div>
+                </div>
+                <button id="super-edit-position-btn" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 6px 12px; font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; cursor: pointer;">
+                    Edit Profile
+                </button>
+            </div>
         `;
     }
 
@@ -572,27 +670,64 @@ export default class SuperStrategyUI {
 
             case SUPER_STATES.FINALISED:
                 return `
-                    <div id="${IDS.SUPER_STEP_DETAIL}" style="text-align: center; padding: 40px 24px; background: rgba(6,255,79,0.04); border-radius: 0; border: 1px solid rgba(6,255,79,0.1); margin: 12px 0 24px; box-shadow: var(--shadow-strong);">
-                        <div style="width: 72px; height: 72px; background: rgba(6,255,79,0.12); border-radius: 0; display: flex; align-items: center; justify-content: center; color: var(--color-positive); margin: 0 auto 24px;">
-                            <i class="fas fa-check-double" style="font-size: 2.22rem;"></i>
-                        </div>
-                        <h3 style="font-size: 1.4rem; font-weight: 950; color: #fff; margin-bottom: 12px; letter-spacing: -0.5px;">Strategy Finalized</h3>
+                    <div id="${IDS.SUPER_STEP_DETAIL}" style="padding: 0; background: transparent; border-radius: 0; margin: 0 0 24px;">
                         
-                        <div style="background: rgba(255,255,255,0.03); border-radius: 0; padding: 22px; border: 1px solid rgba(255,255,255,0.05); margin: 32px auto; display: inline-block; min-width: 260px;">
-                            <div style="font-size: 0.65rem; color: var(--color-accent); font-weight: 850; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 12px; opacity: 0.8;">Confirmed Transfer Amount</div>
-                            <div style="font-size: 2rem; font-weight: 950; color: var(--color-positive); line-height: 1;">${formatCurrency(calc.newPensionStart)}</div>
-                            <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700; margin-top: 12px; opacity: 0.6;">Commenced on ${stateData.commencementDate || 'the selected date'}</div>
+                        <!-- 1. The Hero Certificate -->
+                        <div style="text-align: center; padding: 40px 24px; background: rgba(6,255,79,0.06); border: 1px solid rgba(6,255,79,0.15); border-radius: 0; margin-bottom: 24px; box-shadow: var(--shadow-strong);">
+                            <div style="width: 80px; height: 80px; background: rgba(6,255,79,0.12); border-radius: 0; display: flex; align-items: center; justify-content: center; color: var(--color-positive); margin: 0 auto 28px;">
+                                <i class="fas fa-check-double" style="font-size: 2.5rem;"></i>
+                            </div>
+                            <h3 style="font-size: 1.4rem; font-weight: 950; color: #fff; margin-bottom: 8px; letter-spacing: -0.5px;">Strategy Finalized</h3>
+                            <div style="font-size: 0.72rem; color: var(--color-positive); font-weight: 800; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 32px; opacity: 0.8;">Tactical Execution Complete</div>
+                            
+                            <div style="background: rgba(255,255,255,0.03); border-radius: 0; padding: 24px; border: 1px solid rgba(255,255,255,0.05); margin: 0 auto; display: inline-block; min-width: 280px;">
+                                <div style="font-size: 0.65rem; color: var(--color-accent); font-weight: 850; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 12px; opacity: 0.8;">New Pension Restart Value</div>
+                                <div style="font-size: 2.2rem; font-weight: 950; color: var(--color-positive); line-height: 1;">${formatCurrency(calc.newPensionStart)}</div>
+                                <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700; margin-top: 14px; opacity: 0.8;">Commenced on ${stateData.commencementDate ? new Date(stateData.commencementDate).toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Confirmed Date'}</div>
+                            </div>
                         </div>
 
-                        <p style="font-size: 0.88rem; color: var(--text-muted); line-height: 1.6; max-width: 320px; margin: 0 auto 28px; font-weight: 500; opacity: 0.9;">
-                            Your pension restart has been successfully modeled and recorded for your Brighter Super accounts.
-                        </p>
+                        <!-- 2. Strategic Impact Cards -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px;">
+                            <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); padding: 18px; border-radius: 0;">
+                                <div style="font-size: 0.62rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; opacity: 0.6;">Tax-Free Uplift</div>
+                                <div style="font-size: 1.15rem; font-weight: 900; color: #fff;">${formatCurrency(stateData.recontributionAmount || 0)}</div>
+                                <div style="font-size: 0.65rem; color: var(--color-positive); font-weight: 700; margin-top: 6px;">
+                                    <i class="fas fa-arrow-trend-up" style="margin-right: 4px;"></i> Component Refresh
+                                </div>
+                            </div>
+                            <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); padding: 18px; border-radius: 0;">
+                                <div style="font-size: 0.62rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; opacity: 0.6;">Timing Mastery</div>
+                                <div style="font-size: 1.15rem; font-weight: 900; color: #fff;">
+                                    ${(new Date(stateData.commencementDate).getMonth() === 5) ? 'Bypass' : 'Pro-Rata'}
+                                </div>
+                                <div style="font-size: 0.65rem; color: ${(new Date(stateData.commencementDate).getMonth() === 5) ? 'var(--color-positive)' : 'var(--color-warning)'}; font-weight: 700; margin-top: 6px;">
+                                    <i class="fas ${(new Date(stateData.commencementDate).getMonth() === 5) ? 'fa-shield-check' : 'fa-calendar-check'}" style="margin-right: 4px;"></i>
+                                    ${(new Date(stateData.commencementDate).getMonth() === 5) ? 'Zero Minimum Rule' : 'Standard Payment'}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 3. Post-Implementation Checklist -->
+                        <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 22px; border-radius: 0; margin-bottom: 32px;">
+                            <div style="font-size: 0.72rem; color: var(--color-accent); font-weight: 900; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 16px;">Next Phase: Administration</div>
+                            <div style="display: flex; flex-direction: column; gap: 14px;">
+                                <div style="display: flex; align-items: flex-start; gap: 12px; font-size: 0.8rem; color: rgba(255,255,255,0.8); line-height: 1.4; font-weight: 500;">
+                                    <i class="fas fa-file-invoice-dollar" style="color: var(--color-accent); margin-top: 3px;"></i>
+                                    Confirm the final Notice of Intent has been processed by Brighter Super before the upcoming audit.
+                                </div>
+                                <div style="display: flex; align-items: flex-start; gap: 12px; font-size: 0.8rem; color: rgba(255,255,255,0.8); line-height: 1.4; font-weight: 500;">
+                                    <i class="fas fa-calendar-check" style="color: var(--color-accent); margin-top: 3px;"></i>
+                                    Ensure the automated pension payments in your bank account match the new ${formatCurrency(calc.minDrawdownAmount)} minimum for next year.
+                                </div>
+                            </div>
+                        </div>
                         
-                         <button id="super-final-reset-btn" class="${CSS_CLASSES.PRIMARY_PILL_BTN}" style="width: 100%; border-radius: 0; padding: 14px; font-weight: 800; font-size: 0.85rem; background: var(--color-accent); color: #000; border: none; cursor: pointer; margin-bottom: 12px;">
-                            Restart New Pipeline
+                         <button id="super-final-reset-btn" class="${CSS_CLASSES.PRIMARY_PILL_BTN}" style="width: 100%; border-radius: 0; padding: 16px; font-weight: 950; font-size: 0.9rem; background: var(--color-accent); color: #000; border: none; cursor: pointer; margin-bottom: 14px; text-transform: uppercase; letter-spacing: 1px;">
+                            Archive & Restart Pipeline
                         </button>
                         <button id="super-back-btn" style="width: 100%; padding: 12px; border-radius: 0; background: rgba(255,255,255,0.05); color: var(--text-muted); border: 1px solid rgba(255,255,255,0.1); cursor: pointer; font-weight: 600; font-size: 0.8rem; transition: all 0.2s;">
-                            <i class="fas fa-arrow-left" style="margin-right: 8px; font-size: 0.75rem;"></i>Back to Commencement
+                            <i class="fas fa-arrow-left" style="margin-right: 8px; font-size: 0.75rem;"></i>Adjust Strategy Details
                         </button>
                     </div>
                 `;
@@ -1056,8 +1191,6 @@ export default class SuperStrategyUI {
         const fy = calc.financialYear;
         const H = (t) => `<div style="font-size:0.62rem;font-weight:800;text-transform:uppercase;letter-spacing:2px;color:var(--text-muted);opacity:0.5;margin:20px 0 12px 2px;">${t}</div>`;
         return `
-            ${this._renderBalanceHeader(data, calc, false)}
-
             ${H('What-If Simulator')}
             <div style="font-size: 0.6rem; color: var(--color-accent); font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; margin: -8px 0 16px 2px; opacity: 0.8;">
                 <i class="fas fa-microchip" style="margin-right: 4px;"></i>
@@ -1257,7 +1390,14 @@ export default class SuperStrategyUI {
         `).join('');
 
         return `
-            ${this._renderBalanceHeader(data, calc, false)}
+            ${H('Timing Strategies')}
+            ${this._renderTimingStrategies(data, calc)}
+            
+            ${H('EOFY Reminders')}
+            ${this._renderReminderStatus(calc)}
+            
+            ${H('Quick Access')}
+            ${this._renderQuickLinks(data)}
 
             ${H(`ATO Statutory Limits (FY ${fy - 1}/${String(fy).slice(-2)})`)}
             <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:10px; margin-bottom: 24px;">
@@ -1562,6 +1702,24 @@ export default class SuperStrategyUI {
             });
         });
 
+        // Foundation Gate: Confirm / Edit
+        const confirmBtn = this.container.querySelector('#super-confirm-position-btn');
+        if (confirmBtn) {
+            confirmBtn.addEventListener('click', () => {
+                superStrategyStore.confirmPosition();
+                this.render();
+            });
+        }
+
+        const editBtn = this.container.querySelector('#super-edit-position-btn');
+        if (editBtn) {
+            editBtn.addEventListener('click', () => {
+                this.activeTab = 'pipeline';
+                superStrategyStore.resetPosition();
+                this.render();
+            });
+        }
+
         // --- INPUT ENHANCEMENTS: Auto-clear zeros on focus ---
         const autoClearInputs = this.container.querySelectorAll('input[type="number"]');
         autoClearInputs.forEach(input => {
@@ -1591,6 +1749,18 @@ export default class SuperStrategyUI {
         if (bfUsedEl) bfUsedEl.addEventListener('change', (e) => {
             superStrategyStore.setBringForwardUsedAmount(e.target.value);
             this.render(); // Re-render to update eligibility display
+        });
+
+        // Balance Inputs (Accumulation / Pension)
+        const accEl = this.container.querySelector(`#${IDS.SUPER_ACCUMULATION_INPUT}`);
+        const penEl = this.container.querySelector(`#${IDS.SUPER_PENSION_INPUT}`);
+        if (accEl) accEl.addEventListener('change', (e) => {
+            superStrategyStore.setAccumulationBalance(parseFloat(e.target.value) || 0);
+            this.render();
+        });
+        if (penEl) penEl.addEventListener('change', (e) => {
+            superStrategyStore.setPensionBalance(parseFloat(e.target.value) || 0);
+            this.render();
         });
 
         switch (current) {

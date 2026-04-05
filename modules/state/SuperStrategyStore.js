@@ -113,7 +113,10 @@ function getDefaultData() {
 
         // Timestamps
         lastUpdated: null,
-        createdAt: null
+        createdAt: null,
+        
+        // UX State
+        isPositionConfirmed: false
     };
 }
 
@@ -693,6 +696,24 @@ class SuperStrategyStore {
             new Date(sd.closureDate)
         );
         sd.proRataPayout = result.amount;
+    }
+
+    /**
+     * Confirms the member position and transitions to the strategy pipeline.
+     */
+    confirmPosition() {
+        this.data.isPositionConfirmed = true;
+        this._save();
+        this._dispatch(EVENTS.SUPER_STATE_CHANGED);
+    }
+
+    /**
+     * Unlocks the member position for editing.
+     */
+    resetPosition() {
+        this.data.isPositionConfirmed = false;
+        this._save();
+        this._dispatch(EVENTS.SUPER_STATE_CHANGED);
     }
 
     _save() {
