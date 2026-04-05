@@ -191,10 +191,10 @@ export default class SuperStrategyUI {
                 <i class="fas fa-calendar-day" style="margin-right: 6px;"></i>Financial Year ${fy - 1}/${String(fy).slice(-2)}
             </div>
 
-            <!-- GLOBAL MEMBER SUMMARY (Shown only when position is confirmed) -->
-            ${data.isPositionConfirmed ? this._renderCompactMemberSummary(data, calc) : ''}
-
             ${this._renderTabs()}
+
+            <!-- MEMBER SUMMARY BAR (Only shown in Strategy tab for editing focus) -->
+            ${(this.activeTab === 'pipeline' && data.isPositionConfirmed) ? this._renderCompactMemberSummary(data, calc) : ''}
             
             <div class="${CSS_CLASSES.SUPER_DETAIL_PANEL}" style="padding: 16px;">
                 ${this.activeTab === 'pipeline' ? this._renderPipelineTab(data, calc) : ''}
@@ -279,23 +279,38 @@ export default class SuperStrategyUI {
     }
 
     _renderCompactMemberSummary(data, calc) {
+        const eligibility = calc.recontributionEligibility;
+        const nccStatus = eligibility?.eligible ? 'Available' : 'Cap Used';
+        const nccColor = eligibility?.eligible ? 'var(--color-positive)' : 'var(--color-warning)';
+        
+        const L = (t) => `<div style="font-size: 0.52rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.6; margin-bottom: 2px;">${t}</div>`;
+        const V = (v, c='#fff') => `<div style="font-size: 0.78rem; font-weight: 900; color: ${c};">${v}</div>`;
+
         return `
-            <div style="background: rgba(255,255,255,0.04); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.08); padding: 16px; margin: 12px 0 24px; border-radius: 0; display: flex; justify-content: space-between; align-items: center; box-shadow: var(--shadow-soft);">
-                <div style="display: flex; gap: 24px;">
+            <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); padding: 12px 14px; margin: 0 16px 20px; border-radius: 0;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px 24px;">
                     <div>
-                        <div style="font-size: 0.58rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase; letter-spacing: 1px; opacity: 0.6; margin-bottom: 4px;">Member Totals</div>
-                        <div style="font-size: 0.95rem; font-weight: 950; color: #fff;">${formatCurrency(calc.totalBalance)}</div>
+                        ${L('Accumulation')}
+                        ${V(formatCurrency(data.accumulationBalance))}
                     </div>
                     <div>
-                        <div style="font-size: 0.58rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase; letter-spacing: 1px; opacity: 0.6; margin-bottom: 4px;">Position Status</div>
-                        <div style="font-size: 0.72rem; font-weight: 800; color: var(--color-positive); display: flex; align-items: center; gap: 5px; margin-top: 3px;">
-                            <i class="fas fa-check-circle"></i> Foundation Active
+                        ${L('Pension')}
+                        ${V(formatCurrency(data.pensionBalance))}
+                    </div>
+                    <div>
+                        <div style="display: flex; justify-content: space-between; align-items: flex-end;">
+                            ${L('Member Total')}
+                            <span id="super-edit-position-btn" style="font-size: 0.52rem; color: var(--color-accent); font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer; opacity: 0.6; transition: opacity 0.2s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.6;">
+                                <i class="fas fa-pen" style="margin-right: 3px; font-size: 0.5rem;"></i>Edit
+                            </span>
                         </div>
+                        ${V(formatCurrency(calc.totalBalance), 'var(--color-accent)')}
+                    </div>
+                    <div>
+                        ${L('NCC Status')}
+                        ${V(nccStatus, nccColor)}
                     </div>
                 </div>
-                <button id="super-edit-position-btn" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 6px 12px; font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; cursor: pointer;">
-                    Edit Profile
-                </button>
             </div>
         `;
     }
