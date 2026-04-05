@@ -258,12 +258,13 @@ export default class SuperStrategyUI {
     }
 
     _renderPositionSetupStep(data, calc) {
+        const fy = calc.financialYear;
         return `
             <div style="padding: 10px 0;">
                 <div style="background: rgba(255,165,0,0.06); border: 1px solid rgba(255,165,0,0.15); padding: 18px; margin-bottom: 24px; border-radius: 0;">
                     <div style="font-size: 0.65rem; color: #ffa500; font-weight: 850; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px;">Step 0: Foundation</div>
                     <div style="font-size: 0.82rem; color: #fff; font-weight: 700; line-height: 1.4; opacity: 0.9;">
-                        Confirm your member position as of 1st July 2025 to initialize the strategy pipeline.
+                        Confirm your member position as of 1st July ${fy - 1} to initialize the strategy pipeline.
                     </div>
                 </div>
 
@@ -395,7 +396,7 @@ export default class SuperStrategyUI {
                 <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(130px, 1fr));gap:10px;margin-bottom:10px;">
                     <div style="${CARD}">
                         <div style="${SL} margin-bottom: 2px;">BF Started FY Ending</div>
-                        <div style="${SL} opacity: 0.35; margin-bottom: 8px;">e.g. 2025</div>
+                        <div style="${SL} opacity: 0.35; margin-bottom: 8px;">e.g. ${fy - 1}</div>
                         <input type="number" id="${IDS.SUPER_BRING_FORWARD_FY}"
                                value="${data.bringForwardTriggeredFY || ''}" placeholder="None" min="2000" max="2099"
                                ${!isEditable ? 'readonly style="pointer-events:none; opacity:0.8;"' : ''}
@@ -468,6 +469,7 @@ export default class SuperStrategyUI {
         const desc = superStrategyStore.getStateDescription(current);
         const validation = superStrategyStore.validateCurrentState();
         const calc = superStrategyStore.getCalculatedValues();
+        const fy = getCurrentFinancialYear();
 
         let fieldsHtml = '';
 
@@ -719,20 +721,7 @@ export default class SuperStrategyUI {
                             </div>
                         </div>
 
-                        <!-- 3. Post-Implementation Checklist -->
-                        <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 22px; border-radius: 0; margin-bottom: 32px;">
-                            <div style="font-size: 0.72rem; color: var(--color-accent); font-weight: 900; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 16px;">Next Phase: Administration</div>
-                            <div style="display: flex; flex-direction: column; gap: 14px;">
-                                <div style="display: flex; align-items: flex-start; gap: 12px; font-size: 0.8rem; color: rgba(255,255,255,0.8); line-height: 1.4; font-weight: 500;">
-                                    <i class="fas fa-file-invoice-dollar" style="color: var(--color-accent); margin-top: 3px;"></i>
-                                    Confirm the final Notice of Intent has been processed by Brighter Super before the upcoming audit.
-                                </div>
-                                <div style="display: flex; align-items: flex-start; gap: 12px; font-size: 0.8rem; color: rgba(255,255,255,0.8); line-height: 1.4; font-weight: 500;">
-                                    <i class="fas fa-calendar-check" style="color: var(--color-accent); margin-top: 3px;"></i>
-                                    Ensure the automated pension payments in your bank account match the new ${formatCurrency(calc.minDrawdownAmount)} minimum for next year.
-                                </div>
-                            </div>
-                        </div>
+
                         
                          <button id="super-final-reset-btn" class="${CSS_CLASSES.PRIMARY_PILL_BTN}" style="width: 100%; border-radius: 0; padding: 16px; font-weight: 950; font-size: 0.9rem; background: var(--color-accent); color: #000; border: none; cursor: pointer; margin-bottom: 14px; text-transform: uppercase; letter-spacing: 1px;">
                             Archive & Restart Pipeline
@@ -792,7 +781,7 @@ export default class SuperStrategyUI {
 
                     <!-- 3. Consolidated Strategy Command -->
                     <div style="margin-bottom: 28px; padding: 22px; background: rgba(var(--accent-rgb, 120, 100, 255), 0.12); border-radius: 0; border: 1px solid rgba(var(--accent-rgb, 120, 100, 255), 0.25); box-shadow: 0 8px 32px rgba(0,0,0,0.3); overflow: hidden;">
-                        <div style="font-size: 0.65rem; color: var(--color-accent); font-weight: 950; text-transform: uppercase; letter-spacing: 2.5px; margin-bottom: 20px;">FY 2025/26 Consolidation Command</div>
+                    <div style="font-size: 0.65rem; color: var(--color-accent); font-weight: 950; text-transform: uppercase; letter-spacing: 2.5px; margin-bottom: 20px;">FY ${fy - 1}/${String(fy).slice(-2)} Consolidation Command</div>
                         
                         <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.03);">
                             <span style="font-size: 0.62rem; color: rgba(255,255,255,0.6); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Current Acc. Balance</span>
@@ -829,7 +818,7 @@ export default class SuperStrategyUI {
                         ${calc.excessTBC > 0 ? `
                         <div style="margin-top: 15px; padding: 14px; background: rgba(255,165,0,0.1); border: 1px solid rgba(255,165,0,0.22); border-radius: 0; text-align: left;">
                             <div style="font-size: 0.65rem; color: #ffa500; font-weight: 950; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;">
-                                <i class="fas fa-exclamation-triangle"></i> TBC Overlap Detected ($2.0M Cap)
+                                <i class="fas fa-exclamation-triangle"></i> TBC Overlap Detected (${formatCurrency(calc.contributionCaps.tbc).replace(',000,000', '.0')}M Cap)
                             </div>
                             <div style="font-size: 0.75rem; color: #fff; line-height: 1.4; font-weight: 700; margin-bottom: 4px;">
                                 Your restart exceeds the Transfer Balance Cap (TBC).
@@ -869,85 +858,13 @@ export default class SuperStrategyUI {
                             <i class="fas ${eligibility.eligible ? 'fa-check-circle' : 'fa-times-circle'}" style="font-size: 1.6rem;"></i>
                         </div>
                         <div style="flex: 1;">
-                            <div style="font-size: 0.65rem; color: ${eligibility.eligible ? 'var(--color-positive)' : '#ff3b30'}; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 4px;">FY 2025/26 Contrib. Eligibility</div>
+                            <div style="font-size: 0.65rem; color: ${eligibility.eligible ? 'var(--color-positive)' : '#ff3b30'}; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 4px;">FY ${fy - 1}/${String(fy).slice(-2)} Contrib. Eligibility</div>
                             <div style="font-size: 0.85rem; font-weight: 900; color: #fff; line-height: 1.2; margin-bottom: 4px;">
-                                ${eligibility.eligible ? `Eligible: ${formatCurrency(eligibility.maxAmount)}` : `Cap Used (Available FY 2027/28)`}
+                                ${eligibility.eligible ? `Eligible: ${formatCurrency(eligibility.maxAmount)}` : `Cap Used (Available FY ${fy + 1}/${String(fy + 2).slice(-2)})`}
                             </div>
                             <div style="font-size: 0.68rem; color: var(--text-muted); line-height: 1.3; opacity: 0.8; font-weight: 500;">
                                 ${eligibility.reason}
                             </div>
-                        </div>
-                    </div>
-
-                    <!-- Account Gateways -->
-                    <div style="margin-bottom: 28px;">
-                        <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; opacity: 0.7; margin-bottom: 12px;">Fund Thresholds (PDS 2025/26)</div>
-                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 12px;">
-                            <div style="background: rgba(255,255,255,0.03); border-radius: 0; border-left: 4px solid var(--color-accent); padding: 16px;">
-                                <div style="font-size: 0.65rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase; margin-bottom: 6px; opacity: 0.6;">Accumulation Min (2026)</div>
-                                <div style="font-size: 1.1rem; font-weight: 950; color: #fff;">${formatCurrency(SUPER_THRESHOLDS.minAccumulationBalance)}</div>
-                            </div>
-                            <div style="background: rgba(255,255,255,0.03); border-radius: 0; border-left: 4px solid var(--color-accent); padding: 16px;">
-                                <div style="font-size: 0.65rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase; margin-bottom: 6px; opacity: 0.6;">Pension Min</div>
-                                <div style="font-size: 1.1rem; font-weight: 950; color: #fff;">${formatCurrency(SUPER_THRESHOLDS.minPensionRestart)}</div>
-                            </div>
-                        </div>
-                        </div>
-                    </div>
-
-                    <!-- Pension Restart Model -->
-                    <div style="margin-bottom: 28px;">
-                        <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; opacity: 0.7; margin-bottom: 12px;">Strategic Continuity</div>
-                        <div style="font-size: 0.78rem; color: var(--text-muted); line-height: 1.5; font-weight: 600; background: rgba(255,255,255,0.02); padding: 16px; border-radius: 0; border: 1px solid rgba(255,255,255,0.03);">
-                            Brighter Super utilizes a <strong>Restart</strong> process (not simple closure):
-                            <ul style="padding-left: 20px; margin: 10px 0 0 0; opacity: 0.8; font-weight: 500;">
-                                <li style="margin-bottom: 4px;">Existing pension is closed (pro-rata).</li>
-                                <li style="margin-bottom: 4px;">Funds combine in accumulation.</li>
-                                <li style="margin-bottom: 4px;"><strong>New pension</strong> starts with full balance.</li>
-                                <li>Drawdowns reset based on the consolidated restart.</li>
-                            </ul>
-                        </div>
-                    </div>
-
-                    <!-- NCC Multi-Year Caps -->
-                    <div style="margin-bottom: 28px;">
-                        <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; opacity: 0.7; margin-bottom: 12px;">NCC Contribution Caps</div>
-                        <div style="background: rgba(255,255,255,0.02); border-radius: 0; border: 1px solid rgba(255,255,255,0.03); overflow: hidden;">
-                            <table style="width: 100%; border-collapse: collapse; font-size: 0.72rem; color: var(--text-muted);">
-                                <thead>
-                                    <tr style="background: rgba(255,255,255,0.03);">
-                                        <th style="padding: 10px 16px; text-align: left; font-weight: 800; text-transform: uppercase; opacity: 0.6;">FY</th>
-                                        <th style="padding: 10px 16px; text-align: right; font-weight: 800; text-transform: uppercase; opacity: 0.6;">Standard</th>
-                                        <th style="padding: 10px 16px; text-align: right; font-weight: 800; text-transform: uppercase; opacity: 0.6;">B-Forward</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
-                                        <td style="padding: 10px 16px; font-weight: 700; color: #fff;">23-24</td>
-                                        <td style="padding: 10px 16px; text-align: right; font-weight: 600;">$110,000</td>
-                                        <td style="padding: 10px 16px; text-align: right; font-weight: 800; color: var(--color-accent);">$330,000</td>
-                                    </tr>
-                                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
-                                        <td style="padding: 10px 16px; font-weight: 700; color: #fff;">24-25</td>
-                                        <td style="padding: 10px 16px; text-align: right; font-weight: 600;">$120,000</td>
-                                        <td style="padding: 10px 16px; text-align: right; font-weight: 800; color: var(--color-accent);">$360,000</td>
-                                    </tr>
-                                    <tr>
-                                        <td style="padding: 10px 16px; font-weight: 700; color: #fff;">25-26*</td>
-                                        <td style="padding: 10px 16px; text-align: right; font-weight: 600;">$120,000</td>
-                                        <td style="padding: 10px 16px; text-align: right; font-weight: 800; color: var(--color-accent);">$360,000</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                        <div style="font-size: 0.65rem; color: var(--text-muted); margin-top: 8px; font-style: italic; opacity: 0.5;">*Indexation estimated. TSB limits ($1.9M) apply.</div>
-                    </div>
-
-                    <!-- Transfer Balance Cap Tile -->
-                    <div style="margin-bottom: 24px; padding: 18px; background: rgba(255,255,255,0.03); border-radius: 0; border: 1px solid rgba(255,255,255,0.05);">
-                        <div style="color: var(--color-accent); font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; opacity: 0.9;">Transfer Balance Cap</div>
-                        <div style="font-size: 0.78rem; color: var(--text-muted); line-height: 1.5; font-weight: 600; opacity: 0.85;">
-                            The maximum lifetime limit ($1.9M) you can transfer into tax-free pensions. Each restart counts the full amount against this total limit.
                         </div>
                     </div>
 
@@ -987,7 +904,7 @@ export default class SuperStrategyUI {
                                 <i class="fas fa-exclamation-triangle"></i> Strategic Alert: May Commencement
                             </div>
                             <div style="font-size: 0.72rem; color: #fff; line-height: 1.4; font-weight: 600;">
-                                Starting in May requires a mandatory pro-rata payment before June 30, 2026. If you have any doubt, delay your restart until June 1st to skip this payment.
+                                Starting in May requires a mandatory pro-rata payment before June 30, ${fy}. If you have any doubt, delay your restart until June 1st to skip this payment.
                             </div>
                         </div>
                     ` : ''}
@@ -1286,7 +1203,7 @@ export default class SuperStrategyUI {
                         <i class="fas fa-exclamation-triangle"></i> Strategic Warning: Late-Year Commencement
                     </div>
                     <div style="font-size: 0.72rem; color: #fff; line-height: 1.4; font-weight: 600;">
-                        Pushing your closure to <strong>May 31st</strong> and restarting on <strong>June 1st</strong> allows you to bypass mandatory pro-rata payments for this year and delay your first payment until FY ${fy}/${String(fy + 1).slice(-2)}.
+                        Pushing your closure to <strong>May 31st</strong> and restarting on <strong>June 1st</strong> allows you to bypass mandatory pro-rata payments for this year and delay your first payment until FY ${results.financialYear}/${String(results.financialYear + 1).slice(-2)}.
                     </div>
                 </div>
                 ` : ''}
@@ -1430,8 +1347,48 @@ export default class SuperStrategyUI {
                 <div style="background: rgba(255,255,255,0.03); border-radius: 0; padding: 14px; border-top: 2px solid #ffa500;">
                     <div style="font-size: 0.6rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase;">Transfer Cap</div>
                     <div style="font-size: 1.1rem; font-weight: 950; color: #fff;">${formatCurrency(Math.floor(calc.contributionCaps.tbc / 100000) / 10).replace('0,000,000', '')}M</div>
-                    <div style="font-size: 0.52rem; color: var(--text-muted); margin-top: 4px;">Pension Entry Limit</div>
+                    <div style="font-size: 0.52rem; color: var(--text-muted); margin-top: 4px;">Pension Entry Limit (TBC)</div>
                 </div>
+            </div>
+
+            <div style="margin-bottom: 28px; padding: 18px; background: rgba(255,255,255,0.03); border-radius: 0; border: 1px solid rgba(255,255,255,0.05); margin-top: -14px;">
+                <div style="font-size: 0.78rem; color: var(--text-muted); line-height: 1.5; font-weight: 600; opacity: 0.85;">
+                    The <strong>Transfer Balance Cap (TBC)</strong> is the maximum lifetime limit you can transfer into tax-free pensions. Each restart counts the full amount against this total limit. Current Cap: <strong style="color:#fff;">${formatCurrency(calc.contributionCaps.tbc)}</strong>.
+                </div>
+            </div>
+
+            <!-- NCC Multi-Year Table Transferred from Pipeline -->
+            <div style="margin-bottom: 32px;">
+                <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; opacity: 0.7; margin-bottom: 12px;">NCC Historical & Modeled Caps</div>
+                <div style="background: rgba(255,255,255,0.02); border-radius: 0; border: 1px solid rgba(255,255,255,0.03); overflow: hidden;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 0.72rem; color: var(--text-muted);">
+                        <thead>
+                            <tr style="background: rgba(255,255,255,0.03);">
+                                <th style="padding: 10px 16px; text-align: left; font-weight: 800; text-transform: uppercase; opacity: 0.6;">FY</th>
+                                <th style="padding: 10px 16px; text-align: right; font-weight: 800; text-transform: uppercase; opacity: 0.6;">Standard</th>
+                                <th style="padding: 10px 16px; text-align: right; font-weight: 800; text-transform: uppercase; opacity: 0.6;">B-Forward</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                                <td style="padding: 10px 16px; font-weight: 700; color: #fff;">23-24</td>
+                                <td style="padding: 10px 16px; text-align: right; font-weight: 600;">$110,000</td>
+                                <td style="padding: 10px 16px; text-align: right; font-weight: 800; color: var(--color-accent);">$330,000</td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                                <td style="padding: 10px 16px; font-weight: 700; color: #fff;">24-25</td>
+                                <td style="padding: 10px 16px; text-align: right; font-weight: 600;">$120,000</td>
+                                <td style="padding: 10px 16px; text-align: right; font-weight: 800; color: var(--color-accent);">$360,000</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 10px 16px; font-weight: 700; color: #fff;">25-26*</td>
+                                <td style="padding: 10px 16px; text-align: right; font-weight: 600;">$120,000</td>
+                                <td style="padding: 10px 16px; text-align: right; font-weight: 800; color: var(--color-accent);">$360,000</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div style="font-size: 0.65rem; color: var(--text-muted); margin-top: 8px; font-style: italic; opacity: 0.5;">*Indexation estimated. TSB limits ($1.9M) apply.</div>
             </div>
 
             ${H('Brighter Super Rules & Protection')}
@@ -1451,12 +1408,35 @@ export default class SuperStrategyUI {
 
             <!-- Strategic Principles Reinstated -->
             <div style="margin-bottom: 32px;">
+            <!-- Strategic Principles Detailed Transferred from Pipeline -->
+            <div style="margin-bottom: 32px;">
                 ${H('Strategic Execution Principles')}
 
                 <div style="background: rgba(255,255,255,0.02); border-radius: 0; padding: 18px; margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.04);">
-                    <div style="font-size: 0.7rem; color: #fff; font-weight: 900; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; opacity: 0.9;">Pension Restart Methodology</div>
+                    <div style="font-size: 0.7rem; color: #fff; font-weight: 900; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; opacity: 0.9;">Strategic Continuity (Restart Methodology)</div>
                     <div style="font-size: 0.78rem; color: var(--text-muted); line-height: 1.6; font-weight: 600;">
-                        Unlike a simple top-up, your existing pension account must be <strong style="color: #fff;">commuted</strong> (closed pro-rata) before being combined with accumulation funds and restarted as a single, higher-balance pension.
+                        Brighter Super utilizes a <strong>Restart</strong> process (not simple closure). Your existing pension account must be <strong style="color: #fff;">commuted</strong> (closed pro-rata) before being combined with accumulation funds and restarted as a single, higher-balance pension.
+                         <ul style="padding-left: 20px; margin: 10px 0 0 0; opacity: 0.8; font-weight: 500;">
+                            <li style="margin-bottom: 4px;">Existing pension is closed (pro-rata payout).</li>
+                            <li style="margin-bottom: 4px;">Funds and new contributions consolidate in accumulation.</li>
+                            <li style="margin-bottom: 4px;"><strong>New pension</strong> starts with the consolidated balance.</li>
+                            <li>Minimum drawdowns reset based on the date of restart.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Fund Specific Thresholds Transferred from Pipeline -->
+                <div style="background: rgba(var(--accent-rgb, 120, 100, 255), 0.05); border-radius: 0; border: 1px solid rgba(var(--accent-rgb, 120, 100, 255), 0.15); padding: 18px; margin-bottom: 24px;">
+                     <div style="font-size: 0.7rem; color: #fff; font-weight: 900; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 12px; opacity: 0.9;">Fund Thresholds (PDS FY ${fy - 1}/${String(fy).slice(-2)})</div>
+                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px;">
+                        <div style="background: rgba(255,255,255,0.03); border-radius: 0; border-left: 4px solid var(--color-accent); padding: 16px;">
+                            <div style="font-size: 0.65rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase; margin-bottom: 6px; opacity: 0.6;">Accumulation Min (${fy})</div>
+                            <div style="font-size: 1.1rem; font-weight: 950; color: #fff;">${formatCurrency(SUPER_THRESHOLDS.minAccumulationBalance)}</div>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.03); border-radius: 0; border-left: 4px solid var(--color-accent); padding: 16px;">
+                            <div style="font-size: 0.65rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase; margin-bottom: 6px; opacity: 0.6;">Pension Min</div>
+                            <div style="font-size: 1.1rem; font-weight: 950; color: #fff;">${formatCurrency(SUPER_THRESHOLDS.minPensionRestart)}</div>
+                        </div>
                     </div>
                 </div>
 

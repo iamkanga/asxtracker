@@ -31,14 +31,23 @@ export const DRAWDOWN_TABLE = Object.freeze([
 export const CONTRIBUTION_CAPS = Object.freeze({
     2024: { concessional: 27500, nonConcessional: 110000, tbc: 1900000 },
     2025: { concessional: 30000, nonConcessional: 120000, tbc: 1900000 },
-    2026: { concessional: 30000, nonConcessional: 120000, tbc: 2000000 }
+    2026: { concessional: 30000, nonConcessional: 120000, tbc: 2000000 },
+    2027: { concessional: 32500, nonConcessional: 130000, tbc: 2100000 }
 });
 
 export function getCapData(financialYearEnding) {
     const caps = CONTRIBUTION_CAPS[financialYearEnding];
     if (caps) return caps;
-    const years = Object.keys(CONTRIBUTION_CAPS).map(Number).sort((a, b) => b - a);
-    return CONTRIBUTION_CAPS[years[0]] || { concessional: 30000, nonConcessional: 120000, tbc: 2000000 };
+    
+    // Default to the latest available caps if year is future-dated
+    const availableYears = Object.keys(CONTRIBUTION_CAPS).map(Number).sort((a, b) => b - a);
+    const latestYear = availableYears[0];
+    
+    if (financialYearEnding > latestYear) {
+        return CONTRIBUTION_CAPS[latestYear];
+    }
+    
+    return CONTRIBUTION_CAPS[latestYear] || { concessional: 32500, nonConcessional: 130000, tbc: 2100000 };
 }
 
 // ─────────────────────────────────────────────

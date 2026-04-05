@@ -550,15 +550,6 @@ class SuperStrategyStore {
     /**
      * Gets re-contribution eligibility based on current member data.
      */
-    getRecontributionEligibility() {
-        const fy = getCurrentFinancialYear();
-        return checkRecontributionEligibility(
-            this.getTotalBalance(),
-            fy,
-            this.data.bringForwardTriggeredFY,
-            this.data.bringForwardUsedAmount || 0
-        );
-    }
 
     /**
      * Sets the FY when bring-forward was last triggered.
