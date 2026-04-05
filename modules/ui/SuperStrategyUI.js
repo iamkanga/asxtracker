@@ -600,7 +600,7 @@ export default class SuperStrategyUI {
                                     <i class="fas fa-exclamation-triangle"></i> Strategic Alert: Timing Trap
                                 </div>
                                 <div style="font-size: 0.72rem; color: #fff; line-height: 1.4; font-weight: 600;">
-                                    Closing late in May? Pushing your closure to <strong>May 31st</strong> and restarting on <strong>June 1st</strong> allows you to avoid mandatory drawdowns while keeping your funds tax-free for the maximum possible time.
+                                    Pushing your closure to <strong>May 31st</strong> and restarting on <strong>June 1st</strong> allows you to avoid mandatory drawdowns while keeping your funds tax-free for the maximum possible time.
                                 </div>
                             </div>
                         ` : ''}
@@ -1290,7 +1290,7 @@ export default class SuperStrategyUI {
                         <i class="fas fa-exclamation-triangle"></i> Strategic Warning: Late-Year Commencement
                     </div>
                     <div style="font-size: 0.72rem; color: #fff; line-height: 1.4; font-weight: 600;">
-                        Starting on May ${new Date(results.implementationDate).getDate()} requires a pro-rata payment by June 30, 2026. Delaying to June 1 makes your first payment due in FY 2026/27.
+                        Pushing your closure to <strong>May 31st</strong> and restarting on <strong>June 1st</strong> allows you to bypass mandatory pro-rata payments for this year and delay your first payment until FY ${fy}/${String(fy + 1).slice(-2)}.
                     </div>
                 </div>
                 ` : ''}
