@@ -367,7 +367,7 @@ export default class SuperStrategyUI {
                                value="${stateData.amount || ''}" placeholder="0.00" step="0.01"
                                style="border-radius:0;padding:11px;font-weight:700;outline:none;">
                     </div>
-                    <div class="${CSS_CLASSES.FORM_GROUP}" style="margin-bottom:14px;" onclick="const inp = this.querySelector('input'); if(inp) { try { inp.showPicker(); } catch (e) { inp.click(); } }">
+                    <div class="${CSS_CLASSES.FORM_GROUP}" style="margin-bottom:14px;" onclick="const inp = this.querySelector('input'); if(inp && document.activeElement !== inp) { try { inp.showPicker(); } catch (e) { inp.click(); } }">
                         <label style="font-size:0.62rem;color:var(--text-muted);font-weight:800;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;display:block;opacity:0.55;">Date Cleared</label>
                         <input type="${stateData.clearedDate ? 'date' : 'text'}" 
                                id="${IDS.SUPER_CONTRIBUTION_DATE}" 
@@ -393,7 +393,7 @@ export default class SuperStrategyUI {
                             Max claimable: ${formatCurrency(superStrategyStore.data.stateData[SUPER_STATES.CONTRIBUTION_CLEARANCE]?.amount || 0)} (Based on Step 1)
                         </div>
                     </div>
-                    <div class="${CSS_CLASSES.FORM_GROUP}" style="margin-bottom:14px;" onclick="const inp = this.querySelector('input'); if(inp) { try { inp.showPicker(); } catch (e) { inp.click(); } }">
+                    <div class="${CSS_CLASSES.FORM_GROUP}" style="margin-bottom:14px;" onclick="const inp = this.querySelector('input'); if(inp && document.activeElement !== inp) { try { inp.showPicker(); } catch (e) { inp.click(); } }">
                         <label style="font-size:0.62rem;color:var(--text-muted);font-weight:800;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;display:block;opacity:0.55;">Date Submitted</label>
                         <input type="${stateData.submittedDate ? 'date' : 'text'}" 
                                id="${IDS.SUPER_NOI_DATE}" 
@@ -430,8 +430,10 @@ export default class SuperStrategyUI {
                     ${(stateData.skipped && !superStrategyStore.getRecontributionEligibility().eligible) ? `
                         <div style="margin-top: 10px; padding: 14px; background: rgba(255,59,48,0.1); border: 1px solid rgba(255,59,48,0.2); font-size: 0.7rem; color: #ff3b30; line-height: 1.4; font-weight: 700;">
                             <i class="fas fa-ban" style="margin-right: 8px;"></i>
-                            TSB BLACKOUT: You cannot use Non-Concessional mode as your balance as of July 1st exceeds the ATO limit. 
-                            <br/><span style="font-size: 0.62rem; opacity: 0.8; font-weight: 500;">(You must claim a tax deduction or reduce contribution to $0).</span>
+                            ${superStrategyStore.getTotalBalance() >= getCapData(getCurrentFinancialYear()).tbc 
+                                ? 'TSB BLACKOUT: You cannot use Non-Concessional mode as your balance as of July 1st exceeds the ATO limit.' 
+                                : 'CAP FULL: You cannot use Non-Concessional mode as you have already utilized your full 3-year bring-forward window.'}
+                            <br/><span style="font-size: 0.62rem; opacity: 0.8; font-weight: 500;">(You must claim a tax deduction or reduce contribution to $0 to proceed).</span>
                         </div>
                     ` : ''}
                 `;
@@ -467,7 +469,7 @@ export default class SuperStrategyUI {
                             Every pension closure requires a final pro-rata drawdown payment to be confirmed first. This ensures regulatory compliance before the accounts are closed and merged back into accumulation.
                         </div>
 
-                        <div class="${CSS_CLASSES.FORM_GROUP}" style="margin-bottom:20px;" onclick="const inp = this.querySelector('input'); if(inp) { try { inp.showPicker(); } catch (e) { inp.click(); } }">
+                        <div class="${CSS_CLASSES.FORM_GROUP}" style="margin-bottom:20px;" onclick="const inp = this.querySelector('input'); if(inp && document.activeElement !== inp) { try { inp.showPicker(); } catch (e) { inp.click(); } }">
                             <label style="font-size:0.62rem;color:var(--text-muted);font-weight:800;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;display:block;opacity:0.55;">Planned Closure Date</label>
                             <input type="${stateData.closureDate ? 'date' : 'text'}" 
                                    id="${IDS.SUPER_CLOSURE_DATE}" 
@@ -478,6 +480,17 @@ export default class SuperStrategyUI {
                                    onblur="if(!this.value) this.type='text';"
                                    style="border-radius:0;padding:12px;cursor:pointer;font-weight:700;outline:none;width:100%;">
                         </div>
+
+                        ${(stateData.closureDate && new Date(stateData.closureDate).getMonth() !== 5 && getCurrentFinancialYear(new Date(stateData.closureDate)) === getCurrentFinancialYear()) ? `
+                            <div style="margin-bottom: 24px; padding: 14px; background: rgba(255,165,0,0.12); border: 1px solid rgba(255,165,0,0.25); border-radius: 0;">
+                                <div style="font-size: 0.65rem; color: #ffa500; font-weight: 950; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">
+                                    <i class="fas fa-exclamation-triangle"></i> Strategic Alert: Timing Trap
+                                </div>
+                                <div style="font-size: 0.72rem; color: #fff; line-height: 1.4; font-weight: 600;">
+                                    Closing late in May? Pushing your closure to <strong>May 31st</strong> and restarting on <strong>June 1st</strong> allows you to avoid mandatory drawdowns while keeping your funds tax-free for the maximum possible time.
+                                </div>
+                            </div>
+                        ` : ''}
 
                         <!-- Strategic Guidance -->
                         <div style="font-size:0.68rem; color:var(--text-muted); line-height:1.4; opacity:0.8; margin-top: 24px; margin-bottom: 24px;">
@@ -504,10 +517,22 @@ export default class SuperStrategyUI {
                 break;
             }
 
-            case SUPER_STATES.PENSION_COMMENCEMENT:
+            case SUPER_STATES.PENSION_COMMENCEMENT: {
+                const closureData = superStrategyStore.getStateData(SUPER_STATES.PENSION_CLOSURE);
                 fieldsHtml = `
-                    <div class="${CSS_CLASSES.FORM_GROUP}" style="margin-bottom:20px;" onclick="const inp = this.querySelector('input'); if(inp) { try { inp.showPicker(); } catch (e) { inp.click(); } }">
-                        <label style="font-size:0.62rem;color:var(--text-muted);font-weight:800;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;display:block;opacity:0.55;">Planned Commencement Date</label>
+                    <div style="margin-bottom: 24px; padding: 18px; background: rgba(255,255,255,0.02); border-radius: 0; border: 1px solid rgba(255,255,255,0.05);">
+                        <div style="font-size: 0.65rem; color: var(--color-accent); font-weight: 800; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 14px;">Synchronize Restart</div>
+                        
+                        <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.06); opacity: 0.4;">
+                            <div style="display: flex; flex-direction: column;">
+                                <span style="font-size: 0.62rem; color: rgba(255,255,255,0.6); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Pension Account Closed (Step 4)</span>
+                                <span style="font-size: 0.58rem; color: var(--color-warning); font-weight: 600; margin-top: 2px;">Confirmed Completion</span>
+                            </div>
+                            <span style="font-size: 0.95rem; color: #fff; font-weight: 800;">${closureData?.closureDate ? new Date(closureData.closureDate).toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Not Set'}</span>
+                        </div>
+
+                        <div class="${CSS_CLASSES.FORM_GROUP}" style="margin-bottom:20px;" onclick="const inp = this.querySelector('input'); if(inp && document.activeElement !== inp) { try { inp.showPicker(); } catch (e) { inp.click(); } }">
+                            <label style="font-size:0.62rem;color:var(--text-muted);font-weight:800;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;display:block;opacity:0.55;">Planned Commencement Date</label>
                         <input type="${stateData.commencementDate ? 'date' : 'text'}" 
                                id="${IDS.SUPER_COMMENCE_DATE}" 
                                class="${CSS_CLASSES.FORM_CONTROL}"
@@ -516,6 +541,17 @@ export default class SuperStrategyUI {
                                onfocus="this.type='date';"
                                onblur="if(!this.value) this.type='text';"
                                style="border-radius:0;padding:12px;cursor:pointer;font-weight:700;outline:none;width:100%;">
+                        
+                        ${(stateData.commencementDate && new Date(stateData.commencementDate).getMonth() !== 5 && getCurrentFinancialYear(new Date(stateData.commencementDate)) === getCurrentFinancialYear()) ? `
+                            <div style="margin-top: 12px; padding: 14px; background: rgba(255,165,0,0.12); border: 1px solid rgba(255,165,0,0.25); border-radius: 0;">
+                                <div style="font-size: 0.65rem; color: #ffa500; font-weight: 950; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">
+                                    <i class="fas fa-exclamation-triangle"></i> Strategic Alert: Pro-Rata Trap
+                                </div>
+                                <div style="font-size: 0.72rem; color: #fff; line-height: 1.4; font-weight: 600;">
+                                    Starting before June 1st triggers a <strong>mandatory pro-rata payment</strong> for this financial year. Delaying your commencement until June 1st allows you to bypass this payment entirely.
+                                </div>
+                            </div>
+                        ` : ''}
                     </div>
 
                     <div style="font-size:0.68rem; color:var(--text-muted); line-height:1.4; opacity:0.8; margin-bottom: 20px;">
@@ -531,7 +567,8 @@ export default class SuperStrategyUI {
 
                     ${stateData.commencementDate ? this._renderCommencementPreview(data, stateData.commencementDate) : ''}
                 `;
-                break;
+            }
+            break;
 
             case SUPER_STATES.FINALISED:
                 return `
@@ -612,8 +649,8 @@ export default class SuperStrategyUI {
                         <div style="font-size: 0.65rem; color: var(--color-accent); font-weight: 950; text-transform: uppercase; letter-spacing: 2.5px; margin-bottom: 20px;">FY 2025/26 Consolidation Command</div>
                         
                         <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.03);">
-                            <span style="font-size: 0.62rem; color: rgba(255,255,255,0.6); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Acc Balance (as of July 1, 2025)</span>
-                            <span style="font-size: 0.95rem; color: #fff; font-weight: 800;">${formatCurrency(currentAcc)}</span>
+                            <span style="font-size: 0.62rem; color: rgba(255,255,255,0.6); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Current Acc. Balance</span>
+                            <span style="font-size: 0.95rem; color: #fff; font-weight: 800;">${formatCurrency(calc.currentAcc)}</span>
                         </div>
                         
                         <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.03);">
@@ -622,11 +659,11 @@ export default class SuperStrategyUI {
                         </div>
                         
                         <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.06);">
-                            <div style="display: flex; flex-direction: column;">
-                                <span style="font-size: 0.62rem; color: rgba(255,255,255,0.6); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Step 1 Inflow Check</span>
-                                <span style="font-size: 0.58rem; color: var(--color-positive); font-weight: 600; opacity: 0.7; margin-top: 2px;">(Confirmed & Included in Valuation)</span>
+                            <div style="display: flex; flex-direction: column; opacity: 0.4;">
+                                <span style="font-size: 0.62rem; color: rgba(255,255,255,0.6); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Personal Contribution (Step 1)</span>
+                                <span style="font-size: 0.58rem; color: var(--color-positive); font-weight: 600; margin-top: 2px;">(Included in Valuation)</span>
                             </div>
-                            <span style="font-size: 0.95rem; color: #fff; font-weight: 800; opacity: 0.8;">${formatCurrency(clearedStep1)}</span>
+                            <span style="font-size: 0.95rem; color: #fff; font-weight: 800; opacity: 0.4;">${formatCurrency(clearedStep1)}</span>
                         </div>
 
                         ${buffer > 0 ? `
@@ -665,7 +702,7 @@ export default class SuperStrategyUI {
                         </div>
                     </div>
 
-                    ${!eligibility.eligible ? `
+                    ${(!eligibility.eligible && superStrategyStore.getTotalBalance() >= getCapData(getCurrentFinancialYear()).tbc) ? `
                     <div style="background: rgba(255,59,48,0.12); border: 2px solid #ff3b30; padding: 24px; margin-bottom: 24px; display: flex; gap: 18px; align-items: flex-start;">
                         <i class="fas fa-lock" style="color: #ff3b30; font-size: 1.8rem; margin-top: 4px;"></i>
                         <div>
@@ -770,15 +807,22 @@ export default class SuperStrategyUI {
 
                     <!-- Available to Re-Contribute Tile (Redundant tile removed) -->
 
-                    <div class="${CSS_CLASSES.FORM_GROUP}" style="margin-bottom: 20px;" onclick="this.querySelector('input').focus();">
+                    <div class="${CSS_CLASSES.FORM_GROUP}" style="margin-bottom: 20px;" onclick="const inp = this.querySelector('input'); if(inp && document.activeElement !== inp) { try { inp.showPicker(); } catch (e) { inp.click(); } }">
                         <label style="font-size: 0.7rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; display: block; opacity: 0.7;">Re-Contribution Amount</label>
                         <input type="number" id="${IDS.SUPER_RECONTRIBUTION_AMOUNT}" class="${CSS_CLASSES.FORM_CONTROL}"
                                value="${stateData.recontributionAmount || ''}" placeholder="0.00" step="0.01"
                                ${!eligibility.eligible ? 'disabled' : ''}
                                max="${eligibility.maxAmount}"
                                style="border-radius: 0; padding: 12px; font-weight: 700; width: 100%; outline: none; ${!eligibility.eligible ? 'opacity: 0.4;' : ''}">
+                        
+                        ${!eligibility.eligible ? `
+                        <div style="font-size: 0.65rem; color: #ff3b30; font-weight: 800; margin-top: 8px; text-transform: uppercase; letter-spacing: 0.8px; display: flex; align-items: center; gap: 6px;">
+                            <i class="fas fa-lock"></i> 
+                            <span>Contribution Blocked: ${calc.totalBalance >= calc.contributionCaps.tbc ? 'TSB Limit Reached' : 'Cap Exhausted'}</span>
+                        </div>
+                        ` : ''}
                     </div>
-                    <div class="${CSS_CLASSES.FORM_GROUP}" style="margin-bottom: 20px;" onclick="const inp = this.querySelector('input'); if(inp) { try { inp.showPicker(); } catch (e) { inp.click(); } }">
+                    <div class="${CSS_CLASSES.FORM_GROUP}" style="margin-bottom: 20px;" onclick="const inp = this.querySelector('input'); if(inp && document.activeElement !== inp) { try { inp.showPicker(); } catch (e) { inp.click(); } }">
                         <label style="font-size: 0.7rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; display: block; opacity: 0.7;">Re-Contribution Date</label>
                         <input type="${stateData.recontributionDate ? 'date' : 'text'}" 
                                id="${IDS.SUPER_RECONTRIBUTION_DATE}" 

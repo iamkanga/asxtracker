@@ -199,16 +199,21 @@ class SuperStrategyStore {
         const sd = this.data.stateData?.[state];
         if (!sd) return { valid: false, message: 'Invalid state.' };
 
-        // --- GLOBAL TSB BLACKOUT LOCK ---
+        // --- GLOBAL STRATEGY PICKET LINE ---
         // If they are in Non-Concessional Mode (skipped NOI), check absolute eligibility
         const noiStep = this.data.stateData?.[SUPER_STATES.NOI_SUBMISSION];
         if (noiStep?.skipped) {
             const eligibility = this.getRecontributionEligibility();
             const contributionAmount = this.data.stateData[SUPER_STATES.CONTRIBUTION_CLEARANCE]?.amount || 0;
             if (contributionAmount > eligibility.maxAmount) {
+                // Determine the correct error message (TSB vs Cap Used)
+                const fy = getCurrentFinancialYear();
+                const caps = getContributionCaps(fy);
+                const isTSB = this.getTotalBalance() >= caps.tbc;
+
                 return { 
                     valid: false, 
-                    message: "TSB BLACKOUT: Illegal Strategy." 
+                    message: isTSB ? "TSB BLACKOUT: Illegal Strategy." : "CAP USED: Cannot proceed as NCC."
                 };
             }
         }
@@ -649,8 +654,8 @@ class SuperStrategyStore {
         const closedBalance = currentPen - (closureStep?.proRataPayout || 0);
         
         // Final Consolidation Estimate
-        // Fixed: currentAcc already includes Step 1 contributions by the time the user
-        // enters the valuation at Step 5. Adding it again was double-counting.
+        // Fixed: currentAcc is assumed to be the absolute current balance as 
+        // entered by the user (which usually includes Step 1).
         const restartVal = currentAcc + closedBalance - buffer;
         const excessTBC = Math.max(0, restartVal - caps.tbc);
 
@@ -666,7 +671,8 @@ class SuperStrategyStore {
             accumulationRetentionBuffer: buffer,
             newPensionStart: restartVal,
             excessTBC: excessTBC,
-            clearedStep1: clearedStep1
+            clearedStep1: clearedStep1,
+            currentAcc: currentAcc
         };
     }
 
