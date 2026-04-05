@@ -77,7 +77,7 @@ function getDefaultData() {
         currentState: SUPER_STATES.CONTRIBUTION_CLEARANCE,
         stateData: {
             [SUPER_STATES.CONTRIBUTION_CLEARANCE]: { status: 'active', completedAt: null, amount: 0, clearedDate: null },
-            [SUPER_STATES.NOI_SUBMISSION]: { status: 'pending', completedAt: null, submittedDate: null, deductionAmount: 0 },
+            [SUPER_STATES.NOI_SUBMISSION]: { status: 'pending', completedAt: null, submittedDate: null, deductionAmount: 0, skipped: false },
             [SUPER_STATES.FUND_ACKNOWLEDGEMENT]: { status: 'pending', completedAt: null, acknowledged: false, acknowledgedDate: null },
             [SUPER_STATES.PENSION_CLOSURE]: { status: 'pending', completedAt: null, proRataPayout: 0, closureDate: null },
             [SUPER_STATES.RECONTRIBUTION]: { status: 'pending', completedAt: null, recontributionAmount: 0, recontributionDate: null },
@@ -95,6 +95,9 @@ function getDefaultData() {
 
         // Safety Floor (user's personal minimum — starts blank, not a legislative requirement)
         capitalSafetyFloor: 0,
+        
+        // Retention Buffer (minimum balance to leave in accumulation to keep insurance/account active)
+        accumulationRetentionBuffer: 0,
 
         // Bring-Forward Tracking (FY ending year when bring-forward was last triggered)
         bringForwardTriggeredFY: null,
@@ -196,6 +199,20 @@ class SuperStrategyStore {
         const sd = this.data.stateData?.[state];
         if (!sd) return { valid: false, message: 'Invalid state.' };
 
+        // --- GLOBAL TSB BLACKOUT LOCK ---
+        // If they are in Non-Concessional Mode (skipped NOI), check absolute eligibility
+        const noiStep = this.data.stateData?.[SUPER_STATES.NOI_SUBMISSION];
+        if (noiStep?.skipped) {
+            const eligibility = this.getRecontributionEligibility();
+            const contributionAmount = this.data.stateData[SUPER_STATES.CONTRIBUTION_CLEARANCE]?.amount || 0;
+            if (contributionAmount > eligibility.maxAmount) {
+                return { 
+                    valid: false, 
+                    message: "TSB BLACKOUT: Illegal Strategy." 
+                };
+            }
+        }
+
         switch (state) {
             case SUPER_STATES.CONTRIBUTION_CLEARANCE:
                 if (!sd.amount || sd.amount <= 0) return { valid: false, message: 'Enter the cleared contribution amount.' };
@@ -203,11 +220,47 @@ class SuperStrategyStore {
                 return { valid: true, message: 'Contribution verified.' };
 
             case SUPER_STATES.NOI_SUBMISSION:
+                const contributionAmount = this.data.stateData[SUPER_STATES.CONTRIBUTION_CLEARANCE]?.amount || 0;
+                const fyForCaps = getCurrentFinancialYear();
+                const caps = getContributionCaps(fyForCaps);
+
+                if (sd.skipped) {
+                    const eligibility = this.getRecontributionEligibility();
+                    const remainingNCC = eligibility.maxAmount;
+                    
+                    if (contributionAmount > remainingNCC) {
+                        return { 
+                            valid: false, 
+                            message: `Cap Error: $${(contributionAmount - remainingNCC).toLocaleString()} over NCC Limit.` 
+                        };
+                    }
+                    return { valid: true, message: 'Ready to proceed as NCC.' };
+                }
+
                 if (!sd.submittedDate) return { valid: false, message: 'Enter the NOI submission date.' };
                 if (!sd.deductionAmount || sd.deductionAmount <= 0) return { valid: false, message: 'Enter the deduction amount.' };
+                
+                // --- AUDIT FINDING 1: OVER-CLAIMING CHECK ---
+                if (sd.deductionAmount > contributionAmount) {
+                    return { 
+                        valid: false, 
+                        message: `Error: Cannot claim > $${contributionAmount.toLocaleString()} contributed.` 
+                    };
+                }
+                if (sd.deductionAmount > caps.concessional) {
+                    return {
+                        valid: false,
+                        message: `Cap Error: exceeds $${caps.concessional.toLocaleString()} personal limit.`
+                    };
+                }
+
                 return { valid: true, message: 'NOI submitted.' };
 
             case SUPER_STATES.FUND_ACKNOWLEDGEMENT:
+                // Auto-skip if NOI was skipped
+                if (this.data.stateData?.[SUPER_STATES.NOI_SUBMISSION]?.skipped) {
+                    return { valid: true, message: 'Fund acknowledgement skipped (Not required).' };
+                }
                 if (!sd.acknowledged) return { valid: false, message: 'Fund acknowledgement is required before proceeding.' };
                 return { valid: true, message: 'Fund has acknowledged NOI.' };
 
@@ -257,6 +310,11 @@ class SuperStrategyStore {
             this.data.stateData[currentState].completedAt = new Date().toISOString();
         }
 
+        // Special Path: Skip NOI if toggled
+        if (currentState === SUPER_STATES.NOI_SUBMISSION && this.data.stateData[currentState]?.skipped) {
+            return this.skipNoticeOfIntent();
+        }
+
         // Auto-calculate for pension closure
         if (currentState === SUPER_STATES.PENSION_CLOSURE) {
             this._calculateClosurePayout();
@@ -277,6 +335,48 @@ class SuperStrategyStore {
             this._dispatch(EVENTS.SUPER_STATE_CHANGED, { from: currentState, to: nextState });
             return { success: true, message: `Advanced to ${STATE_LABELS[nextState]}.`, newState: nextState };
         }
+    }
+
+    /**
+     * Skips the Notice of Intent submission, designating the contribution as Non-Concessional.
+     * Includes a guard to ensure NCC limit room is available.
+     * @returns {{ success: boolean, message: string }}
+     */
+    skipNoticeOfIntent() {
+        if (this.data.currentState !== SUPER_STATES.NOI_SUBMISSION) {
+            return { success: false, message: 'Action only valid during NOI submission phase.' };
+        }
+
+        const contribution = this.data.stateData[SUPER_STATES.CONTRIBUTION_CLEARANCE]?.amount || 0;
+        const eligibility = this.getRecontributionEligibility();
+
+        // Check if there is room in the NCC cap (120k/360k)
+        // Fixed: eligibility.maxAmount already accounts for used amount
+        if (contribution > eligibility.maxAmount) {
+            return {
+                success: false,
+                message: `Cannot skip NOI. Contribution of ${contribution} exceeds your remaining Non-Concessional cap room.`
+            };
+        }
+
+        // Mark as skipped and complete
+        this.data.stateData[SUPER_STATES.NOI_SUBMISSION].skipped = true;
+        this.data.stateData[SUPER_STATES.NOI_SUBMISSION].status = 'complete';
+        this.data.stateData[SUPER_STATES.NOI_SUBMISSION].completedAt = new Date().toISOString();
+
+        // Auto-skip Step 3 (Acknowledgement)
+        this.data.stateData[SUPER_STATES.FUND_ACKNOWLEDGEMENT].status = 'complete';
+        this.data.stateData[SUPER_STATES.FUND_ACKNOWLEDGEMENT].completedAt = new Date().toISOString();
+        this.data.stateData[SUPER_STATES.FUND_ACKNOWLEDGEMENT].skipped = true;
+
+        // Advance to Step 4 (Pension Closure)
+        this.data.currentState = SUPER_STATES.PENSION_CLOSURE;
+        this.data.stateData[SUPER_STATES.PENSION_CLOSURE].status = 'active';
+
+        this._save();
+        this._dispatch(EVENTS.SUPER_STATE_CHANGED);
+
+        return { success: true, message: 'NOI skipped. Contribution treated as Non-Concessional.' };
     }
 
     /**
@@ -304,6 +404,18 @@ class SuperStrategyStore {
         this._dispatch(EVENTS.SUPER_STATE_CHANGED, { from: currentState, to: prevState });
         
         return { success: true, message: `Regressed to ${STATE_LABELS[prevState]}.`, newState: prevState };
+    }
+
+    /**
+     * Directly jumps to a specific state.
+     * @param {string} state - The SUPER_STATE key to jump to.
+     */
+    jumpToState(state) {
+        if (!this.data.stateData[state]) return;
+        const from = this.data.currentState;
+        this.data.currentState = state;
+        this._save();
+        this._dispatch(EVENTS.SUPER_STATE_CHANGED, { from, to: state });
     }
 
     /**
@@ -454,10 +566,31 @@ class SuperStrategyStore {
         this._save();
     }
 
-    // ─────────────────────────────────────────
-    // Simulation
-    // ─────────────────────────────────────────
+    /**
+     * Calculates the member's current strategy eligibility based on state and legislation.
+     * @returns {Object}
+     */
+    getRecontributionEligibility() {
+        const fy = getCurrentFinancialYear();
+        const totalBalance = this.data.accumulationBalance + this.data.pensionBalance;
+        
+        // Call legislation engine
+        const result = checkRecontributionEligibility(
+            totalBalance,
+            fy,
+            this.data.bringForwardTriggeredFY,
+            this.data.bringForwardUsedAmount || 0
+        );
 
+        return {
+            ...result,
+            totalNCCUsed: this.data.bringForwardUsedAmount || 0
+        };
+    }
+
+    /**
+     * Executes the strategy simulation based on proposed dates.
+     */
     runSimulation(proposedRestartDate, contributionAmount = 0, isDeductible = false) {
         const restartDate = new Date(proposedRestartDate);
         const simFY = getCurrentFinancialYear(restartDate);
@@ -502,6 +635,25 @@ class SuperStrategyStore {
         const daysLeft = daysUntilEOFY();
         const floorCheck = checkSafetyFloor(this.getTotalBalance(), 0, this.data.capitalSafetyFloor);
 
+        const closureStep = this.data.stateData[SUPER_STATES.PENSION_CLOSURE];
+        const recontribAmount = this.data.stateData[SUPER_STATES.RECONTRIBUTION]?.recontributionAmount || 0;
+        const clearedStep1 = (this.data.stateData[SUPER_STATES.CONTRIBUTION_CLEARANCE]?.amount || 0) * 0.85; // 15% tax
+        
+        // Retention Buffer (Optional hold-back for insurance/account survival)
+        const buffer = this.data.accumulationRetentionBuffer || 0;
+        
+        // Use user-adjusted closing balances if provided, fallback to July 1 static data
+        const currentAcc = (closureStep?.closingAccumulationBalance !== undefined) ? closureStep.closingAccumulationBalance : this.data.accumulationBalance;
+        const currentPen = (closureStep?.closingPensionBalance !== undefined) ? closureStep.closingPensionBalance : this.data.pensionBalance;
+        
+        const closedBalance = currentPen - (closureStep?.proRataPayout || 0);
+        
+        // Final Consolidation Estimate
+        // Fixed: currentAcc already includes Step 1 contributions by the time the user
+        // enters the valuation at Step 5. Adding it again was double-counting.
+        const restartVal = currentAcc + closedBalance - buffer;
+        const excessTBC = Math.max(0, restartVal - caps.tbc);
+
         return {
             annualMinimum: annual.annualMinimum,
             drawdownRate: annual.rate,
@@ -510,7 +662,11 @@ class SuperStrategyStore {
             financialYear: fy,
             daysUntilEOFY: daysLeft,
             safetyFloorStatus: floorCheck,
-            totalBalance: this.getTotalBalance()
+            totalBalance: this.getTotalBalance(),
+            accumulationRetentionBuffer: buffer,
+            newPensionStart: restartVal,
+            excessTBC: excessTBC,
+            clearedStep1: clearedStep1
         };
     }
 

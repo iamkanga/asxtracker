@@ -31,14 +31,13 @@
     right: 8px;
     background: transparent;
     border: none;
-    color: var(--text-muted);
+    /* User Request: Full strength at all times */
+    color: var(--text-color);
     cursor: pointer;
-    /* User Request: Larger target area */
     padding: 10px;
     z-index: 15;
-    /* User Request: Less ghosted out by default */
-    opacity: 0.6;
-    transition: opacity 0.2s ease, transform 0.2s ease;
+    opacity: 1;
+    transition: opacity 0.2s ease, transform 0.2s ease, color 0.2s ease;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -66,8 +65,8 @@
 }
 
 .market-stream-item-wrapper.is-read .stream-dismiss-btn {
-    /* User Request: Not so ghosted even when read */
-    opacity: 0.4;
+    /* User Request: NOT ghosted even when read - maintain full strength */
+    opacity: 1;
 }
 
 .market-stream-item-wrapper.is-read .stream-dismiss-btn:hover {

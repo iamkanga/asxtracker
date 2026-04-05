@@ -2644,7 +2644,8 @@ input:checked+.slider:before {
 }
 
 .market-stream-item-wrapper.is-read .stream-dismiss-btn {
-    opacity: 0.2 !important;
+    opacity: 1 !important;
+    color: var(--text-color) !important;
 }
 
 .market-stream-item {

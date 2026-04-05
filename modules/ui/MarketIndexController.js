@@ -90,7 +90,10 @@ export class MarketIndexController {
                 bodyLink.style.filter = 'grayscale(80%)';
             }
             const dismissBtn = wrapperElement.querySelector('.stream-dismiss-btn');
-            if (dismissBtn) dismissBtn.style.opacity = '0.2';
+            if (dismissBtn) {
+                // User Request: Keep dismiss button at full strength even when ghosted
+                dismissBtn.style.opacity = '1';
+            }
         }
     }
 
@@ -202,7 +205,8 @@ export class MarketIndexController {
             const isRead = notificationStore.readAnnouncements?.has(id);
             const readClass = isRead ? 'is-read' : '';
             const readStyle1 = isRead ? 'opacity: 0.35; filter: grayscale(80%);' : '';
-            const readStyle2 = isRead ? 'opacity: 0.2;' : 'opacity: 0.3;';
+            // User Request: Keep dismiss button at full strength at all times
+            const readStyle2 = 'opacity: 1;';
 
             return `
                 <div class="market-stream-item-wrapper ${readClass}" data-alert-id="${id}">
@@ -225,7 +229,7 @@ export class MarketIndexController {
                     </button>
                     ` : ''}
                     <button class="stream-dismiss-btn" data-id="${id}" title="Dismiss"
-                        style="position: absolute; top: 12px; right: 12px; background: transparent; border: none; color: var(--text-muted); cursor: pointer; padding: 5px; z-index: 5; transition: opacity 0.2s; ${readStyle2}">
+                        style="position: absolute; top: 12px; right: 12px; background: transparent; border: none; color: var(--text-color); cursor: pointer; padding: 5px; z-index: 15; transition: opacity 0.2s, transform 0.2s; ${readStyle2}">
                         <i class="fas fa-times" style="font-size: 0.8rem;"></i>
                     </button>
                 </div>

@@ -121,8 +121,11 @@ export function checkRecontributionEligibility(totalSuperBalance, financialYearE
             reason = `Bring-Forward Unavailable. TSB is between $${tier2Limit.toLocaleString()} and $${tier1Limit.toLocaleString()}. You are limited to the standard $${maxAmount.toLocaleString()} annual cap.`;
         }
     } else {
-        maxAmount = Math.max(0, (caps.nonConcessional * 3) - bringForwardUsedAmount);
-        reason = `Cap Used: Active 3-Year Window (started FY ${bringForwardTriggeredFY - 1}/${String(bringForwardTriggeredFY).slice(-2)}). Your remaining limit is $${maxAmount.toLocaleString()} after accounting for historical utilization ($${bringForwardUsedAmount.toLocaleString()}). A fresh window resets in FY ${bfStatus.nextAvailableFY - 1}/${String(bfStatus.nextAvailableFY).slice(-2)} (${bfStatus.yearsRemaining} year${bfStatus.yearsRemaining > 1 ? 's' : ''} remaining).`;
+        // Active Window Strategy: Limit is (Cap at trigger year * 3) - Used
+        const triggerCaps = getCapData(bringForwardTriggeredFY);
+        maxAmount = Math.max(0, (triggerCaps.nonConcessional * 3) - bringForwardUsedAmount);
+        eligible = maxAmount > 0;
+        reason = `Active 3-Year Window (started FY ${bringForwardTriggeredFY - 1}/${String(bringForwardTriggeredFY).slice(-2)}). Your remaining limit is $${maxAmount.toLocaleString()} based on the $${(triggerCaps.nonConcessional * 3).toLocaleString()} cap applied at trigger. A fresh window resets in FY ${bfStatus.nextAvailableFY - 1}/${String(bfStatus.nextAvailableFY).slice(-2)} (${bfStatus.yearsRemaining} year${bfStatus.yearsRemaining > 1 ? 's' : ''} remaining).`;
     }
 
     return {
@@ -142,7 +145,7 @@ export const SUPER_THRESHOLDS = Object.freeze({
     // Brighter Super: Minimum balance to COMMENCE a new pension
     minPensionCommencement: 20000,
     // Brighter Super: Minimum balance to RESTART a pension (closed/commenced)
-    minPensionRestart: 50000,
+    minPensionRestart: 20000,
     // ATO threshold where fees are capped at 3% for balances under this amount
     autoFeeCapThreshold: 6000
     // Note: TBC and TSB limits are handled dynamically via getCapData()
