@@ -261,10 +261,7 @@ export class SidebarCommandCenter {
                             <i class="fas ${UI_ICONS.CALCULATOR} command-icon"></i>
                         </button>
                         <button class="command-grid-item" id="nav-super-strategy" title="Super Strategy">
-                            <div style="position: relative; display: flex; align-items: center; justify-content: center; width: 1.35rem; height: 1.35rem;">
-                                <i class="fas ${UI_ICONS.SUPER_STRATEGY} command-icon" style="position: absolute; font-size: 1.35rem;"></i>
-                                <span style="position: relative; color: #121212; font-weight: 950; font-size: 0.65rem; z-index: 10; font-family: 'Inter', sans-serif; margin-top: 1px;">S</span>
-                            </div>
+                            <i class="fas ${UI_ICONS.SUPER_STRATEGY} command-icon"></i>
                         </button>
                         <button class="command-grid-item" id="nav-favorites" title="Favorite Links">
                             <i class="fas fa-link command-icon"></i>

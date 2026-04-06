@@ -436,7 +436,7 @@ export const UI_ICONS = {
     SYNC: 'fa-sync-alt',
     ANNOUNCEMENTS: 'fa-satellite-dish',
     CALCULATOR: 'fa-calculator',
-    SUPER_STRATEGY: 'fa-shield-alt'
+    SUPER_STRATEGY: 'fa-piggy-bank'
 };
 
 export const HTML_TEMPLATES = {
