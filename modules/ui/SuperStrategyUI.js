@@ -527,9 +527,9 @@ export default class SuperStrategyUI {
                                     Bypass tax deduction (NOI) and keep this as an after-tax contribution.
                                 </div>
                             </div>
-                            <div class="super-toggle-track" style="width: 48px; height: 24px; background: ${stateData.skipped ? 'var(--color-accent)' : 'rgba(255,255,255,0.1)'}; border-radius: 0; position: relative; transition: all 0.2s;">
+                            <div class="super-toggle-track" style="width: 48px; height: 24px; background: ${stateData.skipped ? 'var(--color-accent)' : 'rgba(255,255,255,0.1)'}; border-radius: 0 !important; position: relative; transition: all 0.2s;">
                                 <input type="checkbox" id="super-noi-skip-toggle" ${stateData.skipped ? 'checked' : ''} style="opacity: 0; width: 100%; height: 100%; cursor: pointer; position: absolute; z-index: 2;">
-                                <div style="width: 18px; height: 18px; background: #fff; border-radius: 0; position: absolute; top: 3px; left: ${stateData.skipped ? '27px' : '3px'}; transition: all 0.2s; z-index: 1; box-shadow: 0 1px 4px rgba(0,0,0,0.4);"></div>
+                                <div style="width: 18px; height: 18px; background: #fff; border-radius: 0 !important; position: absolute; top: 3px; left: ${stateData.skipped ? '27px' : '3px'}; transition: all 0.2s; z-index: 1; box-shadow: 0 1px 4px rgba(0,0,0,0.4);"></div>
                             </div>
                         </label>
                     </div>
@@ -608,22 +608,28 @@ export default class SuperStrategyUI {
                             ${this._renderOrangeWarning('Strategic Alert: Timing Trap', 'Pushing your closure to May 31st and restarting on June 1st allows you to avoid mandatory drawdowns while keeping your funds tax-free.')}
                         ` : ''}
 
+                        ${(() => {
+                            if (!proRata) return '';
+                            const cDate = new Date(stateData.closureDate);
+                            const isJune1st = cDate.getMonth() === 5 && cDate.getDate() >= 1;
+                            const statusColor = isJune1st ? 'var(--color-positive)' : 'var(--color-negative)';
+                            const statusRgb = isJune1st ? '6, 255, 79' : '255, 59, 48';
 
-
-                        ${proRata ? `
-                            <div style="background: linear-gradient(135deg, rgba(255,165,0,0.1) 0%, rgba(255,165,0,0.05) 100%); border-radius:0; padding:20px; border:1px solid rgba(255,165,0,0.2); box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
-                                <div style="font-size:0.65rem;color:#ffa500;font-weight:900;text-transform:uppercase;letter-spacing:2px;margin-bottom:12px;">Mandatory Pro-Rata Payment</div>
-                                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-                                    <span style="font-size:0.85rem;color:#fff;font-weight:700;">Required Payout</span>
-                                    <span style="font-size:1.6rem;font-weight:950;color:#ffa500;">${formatCurrency(proRata.amount)}</span>
+                            return `
+                                <div style="background: linear-gradient(135deg, rgba(${statusRgb},0.1) 0%, rgba(${statusRgb},0.05) 100%); border-radius:0; padding:20px; border:1px solid rgba(${statusRgb},0.25); box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-top: 10px;">
+                                    <div style="font-size:0.65rem;color:${statusColor};font-weight:900;text-transform:uppercase;letter-spacing:2px;margin-bottom:12px;">Mandatory Pro-Rata Payment</div>
+                                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                                        <span style="font-size:0.85rem;color:#fff;font-weight:700;">Required Payout</span>
+                                        <span style="font-size:1.6rem;font-weight:950;color:${statusColor};">${formatCurrency(proRata.amount)}</span>
+                                    </div>
+                                    <div style="height:1px; background:rgba(${statusRgb},0.2); margin:12px 0;"></div>
+                                    <div style="display:flex;justify-content:space-between;font-size:0.75rem;color:var(--text-muted);font-weight:700;opacity:0.8;">
+                                        <span>${proRata.days} days elapsed in FY</span>
+                                        <span style="color:${statusColor}; opacity:1;">Rate: ${(proRata.rate * 100).toFixed(0)}%</span>
+                                    </div>
                                 </div>
-                                <div style="height:1px; background:rgba(255,165,0,0.2); margin:12px 0;"></div>
-                                <div style="display:flex;justify-content:space-between;font-size:0.75rem;color:var(--text-muted);font-weight:700;opacity:0.8;">
-                                    <span>${proRata.days} days elapsed in FY</span>
-                                    <span style="color:#ffa500; opacity:1;">Rate: ${(proRata.rate * 100).toFixed(0)}%</span>
-                                </div>
-                            </div>
-                        ` : ''}
+                            `;
+                        })()}
                     </div>
                 `;
                 break;
@@ -737,9 +743,9 @@ export default class SuperStrategyUI {
                             </div>
 
                             <!-- 3. Final Result -->
-                            <div style="background: rgba(255,255,255,0.03); padding: 16px; border: 1px solid rgba(255,255,255,0.08);">
+                            <div style="padding: 16px 0; border-top: 1px solid rgba(255,255,255,0.1);">
                                 <div style="font-size: 0.62rem; color: var(--color-accent); font-weight: 900; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
-                                    <i class="fas fa-flag-checkered"></i> Current Post-Strategy Result
+                                    <i class="fas fa-check-double"></i> Current Post-Strategy Result
                                 </div>
                                 <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
                                     <div style="display: flex; flex-direction: column;">
@@ -751,7 +757,7 @@ export default class SuperStrategyUI {
                                         <span style="font-size: 1.1rem; color: var(--color-positive); font-weight: 950;">${formatCurrency(calc.newPensionStart)}</span>
                                     </div>
                                 </div>
-                                <div style="padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center;">
+                                <div style="padding-top: 10px; border-top: 1px dotted rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center;">
                                     <span style="font-size: 0.65rem; color: #fff; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Remaining FY Payout</span>
                                     <span style="font-size: 0.8rem; color: ${isJune1st ? 'var(--color-positive)' : 'var(--color-accent)'}; font-weight: 950;">${remainingPayout}</span>
                                 </div>
@@ -862,23 +868,6 @@ export default class SuperStrategyUI {
                     </div>
 
 
-                    ${eligibility.eligible ? `
-                    <!-- Eligibility Status Tile -->
-                    <div style="display: flex; align-items: center; gap: 14px; padding: 18px; background: rgba(6,255,79,0.06); border-radius: 0; border: 1px solid rgba(6,255,79,0.1); margin-bottom: 24px;">
-                        <div style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; color: var(--color-positive); flex-shrink: 0;">
-                            <i class="fas fa-check-circle" style="font-size: 1.6rem;"></i>
-                        </div>
-                        <div style="flex: 1;">
-                            <div style="font-size: 0.65rem; color: var(--color-positive); font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 4px;">FY ${fy - 1}/${String(fy).slice(-2)} Contrib. Eligibility</div>
-                            <div style="font-size: 0.85rem; font-weight: 900; color: #fff; line-height: 1.2; margin-bottom: 4px;">
-                                Eligible: ${formatCurrency(eligibility.maxAmount)}
-                            </div>
-                            <div style="font-size: 0.68rem; color: var(--text-muted); line-height: 1.3; opacity: 0.8; font-weight: 500;">
-                                ${eligibility.reason}
-                            </div>
-                        </div>
-                    </div>
-                    ` : ''}
 
                     <!-- Available to Re-Contribute Tile (Redundant tile removed) -->
 
