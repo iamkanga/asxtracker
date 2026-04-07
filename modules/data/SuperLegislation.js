@@ -154,7 +154,7 @@ export const SUPER_THRESHOLDS = Object.freeze({
     // Brighter Super: Minimum balance to COMMENCE a new pension
     minPensionCommencement: 20000,
     // Brighter Super: Minimum balance to RESTART a pension (closed/commenced)
-    minPensionRestart: 20000,
+    minPensionRestart: 50000,
     // ATO threshold where fees are capped at 3% for balances under this amount
     autoFeeCapThreshold: 6000
     // Note: TBC and TSB limits are handled dynamically via getCapData()

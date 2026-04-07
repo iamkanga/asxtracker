@@ -691,7 +691,9 @@ class SuperStrategyStore {
                 clearanceDate: sd[SUPER_STATES.CONTRIBUTION_CLEARANCE]?.clearedDate,
                 noiFiledDate: sd[SUPER_STATES.NOI_SUBMISSION]?.submittedDate,
                 fundAckDate: sd[SUPER_STATES.FUND_ACKNOWLEDGEMENT]?.acknowledgedDate,
-                mccAmount: calc.contributionCaps.concessional,
+                mccAmount: sd[SUPER_STATES.NOI_SUBMISSION]?.deductionAmount || 0,
+                nccAmount: (sd[SUPER_STATES.CONTRIBUTION_CLEARANCE]?.amount || 0) - (sd[SUPER_STATES.NOI_SUBMISSION]?.deductionAmount || 0),
+                nccAvailable: calc.recontributionEligibility?.eligible,
                 completionDate: sd[SUPER_STATES.FINALISED]?.completedAt
             },
             forensics: {

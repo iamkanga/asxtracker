@@ -684,14 +684,14 @@ export default class SuperStrategyUI {
 
             case SUPER_STATES.FINALISED: {
                 const audit = superStrategyStore.getAuditForensics();
-                const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Pending';
+                const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
                 
                 fieldsHtml = `
                     <div id="${IDS.SUPER_STEP_DETAIL}" style="padding: 0; background: transparent; border-radius: 0; margin: 0 0 -10px;">
                         
-                        <div style="padding: 20px; border: 1px solid rgba(255,255,255,0.12); border-radius: 0; margin-bottom: 24px; background: rgba(255,255,255,0.02); box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
+                        <div class="super-audit-card">
                             <!-- Header -->
-                            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 15px;">
+                            <div class="super-audit-header">
                                 <div style="color: var(--color-positive); font-size: 1.4rem;">
                                     <i class="fas fa-file-invoice-dollar"></i>
                                 </div>
@@ -702,98 +702,107 @@ export default class SuperStrategyUI {
                             </div>
 
                             <!-- Group 1: Baseline Position -->
-                            <div style="margin-bottom: 20px;">
-                                <div style="font-size: 0.55rem; color: var(--text-muted); font-weight: 900; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
-                                    <i class="fas fa-database"></i> Baseline Position <span style="font-weight: 400; opacity: 0.6;">(1 July)</span>
+                            <div class="super-audit-section">
+                                <div class="super-audit-section-title">
+                                    <i class="fas fa-database"></i> Baseline Position <span>(1 July)</span>
                                 </div>
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 8px;">
-                                    <div>
-                                        <div style="font-size: 0.5rem; color: var(--text-muted); text-transform: uppercase;">Accumulation</div>
-                                        <div style="font-size: 0.72rem; color: #fff; font-weight: 700;">${formatCurrency(audit.baseline.accumulation)}</div>
+                                <div class="super-audit-grid">
+                                    <div class="super-audit-row">
+                                        <div class="super-audit-label">Accumulation</div>
+                                        <div class="super-audit-value">${formatCurrency(audit.baseline.accumulation)}</div>
                                     </div>
-                                    <div>
-                                        <div style="font-size: 0.5rem; color: var(--text-muted); text-transform: uppercase;">Pension</div>
-                                        <div style="font-size: 0.72rem; color: #fff; font-weight: 700;">${formatCurrency(audit.baseline.pension)}</div>
+                                    <div class="super-audit-row">
+                                        <div class="super-audit-label">Pension</div>
+                                        <div class="super-audit-value">${formatCurrency(audit.baseline.pension)}</div>
                                     </div>
-                                </div>
-                                <div style="display: flex; justify-content: space-between; padding: 8px 0; border-top: 1px solid rgba(255,255,255,0.06);">
-                                    <span style="font-size: 0.68rem; color: #fff; font-weight: 700; text-transform: uppercase;">Total Member Balance</span>
-                                    <span style="font-size: 0.9rem; color: #fff; font-weight: 950;">${formatCurrency(audit.baseline.total)}</span>
+                                    <div class="super-audit-row full-width">
+                                        <div class="super-audit-divider"></div>
+                                        <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                                            <span class="super-audit-label" style="font-size: 0.65rem; opacity: 0.8;">Total Member Balance</span>
+                                            <span class="super-audit-value large">${formatCurrency(audit.baseline.total)}</span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
                             <!-- Group 2: The Execution Timeline -->
-                            <div style="margin-bottom: 20px;">
-                                <div style="font-size: 0.55rem; color: var(--text-muted); font-weight: 900; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+                            <div class="super-audit-section">
+                                <div class="super-audit-section-title">
                                     <i class="fas fa-calendar-alt"></i> Execution Timeline
                                 </div>
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.65rem;">
-                                    <div>
-                                        <div style="color: var(--text-muted); font-size: 0.5rem; text-transform: uppercase;">Clearance</div>
-                                        <div style="color: #fff; font-weight: 600;">${formatDate(audit.timeline.clearanceDate)}</div>
+                                <div class="super-audit-grid">
+                                    <div class="super-audit-row full-width">
+                                        <div class="super-audit-label">Clearance</div>
+                                        <div class="super-audit-value">${formatDate(audit.timeline.clearanceDate)}</div>
                                     </div>
-                                    <div>
-                                        <div style="color: var(--text-muted); font-size: 0.5rem; text-transform: uppercase;">NOI Filed</div>
-                                        <div style="color: #fff; font-weight: 600;">${formatDate(audit.timeline.noiFiledDate)}</div>
+                                    <div class="super-audit-row">
+                                        <div class="super-audit-label">NOI Filed</div>
+                                        <div class="super-audit-value">${formatDate(audit.timeline.noiFiledDate)}</div>
                                     </div>
-                                    <div>
-                                        <div style="color: var(--text-muted); font-size: 0.5rem; text-transform: uppercase;">NOI Approval</div>
-                                        <div style="color: #fff; font-weight: 600;">${formatDate(audit.timeline.fundAckDate)}</div>
+                                    <div class="super-audit-row">
+                                        <div class="super-audit-label">NOI Approval</div>
+                                        <div class="super-audit-value">${formatDate(audit.timeline.fundAckDate)}</div>
                                     </div>
-                                    <div>
-                                        <div style="color: var(--text-muted); font-size: 0.5rem; text-transform: uppercase;">Concessional Cap</div>
-                                        <div style="color: #fff; font-weight: 600;">${formatCurrency(audit.timeline.mccAmount)}</div>
+                                    <div class="super-audit-row">
+                                        <div class="super-audit-label">Concessional</div>
+                                        <div class="super-audit-value accent">${formatCurrency(audit.timeline.mccAmount)}</div>
                                     </div>
-                                </div>
-                                <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.04);">
-                                    <div style="color: var(--text-muted); font-size: 0.5rem; text-transform: uppercase;">Strategy Completion</div>
-                                    <div style="color: #fff; font-weight: 600;">${formatDate(audit.timeline.completionDate)}</div>
+                                    <div class="super-audit-row">
+                                        <div class="super-audit-label">Non-Concessional</div>
+                                        <div class="super-audit-value ${audit.timeline.nccAvailable ? '' : 'negative'}">
+                                            ${audit.timeline.nccAvailable ? formatCurrency(audit.timeline.nccAmount) : 'Cap Used'}
+                                        </div>
+                                    </div>
+                                    <div class="super-audit-row full-width" style="margin-top: 4px; padding: 10px; background: rgba(var(--accent-rgb, 120, 100, 255), 0.05); border: 1px solid rgba(var(--accent-rgb, 120, 100, 255), 0.1);">
+                                        <div class="super-audit-label" style="color: var(--color-accent); opacity: 0.8;">Strategy Completion</div>
+                                        <div class="super-audit-value large">${formatDate(audit.timeline.completionDate)}</div>
+                                    </div>
                                 </div>
                             </div>
 
                             <!-- Group 3: Strategy Forensics -->
-                            <div style="margin-bottom: 20px;">
-                                <div style="font-size: 0.55rem; color: var(--text-muted); font-weight: 900; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+                            <div class="super-audit-section">
+                                <div class="super-audit-section-title">
                                     <i class="fas fa-microchip"></i> Strategy Forensics
                                 </div>
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.65rem;">
-                                    <div>
-                                        <div style="color: var(--text-muted); font-size: 0.5rem; text-transform: uppercase;">Gross Contribution</div>
-                                        <div style="color: #fff; font-weight: 600;">${formatCurrency(audit.forensics.grossContribution)}</div>
+                                <div class="super-audit-grid">
+                                    <div class="super-audit-row">
+                                        <div class="super-audit-label">Gross Contribution</div>
+                                        <div class="super-audit-value">${formatCurrency(audit.forensics.grossContribution)}</div>
                                     </div>
-                                    <div>
-                                        <div style="color: var(--text-muted); font-size: 0.5rem; text-transform: uppercase;">Tax (15%)</div>
-                                        <div style="color: #ff3b30; font-weight: 700;">-${formatCurrency(audit.forensics.contributionTax)}</div>
+                                    <div class="super-audit-row">
+                                        <div class="super-audit-label">Tax (15%)</div>
+                                        <div class="super-audit-value negative">-${formatCurrency(audit.forensics.contributionTax)}</div>
                                     </div>
-                                    <div>
-                                        <div style="color: var(--text-muted); font-size: 0.5rem; text-transform: uppercase;">Net Recontribution</div>
-                                        <div style="color: var(--color-accent); font-weight: 750;">${formatCurrency(audit.forensics.netRecontribution)}</div>
+                                    <div class="super-audit-row">
+                                        <div class="super-audit-label">Net Recontribution</div>
+                                        <div class="super-audit-value accent">${formatCurrency(audit.forensics.netRecontribution)}</div>
                                     </div>
-                                    <div>
-                                        <div style="color: var(--text-muted); font-size: 0.5rem; text-transform: uppercase;">Closure Payout</div>
-                                        <div style="color: #fff; font-weight: 600;">${formatCurrency(audit.forensics.closurePayout)}</div>
+                                    <div class="super-audit-row">
+                                        <div class="super-audit-label">Closure Payout</div>
+                                        <div class="super-audit-value">${formatCurrency(audit.forensics.closurePayout)}</div>
                                     </div>
                                 </div>
                             </div>
 
                             <!-- Group 4: Final Results -->
-                            <div style="padding-top: 18px; border-top: 1px solid rgba(255,255,255,0.12);">
-                                <div style="font-size: 0.55rem; color: var(--color-accent); font-weight: 900; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+                            <div class="super-audit-footer">
+                                <div class="super-audit-section-title" style="color: var(--color-accent); opacity: 1;">
                                     <i class="fas fa-check-double"></i> Final Post-Strategy Result
                                 </div>
-                                <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
-                                    <div>
-                                        <div style="font-size: 0.5rem; color: var(--text-muted); text-transform: uppercase;">Restart Date</div>
-                                        <div style="font-size: 0.85rem; color: #fff; font-weight: 800;">${formatDate(audit.result.restartDate)}</div>
+                                <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 4px;">
+                                    <div class="super-audit-row">
+                                        <div class="super-audit-label">Restart Date</div>
+                                        <div class="super-audit-value" style="font-size: 0.9rem;">${formatDate(audit.result.restartDate)}</div>
                                     </div>
-                                    <div style="text-align: right;">
-                                        <div style="font-size: 0.5rem; color: var(--text-muted); text-transform: uppercase;">New Pension Start</div>
-                                        <div style="font-size: 1.2rem; color: var(--color-positive); font-weight: 950; line-height: 1;">${formatCurrency(audit.result.newPensionStart)}</div>
+                                    <div class="super-audit-row" style="text-align: right;">
+                                        <div class="super-audit-label">New Pension Start</div>
+                                        <div class="super-audit-value positive" style="font-size: 1.4rem; font-weight: 950; line-height: 1;">${formatCurrency(audit.result.newPensionStart)}</div>
                                     </div>
                                 </div>
-                                <div style="padding-top: 10px; border-top: 1px dotted rgba(255,255,255,0.15); display: flex; justify-content: space-between; align-items: center;">
-                                    <span style="font-size: 0.65rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; opacity: 0.8;">Remaining Accumulation</span>
-                                    <span style="font-size: 0.82rem; color: #fff; font-weight: 800;">${formatCurrency(audit.result.remainingAccumulation)}</span>
+                                <div class="super-audit-footer-summary">
+                                    <span class="super-audit-label" style="font-size: 0.65rem; color: var(--text-muted); opacity: 0.8;">Remaining Accumulation</span>
+                                    <span class="super-audit-value large">${formatCurrency(audit.result.remainingAccumulation)}</span>
                                 </div>
                             </div>
                         </div>
@@ -1296,11 +1305,11 @@ export default class SuperStrategyUI {
                 <div class="super-accordion-content">
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom:12px;">
                         <div style="background: rgba(255,255,255,0.03); padding: 14px; border-left: 4px solid var(--color-accent);">
-                            <div style="font-size: 0.6rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase;">Accumulation Min</div>
-                            <div style="font-size: 1.1rem; font-weight: 950; color: #fff;">${formatCurrency(SUPER_THRESHOLDS.minAccumulationBalance)}</div>
+                            <div style="font-size: 0.6rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase;">New Pension Account</div>
+                            <div style="font-size: 1.1rem; font-weight: 950; color: #fff;">${formatCurrency(SUPER_THRESHOLDS.minPensionCommencement)}</div>
                         </div>
-                        <div style="background: rgba(255,255,255,0.03); padding: 14px; border-left: 4px solid var(--color-accent);">
-                            <div style="font-size: 0.6rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase;">Pension Min</div>
+                        <div style="background: rgba(255,255,255,0.03); padding: 14px; border-left: 4px solid var(--color-positive);">
+                            <div style="font-size: 0.6rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase;">Pension Restart</div>
                             <div style="font-size: 1.1rem; font-weight: 950; color: #fff;">${formatCurrency(SUPER_THRESHOLDS.minPensionRestart)}</div>
                         </div>
                     </div>
