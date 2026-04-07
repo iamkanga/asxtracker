@@ -875,21 +875,44 @@ export class HeaderLayout {
         const dot = document.getElementById('connection-dot');
         if (dot) {
             // Remove all health classes first
-            dot.classList.remove(CSS_CLASSES.CONNECTED, CSS_CLASSES.HEALTH_STALE, CSS_CLASSES.HEALTH_CRITICAL);
+            dot.classList.remove(
+                CSS_CLASSES.CONNECTED,
+                CSS_CLASSES.HEALTH_STALE,
+                CSS_CLASSES.HEALTH_CRITICAL,
+                CSS_CLASSES.HEALTH_LOADING,
+                CSS_CLASSES.HEALTH_OFFLINE
+            );
 
+            // 1. HIGH PRIORITY: Loading State (Overwrites all visual colors while active)
+            if (healthStatus === 'loading') {
+                dot.classList.add(CSS_CLASSES.HEALTH_LOADING);
+                dot.title = 'Refreshing Live Prices...';
+                return;
+            }
+
+            // 2. HIGH PRIORITY: Network Offline State
+            if (healthStatus === 'offline' || !navigator.onLine) {
+                dot.classList.add(CSS_CLASSES.HEALTH_OFFLINE);
+                dot.title = 'Offline - Connect to internet for live updates';
+                return;
+            }
+
+            // 3. AUTHENTICATION & HEALTH STATES
             if (isConnected) {
                 dot.classList.add(CSS_CLASSES.CONNECTED);
 
                 if (healthStatus === 'stale') {
                     dot.classList.add(CSS_CLASSES.HEALTH_STALE);
-                    dot.title = 'Connected - Application is stale (refresh recommended for stability)';
+                    dot.title = 'Connected - Application is stale (Click Live Refresh to update)';
                 } else if (healthStatus === 'critical') {
                     dot.classList.add(CSS_CLASSES.HEALTH_CRITICAL);
-                    dot.title = 'Connected - Sync issues detected. Refresh required to ensure data integrity.';
+                    dot.title = 'Connected - Sync issues detected. Refresh required.';
                 } else {
-                    dot.title = 'Connected - Logic is fresh';
+                    dot.title = 'Connected - Data is fresh';
                 }
             } else {
+                // Not Logged In / Disconnected
+                dot.classList.add(CSS_CLASSES.HEALTH_OFFLINE);
                 dot.title = 'Disconnected - Click to Reconnect';
             }
         }

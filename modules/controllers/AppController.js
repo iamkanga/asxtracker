@@ -151,6 +151,19 @@ export class AppController {
         this._bindGlobalEvents();
         this._setupDelegatedEvents(); // Binds Delete, Watchlist Actions, etc.
 
+        // --- NETWORK MONITORING (Live Response) ---
+        window.addEventListener('online', () => {
+            if (this.headerLayout) {
+                this.headerLayout.updateConnectionStatus(AppState.user !== null, AppState.health.status);
+            }
+        });
+
+        window.addEventListener('offline', () => {
+            if (this.headerLayout) {
+                this.headerLayout.updateConnectionStatus(AppState.user !== null, 'offline');
+            }
+        });
+
         // Notification System Bindings (Unified)
         NotificationUI.init(); // Initialize Floating Bell
 
@@ -1415,6 +1428,10 @@ export class AppController {
 
 
     async updateDataAndRender(fetchFresh = false) {
+        // Trigger Loading State on Connection Dot if explicit fetch requested
+        if (fetchFresh && this.headerLayout) {
+            this.headerLayout.updateConnectionStatus(AppState.user !== null, 'loading');
+        }
 
 
         if (AppState.isLocked) {
@@ -1617,6 +1634,11 @@ export class AppController {
                                 }
 
                                 if (AppState.watchlist.id === originalWatchlistId) {
+                                    // Recover Health Status to Healthy
+                                    AppState.health.status = 'healthy';
+                                    if (this.headerLayout) {
+                                        this.headerLayout.updateConnectionStatus(true, 'healthy');
+                                    }
                                     // The reactive event will trigger the actual re-render, 
                                     // but we emit it here.
                                     StateAuditor.emit('PRICES_UPDATED', {

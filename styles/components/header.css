@@ -405,8 +405,35 @@ h1#dynamicWatchlistTitle.active {
     box-shadow: 0 0 10px #F44336;
 }
 
-.connection-dot:not(.connected):not(.health-stale):not(.health-critical) {
+.connection-dot.health-offline {
+    background-color: #F44336;
+    box-shadow: 0 0 12px #F44336, 0 0 20px rgba(244, 67, 54, 0.3);
+    animation: pulse-red 1s infinite;
+}
+
+.connection-dot.health-loading {
+    animation: pulse-loading 0.8s infinite !important;
+}
+
+.connection-dot:not(.connected):not(.health-stale):not(.health-critical):not(.health-offline):not(.health-loading) {
     animation: pulse-red 2s infinite;
+}
+
+@keyframes pulse-loading {
+    0% {
+        background-color: #ffffff;
+        box-shadow: 0 0 5px #ffffff;
+    }
+
+    50% {
+        background-color: var(--color-accent);
+        box-shadow: 0 0 15px var(--color-accent), 0 0 25px rgba(var(--color-accent-rgb), 0.5);
+    }
+
+    100% {
+        background-color: #ffffff;
+        box-shadow: 0 0 5px #ffffff;
+    }
 }
 
 @keyframes pulse-green {
