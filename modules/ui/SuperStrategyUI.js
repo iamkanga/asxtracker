@@ -476,13 +476,13 @@ export default class SuperStrategyUI {
             case SUPER_STATES.CONTRIBUTION_CLEARANCE:
                 fieldsHtml = `
                     <div class="${CSS_CLASSES.FORM_GROUP}" style="margin-bottom:14px;">
-                        <label style="font-size:0.62rem;color:var(--text-muted);font-weight:800;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;display:block;opacity:0.55;">Cleared Amount</label>
+                        <label style="font-size:0.62rem;color:var(--text-muted);font-weight:800;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;display:block;opacity:0.55;">Clearance</label>
                         <input type="number" id="${IDS.SUPER_CONTRIBUTION_AMOUNT}" class="${CSS_CLASSES.FORM_CONTROL}"
                                value="${stateData.amount || ''}" placeholder="0.00" step="0.01"
                                style="border-radius:0;padding:11px;font-weight:700;outline:none;">
                     </div>
                     <div class="${CSS_CLASSES.FORM_GROUP}" style="margin-bottom:14px;" onclick="const inp = this.querySelector('input'); if(inp && document.activeElement !== inp) { try { inp.showPicker(); } catch (e) { inp.click(); } }">
-                        <label style="font-size:0.62rem;color:var(--text-muted);font-weight:800;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;display:block;opacity:0.55;">Date Cleared</label>
+                        <label style="font-size:0.62rem;color:var(--text-muted);font-weight:800;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;display:block;opacity:0.55;">Cleared</label>
                         <input type="${stateData.clearedDate ? 'date' : 'text'}" 
                                id="${IDS.SUPER_CONTRIBUTION_DATE}" 
                                class="${CSS_CLASSES.FORM_CONTROL}"
@@ -508,7 +508,7 @@ export default class SuperStrategyUI {
                         </div>
                     </div>
                     <div class="${CSS_CLASSES.FORM_GROUP}" style="margin-bottom:14px;" onclick="const inp = this.querySelector('input'); if(inp && document.activeElement !== inp) { try { inp.showPicker(); } catch (e) { inp.click(); } }">
-                        <label style="font-size:0.62rem;color:var(--text-muted);font-weight:800;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;display:block;opacity:0.55;">Date Submitted</label>
+                        <label style="font-size:0.62rem;color:var(--text-muted);font-weight:800;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;display:block;opacity:0.55;">NOI Filed</label>
                         <input type="${stateData.submittedDate ? 'date' : 'text'}" 
                                id="${IDS.SUPER_NOI_DATE}" 
                                class="${CSS_CLASSES.FORM_CONTROL}"
@@ -651,115 +651,149 @@ export default class SuperStrategyUI {
 
                         <div class="${CSS_CLASSES.FORM_GROUP}" style="margin-bottom:20px;" onclick="const inp = this.querySelector('input'); if(inp && document.activeElement !== inp) { try { inp.showPicker(); } catch (e) { inp.click(); } }">
                             <label style="font-size:0.62rem;color:var(--text-muted);font-weight:800;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;display:block;opacity:0.55;">Planned Commencement Date</label>
-                        <input type="${stateData.commencementDate ? 'date' : 'text'}" 
-                               id="${IDS.SUPER_COMMENCE_DATE}" 
-                               class="${CSS_CLASSES.FORM_CONTROL}"
-                               value="${stateData.commencementDate || ''}"
-                               placeholder="Date"
-                               onfocus="this.type='date';"
-                               onblur="if(!this.value) this.type='text';"
-                               style="border-radius:0;padding:12px;cursor:pointer;font-weight:700;outline:none;width:100%;">
-                        
-                        ${(stateData.commencementDate && new Date(stateData.commencementDate).getMonth() !== 5 && getCurrentFinancialYear(new Date(stateData.commencementDate)) === getCurrentFinancialYear()) ? `
-                            ${this._renderOrangeWarning('Strategic Alert: Pro-Rata Trap', 'Starting before June 1st triggers a mandatory pro-rata payment. Delaying until June 1st allows you to bypass this payment entirely.')}
-                        ` : ''}
-                    </div>
+                            <input type="${stateData.commencementDate ? 'date' : 'text'}" 
+                                   id="${IDS.SUPER_COMMENCE_DATE}" 
+                                   class="${CSS_CLASSES.FORM_CONTROL}"
+                                   value="${stateData.commencementDate || ''}"
+                                   placeholder="Date"
+                                   onfocus="this.type='date';"
+                                   onblur="if(!this.value) this.type='text';"
+                                   style="border-radius:0;padding:12px;cursor:pointer;font-weight:700;outline:none;width:100%;">
+                            
+                            ${(stateData.commencementDate && new Date(stateData.commencementDate).getMonth() !== 5 && getCurrentFinancialYear(new Date(stateData.commencementDate)) === getCurrentFinancialYear()) ? `
+                                ${this._renderOrangeWarning('Strategic Alert: Pro-Rata Trap', 'Starting before June 1st triggers a mandatory pro-rata payment. Delaying until June 1st allows you to bypass this payment entirely.')}
+                            ` : ''}
+                        </div>
 
-                    <div style="font-size:0.68rem; color:var(--text-muted); line-height:1.4; opacity:0.8; margin-bottom: 20px;">
-                         <i class="fas fa-info-circle" style="margin-right:4px; color:var(--color-accent);"></i>
-                         <strong>Confirmed Strategy:</strong> Final commencement will use the $8,000 safety buffer and valuations confirmed in Step 5.
-                    </div>
+                        <div style="font-size:0.68rem; color:var(--text-muted); line-height:1.4; opacity:0.8; margin-bottom: 20px;">
+                             <i class="fas fa-info-circle" style="margin-right:4px; color:var(--color-accent);"></i>
+                             <strong>Confirmed Strategy:</strong> Final commencement will use the $8,000 safety buffer and valuations confirmed in Step 5.
+                        </div>
 
-                    <div style="background: rgba(var(--accent-rgb, 120, 100, 255), 0.1); border-radius: 0; padding: 20px; border: 1px solid rgba(var(--accent-rgb, 120, 100, 255), 0.2); margin-bottom: 24px;">
-                        <div style="font-size: 0.62rem; color: var(--color-accent); font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 12px; opacity: 0.8;">Confirmed Transfer Amount</div>
-                        <div style="font-size: 1.6rem; font-weight: 950; color: #fff; line-height: 1;">${formatCurrency(calc.newPensionStart)}</div>
-                        <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; margin-top: 8px;">Scheduled for new Pension Account</div>
-                    </div>
+                        <div style="background: rgba(var(--accent-rgb, 120, 100, 255), 0.1); border-radius: 0; padding: 20px; border: 1px solid rgba(var(--accent-rgb, 120, 100, 255), 0.2); margin-bottom: 24px;">
+                            <div style="font-size: 0.62rem; color: var(--color-accent); font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 12px; opacity: 0.8;">Confirmed Transfer Amount</div>
+                            <div style="font-size: 1.6rem; font-weight: 950; color: #fff; line-height: 1;">${formatCurrency(calc.newPensionStart)}</div>
+                            <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; margin-top: 8px;">Scheduled for new Pension Account</div>
+                        </div>
 
-                    ${stateData.commencementDate ? this._renderCommencementPreview(data, stateData.commencementDate) : ''}
+                        ${stateData.commencementDate ? this._renderCommencementPreview(data, stateData.commencementDate) : ''}
+                    </div>
                 `;
                 break;
             }
 
             case SUPER_STATES.FINALISED: {
-                const closureData = superStrategyStore.getStateData(SUPER_STATES.PENSION_CLOSURE);
-                const recontribData = superStrategyStore.getStateData(SUPER_STATES.RECONTRIBUTION);
-                const commencementDate = stateData.commencementDate ? new Date(stateData.commencementDate) : null;
-                const isJune1st = commencementDate && commencementDate.getMonth() === 5 && commencementDate.getDate() >= 1;
+                const audit = superStrategyStore.getAuditForensics();
+                const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Pending';
                 
-                // Determine remaining FY mandate
-                let remainingPayout = 'N/A';
-                if (isJune1st) {
-                    remainingPayout = '$0.00 (Strategic Reset)';
-                } else if (commencementDate) {
-                    const fy = getCurrentFinancialYear(commencementDate);
-                    const fyEnd = new Date(fy, 5, 30);
-                    const drawRate = getDrawdownRate(data.ageAtJuly1);
-                    const msPerDay = 86400000;
-                    const daysRemaining = Math.max(1, Math.ceil((fyEnd - commencementDate) / msPerDay) + 1);
-                    const totalDays = Math.ceil((fyEnd - new Date(fy - 1, 6, 1)) / msPerDay) + 1;
-                    remainingPayout = formatCurrency(Math.round(calc.newPensionStart * drawRate * (daysRemaining / totalDays) * 100) / 100);
-                }
-
-                return `
-                    <div id="${IDS.SUPER_STEP_DETAIL}" style="padding: 0; background: transparent; border-radius: 0; margin: 0 0 24px;">
+                fieldsHtml = `
+                    <div id="${IDS.SUPER_STEP_DETAIL}" style="padding: 0; background: transparent; border-radius: 0; margin: 0 0 -10px;">
                         
-                        <div style="padding: 24px 20px; border: 1px solid rgba(255,255,255,0.12); border-radius: 0; margin-bottom: 24px; background: rgba(255,255,255,0.02); box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
-                            <!-- Clean Header -->
-                            <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 24px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 18px;">
-                                <div style="color: var(--color-positive); font-size: 1.6rem;">
+                        <div style="padding: 20px; border: 1px solid rgba(255,255,255,0.12); border-radius: 0; margin-bottom: 24px; background: rgba(255,255,255,0.02); box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
+                            <!-- Header -->
+                            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 15px;">
+                                <div style="color: var(--color-positive); font-size: 1.4rem;">
                                     <i class="fas fa-file-invoice-dollar"></i>
                                 </div>
                                 <div>
-                                    <h3 style="font-size: 1.1rem; font-weight: 950; color: #fff; margin: 0; letter-spacing: -0.5px; text-transform: uppercase;">Master Strategy Record</h3>
-                                    <div style="font-size: 0.62rem; color: var(--color-positive); font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; opacity: 0.8;">Phase 3 Completion Audit</div>
+                                    <h3 style="font-size: 0.95rem; font-weight: 950; color: #fff; margin: 0; letter-spacing: -0.2px; text-transform: uppercase;">Master Strategy Record</h3>
+                                    <div style="font-size: 0.58rem; color: var(--color-positive); font-weight: 800; text-transform: uppercase; letter-spacing: 1px; opacity: 0.8;">Phase 3 Completion Audit</div>
                                 </div>
                             </div>
 
-                            <!-- 1. Baseline Position -->
-                            <div style="margin-bottom: 24px;">
-                                <div style="font-size: 0.62rem; color: var(--text-muted); font-weight: 900; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
+                            <!-- Group 1: Baseline Position -->
+                            <div style="margin-bottom: 20px;">
+                                <div style="font-size: 0.55rem; color: var(--text-muted); font-weight: 900; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
                                     <i class="fas fa-database"></i> Baseline Position <span style="font-weight: 400; opacity: 0.6;">(1 July)</span>
                                 </div>
-                                <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.04);">
-                                    <span style="font-size: 0.72rem; color: #fff; opacity: 0.8;">Total Member Balance</span>
-                                    <span style="font-size: 0.75rem; color: #fff; font-weight: 800;">${formatCurrency(data.accumulationBalance + data.pensionBalance)}</span>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 8px;">
+                                    <div>
+                                        <div style="font-size: 0.5rem; color: var(--text-muted); text-transform: uppercase;">Accumulation</div>
+                                        <div style="font-size: 0.72rem; color: #fff; font-weight: 700;">${formatCurrency(audit.baseline.accumulation)}</div>
+                                    </div>
+                                    <div>
+                                        <div style="font-size: 0.5rem; color: var(--text-muted); text-transform: uppercase;">Pension</div>
+                                        <div style="font-size: 0.72rem; color: #fff; font-weight: 700;">${formatCurrency(audit.baseline.pension)}</div>
+                                    </div>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; padding: 8px 0; border-top: 1px solid rgba(255,255,255,0.06);">
+                                    <span style="font-size: 0.68rem; color: #fff; font-weight: 700; text-transform: uppercase;">Total Member Balance</span>
+                                    <span style="font-size: 0.9rem; color: #fff; font-weight: 950;">${formatCurrency(audit.baseline.total)}</span>
                                 </div>
                             </div>
 
-                            <!-- 2. Execution Forensics -->
-                            <div style="margin-bottom: 24px;">
-                                <div style="font-size: 0.62rem; color: var(--text-muted); font-weight: 900; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
+                            <!-- Group 2: The Execution Timeline -->
+                            <div style="margin-bottom: 20px;">
+                                <div style="font-size: 0.55rem; color: var(--text-muted); font-weight: 900; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+                                    <i class="fas fa-calendar-alt"></i> Execution Timeline
+                                </div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.65rem;">
+                                    <div>
+                                        <div style="color: var(--text-muted); font-size: 0.5rem; text-transform: uppercase;">Clearance</div>
+                                        <div style="color: #fff; font-weight: 600;">${formatDate(audit.timeline.clearanceDate)}</div>
+                                    </div>
+                                    <div>
+                                        <div style="color: var(--text-muted); font-size: 0.5rem; text-transform: uppercase;">NOI Filed</div>
+                                        <div style="color: #fff; font-weight: 600;">${formatDate(audit.timeline.noiFiledDate)}</div>
+                                    </div>
+                                    <div>
+                                        <div style="color: var(--text-muted); font-size: 0.5rem; text-transform: uppercase;">NOI Approval</div>
+                                        <div style="color: #fff; font-weight: 600;">${formatDate(audit.timeline.fundAckDate)}</div>
+                                    </div>
+                                    <div>
+                                        <div style="color: var(--text-muted); font-size: 0.5rem; text-transform: uppercase;">Concessional Cap</div>
+                                        <div style="color: #fff; font-weight: 600;">${formatCurrency(audit.timeline.mccAmount)}</div>
+                                    </div>
+                                </div>
+                                <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.04);">
+                                    <div style="color: var(--text-muted); font-size: 0.5rem; text-transform: uppercase;">Strategy Completion</div>
+                                    <div style="color: #fff; font-weight: 600;">${formatDate(audit.timeline.completionDate)}</div>
+                                </div>
+                            </div>
+
+                            <!-- Group 3: Strategy Forensics -->
+                            <div style="margin-bottom: 20px;">
+                                <div style="font-size: 0.55rem; color: var(--text-muted); font-weight: 900; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
                                     <i class="fas fa-microchip"></i> Strategy Forensics
                                 </div>
-                                <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.04);">
-                                    <span style="font-size: 0.72rem; color: #fff; opacity: 0.8;">Tax-Free Conversion</span>
-                                    <span style="font-size: 0.75rem; color: var(--color-accent); font-weight: 800;">${formatCurrency(recontribData?.recontributionAmount || 0)}</span>
-                                </div>
-                                <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.04);">
-                                    <span style="font-size: 0.72rem; color: #fff; opacity: 0.8;">Pensions Closure Payout</span>
-                                    <span style="font-size: 0.75rem; color: #fff; font-weight: 800;">${formatCurrency(closureData?.proRataPayout || 0)}</span>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.65rem;">
+                                    <div>
+                                        <div style="color: var(--text-muted); font-size: 0.5rem; text-transform: uppercase;">Gross Contribution</div>
+                                        <div style="color: #fff; font-weight: 600;">${formatCurrency(audit.forensics.grossContribution)}</div>
+                                    </div>
+                                    <div>
+                                        <div style="color: var(--text-muted); font-size: 0.5rem; text-transform: uppercase;">Tax (15%)</div>
+                                        <div style="color: #ff3b30; font-weight: 700;">-${formatCurrency(audit.forensics.contributionTax)}</div>
+                                    </div>
+                                    <div>
+                                        <div style="color: var(--text-muted); font-size: 0.5rem; text-transform: uppercase;">Net Recontribution</div>
+                                        <div style="color: var(--color-accent); font-weight: 750;">${formatCurrency(audit.forensics.netRecontribution)}</div>
+                                    </div>
+                                    <div>
+                                        <div style="color: var(--text-muted); font-size: 0.5rem; text-transform: uppercase;">Closure Payout</div>
+                                        <div style="color: #fff; font-weight: 600;">${formatCurrency(audit.forensics.closurePayout)}</div>
+                                    </div>
                                 </div>
                             </div>
 
-                            <!-- 3. Final Result -->
-                            <div style="padding: 16px 0; border-top: 1px solid rgba(255,255,255,0.1);">
-                                <div style="font-size: 0.62rem; color: var(--color-accent); font-weight: 900; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
-                                    <i class="fas fa-check-double"></i> Current Post-Strategy Result
+                            <!-- Group 4: Final Results -->
+                            <div style="padding-top: 18px; border-top: 1px solid rgba(255,255,255,0.12);">
+                                <div style="font-size: 0.55rem; color: var(--color-accent); font-weight: 900; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+                                    <i class="fas fa-check-double"></i> Final Post-Strategy Result
                                 </div>
-                                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                                    <div style="display: flex; flex-direction: column;">
-                                        <span style="font-size: 0.6rem; color: var(--text-muted); text-transform: uppercase;">Restart Date</span>
-                                        <span style="font-size: 0.85rem; color: #fff; font-weight: 800;">${stateData.commencementDate ? new Date(stateData.commencementDate).toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Confirmed'}</span>
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
+                                    <div>
+                                        <div style="font-size: 0.5rem; color: var(--text-muted); text-transform: uppercase;">Restart Date</div>
+                                        <div style="font-size: 0.85rem; color: #fff; font-weight: 800;">${formatDate(audit.result.restartDate)}</div>
                                     </div>
-                                    <div style="display: flex; flex-direction: column; align-items: flex-end;">
-                                        <span style="font-size: 0.6rem; color: var(--text-muted); text-transform: uppercase;">New Pension Start</span>
-                                        <span style="font-size: 1.1rem; color: var(--color-positive); font-weight: 950;">${formatCurrency(calc.newPensionStart)}</span>
+                                    <div style="text-align: right;">
+                                        <div style="font-size: 0.5rem; color: var(--text-muted); text-transform: uppercase;">New Pension Start</div>
+                                        <div style="font-size: 1.2rem; color: var(--color-positive); font-weight: 950; line-height: 1;">${formatCurrency(audit.result.newPensionStart)}</div>
                                     </div>
                                 </div>
-                                <div style="padding-top: 10px; border-top: 1px dotted rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center;">
-                                    <span style="font-size: 0.65rem; color: #fff; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Remaining FY Payout</span>
-                                    <span style="font-size: 0.8rem; color: ${isJune1st ? 'var(--color-positive)' : 'var(--color-accent)'}; font-weight: 950;">${remainingPayout}</span>
+                                <div style="padding-top: 10px; border-top: 1px dotted rgba(255,255,255,0.15); display: flex; justify-content: space-between; align-items: center;">
+                                    <span style="font-size: 0.65rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; opacity: 0.8;">Remaining Accumulation</span>
+                                    <span style="font-size: 0.82rem; color: #fff; font-weight: 800;">${formatCurrency(audit.result.remainingAccumulation)}</span>
                                 </div>
                             </div>
                         </div>
@@ -923,6 +957,7 @@ export default class SuperStrategyUI {
                     <div style="font-size:0.75rem;color:var(--text-muted);line-height:1.5;opacity:0.8;font-weight:500;">${desc}</div>
                 </div>
                 ${fieldsHtml}
+                ${current !== SUPER_STATES.FINALISED ? `
                  <div style="display:flex;gap:8px;margin-top:16px;">
                     ${superStrategyStore.getCurrentStateIndex() > 0 ? `
                         <button id="super-back-btn" style="padding:12px 14px;border-radius:0;background:rgba(255,255,255,0.06);color:var(--text-muted);border:1px solid rgba(255,255,255,0.08);cursor:pointer;font-weight:600;font-size:0.8rem;display:flex;align-items:center;gap:6px;">
@@ -942,6 +977,7 @@ export default class SuperStrategyUI {
                         <i class="fas fa-sync-alt" style="font-size:0.75rem;"></i>
                     </button>
                 </div>
+                ` : ''}
             </div>
         `;
     }
@@ -997,7 +1033,7 @@ export default class SuperStrategyUI {
 
             <!-- 2. The Guardrails (High-Impact Caps) -->
             <!-- 2. The Guardrails (High-Impact Caps) -->
-            <div style="font-size:0.62rem;font-weight:800;text-transform:uppercase;letter-spacing:2px;color:var(--text-muted);opacity:0.5;margin:24px 0(14px) 2px;">Legislative Guardrails FY ${fy - 1} ${String(fy).slice(-2)}</div>
+            <div style="font-size:0.62rem;font-weight:800;text-transform:uppercase;letter-spacing:2px;color:var(--text-muted);opacity:0.5;margin:24px 0 14px 2px;">Legislative Guardrails FY ${fy - 1} ${String(fy).slice(-2)}</div>
             <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:12px; margin-bottom:32px;">
                 
                 <!-- Concessional Card -->

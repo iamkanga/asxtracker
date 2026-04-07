@@ -343,6 +343,8 @@ class SuperStrategyStore {
             this._dispatch(EVENTS.SUPER_STATE_CHANGED, { from: currentState, to: nextState });
             return { success: true, message: `Advanced to ${STATE_LABELS[nextState]}.`, newState: nextState };
         }
+
+        return { success: true, message: 'Strategy already finalized.', newState: currentState };
     }
 
     /**
@@ -650,8 +652,9 @@ class SuperStrategyStore {
         // Final Consolidation Estimate
         // Fixed: currentAcc is assumed to be the absolute current balance as 
         // entered by the user (which usually includes Step 1).
-        const restartVal = currentAcc + closedBalance - buffer;
-        const excessTBC = Math.max(0, restartVal - caps.tbc);
+        const restartValTotal = currentAcc + closedBalance - buffer;
+        const pensionStart = Math.min(restartValTotal, caps.tbc);
+        const excessTBC = Math.max(0, restartValTotal - caps.tbc);
 
         return {
             annualMinimum: annual.annualMinimum,
@@ -663,10 +666,45 @@ class SuperStrategyStore {
             safetyFloorStatus: floorCheck,
             totalBalance: this.getTotalBalance(),
             accumulationRetentionBuffer: buffer,
-            newPensionStart: restartVal,
+            newPensionStart: pensionStart,
             excessTBC: excessTBC,
             clearedStep1: clearedStep1,
-            currentAcc: currentAcc
+            currentAcc: currentAcc,
+            residualAccumulation: buffer + excessTBC
+        };
+    }
+
+    /**
+     * Aggregates all chronological and forensic data for the final Phase 3 audit.
+     */
+    getAuditForensics() {
+        const sd = this.data.stateData;
+        const calc = this.getCalculatedValues();
+        
+        return {
+            baseline: {
+                accumulation: this.data.accumulationBalance,
+                pension: this.data.pensionBalance,
+                total: this.getTotalBalance()
+            },
+            timeline: {
+                clearanceDate: sd[SUPER_STATES.CONTRIBUTION_CLEARANCE]?.clearedDate,
+                noiFiledDate: sd[SUPER_STATES.NOI_SUBMISSION]?.submittedDate,
+                fundAckDate: sd[SUPER_STATES.FUND_ACKNOWLEDGEMENT]?.acknowledgedDate,
+                mccAmount: calc.contributionCaps.concessional,
+                completionDate: sd[SUPER_STATES.FINALISED]?.completedAt
+            },
+            forensics: {
+                grossContribution: sd[SUPER_STATES.CONTRIBUTION_CLEARANCE]?.amount || 0,
+                contributionTax: (sd[SUPER_STATES.NOI_SUBMISSION]?.deductionAmount || 0) * 0.15,
+                netRecontribution: sd[SUPER_STATES.RECONTRIBUTION]?.recontributionAmount || 0,
+                closurePayout: sd[SUPER_STATES.PENSION_CLOSURE]?.proRataPayout || 0
+            },
+            result: {
+                restartDate: sd[SUPER_STATES.PENSION_COMMENCEMENT]?.commencementDate,
+                newPensionStart: calc.newPensionStart,
+                remainingAccumulation: calc.residualAccumulation
+            }
         };
     }
 
