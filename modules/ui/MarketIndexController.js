@@ -108,14 +108,12 @@ export class MarketIndexController {
         this.modal.classList.add('hidden');
         this.modal.classList.remove('show');
         
-        requestAnimationFrame(() => {
-            this.modal.classList.remove('hidden');
-            requestAnimationFrame(() => {
-                this.modal.classList.add('show');
-                document.body.style.overflow = 'hidden';
-                this.render(notificationStore.getMarketIndexAlerts());
-            });
-        });
+        // Optimized Transition (v1149: Remove nested rAF)
+        this.modal.classList.remove('hidden');
+        void this.modal.offsetWidth; // Force Reflow
+        this.modal.classList.add('show');
+        document.body.style.overflow = 'hidden';
+        this.render(notificationStore.getMarketIndexAlerts());
 
         // Register with NavigationManager for Back Button support
         navManager.pushState(() => {

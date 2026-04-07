@@ -44,7 +44,9 @@ export class AiSummaryUI {
         this._dismissOthers();
         const modal = this._renderModal(symbol, title);
         document.body.appendChild(modal);
-        requestAnimationFrame(() => modal.classList.add('show'));
+        // Optimized Transition (v1149: Remove nested rAF)
+        modal.classList.add('show');
+        void modal.offsetWidth; // Force Reflow
         return modal;
     }
 
@@ -59,7 +61,9 @@ export class AiSummaryUI {
             this._dismissOthers();
             modal = this._renderModal(symbol, title);
             document.body.appendChild(modal);
-            requestAnimationFrame(() => modal.classList.add('show'));
+            // Optimized Transition (v1149: Remove nested rAF)
+            modal.classList.add('show');
+            void modal.offsetWidth; // Force Reflow
         }
 
         this._updateContent(modal, text, modelName);

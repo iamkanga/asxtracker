@@ -1408,12 +1408,10 @@ export class ViewRenderer {
             });
         }
 
-        requestAnimationFrame(() => {
-            modal.classList.remove(CSS_CLASSES.HIDDEN);
-            requestAnimationFrame(() => {
-                modal.classList.add(CSS_CLASSES.SHOW);
-            });
-        });
+        // Optimized Transition (v1149: Removed nested rAF for instantaneous feel)
+        modal.classList.remove(CSS_CLASSES.HIDDEN);
+        void modal.offsetWidth; // Force Reflow
+        modal.classList.add(CSS_CLASSES.SHOW);
     }
 
     _renderStars(count) {
@@ -2793,19 +2791,17 @@ export class ViewRenderer {
                 // REMOVED close() to allow stacking and "Step Back" support.
                 // Summary stays in stack, Details pushes on top.
 
-                // Delay opening detail modal to allow history to settle (lock safety)
+                // Delay eliminated for snappiness (v1149)
                 setTimeout(() => {
                     document.dispatchEvent(new CustomEvent(EVENTS.ASX_CODE_CLICK, { detail: { code, id } }));
-                }, 150);
+                }, 0);
             });
         });
 
-        requestAnimationFrame(() => {
-            modal.classList.remove(CSS_CLASSES.HIDDEN);
-            requestAnimationFrame(() => {
-                modal.classList.add(CSS_CLASSES.SHOW);
-            });
-        });
+        // Optimized Transition (v1149: Remove nested rAF)
+        modal.classList.remove(CSS_CLASSES.HIDDEN);
+        void modal.offsetWidth; // Force reflow
+        modal.classList.add(CSS_CLASSES.SHOW);
     }
 
     /**

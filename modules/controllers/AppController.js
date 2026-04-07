@@ -2332,14 +2332,14 @@ export class AppController {
             if (addBtn) {
                 if (this.headerLayout) this.headerLayout.closeSidebar();
 
-                // Standard 150ms delay for history stabilization
+                // Standard delay reduced to 0ms for instantaneous feeling
                 setTimeout(() => {
                     if (AppState.watchlist.id === CASH_WATCHLIST_ID) {
                         this.modalController.handleOpenCashModal(null);
                     } else {
                         this.modalController.openAddShareModal(null);
                     }
-                }, 150);
+                }, 0);
             }
         });
 
@@ -2506,13 +2506,13 @@ export class AppController {
 
             if (item && item.dataset.code) {
                 const code = item.dataset.code;
-                // Add delay for row click transitions
+                // Eliminated delay for row click transitions
                 setTimeout(() => {
                     const stockData = getSingleShareData(code, AppState.data.shares, AppState.livePrices, AppState.data.watchlists);
                     if (stockData) {
                         this.viewRenderer.renderStockDetailsModal(stockData);
                     }
-                }, 150);
+                }, 0);
             }
         });
 
@@ -2541,7 +2541,7 @@ export class AppController {
             }
 
             if (targetId) {
-                const delay = e.detail.instant ? 0 : 150;
+                const delay = e.detail.instant ? 0 : 0; // Delay eliminated
                 // Safety delay for transition from detail to edit
                 setTimeout(() => {
                     // DEEP LINK: Pass specific section if requested (e.g. 'notes', 'target')
@@ -2991,7 +2991,7 @@ export class AppController {
             const { code } = e.detail;
             if (!code) return;
 
-            // Safety Delay: Ensures any preceding transitions or history moves settle
+            // Safety Delay: Eliminated for snappiness
             setTimeout(() => {
                 const stockData = getSingleShareData(code, AppState.data.shares, AppState.livePrices, AppState.data.watchlists);
                 if (stockData) {
@@ -3014,7 +3014,7 @@ export class AppController {
                         document.dispatchEvent(new CustomEvent(EVENTS.OPEN_RESEARCH_MODAL, { detail: { query: code } }));
                     }
                 }
-            }, 120);
+            }, 0);
         });
 
         // 5. Summary Detail Modals
@@ -3089,10 +3089,10 @@ export class AppController {
                 default:
                     return;
             }
-            // Delay opening modal to allow any preceding history moves to settle
+            // Delay eliminated for snappiness
             setTimeout(() => {
                 this.viewRenderer.renderSummaryDetailModal(title, filteredShares, valueField, trendClass);
-            }, 150);
+            }, 0);
         });
 
         // -------------------------------------------------------------------------

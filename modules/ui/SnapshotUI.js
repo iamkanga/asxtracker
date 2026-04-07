@@ -43,12 +43,10 @@ export class SnapshotUI {
             });
         }
 
-        requestAnimationFrame(() => {
-            modal.classList.remove(CSS_CLASSES.HIDDEN);
-            requestAnimationFrame(() => {
-                modal.classList.add(CSS_CLASSES.SHOW);
-            });
-        });
+        // Optimized Transition (v1149: Remove nested rAF)
+        modal.classList.remove(CSS_CLASSES.HIDDEN);
+        void modal.offsetWidth; // Force Reflow
+        modal.classList.add(CSS_CLASSES.SHOW);
     }
 
     static _close(modal) {

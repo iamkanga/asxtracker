@@ -108,12 +108,13 @@ export class ShareFormUI {
 
         // 4. Show Modal
         document.body.appendChild(modal);
-        requestAnimationFrame(() => {
-            modal.classList.remove(CSS_CLASSES.HIDDEN);
-            requestAnimationFrame(() => {
-                modal.classList.add(CSS_CLASSES.SHOW);
-                const input = modal.querySelector('#shareName');
-                if (input) input.focus();
+        // Optimized Transition (v1149: Remove nested rAF)
+        modal.classList.remove(CSS_CLASSES.HIDDEN);
+        void modal.offsetWidth; // Force Reflow
+        modal.classList.add(CSS_CLASSES.SHOW);
+
+        const input = modal.querySelector('#shareName');
+        if (input) input.focus();
 
             // EDIT MODE: Trigger Live Preview immediately
             if (shareData && shareData.shareName) {
@@ -171,8 +172,7 @@ export class ShareFormUI {
                     }, 200);
                 }
             }
-            });
-        });
+        // End of optimized transition block
     }
 
     /**
@@ -759,8 +759,8 @@ export class ShareFormUI {
             modal.classList.remove(CSS_CLASSES.SHOW);
             modal.style.pointerEvents = 'none';
 
+            // Optimized Transition (v1149: Remove nested rAF)
             setTimeout(() => {
-                modal.classList.add(CSS_CLASSES.HIDDEN);
                 modal.remove();
             }, 450);
 
@@ -1235,6 +1235,11 @@ export class ShareFormUI {
 
             panel.innerHTML = row1 + row2;
             panel.classList.remove(CSS_CLASSES.HIDDEN);
+
+            // Optimized Transition (v1149: Remove nested rAF)
+            modal.classList.remove(CSS_CLASSES.HIDDEN);
+            void modal.offsetWidth; // Force Reflow
+            // Note: SHOW is already on the classList from render, so reflow triggers the transition immediately
         });
     }
 

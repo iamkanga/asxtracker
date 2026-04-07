@@ -426,9 +426,9 @@ export class CashAssetUI {
         // Attach keyboard handler for Android keyboard visibility
         KeyboardModalHandler.attach(modal);
 
-        requestAnimationFrame(() => {
-            modal.classList.remove(CSS_CLASSES.HIDDEN);
-        });
+        // Optimized Transition (v1149: Remove nested rAF)
+        modal.classList.remove(CSS_CLASSES.HIDDEN);
+        void modal.offsetWidth; // Force Reflow
     }
 
     gatherFormData(modal) {

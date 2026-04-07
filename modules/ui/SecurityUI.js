@@ -61,12 +61,10 @@ export const SecurityUI = {
 
         document.body.appendChild(modal);
 
-        requestAnimationFrame(() => {
-            modal.classList.remove(CSS_CLASSES.HIDDEN);
-            requestAnimationFrame(() => {
-                modal.classList.add(CSS_CLASSES.SHOW);
-            });
-        });
+        // Optimized Transition (v1149: Remove nested rAF)
+        modal.classList.remove(CSS_CLASSES.HIDDEN);
+        void modal.offsetWidth; // Force Reflow
+        modal.classList.add(CSS_CLASSES.SHOW);
 
         let currentPin = "";
         const dots = modal.querySelectorAll(`.${CSS_CLASSES.PIN_DOT}`);
@@ -139,13 +137,13 @@ export const SecurityUI = {
         if (isBiometricEnabled && isBiometricSupported) {
             if (bioBtn) bioBtn.addEventListener('click', () => options.onBiometric());
 
-            // Auto-trigger with slight delay to ensure UI renders first (Context: "Why is this prompt appearing?")
+            // Auto-trigger with minimal delay to ensure UI renders first
             setTimeout(() => {
                 // Ensure modal is still valid/attached
                 if (document.getElementById(IDS.SECURITY_UNLOCK_MODAL)) {
                     options.onBiometric();
                 }
-            }, 500);
+            }, 100); // Reduced from 500ms
         }
     },
 
@@ -162,12 +160,10 @@ export const SecurityUI = {
 
         document.body.appendChild(modal);
 
-        requestAnimationFrame(() => {
-            modal.classList.remove(CSS_CLASSES.HIDDEN);
-            requestAnimationFrame(() => {
-                modal.classList.add(CSS_CLASSES.SHOW);
-            });
-        });
+        // Optimized Transition (v1149)
+        modal.classList.remove(CSS_CLASSES.HIDDEN);
+        void modal.offsetWidth; // Force Reflow
+        modal.classList.add(CSS_CLASSES.SHOW);
 
         // Register with NavigationManager
         this._navActive = true;
@@ -343,12 +339,10 @@ export const SecurityUI = {
 
         document.body.appendChild(modal);
 
-        requestAnimationFrame(() => {
-            modal.classList.remove(CSS_CLASSES.HIDDEN);
-            requestAnimationFrame(() => {
-                modal.classList.add(CSS_CLASSES.SHOW);
-            });
-        });
+        // Optimized Transition (v1149)
+        modal.classList.remove(CSS_CLASSES.HIDDEN);
+        void modal.offsetWidth; // Force Reflow
+        modal.classList.add(CSS_CLASSES.SHOW);
 
         modal.innerHTML = `
             <div class="${CSS_CLASSES.MODAL_OVERLAY}"></div>
