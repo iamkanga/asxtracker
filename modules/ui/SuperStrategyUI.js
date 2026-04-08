@@ -672,7 +672,7 @@ export default class SuperStrategyUI {
                         
                         <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.06); opacity: 0.4;">
                             <div style="display: flex; flex-direction: column;">
-                                <span style="font-size: 0.62rem; color: rgba(255,255,255,0.6); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Pension Account Closed (Step 4)</span>
+                                <span style="font-size: 0.62rem; color: rgba(255,255,255,0.6); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Pension Account Closed</span>
                                 <span style="font-size: 0.58rem; color: var(--color-warning); font-weight: 600; margin-top: 2px;">Confirmed Completion</span>
                             </div>
                             <span style="font-size: 0.95rem; color: #fff; font-weight: 800;">${closureData?.closureDate ? new Date(closureData.closureDate).toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Not Set'}</span>
