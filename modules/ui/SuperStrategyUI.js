@@ -737,11 +737,11 @@ export default class SuperStrategyUI {
                                 <div class="super-audit-grid">
                                     <div class="super-audit-row">
                                         <div class="super-audit-label">Accumulation</div>
-                                        <div class="super-audit-value" style="font-size: 0.95rem; font-weight: 900;">${formatCurrency(audit.baseline.accumulation)}</div>
+                                        <div class="super-audit-value" style="font-size: 0.95rem; font-weight: 900; color: #fff;">${formatCurrency(audit.baseline.accumulation)}</div>
                                     </div>
                                     <div class="super-audit-row">
                                         <div class="super-audit-label">Pension</div>
-                                        <div class="super-audit-value" style="font-size: 0.95rem; font-weight: 900;">${formatCurrency(audit.baseline.pension)}</div>
+                                        <div class="super-audit-value" style="font-size: 0.95rem; font-weight: 900; color: #fff;">${formatCurrency(audit.baseline.pension)}</div>
                                     </div>
                                     <div class="super-audit-row full-width">
                                         <div class="super-audit-label">Total Member Balance</div>
@@ -758,15 +758,15 @@ export default class SuperStrategyUI {
                                 <div class="super-audit-grid">
                                     <div class="super-audit-row full-width">
                                         <div class="super-audit-label">Clearance</div>
-                                        <div class="super-audit-value" style="font-size: 0.85rem; font-weight: 800; color: #fff;">${formatDate(audit.timeline.clearanceDate)}</div>
+                                        <div class="super-audit-value" style="font-size: 0.95rem; font-weight: 900; color: #fff;">${formatDate(audit.timeline.clearanceDate)}</div>
                                     </div>
                                     <div class="super-audit-row">
                                         <div class="super-audit-label">NOI Filed</div>
-                                        <div class="super-audit-value" style="font-size: 0.85rem; font-weight: 800; color: #fff;">${formatDate(audit.timeline.noiFiledDate)}</div>
+                                        <div class="super-audit-value" style="font-size: 0.95rem; font-weight: 900; color: #fff;">${formatDate(audit.timeline.noiFiledDate)}</div>
                                     </div>
                                     <div class="super-audit-row">
                                         <div class="super-audit-label">NOI Approval</div>
-                                        <div class="super-audit-value" style="font-size: 0.85rem; font-weight: 800; color: #fff;">${formatDate(audit.timeline.fundAckDate)}</div>
+                                        <div class="super-audit-value" style="font-size: 0.95rem; font-weight: 900; color: #fff;">${formatDate(audit.timeline.fundAckDate)}</div>
                                     </div>
                                     <div class="super-audit-row">
                                         <div class="super-audit-label">Concessional</div>
@@ -784,7 +784,7 @@ export default class SuperStrategyUI {
                                     </div>
                                     <div class="super-audit-row">
                                         <div class="super-audit-label">Strategy Completion</div>
-                                        <div class="super-audit-value" style="font-size: 0.85rem; font-weight: 800; color: #fff;">${formatDate(audit.timeline.completionDate)}</div>
+                                        <div class="super-audit-value" style="font-size: 0.95rem; font-weight: 900; color: #fff;">${formatDate(audit.timeline.completionDate)}</div>
                                     </div>
                                 </div>
                             </div>
@@ -823,11 +823,11 @@ export default class SuperStrategyUI {
                                 <div class="super-audit-grid">
                                     <div class="super-audit-row">
                                         <div class="super-audit-label">Restart Date</div>
-                                        <div class="super-audit-value" style="font-size: 0.85rem; font-weight: 800; color: #fff;">${formatDate(audit.result.restartDate)}</div>
+                                        <div class="super-audit-value" style="font-size: 0.95rem; font-weight: 900; color: #fff;">${formatDate(audit.result.restartDate)}</div>
                                     </div>
                                     <div class="super-audit-row">
                                         <div class="super-audit-label">Accumulation</div>
-                                        <div class="super-audit-value" style="font-size: 0.85rem; font-weight: 800; color: #fff;">${formatCurrency(audit.result.remainingAccumulation)}</div>
+                                        <div class="super-audit-value" style="font-size: 0.95rem; font-weight: 900; color: #fff;">${formatCurrency(audit.result.remainingAccumulation)}</div>
                                     </div>
                                     <div class="super-audit-row full-width">
                                         <div class="super-audit-label" style="color: var(--color-accent); opacity: 1;">New Pension Start</div>
