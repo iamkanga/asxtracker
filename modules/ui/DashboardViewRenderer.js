@@ -4,7 +4,7 @@
  * Displays market indices and commodities in a high-density stacked card view.
  */
 import { formatCurrency, formatPercent } from '../utils/formatters.js';
-import { IDS, CSS_CLASSES, DASHBOARD_SYMBOLS, STORAGE_KEYS, DASHBOARD_LINKS, UI_ICONS, KANGAROO_ICON_SVG } from '../utils/AppConstants.js?v=1031';
+import { IDS, CSS_CLASSES, EVENTS, DASHBOARD_SYMBOLS, STORAGE_KEYS, DASHBOARD_LINKS, UI_ICONS, KANGAROO_ICON_SVG } from '../utils/AppConstants.js?v=1031';
 import { AppState } from '../state/AppState.js';
 import { DashboardFilterModal } from './DashboardFilterModal.js';
 import { LinkHelper } from '../utils/LinkHelper.js';
@@ -133,7 +133,7 @@ export class DashboardViewRenderer {
         // Listen for external updates (from Modal closing)
         if (!this._boundRefresh) {
             this._boundRefresh = () => this.render(AppState.data.dashboard);
-            window.addEventListener('dashboard-prefs-changed', this._boundRefresh);
+            document.addEventListener(EVENTS.DASHBOARD_PREFS_CHANGED, this._boundRefresh);
         }
 
         // Reorder buttons

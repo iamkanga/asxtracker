@@ -61,9 +61,8 @@ export class WidgetPanel {
     init(container) {
         if (this.isInitialized) return;
         this.container = container;
-        console.log('[WidgetPanel] Initializing with container:', container);
         this.container.classList.add(CSS_CLASSES.WIDGET_PANEL);
-        this.container.classList.add('widget-hidden');
+        this.container.classList.add(CSS_CLASSES.WIDGET_HIDDEN);
 
         this._setupOverlay();
 
@@ -105,7 +104,7 @@ export class WidgetPanel {
 
         // Keyboard support (Escape to close)
         window.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && this.container && !this.container.classList.contains('widget-hidden')) {
+            if (e.key === 'Escape' && this.container && !this.container.classList.contains(CSS_CLASSES.WIDGET_HIDDEN)) {
                 this.toggle();
             }
         });
@@ -117,8 +116,7 @@ export class WidgetPanel {
             return;
         }
 
-        const isHidden = this.container.classList.toggle('widget-hidden');
-        console.log('[WidgetPanel] Toggle State:', isHidden ? 'HIDDEN' : 'VISIBLE');
+        const isHidden = this.container.classList.toggle(CSS_CLASSES.WIDGET_HIDDEN);
 
         if (!isHidden) {
             // OPENING
@@ -131,7 +129,7 @@ export class WidgetPanel {
             }
 
             document.body.appendChild(this.container);
-            this.container.className = 'widget-panel';
+            this.container.className = CSS_CLASSES.WIDGET_PANEL;
 
             const isMobile = window.innerWidth <= 540;
             const panelWidth = isMobile ? '100vw' : '380px';
@@ -160,7 +158,7 @@ export class WidgetPanel {
                 this.overlay.style.opacity = '0';
                 this.overlay.style.visibility = 'hidden';
                 setTimeout(() => {
-                    if (this.container.classList.contains('widget-hidden')) {
+                    if (this.container.classList.contains(CSS_CLASSES.WIDGET_HIDDEN)) {
                         this.overlay.style.display = 'none';
                     }
                 }, 300);
@@ -168,7 +166,7 @@ export class WidgetPanel {
 
             this.container.style.transform = 'translateX(100%)';
             setTimeout(() => {
-                if (this.container.classList.contains('widget-hidden')) {
+                if (this.container.classList.contains(CSS_CLASSES.WIDGET_HIDDEN)) {
                     this.container.style.display = 'none';
                 }
             }, 300);
@@ -177,7 +175,7 @@ export class WidgetPanel {
 
     render() {
         if (!this.container) return;
-        if (this.container.classList.contains('widget-hidden')) {
+        if (this.container.classList.contains(CSS_CLASSES.WIDGET_HIDDEN)) {
             return;
         }
 

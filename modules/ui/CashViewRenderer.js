@@ -90,7 +90,7 @@ export class CashViewRenderer {
      */
     createTotalHeader(totalValue, assets = []) {
         const headerDiv = document.createElement('div');
-        headerDiv.className = 'cash-total-header';
+        headerDiv.className = CSS_CLASSES.CASH_TOTAL_HEADER;
 
         const stripThickness = 9;
         const baseCardHeight = 70;

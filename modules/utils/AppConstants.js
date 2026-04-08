@@ -189,7 +189,10 @@ export const EVENTS = {
     OPEN_SUPER_STRATEGY: 'open-super-strategy',
     SUPER_STATE_CHANGED: 'super-state-changed',
     SUPER_SUSTAINABILITY_ALERT: 'super-sustainability-alert',
-    SUPER_READY: 'super-ready'
+    SUPER_READY: 'super-ready',
+
+    // Dashboard Preferences
+    DASHBOARD_PREFS_CHANGED: 'dashboard-prefs-changed'
 };
 
 export const SORT_OPTIONS = {
@@ -841,6 +844,31 @@ export const CSS_CLASSES = {
     WIDGET_CONFIG_MODAL: 'widget-config-modal',
     WIDGET_MODULE_ROW: 'widget-module-row',
     WIDGET_DRAG_HANDLE: 'widget-drag-handle',
+    WIDGET_HIDDEN: 'widget-hidden',
+
+    // Peripheral UI Modules
+    GLASS_EFFECT: 'glass-effect',
+    VISUAL_HUD: 'visual-hud',
+    THEME_STUDIO_OVERLAY: 'theme-studio-overlay',
+    BACK_TO_TOP_BTN: 'back-to-top-btn',
+    PTR_INDICATOR: 'ptr-indicator',
+    PTR_ICON_WRAP: 'ptr-icon-wrap',
+    SHARE_PIE_SMALL_WRAPPER: 'share-pie-small-wrapper',
+    PORTFOLIO_DNA_STRIP: 'portfolio-dna-strip',
+    CASH_PIE_SMALL_WRAPPER: 'cash-pie-small-wrapper',
+    CASH_DNA_STRIP: 'cash-dna-strip',
+    SETTINGS_ACCORDION_MODAL: 'settings-accordion-modal',
+    CASH_TOTAL_HEADER: 'cash-total-header',
+
+    // Gemini Prompt Menu
+    GEMINI_MENU: 'gemini-menu',
+    GEMINI_MENU_ITEM: 'gemini-menu-item',
+    GEMINI_CUSTOM_TEXTAREA: 'gemini-custom-textarea',
+    GEMINI_ACTION_BTN: 'gemini-action-btn',
+    GEMINI_CUSTOM_PROMPT_BTN: 'custom-prompt-btn',
+
+    // Utilities
+    PRINT_ONLY: 'print-only',
 
     // Utility Buttons
     ICON_BTN_GHOST: 'icon-btn-ghost',

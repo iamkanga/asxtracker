@@ -689,7 +689,7 @@ export class ChartModal {
         if (rotator) {
             rotator.title = 'Close';
             const icon = rotator.querySelector('i');
-            if (icon) icon.className = 'fas fa-compress';
+            if (icon) icon.setAttribute('class', 'fas fa-compress');
         }
 
         // Helper to resize chart - uses container dimensions to ensure perfect fit

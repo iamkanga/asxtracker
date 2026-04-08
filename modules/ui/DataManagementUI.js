@@ -292,7 +292,7 @@ export class DataManagementUI {
         if (!printContainer) {
             printContainer = document.createElement('div');
             printContainer.id = 'print-export-container';
-            printContainer.className = 'print-only';
+            printContainer.className = CSS_CLASSES.PRINT_ONLY;
             document.body.appendChild(printContainer);
         }
 

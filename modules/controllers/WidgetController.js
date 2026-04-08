@@ -20,7 +20,6 @@ export class WidgetController {
 
     _bindGlobalEvents() {
         document.addEventListener(EVENTS.WIDGET_TOGGLE, () => {
-            console.log('[WidgetController] WIDGET_TOGGLE received');
             widgetPanel.toggle();
         });
 
@@ -42,7 +41,7 @@ export class WidgetController {
         if (existing) existing.remove();
 
         // Close the widget panel so the config modal isn't behind it
-        if (widgetPanel.container && !widgetPanel.container.classList.contains('widget-hidden')) {
+        if (widgetPanel.container && !widgetPanel.container.classList.contains(CSS_CLASSES.WIDGET_HIDDEN)) {
             widgetPanel.toggle();
         }
 
@@ -223,7 +222,7 @@ export class WidgetController {
         if (existing) existing.remove();
 
         // Close widget so modal isn't behind it
-        if (widgetPanel.container && !widgetPanel.container.classList.contains('widget-hidden')) {
+        if (widgetPanel.container && !widgetPanel.container.classList.contains(CSS_CLASSES.WIDGET_HIDDEN)) {
             widgetPanel.toggle();
         }
 

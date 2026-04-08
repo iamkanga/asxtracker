@@ -84,7 +84,7 @@ export class ScrollManager {
     static _createButton() {
         const btn = document.createElement('div');
         btn.id = 'global-back-to-top';
-        btn.className = 'back-to-top-btn';
+        btn.className = CSS_CLASSES.BACK_TO_TOP_BTN;
         btn.innerHTML = '<i class="fas fa-chevron-up"></i>';
         btn.title = 'Back to top';
 

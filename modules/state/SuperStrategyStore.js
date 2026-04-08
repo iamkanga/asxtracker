@@ -787,7 +787,7 @@ class SuperStrategyStore {
             console.log('[SuperStrategyStore] Hydrated from cloud sync');
             
             // Re-trigger global refresh for dashboard banners
-            window.dispatchEvent(new CustomEvent('dashboard-prefs-changed'));
+            document.dispatchEvent(new CustomEvent(EVENTS.DASHBOARD_PREFS_CHANGED));
         }
     }
 

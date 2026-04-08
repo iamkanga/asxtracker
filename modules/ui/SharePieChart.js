@@ -28,7 +28,7 @@ export class SharePieChart {
         const svg = this._createPieSvg(breakdown, 44, 44, false);
 
         const wrapper = document.createElement('div');
-        wrapper.className = 'share-pie-small-wrapper';
+        wrapper.className = CSS_CLASSES.SHARE_PIE_SMALL_WRAPPER;
         wrapper.style.cssText = `
             cursor: pointer;
             transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -88,7 +88,7 @@ export class SharePieChart {
         }
 
         const strip = document.createElement('div');
-        strip.className = 'portfolio-dna-strip';
+        strip.className = CSS_CLASSES.PORTFOLIO_DNA_STRIP;
         strip.style.cssText = `
             width: 100%;
             height: ${height}px;

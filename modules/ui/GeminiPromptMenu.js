@@ -40,7 +40,7 @@ export class GeminiPromptMenu {
         // 2. Create MENU
         const menu = document.createElement('div');
         menu.id = 'gemini-prompt-menu';
-        menu.className = 'gemini-menu';
+        menu.className = CSS_CLASSES.GEMINI_MENU;
 
         Object.assign(menu.style, {
             position: 'fixed',
@@ -78,7 +78,7 @@ export class GeminiPromptMenu {
 
         prompts.forEach(p => {
             const item = document.createElement('div');
-            item.className = 'gemini-menu-item';
+            item.className = CSS_CLASSES.GEMINI_MENU_ITEM;
             Object.assign(item.style, {
                 padding: '14px 16px',
                 cursor: 'pointer',
@@ -144,7 +144,7 @@ export class GeminiPromptMenu {
 
 
         const customItem = document.createElement('div');
-        customItem.className = 'gemini-menu-item custom-prompt-btn';
+        customItem.className = `${CSS_CLASSES.GEMINI_MENU_ITEM} ${CSS_CLASSES.GEMINI_CUSTOM_PROMPT_BTN}`;
         Object.assign(customItem.style, {
             padding: '12px 16px',
             cursor: 'pointer',
@@ -305,7 +305,7 @@ export class GeminiPromptMenu {
         });
 
         const textarea = document.createElement('textarea');
-        textarea.className = 'gemini-custom-textarea';
+        textarea.className = CSS_CLASSES.GEMINI_CUSTOM_TEXTAREA;
         textarea.placeholder = 'Type your question here...';
 
         // Context Injection: If for external launch (long-press), pre-fill the stock context
@@ -332,7 +332,7 @@ export class GeminiPromptMenu {
 
         // Gemini Icon Button (Bottom Right of textarea)
         const submitBtn = document.createElement('button');
-        submitBtn.className = 'gemini-action-btn';
+        submitBtn.className = CSS_CLASSES.GEMINI_ACTION_BTN;
         Object.assign(submitBtn.style, {
             position: 'absolute',
             right: '12px',

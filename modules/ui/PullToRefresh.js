@@ -4,6 +4,8 @@
  * Implements a premium pull-to-refresh functionality for PWA.
  * Detects downward drag at the top of the container and triggers a reload.
  */
+import { CSS_CLASSES } from '../utils/AppConstants.js';
+
 export class PullToRefresh {
     constructor(options = {}) {
         this.containerSelector = options.containerSelector || '#main-content';
@@ -95,10 +97,10 @@ export class PullToRefresh {
 
     _createIndicator() {
         this.indicator = document.createElement('div');
-        this.indicator.className = 'ptr-indicator';
+        this.indicator.className = CSS_CLASSES.PTR_INDICATOR;
 
         const iconWrap = document.createElement('div');
-        iconWrap.className = 'ptr-icon-wrap';
+        iconWrap.className = CSS_CLASSES.PTR_ICON_WRAP;
         iconWrap.innerHTML = '<i class="fas fa-chevron-down"></i>';
 
         this.indicator.appendChild(iconWrap);

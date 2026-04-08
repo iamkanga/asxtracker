@@ -81,7 +81,7 @@ export class VisualSettingsHUD {
         // Inject Dynamic CSS Variable for Chart Opacity immediately
         document.documentElement.style.setProperty('--card-chart-opacity', chartOpacity);
 
-        container.className = 'visual-hud glass-effect';
+        container.className = `${CSS_CLASSES.VISUAL_HUD} ${CSS_CLASSES.GLASS_EFFECT}`;
         // Note: 'glass-effect' might add border-radius, we override it in local style below.
 
         container.innerHTML = `

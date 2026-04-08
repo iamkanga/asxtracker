@@ -27,7 +27,7 @@ export class GeneralSettingsUI {
 
         const modal = document.createElement('div');
         modal.id = IDS.GENERAL_SETTINGS_MODAL;
-        modal.className = 'settings-accordion-modal';
+        modal.className = CSS_CLASSES.SETTINGS_ACCORDION_MODAL;
 
         // --- Determine current theme name ---
         const currentThemeName = this._getCurrentThemeName();

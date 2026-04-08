@@ -721,7 +721,7 @@ export class AppController {
 
         // Gracefully close widget panel if it is open during navigation
         const widgetEl = document.getElementById('widget-panel');
-        if (widgetEl && !widgetEl.classList.contains('widget-hidden')) {
+        if (widgetEl && !widgetEl.classList.contains(CSS_CLASSES.WIDGET_HIDDEN)) {
             document.dispatchEvent(new CustomEvent(EVENTS.WIDGET_TOGGLE));
         }
 

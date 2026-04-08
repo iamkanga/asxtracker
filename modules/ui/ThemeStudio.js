@@ -1,5 +1,5 @@
 import { AppState } from '../state/AppState.js';
-import { EVENTS } from '../utils/AppConstants.js';
+import { EVENTS, CSS_CLASSES } from '../utils/AppConstants.js';
 
 export class ThemeStudio {
     static get ID() { return 'theme-studio-overlay'; }
@@ -33,7 +33,7 @@ export class ThemeStudio {
         const currentHex = getComputedStyle(document.documentElement).getPropertyValue('--color-accent').trim();
         const currentOpacity = getComputedStyle(document.documentElement).getPropertyValue('--accent-opacity').trim() || '1';
 
-        container.className = 'theme-studio-overlay glass-effect';
+        container.className = `${CSS_CLASSES.THEME_STUDIO_OVERLAY} ${CSS_CLASSES.GLASS_EFFECT}`;
 
         // 30 DISTINCT Colors (Strictly Sorted: Dark -> Light per row)
         const palette = [

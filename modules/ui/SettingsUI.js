@@ -1145,7 +1145,7 @@ export class SettingsUI {
             const isOpen = (wasOpen !== undefined) ? wasOpen : false;
 
             const section = document.createElement('div');
-            section.className = 'filter-accordion-item';
+            section.className = CSS_CLASSES.FILTER_ACCORDION_ITEM;
             section.style.border = '1px solid var(--border-color)';
             section.style.borderRadius = '0';
             section.style.overflow = 'hidden';

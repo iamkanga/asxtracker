@@ -108,7 +108,7 @@ export class ViewRenderer {
         // 2. Clear Container
         this.container.innerHTML = '';
         // Resetting class names more aggressively to ensure only relevant ones are applied
-        this.container.className = '';
+        this.container.removeAttribute('class');
         this.container.id = IDS.CONTENT_CONTAINER; // Ensure ID is always correct
 
         // 2a. Render Summary (ONLY for Portfolio)

@@ -43,7 +43,7 @@ export default class SuperStrategyUI {
 
         const modal = document.createElement('div');
         modal.id = IDS.SUPER_STRATEGY_MODAL;
-        modal.className = `${CSS_CLASSES.WIDGET_PANEL} widget-hidden`;
+        modal.className = `${CSS_CLASSES.WIDGET_PANEL} ${CSS_CLASSES.WIDGET_HIDDEN}`;
         modal.style.cssText = `
             position: fixed;
             top: 60px;
@@ -119,7 +119,7 @@ export default class SuperStrategyUI {
             modal.style.display = 'flex';
             requestAnimationFrame(() => {
                 // Second frame: trigger the slide-in
-                modal.classList.remove('widget-hidden');
+                modal.classList.remove(CSS_CLASSES.WIDGET_HIDDEN);
                 modal.style.opacity = '1';
                 overlay.style.opacity = '1';
                 overlay.style.visibility = 'visible';
@@ -140,7 +140,7 @@ export default class SuperStrategyUI {
             modal._isClosing = true;
             
             // Trigger standard Side-Drawer slide-out
-            modal.classList.add('widget-hidden');
+            modal.classList.add(CSS_CLASSES.WIDGET_HIDDEN);
             modal.style.opacity = '0';
             overlay.style.opacity = '0';
             overlay.style.visibility = 'hidden';
@@ -1817,7 +1817,7 @@ export default class SuperStrategyUI {
             customDateInput.addEventListener('change', (e) => {
                 superStrategyStore.setCustomReminderDate(e.target.value);
                 this.render(); // Re-render local UI
-                window.dispatchEvent(new CustomEvent('dashboard-prefs-changed')); // Force refresh dashboard banner
+                document.dispatchEvent(new CustomEvent(EVENTS.DASHBOARD_PREFS_CHANGED)); // Force refresh dashboard banner
             });
         }
 
