@@ -928,29 +928,10 @@ export default class SuperStrategyUI {
 
 
 
-                    <div class="${CSS_CLASSES.FORM_GROUP}" style="margin-bottom: 20px;" onclick="const inp = this.querySelector('input'); if(inp && document.activeElement !== inp) { try { inp.showPicker(); } catch (e) { inp.click(); } }">
-                        <label style="font-size: 0.7rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; display: block; opacity: 0.7;">Re-Contribution Date</label>
-                        <input type="${stateData.recontributionDate ? 'date' : 'text'}" 
-                               id="${IDS.SUPER_RECONTRIBUTION_DATE}" 
-                               class="${CSS_CLASSES.FORM_CONTROL}"
-                               value="${stateData.recontributionDate || ''}"
-                               placeholder="Select Date"
-                               ${!eligibility.eligible ? 'disabled' : ''}
-                               onfocus="this.type='date';"
-                               onblur="if(!this.value) this.type='text';"
-                               style="border-radius: 0; padding: 12px; font-weight: 700; width: 100%; outline: none; cursor: pointer; ${!eligibility.eligible ? 'opacity: 0.4;' : ''}">
+                    <div style="font-size:0.68rem; color:var(--text-muted); line-height:1.4; opacity:0.8; margin-top: 10px;">
+                         <i class="fas fa-check-circle" style="margin-right:4px; color:var(--color-positive);"></i>
+                         <strong>Strategy Ready:</strong> Once your consolidated balance above matches your fund's records, advance to the final step to set your pension commencement date.
                     </div>
-
-                    ${(stateData.recontributionDate && new Date(stateData.recontributionDate).getMonth() === 4) ? `
-                        <div style="margin-bottom: 20px; padding: 14px; background: rgba(255,165,0,0.12); border: 1px solid rgba(255,165,0,0.25); border-radius: 0;">
-                            <div style="font-size: 0.65rem; color: #ffa500; font-weight: 950; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">
-                                <i class="fas fa-exclamation-triangle"></i> Strategic Alert: May Commencement
-                            </div>
-                            <div style="font-size: 0.72rem; color: #fff; line-height: 1.4; font-weight: 600;">
-                                Starting in May requires a mandatory pro-rata payment before June 30, ${fy}. If you have any doubt, delay your restart until June 1st to skip this payment.
-                            </div>
-                        </div>
-                    ` : ''}
                 `;
                 break;
             }

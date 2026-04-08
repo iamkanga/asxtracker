@@ -277,19 +277,10 @@ class SuperStrategyStore {
                 return { valid: true, message: 'Pension closure executed.' };
 
             case SUPER_STATES.RECONTRIBUTION: {
-                const eligibility = this.getRecontributionEligibility();
-                const step1Amount = this.data.stateData[SUPER_STATES.CONTRIBUTION_CLEARANCE]?.amount || 0;
-
-                // 1. Validate the re-contribution source (Stage 1)
-                if (step1Amount <= 0) return { valid: false, message: 'Stage 1 contribution data missing.' };
-                
-                // 2. Validate the valuations entered in Stage 5
+                // 1. Validate the valuations entered in Stage 5
                 if (!sd.closingAccumulationBalance || sd.closingAccumulationBalance <= 0) {
                     return { valid: false, message: 'Enter your actual Accumulation balance.' };
                 }
-                
-                // 3. Validate Date
-                if (!sd.recontributionDate) return { valid: false, message: 'Select your reconciliation date.' };
                 
                 return { valid: true, message: 'Final reconciliation verified.' };
             }
