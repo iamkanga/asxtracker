@@ -716,7 +716,7 @@ class SuperStrategyStore {
             forensics: {
                 grossContribution: sd[SUPER_STATES.CONTRIBUTION_CLEARANCE]?.amount || 0,
                 contributionTax: (sd[SUPER_STATES.NOI_SUBMISSION]?.isNonConcessionalMode ? 0 : (sd[SUPER_STATES.NOI_SUBMISSION]?.deductionAmount || 0)) * 0.15,
-                netRecontribution: sd[SUPER_STATES.RECONTRIBUTION]?.recontributionAmount || 0,
+                netRecontribution: (sd[SUPER_STATES.CONTRIBUTION_CLEARANCE]?.amount || 0) - ((sd[SUPER_STATES.NOI_SUBMISSION]?.isNonConcessionalMode ? 0 : (sd[SUPER_STATES.NOI_SUBMISSION]?.deductionAmount || 0)) * 0.15),
                 closurePayout: sd[SUPER_STATES.PENSION_CLOSURE]?.proRataPayout || 0
             },
             result: {

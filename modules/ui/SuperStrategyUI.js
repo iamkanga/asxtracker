@@ -725,7 +725,7 @@ export default class SuperStrategyUI {
                                 </div>
                                 <div>
                                     <h3 style="font-size: 0.95rem; font-weight: 950; color: #fff; margin: 0; letter-spacing: -0.2px; text-transform: uppercase;">Master Strategy Record</h3>
-                                    <div style="font-size: 0.58rem; color: var(--color-positive); font-weight: 800; text-transform: uppercase; letter-spacing: 1px; opacity: 0.8;">Phase 3 Completion Audit</div>
+                                    <div style="font-size: 0.58rem; color: var(--color-positive); font-weight: 800; text-transform: uppercase; letter-spacing: 1px; opacity: 0.8;">Completion Audit</div>
                                 </div>
                             </div>
 
@@ -770,15 +770,19 @@ export default class SuperStrategyUI {
                                     </div>
                                     <div class="super-audit-row">
                                         <div class="super-audit-label">Concessional</div>
-                                        <div class="super-audit-value accent" style="font-size: 0.95rem; font-weight: 900;">${formatCurrency(audit.timeline.mccAmount)}</div>
+                                        <div class="super-audit-value" style="font-size: 0.95rem; font-weight: 900; color: #fff;">${formatCurrency(audit.timeline.mccAmount)}</div>
                                     </div>
                                     <div class="super-audit-row">
                                         <div class="super-audit-label">Non-Concessional</div>
-                                        <div class="super-audit-value ${audit.timeline.nccAvailable ? '' : 'negative'}" style="font-size: 0.95rem; font-weight: 900;">
+                                        <div class="super-audit-value ${audit.timeline.nccAvailable ? '' : 'negative'}" style="font-size: 0.95rem; font-weight: 900; color: ${audit.timeline.nccAvailable ? '#fff' : 'var(--color-negative)'};">
                                             ${audit.timeline.nccAvailable ? formatCurrency(audit.timeline.nccAmount) : 'Cap Used'}
                                         </div>
                                     </div>
-                                    <div class="super-audit-row full-width">
+                                    <div class="super-audit-row">
+                                        <div class="super-audit-label">Pension Payment</div>
+                                        <div class="super-audit-value" style="font-size: 0.95rem; font-weight: 950; color: #fff;">${formatCurrency(audit.forensics.closurePayout)}</div>
+                                    </div>
+                                    <div class="super-audit-row">
                                         <div class="super-audit-label">Strategy Completion</div>
                                         <div class="super-audit-value" style="font-size: 0.85rem; font-weight: 800; color: #fff;">${formatDate(audit.timeline.completionDate)}</div>
                                     </div>
@@ -801,16 +805,12 @@ export default class SuperStrategyUI {
                                         </div>
                                     </div>
                                     <div class="super-audit-row">
-                                        <div class="super-audit-label">Tax (15%)</div>
+                                        <div class="super-audit-label">Contribution Tax (15%)</div>
                                         <div class="super-audit-value negative" style="font-size: 0.95rem; font-weight: 950;">-${formatCurrency(audit.forensics.contributionTax)}</div>
                                     </div>
-                                    <div class="super-audit-row">
-                                        <div class="super-audit-label">Net Recontribution</div>
-                                        <div class="super-audit-value accent" style="font-size: 0.95rem; font-weight: 950;">${formatCurrency(audit.forensics.netRecontribution)}</div>
-                                    </div>
-                                    <div class="super-audit-row">
-                                        <div class="super-audit-label">Pro-Rata Exit Withdrawal</div>
-                                        <div class="super-audit-value" style="font-size: 0.95rem; font-weight: 950;">${formatCurrency(audit.forensics.closurePayout)}</div>
+                                    <div class="super-audit-row full-width">
+                                        <div class="super-audit-label">Net Strategy Increase</div>
+                                        <div class="super-audit-value" style="font-size: 0.95rem; font-weight: 950; color: #fff;">${formatCurrency(audit.forensics.netRecontribution)}</div>
                                     </div>
                                 </div>
                             </div>
@@ -826,12 +826,12 @@ export default class SuperStrategyUI {
                                         <div class="super-audit-value" style="font-size: 0.85rem; font-weight: 800; color: #fff;">${formatDate(audit.result.restartDate)}</div>
                                     </div>
                                     <div class="super-audit-row">
-                                        <div class="super-audit-label">New Pension Start</div>
-                                        <div class="super-audit-value positive" style="font-size: 1.15rem; font-weight: 950;">${formatCurrency(audit.result.newPensionStart)}</div>
+                                        <div class="super-audit-label">Accumulation</div>
+                                        <div class="super-audit-value" style="font-size: 0.85rem; font-weight: 800; color: #fff;">${formatCurrency(audit.result.remainingAccumulation)}</div>
                                     </div>
                                     <div class="super-audit-row full-width">
-                                        <div class="super-audit-label">Remaining Accumulation Balance</div>
-                                        <div class="super-audit-value" style="font-size: 1.15rem; font-weight: 950; color: #fff;">${formatCurrency(audit.result.remainingAccumulation)}</div>
+                                        <div class="super-audit-label" style="color: var(--color-accent); opacity: 1;">New Pension Start</div>
+                                        <div class="super-audit-value positive" style="font-size: 1.15rem; font-weight: 950;">${formatCurrency(audit.result.newPensionStart)}</div>
                                     </div>
                                 </div>
                             </div>
