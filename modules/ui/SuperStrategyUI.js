@@ -432,13 +432,13 @@ export default class SuperStrategyUI {
                     const isEven = (i + 1) % 2 === 0;
                     
                     const labelMap = {
-                        [SUPER_STATES.CONTRIBUTION_CLEARANCE]: 'Clearance',
+                        [SUPER_STATES.CONTRIBUTION_CLEARANCE]: 'Eligibility',
                         [SUPER_STATES.NOI_SUBMISSION]: 'NOI',
                         [SUPER_STATES.FUND_ACKNOWLEDGEMENT]: 'Approval',
-                        [SUPER_STATES.PENSION_CLOSURE]: 'Closure',
-                        [SUPER_STATES.RECONTRIBUTION]: 'Recontribution',
+                        [SUPER_STATES.PENSION_CLOSURE]: 'P10 Restart',
+                        [SUPER_STATES.RECONTRIBUTION]: 'Limits',
                         [SUPER_STATES.PENSION_COMMENCEMENT]: 'Restart',
-                        [SUPER_STATES.FINALISED]: 'Finalised'
+                        [SUPER_STATES.FINALISED]: 'Final'
                     };
                     
                     let label = labelMap[s.id] || s.label.split(' ')[0];
@@ -518,6 +518,33 @@ export default class SuperStrategyUI {
                                onblur="if(!this.value) this.type='text';"
                                style="border-radius:0;padding:11px;cursor:pointer;font-weight:700;width:100%;">
                     </div>
+
+                    ${(() => {
+                        const total = superStrategyStore.data.stateData[SUPER_STATES.CONTRIBUTION_CLEARANCE]?.amount || 0;
+                        const deduction = stateData.deductionAmount || 0;
+                        const ncc = Math.max(0, total - deduction);
+                        if (total <= 0) return '';
+                        
+                        return `
+                            <div style="margin-top: 14px; padding: 16px; background: rgba(var(--accent-rgb, 120, 100, 255), 0.04); border: 1px solid rgba(var(--accent-rgb, 120, 100, 255), 0.15); border-radius: 0;">
+                                <div style="font-size: 0.6rem; color: var(--color-accent); font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 12px;">Strategic Split Summary</div>
+                                
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                    <span style="font-size: 0.7rem; color: var(--text-muted); font-weight: 600;">Concessional Porton</span>
+                                    <span style="font-size: 0.75rem; color: #fff; font-weight: 800;">${formatCurrency(deduction)}</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                    <span style="font-size: 0.7rem; color: var(--text-muted); font-weight: 600;">Non-Concessional Portion</span>
+                                    <span style="font-size: 0.75rem; color: #fff; font-weight: 800;">${formatCurrency(ncc)}</span>
+                                </div>
+                                <div style="height: 1px; background: rgba(255,255,255,0.06); margin: 8px 0;"></div>
+                                <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                                    <span style="font-size: 0.65rem; color: var(--color-accent); font-weight: 800; text-transform: uppercase;">Total Strategy Deposit</span>
+                                    <span style="font-size: 1rem; color: #fff; font-weight: 950;">${formatCurrency(total)}</span>
+                                </div>
+                            </div>
+                        `;
+                    })()}
                     
                     <div style="margin-top: 24px; padding: 20px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);">
                         <label style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;">
@@ -527,18 +554,18 @@ export default class SuperStrategyUI {
                                     Bypass tax deduction (NOI) and keep this as an after-tax contribution.
                                 </div>
                             </div>
-                            <div class="super-toggle-track" style="width: 48px; height: 24px; background: ${stateData.skipped ? 'var(--color-accent)' : 'rgba(255,255,255,0.1)'}; border-radius: 0 !important; position: relative; transition: all 0.2s;">
-                                <input type="checkbox" id="super-noi-skip-toggle" ${stateData.skipped ? 'checked' : ''} style="opacity: 0; width: 100%; height: 100%; cursor: pointer; position: absolute; z-index: 2;">
-                                <div style="width: 18px; height: 18px; background: #fff; border-radius: 0 !important; position: absolute; top: 3px; left: ${stateData.skipped ? '27px' : '3px'}; transition: all 0.2s; z-index: 1; box-shadow: 0 1px 4px rgba(0,0,0,0.4);"></div>
+                            <div class="super-toggle-track" style="width: 48px; height: 24px; background: ${stateData.isNonConcessionalMode ? 'var(--color-accent)' : 'rgba(255,255,255,0.1)'}; border-radius: 0 !important; position: relative; transition: all 0.2s;">
+                                <input type="checkbox" id="super-noi-skip-toggle" ${stateData.isNonConcessionalMode ? 'checked' : ''} style="opacity: 0; width: 100%; height: 100%; cursor: pointer; position: absolute; z-index: 2;">
+                                <div style="width: 18px; height: 18px; background: #fff; border-radius: 0 !important; position: absolute; top: 3px; left: ${stateData.isNonConcessionalMode ? '27px' : '3px'}; transition: all 0.2s; z-index: 1; box-shadow: 0 1px 4px rgba(0,0,0,0.4);"></div>
                             </div>
                         </label>
                     </div>
 
-                    ${(stateData.skipped && superStrategyStore.getRecontributionEligibility().eligible) ? this._renderOrangeWarning('Strategic Skip', 'This contribution will stay "Non-Concessional" (No 15% tax).') : ''}
+                    ${(stateData.isNonConcessionalMode && superStrategyStore.getRecontributionEligibility().eligible) ? this._renderOrangeWarning('Strategic Skip', 'This contribution will stay "Non-Concessional" (No 15% tax).') : ''}
 
 
                     ${(() => {
-                        if (!stateData.skipped || superStrategyStore.getRecontributionEligibility().eligible) return '';
+                        if (!stateData.isNonConcessionalMode || superStrategyStore.getRecontributionEligibility().eligible) return '';
                         
                         const eligibility = superStrategyStore.getRecontributionEligibility();
                         const isTsbBlackout = superStrategyStore.getTotalBalance() >= getCapData(getCurrentFinancialYear()).tbc;
@@ -635,7 +662,39 @@ export default class SuperStrategyUI {
                 break;
             }
 
+            case SUPER_STATES.RECONTRIBUTION: {
+                const stateData = superStrategyStore.getStateData(SUPER_STATES.RECONTRIBUTION);
+                const calc = superStrategyStore.getCalculatedValues();
+                fieldsHtml = `
+                    <div style="margin-bottom: 24px; padding: 18px; background: rgba(255,255,255,0.02); border-radius: 0; border: 1px solid rgba(255,255,255,0.05);">
+                        <div style="font-size: 0.65rem; color: var(--color-accent); font-weight: 800; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 14px;">Regulatory Limits & Consolidation</div>
+                        
+                        <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 20px;">TBA</div>
+
+                        <div class="${CSS_CLASSES.FORM_GROUP}" style="margin-bottom:20px;">
+                            <label style="font-size:0.62rem;color:var(--text-muted);font-weight:800;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;display:block;opacity:0.55;">Re-contribution Amount</label>
+                            <input type="number" id="${IDS.SUPER_RECONTRIBUTE_AMOUNT}" class="${CSS_CLASSES.FORM_CONTROL}"
+                                   value="${stateData.recontributionAmount || ''}" placeholder="0.00" step="0.01"
+                                   style="border-radius:0;padding:12px;font-weight:700;outline:none;">
+                            <div style="font-size: 0.62rem; color: var(--color-accent); margin-top: 8px; font-weight: 600; opacity: 0.8;">
+                                <i class="fas fa-info-circle"></i> This amount must be within your available NCC caps.
+                            </div>
+                        </div>
+
+                        ${(() => {
+                            const eligibility = superStrategyStore.getRecontributionEligibility();
+                            if (!eligibility.eligible) {
+                                return this._renderOrangeWarning('Cap Conflict', eligibility.reason);
+                            }
+                            return '';
+                        })()}
+                    </div>
+                `;
+                break;
+            }
+
             case SUPER_STATES.PENSION_COMMENCEMENT: {
+                const stateData = superStrategyStore.getStateData(SUPER_STATES.PENSION_COMMENCEMENT);
                 const closureData = superStrategyStore.getStateData(SUPER_STATES.PENSION_CLOSURE);
                 fieldsHtml = `
                     <div style="margin-bottom: 24px; padding: 18px; background: rgba(255,255,255,0.02); border-radius: 0; border: 1px solid rgba(255,255,255,0.05);">
@@ -768,7 +827,13 @@ export default class SuperStrategyUI {
                                 <div class="super-audit-grid">
                                     <div class="super-audit-row">
                                         <div class="super-audit-label">Gross Contribution</div>
-                                        <div class="super-audit-value">${formatCurrency(audit.forensics.grossContribution)}</div>
+                                        <div class="super-audit-value" style="display: flex; flex-direction: column; align-items: flex-end;">
+                                            <div style="font-size: 0.95rem; font-weight: 950; color: #fff;">${formatCurrency(audit.forensics.grossContribution)}</div>
+                                            <div style="font-size: 0.58rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">
+                                                <span style="color: var(--color-accent);">${formatCurrency(audit.timeline.mccAmount)} CC</span> + 
+                                                <span style="color: #fff;">${formatCurrency(audit.timeline.nccAmount)} NCC</span>
+                                            </div>
+                                        </div>
                                     </div>
                                     <div class="super-audit-row">
                                         <div class="super-audit-label">Tax (15%)</div>
@@ -822,12 +887,14 @@ export default class SuperStrategyUI {
                 const eligibility = superStrategyStore.getRecontributionEligibility();
                 const closureData = superStrategyStore.getStateData(SUPER_STATES.PENSION_CLOSURE);
                 const step1Data = superStrategyStore.getStateData(SUPER_STATES.CONTRIBUTION_CLEARANCE);
+                const noiData = superStrategyStore.getStateData(SUPER_STATES.NOI_SUBMISSION);
                 const calc = superStrategyStore.getCalculatedValues();
                 
                 const currentAcc = (closureData?.closingAccumulationBalance !== undefined) ? closureData.closingAccumulationBalance : data.accumulationBalance;
                 const activePensionVal = (closureData?.closingPensionBalance !== undefined) ? closureData.closingPensionBalance : data.pensionBalance;
                 const closedBalanceNet = activePensionVal - (closureData?.proRataPayout || 0);
-                const clearedStep1 = (step1Data?.amount || 0) * 0.85; // 15% tax
+                const activeDeduction = noiData?.isNonConcessionalMode ? 0 : (noiData?.deductionAmount || 0);
+                const clearedStep1 = (step1Data?.amount || 0) - (activeDeduction * 0.15);
                 const buffer = superStrategyStore.data.accumulationRetentionBuffer || 0;
 
                 fieldsHtml = `
@@ -1120,183 +1187,176 @@ export default class SuperStrategyUI {
                     </summary>
                     <div style="padding:12px; background:rgba(0,0,0,0.2); font-size:0.65rem; color:var(--text-muted); line-height:1.4; border:1px solid rgba(255,59,48,0.1); border-top:none;">
                         <div style="font-weight:900; color:#ff3b30; text-transform:uppercase; margin-bottom:6px; letter-spacing:0.5px;">Quick Reference</div>
-                        <ul style="margin:0; padding-left:14px; list-style-type:circle;">
-                            <li>Tracks your personal 3-year bring-forward window status.</li>
-                            <li><strong>Trigger:</strong> Contributing over $120,000 in a single year.</li>
-                            <li>Availability depends on your TSB from the previous June 30th.</li>
-                            <li>NCC contributions are generally restricted after age 75.</li>
+                        <ul style="margin:0; padding-left:14px; list-style-type:circle; gap:6px; display:flex; flex-direction:column;">
+                            <li><strong>Concessional (CC):</strong> $30,000 cap. Claim a tax deduction to reduce personal taxable income.</li>
+                            <li><strong>Non-Concessional (NCC):</strong> $120,000 cap. Creates a 0% tax component for heirs.</li>
+                            <li><strong>Bring-Forward:</strong> Contributing >$120k triggers a 3-year window (up to $360k total).</li>
+                            <li><strong>TSB Guard:</strong> NCC eligibility is blocked if your Total Super Balance exceeds $1.9M at 30 June.</li>
+                            <li><strong>Age Limit:</strong> All voluntary contributions are legally restricted after age 75.</li>
+                            <li><strong>Notice of Intent:</strong> Must be filed and acknowledged BEFORE you start a pension to lock in tax benefits.</li>
                         </ul>
                     </div>
                 </details>
             </div>
 
-            <!-- 3. The 7-Step Strategic Roadmap -->
+            <!-- 2. Step-by-Step Strategic Roadmap -->
             <div style="font-size:0.62rem;font-weight:800;text-transform:uppercase;letter-spacing:2px;color:var(--text-muted);opacity:0.5;margin:24px 0 14px 2px;">Step-by-Step Strategic Roadmap</div>
             
-            <!-- Step 1: Contribution -->
+            <!-- Step 1: Eligibility -->
             <details class="super-accordion">
                 <summary>
                     <div style="display:flex; flex-direction:column; gap:8px;">
                         <div style="display:inline-flex; align-items:center; gap:12px;">
-                            <span style="font-size:1.2rem; font-weight:950; color:rgba(255,255,255,0.1);">01</span>
-                            <span style="font-size:0.75rem; color:#fff; font-weight:900; text-transform:uppercase; letter-spacing:1.5px;">Stage 1 - Contribution Entry</span>
+                            <span style="font-size:0.75rem; color:#fff; font-weight:900; text-transform:uppercase; letter-spacing:1.5px;">Stage 1 - Age & TSB Eligibility</span>
                         </div>
-                        <div style="${STEP_GOAL} margin-bottom:0; padding-left:42px;">Move your after-tax savings into your Brighter Super account. This is the physical start of the recycling process.</div>
                     </div>
                 </summary>
                 <div class="super-accordion-content" style="padding-top:10px;">
-                    <div style="font-size:0.75rem; color:var(--text-muted); line-height:1.5; margin-bottom:12px; position:relative; z-index:1;">
-                        You can use BPAY or Electronic Funds Transfer. This step turns your personal bank savings into superannuation assets. It is vital to keep your transaction receipt as proof of the date the transfer was initiated.
-                    </div>
-                    ${ADVICE_BOX('accent', `Timing Strategy - Funds should clear before 20 June to avoid bank delays. Late entries may miss the tax year deadline.`)}
-                    ${ADVICE_BOX('check', `Positive Strategy - Getting funds in early maximizes your time inside the low-tax super environment. The 15% internal tax rate is significantly more efficient than personal tax on bank interest.`)}
+                    <ul style="font-size:0.75rem; color:var(--text-muted); line-height:1.6; margin-bottom:12px; padding-left:20px; list-style-type: disc;">
+                        <li><strong>Concessional (CC) Age Limit</strong>: Personal deductible contributions are restricted after age 67.</li>
+                        <li><strong>Non-Concessional (NCC) Age Limit</strong>: Voluntary contributions are prohibited after age 75.</li>
+                        <li><strong>TSB Cap</strong>: NCC eligibility is blocked if your Total Super Balance (TSB) is $2.1 million or more as of 30 June 2026.</li>
+                    </ul>
                 </div>
             </details>
  
-            <!-- Step 2: The Tax Claim -->
+            <!-- Steps 2 & 3: NOI -->
             <details class="super-accordion">
                 <summary>
                     <div style="display:flex; flex-direction:column; gap:8px;">
                         <div style="display:inline-flex; align-items:center; gap:12px;">
-                            <span style="font-size:1.2rem; font-weight:950; color:rgba(255,255,255,0.1);">02</span>
-                            <span style="font-size:0.75rem; color:#fff; font-weight:900; text-transform:uppercase; letter-spacing:1.5px;">Stage 2 - Notice of Intent</span>
+                            <span style="font-size:0.75rem; color:#fff; font-weight:900; text-transform:uppercase; letter-spacing:1.5px;">Stages 2 & 3 - Notice of Intent (NOI)</span>
                         </div>
-                        <div style="${STEP_GOAL} margin-bottom:0; padding-left:42px;">Formally notify the fund that you intend to claim this contribution as a personal tax deduction.</div>
                     </div>
                 </summary>
                 <div class="super-accordion-content" style="padding-top:10px;">
-                    <div style="font-size:0.75rem; color:var(--text-muted); line-height:1.5; margin-bottom:12px; position:relative; z-index:1;">
-                        This is the "Tax Switch" stage. By submitting this notice, you tell the ATO that this money should reduce your taxable income. Without this form, you cannot claim the 15% super tax rate benefit on your personal return.
-                    </div>
-                    ${data.ageAtJuly1 >= 67 ? ADVICE_BOX('alert', `Work Test Required - As you are aged 67 or older, you MUST meet the 40-hour work test to claim this tax deduction. Non-deductible contributions do not require this test.`) : ''}
-                    ${ADVICE_BOX('alert', `Strategic Lock - You must receive the Fund Acknowledge Letter before you close the account or start a pension.`)}
-                    ${ADVICE_BOX('check', `Tax Benefit - Successful submission effectively reduces your taxable income, potentially moving you into a lower tax bracket for the year.`)}
+                    <ul style="font-size:0.75rem; color:var(--text-muted); line-height:1.6; margin-bottom:12px; padding-left:20px; list-style-type: disc;">
+                        <li><strong>Lock-in Rule</strong>: A Notice of Intent must be filed and acknowledged BEFORE restarting a pension to secure tax benefits.</li>
+                    </ul>
                 </div>
             </details>
  
-            <!-- Step 3: Confirmation -->
+            <!-- Step 4: P10 -->
             <details class="super-accordion">
                 <summary>
                     <div style="display:flex; flex-direction:column; gap:8px;">
                         <div style="display:inline-flex; align-items:center; gap:12px;">
-                            <span style="font-size:1.2rem; font-weight:950; color:rgba(255,255,255,0.1);">03</span>
-                            <span style="font-size:0.75rem; color:#fff; font-weight:900; text-transform:uppercase; letter-spacing:1.5px;">Stage 3 - Fund Confirmation</span>
+                            <span style="font-size:0.75rem; color:#fff; font-weight:900; text-transform:uppercase; letter-spacing:1.5px;">Stage 4 - File Pension Restart P10</span>
                         </div>
-                        <div style="${STEP_GOAL} margin-bottom:0; padding-left:42px;">Verify that your contribution has officially been recorded as Concessional.</div>
                     </div>
                 </summary>
                 <div class="super-accordion-content" style="padding-top:10px;">
-                    <div style="font-size:0.75rem; color:var(--text-muted); line-height:1.5; margin-bottom:12px; position:relative; z-index:1;">
-                        Log into your Brighter Super portal and check your 'Contribution History'. You are looking for the status to change from 'Personal After-Tax' to 'Personal Concessional'. This ensures the tax office recognizes the strategy.
-                    </div>
-                    ${ADVICE_BOX('check', `Look for the official "Notice of Intent Acknowledgment" in your portal inbox.`)}
+                    <ul style="font-size:0.75rem; color:var(--text-muted); line-height:1.6; margin-bottom:12px; padding-left:20px; list-style-type: disc;">
+                        <li><strong>June 1st Rule</strong>: Commencing a pension after June 1st resets the mandatory minimum withdrawal to zero for the remainder of that financial year.</li>
+                        <li><strong>Pro-rata Requirement</strong>: A mandatory proportional payment must be taken from the existing pension balance before the account is closed.</li>
+                        <li><strong>Retention Buffer</strong>: Brighter Super requires a minimum of $8,000 to remain in accumulation to keep the account active.</li>
+                    </ul>
                 </div>
             </details>
  
-            <!-- Step 4: Pension Closure -->
+            <!-- Step 5: Limits -->
             <details class="super-accordion">
                 <summary>
                     <div style="display:flex; flex-direction:column; gap:8px;">
                         <div style="display:inline-flex; align-items:center; gap:12px;">
-                            <span style="font-size:1.2rem; font-weight:950; color:rgba(255,255,255,0.1);">04</span>
-                            <span style="font-size:0.75rem; color:#fff; font-weight:900; text-transform:uppercase; letter-spacing:1.5px;">Stage 4 - Pension Closure</span>
+                            <span style="font-size:0.75rem; color:#fff; font-weight:900; text-transform:uppercase; letter-spacing:1.5px;">Stage 5 - Re-Contribution Limits</span>
                         </div>
-                        <div style="${STEP_GOAL} margin-bottom:0; padding-left:42px;">Close your current pension account to allow your new money to be consolidated.</div>
                     </div>
                 </summary>
                 <div class="super-accordion-content" style="padding-top:10px;">
-                    <div style="font-size:0.75rem; color:var(--text-muted); line-height:1.5; margin-bottom:12px; position:relative; z-index:1;">
-                        Closing the pension, also known as commutation, stops the current income stream so that the money can be sent back to accumulation. This allows the new tax-deductible money from Stage 1 to mix with your existing balance.
-                    </div>
-                    ${ADVICE_BOX('alert', `Mandatory Payout - Before closure, you must receive a pro-rata payment based on your existing annual minimum requirement, calculated up to the closure date.`)}
-                    ${ADVICE_BOX('check', `The Goal - This stage 'unlocks' your pension so you can combine it with new contributions, effectively refreshing your tax-free components.`)}
+                    <ul style="font-size:0.75rem; color:var(--text-muted); line-height:1.6; margin-bottom:12px; padding-left:20px; list-style-type: disc;">
+                        <li><strong>Audit Documentation</strong>: Document exactly how much is being moved so your final Audit Report is accurate.</li>
+                    </ul>
                 </div>
             </details>
  
-            <!-- Step 5: Re-Contribution -->
+            <!-- Steps 6 & 7: Finalised -->
             <details class="super-accordion">
                 <summary>
                     <div style="display:flex; flex-direction:column; gap:8px;">
                         <div style="display:inline-flex; align-items:center; gap:12px;">
-                            <span style="font-size:1.2rem; font-weight:950; color:rgba(255,255,255,0.1);">05</span>
-                            <span style="font-size:0.75rem; color:#fff; font-weight:900; text-transform:uppercase; letter-spacing:1.5px;">Stage 5 - Re-Contribution Command</span>
+                            <span style="font-size:0.75rem; color:#fff; font-weight:900; text-transform:uppercase; letter-spacing:1.5px;">Stages 6 & 7 - Pension Restart & Audit</span>
                         </div>
-                        <div style="${STEP_GOAL} margin-bottom:0; padding-left:42px;">Move the consolidated money back into super as tax-free Non-Concessional funds.</div>
                     </div>
                 </summary>
                 <div class="super-accordion-content" style="padding-top:10px;">
-                    <div style="font-size:0.75rem; color:var(--text-muted); line-height:1.5; margin-bottom:12px; position:relative; z-index:1;">
-                        This is the "Tax Switch" stage. To change the tax components, the consolidated money must be physically withdrawn from the fund as a lump sum to your personal bank account and then deposited back as a new Non-Concessional contribution.
-                    </div>
-                    ${ADVICE_BOX('alert', `Condition of Release - A re-contribution tax switch requires a full Condition of Release, such as reaching age 60 and declaring permanent retirement.`)}
-                    ${ADVICE_BOX('alert', `Avoid the Tax Switch Trap - To move money to the Tax-Free component, you MUST register this as a Non-Concessional contribution. Do NOT claim a tax deduction in Step 2 for these specific switch funds, or they will remain taxable.`)}
-                    ${ADVICE_BOX('alert', `Bring-Forward Rule - $360,000 window. Exceeding this triggers a 47% penalty tax rate from the ATO.`)}
-                    ${ADVICE_BOX('alert', `Age Restriction - Non-concessional contributions are generally only permitted until age 75. Ensure this strategy is completed before this milestone.`)}
+                    <ul style="font-size:0.75rem; color:var(--text-muted); line-height:1.6; margin-bottom:12px; padding-left:20px; list-style-type: disc;">
+                        <li><strong>New Pension Entry</strong>: The system uses the consolidated balance to set the starting value of your new pension.</li>
+                        <li><strong>June 1st Advantage</strong>: If commencement is after June 1st, the mandatory minimum withdrawal for the remainder of the year is reset to zero.</li>
+                        <li><strong>Audit Trailing</strong>: The software records the commencement date and final tax components for your permanent records.</li>
+                    </ul>
                 </div>
             </details>
  
-            <!-- Step 6: Commencement -->
-            <details class="super-accordion">
-                <summary>
-                    <div style="display:flex; flex-direction:column; gap:8px;">
-                        <div style="display:inline-flex; align-items:center; gap:12px;">
-                            <span style="font-size:1.2rem; font-weight:950; color:rgba(255,255,255,0.1);">06</span>
-                            <span style="font-size:0.75rem; color:#fff; font-weight:900; text-transform:uppercase; letter-spacing:1.5px;">Stage 6 - New Pension Entry</span>
-                        </div>
-                        <div style="${STEP_GOAL} margin-bottom:0; padding-left:42px;">Start your new consolidated tax-free income stream.</div>
-                    </div>
-                </summary>
-                <div class="super-accordion-content" style="padding-top:10px;">
-                    <div style="font-size:0.75rem; color:var(--text-muted); line-height:1.5; margin-bottom:12px; position:relative; z-index:1;">
-                        This step restarts your pension. You will set a new monthly payment amount. Starting after June 1st is a strategic move that can reduce your mandatory withdrawal requirements for the remainder of the year.
-                    </div>
-                    ${ADVICE_BOX('check', `Strategic Play - The June 1st Rule resets the mandatory minimum to zero for the rest of this financial year.`)}
-                    ${ADVICE_BOX('accent', `Success - By restarting now, you avoid taking an unecessary cash payment this year, keeping your capital working for you longer.`)}
-                </div>
-            </details>
- 
-            <!-- Step 7: Finalised -->
-            <details class="super-accordion">
-                <summary>
-                    <div style="display:flex; flex-direction:column; gap:8px;">
-                        <div style="display:inline-flex; align-items:center; gap:12px;">
-                            <span style="font-size:1.2rem; font-weight:950; color:rgba(255,255,255,0.1);">07</span>
-                            <span style="font-size:0.75rem; color:#fff; font-weight:900; text-transform:uppercase; letter-spacing:1.5px;">Stage 7 - Strategy Finalised</span>
-                        </div>
-                        <div style="${STEP_GOAL} margin-bottom:0; padding-left:42px;">Confirm your position is audit-ready for the upcoming financial year.</div>
-                    </div>
-                </summary>
-                <div class="super-accordion-content" style="padding-top:10px;">
-                    <div style="font-size:0.75rem; color:var(--text-muted); line-height:1.5; margin-bottom:12px; position:relative; z-index:1;">
-                        Double check that your bank account is receiving the correct monthly pension amounts. Ensure your accountant has all the Acknowledge Letters and receipts from the steps above for your next tax return.
-                    </div>
-                    ${ADVICE_BOX('accent', `Final Audit - Verify that automated pension payments match the new strategy in your portal.`)}
-                </div>
-            </details>
- 
+
             <!-- 4. Technical Appendix (Deep Dive) -->
             <div style="font-size:0.62rem;font-weight:800;text-transform:uppercase;letter-spacing:2px;color:var(--text-muted);opacity:0.5;margin:24px 0 14px 2px;">Technical Appendices</div>
             
             <details class="super-accordion">
                 <summary>Brighter Super Accumulation Account</summary>
                 <div class="super-accordion-content">
-                    <div style="font-size:0.75rem; color:var(--text-muted); line-height:1.5; margin-bottom:12px;">
+                    ${ADVICE_BOX('check', `Fee Cap Benefit - Brighter Super caps administration fees at $650 per financial year. Accumulation accounts also receive a 15% tax rebate on these fees, further reducing the cost.`)}
+                    ${ADVICE_BOX('accent', `Taxation - Investment earnings within this account are taxed at a maximum of 15%.`)}
+                    <div style="font-size:0.75rem; color:var(--text-muted); line-height:1.5; margin-top:12px;">
                         The accumulation phase is designed for building wealth while you are still working or contributing. It serves as the primary container for employer SG, salary sacrifice, and personal deductible contributions.
                     </div>
-                    ${ADVICE_BOX('accent', `Taxation - Investment earnings within this account are taxed at a maximum of 15%.`)}
-                    ${ADVICE_BOX('check', `Fee Cap Benefit - Brighter Super caps administration fees at $650 per financial year. Accumulation accounts also receive a 15% tax rebate on these fees, further reducing the cost.`)}
                 </div>
             </details>
 
             <details class="super-accordion">
                 <summary>Brighter Super Pension Account</summary>
                 <div class="super-accordion-content">
-                    <div style="font-size:0.75rem; color:var(--text-muted); line-height:1.5; margin-bottom:12px;">
+                    ${ADVICE_BOX('alert', `Fee Cap - The $650 administration fee cap also applies here, but without the 15% tax rebate as the account is already tax-free.`)}
+                    ${ADVICE_BOX('check', `Tax-Free - Investment earnings in this account are 100% tax-exempt (0% tax).`)}
+                    ${ADVICE_BOX('accent', `Mandatory Drawdowns - ATO rules require a minimum annual withdrawal based on your age at July 1st each year.`)}
+                    <div style="font-size:0.75rem; color:var(--text-muted); line-height:1.5; margin-top:12px;">
                         The pension phase (Account Based Pension) is used to provide an income stream once you meet a Condition of Release. New contributions cannot be added directly to this account; they must first go through accumulation.
                     </div>
-                    ${ADVICE_BOX('check', `Tax-Free - Investment earnings in this account are 100% tax-exempt (0% tax).`)}
-                    ${ADVICE_BOX('alert', `Fee Cap - The $650 administration fee cap also applies here, but without the 15% tax rebate as the account is already tax-free.`)}
-                    ${ADVICE_BOX('accent', `Mandatory Drawdowns - ATO rules require a minimum annual withdrawal based on your age at July 1st each year.`)}
+                </div>
+            </details>
+
+            <details class="super-accordion">
+                <summary>Preservation & Mistake Handling</summary>
+                <div class="super-accordion-content">
+                    ${ADVICE_BOX('alert', `No Easy Reversal - If you mistakenly pay too much into your Brighter Super account, you cannot simply ask for a refund. The money will stay inside the super system until you retire.`)}
+                    ${ADVICE_BOX('check', `Verification First - Always double-check your intended contribution amounts and your available caps BEFORE initiating a bank transfer.`)}
+                    <div style="font-size:0.75rem; color:var(--text-muted); line-height:1.5; margin-top:12px;">
+                        Superannuation is a "preserved" environment. Once you make a contribution to an accumulation account, that money is legally locked and generally cannot be withdrawn until you meet a Condition of Release (e.g., reaching age 65).
+                    </div>
+                </div>
+            </details>
+
+            <details class="super-accordion">
+                <summary>Concessional Contributions (CC) Deep Dive</summary>
+                <div class="super-accordion-content">
+                    ${ADVICE_BOX('alert', `Excess CC - If you exceed the $30,000 cap (plus catch-ups), the excess is taxed at your marginal rate, negating the strategy benefit.`)}
+                    ${ADVICE_BOX('alert', `Division 293 - High earners ($250k+ combined income) pay an additional 15% tax on these contributions.`)}
+                    ${ADVICE_BOX('check', `Tax Deduction - Filing a 'Notice of Intent' (Stage 2) allows you to claim these as a personal deduction, reducing your taxable income.`)}
+                    ${ADVICE_BOX('accent', `Catch-Up Rule - If your balance is under $500,000, you can carry forward unused cap for up to 5 years. This is critical for maximizing large one-off deposits.`)}
+                    <div style="font-size:0.75rem; color:var(--text-muted); line-height:1.5; margin-top:12px;">
+                        Concessional contributions (CC) include employer SG, salary sacrifice, and personal deductible contributions. These are taxed at 15% inside the fund, which is usually lower than your marginal tax rate.
+                    </div>
+                </div>
+            </details>
+
+            <details class="super-accordion">
+                <summary>Downsizer Contribution Opportunity</summary>
+                <div class="super-accordion-content">
+                    ${ADVICE_BOX('check', `No Work Test - Downsizer contributions are exempt from the work test and the standard $1.9M balance limit.`)}
+                    ${ADVICE_BOX('accent', `Lump Sum - This can be up to $600,000 for a couple, provided the home was owned for at least 10 years.`)}
+                    <div style="font-size:0.75rem; color:var(--text-muted); line-height:1.5; margin-top:12px;">
+                        If you are aged 55 or older, you may be able to contribute up to $300,000 from the sale of your main residence. This is a one-time contribution that does not count toward your standard contribution caps.
+                    </div>
+                </div>
+            </details>
+
+            <details class="super-accordion">
+                <summary>Division 293 High Income Tax</summary>
+                <div class="super-accordion-content">
+                    ${ADVICE_BOX('alert', `Combined Threshold - This tax is triggered when your personal income and employer super together cross the $250k line.`)}
+                    <div style="font-size:0.75rem; color:var(--text-muted); line-height:1.5; margin-top:12px;">
+                        If your 'Combined Income' (Taxable Income + Reportable Fringe Benefits + Concessional Super Contributions) exceeds $250,000, you are subject to an additional 15% tax on your contributions.
+                    </div>
                 </div>
             </details>
 
@@ -1313,13 +1373,11 @@ export default class SuperStrategyUI {
                             <div style="font-size: 1.1rem; font-weight: 950; color: #fff;">${formatCurrency(SUPER_THRESHOLDS.minPensionRestart)}</div>
                         </div>
                     </div>
-                    <div style="font-size:0.68rem; color:var(--text-muted); line-height:1.4; opacity:0.8;">
-                         <i class="fas fa-info-circle" style="margin-right:4px; color:var(--color-accent);"></i>
-                         <strong>Retention Buffer:</strong> Brighter Super requires a minimum of $8,000 to remain in accumulation to keep the account active when transferring to a pension. Balances under $6,000 have fees capped at 3% by the ATO.
-                    </div>
+                    ${ADVICE_BOX('check', `Fee Protection - Balances under $6,000 have total administration and investment fees capped at 3% per annum by the ATO.`)}
+                    ${ADVICE_BOX('accent', `Retention Buffer - Brighter Super requires a minimum of $8,000 to remain in accumulation to keep the account and insurances active.`)}
                 </div>
             </details>
- 
+
             <details class="super-accordion">
                 <summary>NCC Cap History</summary>
                 <div class="super-accordion-content">
@@ -1351,59 +1409,38 @@ export default class SuperStrategyUI {
                     </table>
                 </div>
             </details>
- 
-            <details class="super-accordion">
-                <summary>Downsizer Contribution Opportunity</summary>
-                <div class="super-accordion-content">
-                    <div style="font-size:0.75rem; color:var(--text-muted); line-height:1.5; margin-bottom:12px;">
-                        If you are aged 55 or older, you may be able to contribute up to $300,000 from the sale of your main residence. This is a one-time contribution that does not count toward your standard contribution caps.
-                    </div>
-                    ${ADVICE_BOX('check', `No Work Test - Downsizer contributions are exempt from the work test and the standard $1.9M balance limit.`)}
-                    ${ADVICE_BOX('accent', `Lump Sum - This can be up to $600,000 for a couple, provided the home was owned for at least 10 years.`)}
-                </div>
-            </details>
- 
+
             <details class="super-accordion">
                 <summary>Total Super Balance (TSB) Thresholds</summary>
                 <div class="super-accordion-content">
-                    <div style="font-size:0.75rem; color:var(--text-muted); line-height:1.5; margin-bottom:12px;">
-                        Your TSB as of June 30th in the previous financial year determines your eligibility for almost all high-impact strategies.
-                    </div>
-                    <table style="width: 100%; border-collapse: collapse; font-size: 0.72rem; color: var(--text-muted);">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 0.72rem; color: var(--text-muted); margin-bottom: 14px;">
                         <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
                             <td style="padding: 8px 0; color: #fff; font-weight: 700;">Under $500,000</td>
                             <td style="padding: 8px 0; text-align: right;">Eligible for Concessional Catch-up</td>
                         </tr>
                         <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
-                            <td style="padding: 8px 0; color: #fff; font-weight: 700;">Under $1.76M</td>
-                            <td style="padding: 8px 0; text-align: right;">Eligible for 3yr NCC ($360k)</td>
+                            <td style="padding: 8px 0; color: #fff; font-weight: 700;">Under $1.84M</td>
+                            <td style="padding: 8px 0; text-align: right;">Eligible for 3yr NCC ($390k)</td>
                         </tr>
                         <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
-                            <td style="padding: 8px 0; color: #fff; font-weight: 700;">$1.76M – $1.88M</td>
-                            <td style="padding: 8px 0; text-align: right;">Eligible for 2yr NCC ($240k)</td>
+                            <td style="padding: 8px 0; color: #fff; font-weight: 700;">$1.84M – $1.97M</td>
+                            <td style="padding: 8px 0; text-align: right;">Eligible for 2yr NCC ($260k)</td>
                         </tr>
                         <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
-                            <td style="padding: 8px 0; color: #fff; font-weight: 700;">$1.88M – $2.0M</td>
-                            <td style="padding: 8px 0; text-align: right;">Standard NCC Only ($120k)</td>
+                            <td style="padding: 8px 0; color: #fff; font-weight: 700;">$1.97M – $2.10M</td>
+                            <td style="padding: 8px 0; text-align: right;">Standard NCC Only ($130k)</td>
                         </tr>
                         <tr>
-                            <td style="padding: 8px 0; color: #ff3b30; font-weight: 700;">Over $2.0M</td>
+                            <td style="padding: 8px 0; color: #ff3b30; font-weight: 700;">Over $2.10M</td>
                             <td style="padding: 8px 0; text-align: right; color: #ff3b30;">NCC Cap is Zero (Blackout)</td>
                         </tr>
                     </table>
+                    <div style="font-size:0.75rem; color:var(--text-muted); line-height:1.5;">
+                        Your TSB as of June 30th in the previous financial year determines your eligibility for almost all high-impact strategies.
+                    </div>
                 </div>
             </details>
 
-            <details class="super-accordion">
-                <summary>Division 293 High Income Tax</summary>
-                <div class="super-accordion-content">
-                    <div style="font-size:0.75rem; color:var(--text-muted); line-height:1.5; margin-bottom:12px;">
-                        If your 'Combined Income' (Taxable Income + Reportable Fringe Benefits + Concessional Super Contributions) exceeds $250,000, you are subject to an additional 15% tax on your contributions.
-                    </div>
-                    ${ADVICE_BOX('alert', `Combined Threshold - This tax is triggered when your personal income and employer super together cross the $250k line.`)}
-                </div>
-            </details>
- 
             <details class="super-accordion">
                 <summary>ATO Statutory Drawdown Rates</summary>
                 <div class="super-accordion-content">
@@ -2049,7 +2086,7 @@ export default class SuperStrategyUI {
 
                 const skipToggle = this.container.querySelector('#super-noi-skip-toggle');
                 if (skipToggle) skipToggle.addEventListener('change', (e) => {
-                    superStrategyStore.updateStateData(current, { skipped: e.target.checked });
+                    superStrategyStore.updateStateData(current, { isNonConcessionalMode: e.target.checked });
                     this.render(); // Update button text and warning
                 });
                 break;
@@ -2078,10 +2115,8 @@ export default class SuperStrategyUI {
                 const accEl = this.container.querySelector('#super-closing-acc-balance');
                 const penEl = this.container.querySelector('#super-closing-pen-balance');
                 const bufferEl = this.container.querySelector('#super-acc-retention-buffer');
-                const recontribEl = this.container.querySelector(`#${IDS.SUPER_RECONTRIB_AMOUNT}`);
-
-                // Fetch latest data for rendering inside closures
-                const getData = () => superStrategyStore.data;
+                const recontribEl = this.container.querySelector(`#${IDS.SUPER_RECONTRIBUTION_AMOUNT}`);
+                const dateEl = this.container.querySelector(`#${IDS.SUPER_RECONTRIBUTION_DATE}`);
 
                 if (accEl) accEl.addEventListener('change', (e) => {
                     superStrategyStore.updateStateData(SUPER_STATES.PENSION_CLOSURE, { closingAccumulationBalance: parseFloat(e.target.value) || 0 });
@@ -2098,6 +2133,10 @@ export default class SuperStrategyUI {
                 });
                 if (recontribEl) recontribEl.addEventListener('change', (e) => {
                     superStrategyStore.updateStateData(current, { recontributionAmount: parseFloat(e.target.value) || 0 });
+                    this.render(); // Re-render for immediate validation feedback
+                });
+                if (dateEl) dateEl.addEventListener('change', (e) => {
+                    superStrategyStore.updateStateData(current, { recontributionDate: e.target.value });
                     this.render();
                 });
                 break;

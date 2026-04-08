@@ -49,23 +49,23 @@ const STATE_ORDER = [
 ];
 
 const STATE_LABELS = Object.freeze({
-    [SUPER_STATES.CONTRIBUTION_CLEARANCE]: 'Contribution Clearance',
-    [SUPER_STATES.NOI_SUBMISSION]: 'NOI Submission',
-    [SUPER_STATES.FUND_ACKNOWLEDGEMENT]: 'Fund Acknowledgement',
-    [SUPER_STATES.PENSION_CLOSURE]: 'Pension Closure & Payment Confirmation',
-    [SUPER_STATES.RECONTRIBUTION]: 'Re-Contribution',
-    [SUPER_STATES.PENSION_COMMENCEMENT]: 'Pension Commencement',
-    [SUPER_STATES.FINALISED]: 'Strategy Complete'
+    [SUPER_STATES.CONTRIBUTION_CLEARANCE]: 'Stage 1 - Age & TSB Eligibility',
+    [SUPER_STATES.NOI_SUBMISSION]: 'Stages 2 & 3 - Notice of Intent (NOI)',
+    [SUPER_STATES.FUND_ACKNOWLEDGEMENT]: 'Stages 2 & 3 - NOI Acknowledgement',
+    [SUPER_STATES.PENSION_CLOSURE]: 'Stage 4 - File Pension Restart P10',
+    [SUPER_STATES.RECONTRIBUTION]: 'Stage 5 - Re-Contribution Limits',
+    [SUPER_STATES.PENSION_COMMENCEMENT]: 'Stages 6 & 7 - Strategy Finalised',
+    [SUPER_STATES.FINALISED]: 'Stages 6 & 7 - Strategy Conclusion'
 });
 
 const STATE_DESCRIPTIONS = Object.freeze({
-    [SUPER_STATES.CONTRIBUTION_CLEARANCE]: 'Verify that contribution funds have cleared in the accumulation account.',
-    [SUPER_STATES.NOI_SUBMISSION]: 'Submit Notice of Intent to claim a tax deduction on the contribution.',
-    [SUPER_STATES.FUND_ACKNOWLEDGEMENT]: 'Waiting for fund acknowledgement of NOI. This is a manual/API verification gate.',
-    [SUPER_STATES.PENSION_CLOSURE]: 'Confirm and facilitate mandatory pro-rata drawdown payments before account closure.',
-    [SUPER_STATES.RECONTRIBUTION]: 'Re-contribute pension balance back into accumulation as a non-concessional contribution, then consolidate for the new pension.',
-    [SUPER_STATES.PENSION_COMMENCEMENT]: 'Initiate the restarted pension account with the consolidated balance.',
-    [SUPER_STATES.FINALISED]: 'Your superannuation strategy has been successfully implemented and finalized.'
+    [SUPER_STATES.CONTRIBUTION_CLEARANCE]: 'Verify age and TSB limits before transferring funds into accumulation.',
+    [SUPER_STATES.NOI_SUBMISSION]: 'File the Notice of Intent to secure your personal tax deduction.',
+    [SUPER_STATES.FUND_ACKNOWLEDGEMENT]: 'Waiting for fund acknowledgement of the NOI before closing accounts.',
+    [SUPER_STATES.PENSION_CLOSURE]: 'File the P10 form to close your existing pension and pay out pro-rata minimums.',
+    [SUPER_STATES.RECONTRIBUTION]: 'Consolidate accumulation balances ready for the pension restart.',
+    [SUPER_STATES.PENSION_COMMENCEMENT]: 'Initiate the new pension account with the consolidated tax-free balance.',
+    [SUPER_STATES.FINALISED]: 'The strategy is complete and the position is audit-ready.'
 });
 
 // ─────────────────────────────────────────────
@@ -77,8 +77,8 @@ function getDefaultData() {
         currentState: SUPER_STATES.CONTRIBUTION_CLEARANCE,
         stateData: {
             [SUPER_STATES.CONTRIBUTION_CLEARANCE]: { status: 'active', completedAt: null, amount: 0, clearedDate: null },
-            [SUPER_STATES.NOI_SUBMISSION]: { status: 'pending', completedAt: null, submittedDate: null, deductionAmount: 0, skipped: false },
-            [SUPER_STATES.FUND_ACKNOWLEDGEMENT]: { status: 'pending', completedAt: null, acknowledged: false, acknowledgedDate: null },
+            [SUPER_STATES.NOI_SUBMISSION]: { status: 'pending', completedAt: null, submittedDate: null, deductionAmount: 0, isNonConcessionalMode: false },
+            [SUPER_STATES.FUND_ACKNOWLEDGEMENT]: { status: 'pending', completedAt: null, acknowledged: false, acknowledgedDate: null, skipped: false },
             [SUPER_STATES.PENSION_CLOSURE]: { status: 'pending', completedAt: null, proRataPayout: 0, closureDate: null },
             [SUPER_STATES.RECONTRIBUTION]: { status: 'pending', completedAt: null, recontributionAmount: 0, recontributionDate: null },
             [SUPER_STATES.PENSION_COMMENCEMENT]: { status: 'pending', completedAt: null, commencementDate: null, newBalance: 0 },
@@ -205,7 +205,7 @@ class SuperStrategyStore {
         // --- GLOBAL STRATEGY PICKET LINE ---
         // If they are in Non-Concessional Mode (skipped NOI), check absolute eligibility
         const noiStep = this.data.stateData?.[SUPER_STATES.NOI_SUBMISSION];
-        if (noiStep?.skipped) {
+        if (noiStep?.isNonConcessionalMode) {
             const eligibility = this.getRecontributionEligibility();
             const contributionAmount = this.data.stateData[SUPER_STATES.CONTRIBUTION_CLEARANCE]?.amount || 0;
             if (contributionAmount > eligibility.maxAmount) {
@@ -232,7 +232,7 @@ class SuperStrategyStore {
                 const fyForCaps = getCurrentFinancialYear();
                 const caps = getContributionCaps(fyForCaps);
 
-                if (sd.skipped) {
+                if (sd.isNonConcessionalMode) {
                     const eligibility = this.getRecontributionEligibility();
                     const remainingNCC = eligibility.maxAmount;
                     
@@ -319,7 +319,7 @@ class SuperStrategyStore {
         }
 
         // Special Path: Skip NOI if toggled
-        if (currentState === SUPER_STATES.NOI_SUBMISSION && this.data.stateData[currentState]?.skipped) {
+        if (currentState === SUPER_STATES.NOI_SUBMISSION && this.data.stateData[currentState]?.isNonConcessionalMode) {
             return this.skipNoticeOfIntent();
         }
 
@@ -370,7 +370,7 @@ class SuperStrategyStore {
         }
 
         // Mark as skipped and complete
-        this.data.stateData[SUPER_STATES.NOI_SUBMISSION].skipped = true;
+        this.data.stateData[SUPER_STATES.NOI_SUBMISSION].isNonConcessionalMode = true;
         this.data.stateData[SUPER_STATES.NOI_SUBMISSION].status = 'complete';
         this.data.stateData[SUPER_STATES.NOI_SUBMISSION].completedAt = new Date().toISOString();
 
@@ -636,9 +636,14 @@ class SuperStrategyStore {
         const daysLeft = daysUntilEOFY();
         const floorCheck = checkSafetyFloor(this.getTotalBalance(), 0, this.data.capitalSafetyFloor);
 
+        const noiStep = this.data.stateData[SUPER_STATES.NOI_SUBMISSION];
+        const isNCC = noiStep?.isNonConcessionalMode || false;
+        const deduction = isNCC ? 0 : (noiStep?.deductionAmount || 0);
+        const contribTax = deduction * 0.15;
+        const clearedStep1 = (this.data.stateData[SUPER_STATES.CONTRIBUTION_CLEARANCE]?.amount || 0) - contribTax;
+        
         const closureStep = this.data.stateData[SUPER_STATES.PENSION_CLOSURE];
         const recontribAmount = this.data.stateData[SUPER_STATES.RECONTRIBUTION]?.recontributionAmount || 0;
-        const clearedStep1 = (this.data.stateData[SUPER_STATES.CONTRIBUTION_CLEARANCE]?.amount || 0) * 0.85; // 15% tax
         
         // Retention Buffer (Optional hold-back for insurance/account survival)
         const buffer = this.data.accumulationRetentionBuffer || 0;
@@ -698,7 +703,7 @@ class SuperStrategyStore {
             },
             forensics: {
                 grossContribution: sd[SUPER_STATES.CONTRIBUTION_CLEARANCE]?.amount || 0,
-                contributionTax: (sd[SUPER_STATES.NOI_SUBMISSION]?.deductionAmount || 0) * 0.15,
+                contributionTax: (sd[SUPER_STATES.NOI_SUBMISSION]?.isNonConcessionalMode ? 0 : (sd[SUPER_STATES.NOI_SUBMISSION]?.deductionAmount || 0)) * 0.15,
                 netRecontribution: sd[SUPER_STATES.RECONTRIBUTION]?.recontributionAmount || 0,
                 closurePayout: sd[SUPER_STATES.PENSION_CLOSURE]?.proRataPayout || 0
             },
