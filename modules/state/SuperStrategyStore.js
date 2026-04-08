@@ -50,20 +50,20 @@ const STATE_ORDER = [
 
 const STATE_LABELS = Object.freeze({
     [SUPER_STATES.CONTRIBUTION_CLEARANCE]: 'Stage 1 - Age & TSB Eligibility',
-    [SUPER_STATES.NOI_SUBMISSION]: 'Stages 2 & 3 - Notice of Intent (NOI)',
-    [SUPER_STATES.FUND_ACKNOWLEDGEMENT]: 'Stages 2 & 3 - NOI Acknowledgement',
+    [SUPER_STATES.NOI_SUBMISSION]: 'Stage 2 - Tax Strategy Selection',
+    [SUPER_STATES.FUND_ACKNOWLEDGEMENT]: 'Stage 3 - NOI Acknowledgement',
     [SUPER_STATES.PENSION_CLOSURE]: 'Stage 4 - File Pension Restart P10',
-    [SUPER_STATES.RECONTRIBUTION]: 'Stage 5 - Re-Contribution Limits',
-    [SUPER_STATES.PENSION_COMMENCEMENT]: 'Stages 6 & 7 - Strategy Finalised',
-    [SUPER_STATES.FINALISED]: 'Stages 6 & 7 - Strategy Conclusion'
+    [SUPER_STATES.RECONTRIBUTION]: 'Stage 5 - Final Balance Reconciliation',
+    [SUPER_STATES.PENSION_COMMENCEMENT]: 'Stage 6 - Pension Commencement',
+    [SUPER_STATES.FINALISED]: 'Stage 7 - Strategy Finalised'
 });
 
 const STATE_DESCRIPTIONS = Object.freeze({
     [SUPER_STATES.CONTRIBUTION_CLEARANCE]: 'Verify age and TSB limits before transferring funds into accumulation.',
-    [SUPER_STATES.NOI_SUBMISSION]: 'File the Notice of Intent to secure your personal tax deduction.',
+    [SUPER_STATES.NOI_SUBMISSION]: 'Select your tax characterization (CC vs NCC) for this contribution.',
     [SUPER_STATES.FUND_ACKNOWLEDGEMENT]: 'Waiting for fund acknowledgement of the NOI before closing accounts.',
     [SUPER_STATES.PENSION_CLOSURE]: 'File the P10 form to close your existing pension and pay out pro-rata minimums.',
-    [SUPER_STATES.RECONTRIBUTION]: 'Consolidate accumulation balances ready for the pension restart.',
+    [SUPER_STATES.RECONTRIBUTION]: 'Align the strategy with your actual fund balances to ensure the final pension restart is mathematically perfect.',
     [SUPER_STATES.PENSION_COMMENCEMENT]: 'Initiate the new pension account with the consolidated tax-free balance.',
     [SUPER_STATES.FINALISED]: 'The strategy is complete and the position is audit-ready.'
 });
@@ -278,13 +278,20 @@ class SuperStrategyStore {
 
             case SUPER_STATES.RECONTRIBUTION: {
                 const eligibility = this.getRecontributionEligibility();
-                // If not eligible, they MUST proceed with 0 (skip re-contribution)
-                if (!eligibility.eligible) {
-                    return { valid: true, message: 'No re-contribution possible (Cap used). Advance to consolidated restart.' };
+                const step1Amount = this.data.stateData[SUPER_STATES.CONTRIBUTION_CLEARANCE]?.amount || 0;
+
+                // 1. Validate the re-contribution source (Stage 1)
+                if (step1Amount <= 0) return { valid: false, message: 'Stage 1 contribution data missing.' };
+                
+                // 2. Validate the valuations entered in Stage 5
+                if (!sd.closingAccumulationBalance || sd.closingAccumulationBalance <= 0) {
+                    return { valid: false, message: 'Enter your actual Accumulation balance.' };
                 }
-                if (!sd.recontributionAmount || sd.recontributionAmount <= 0) return { valid: false, message: 'Enter the amount being re-contributed.' };
-                if (!sd.recontributionDate) return { valid: false, message: 'Enter the re-contribution date.' };
-                return { valid: true, message: 'Re-contribution recorded.' };
+                
+                // 3. Validate Date
+                if (!sd.recontributionDate) return { valid: false, message: 'Select your reconciliation date.' };
+                
+                return { valid: true, message: 'Final reconciliation verified.' };
             }
 
             case SUPER_STATES.PENSION_COMMENCEMENT:
@@ -441,11 +448,13 @@ class SuperStrategyStore {
     // State Data Updates
     // ─────────────────────────────────────────
 
-    updateStateData(state, updates) {
+    updateStateData(state, updates, silent = false) {
         if (!this.data.stateData[state]) return;
         Object.assign(this.data.stateData[state], updates);
-        this._save();
-        this._dispatch(EVENTS.SUPER_STATE_CHANGED);
+        if (!silent) {
+            this._save();
+            this._dispatch(EVENTS.SUPER_STATE_CHANGED);
+        }
     }
 
     // ─────────────────────────────────────────
@@ -642,22 +651,25 @@ class SuperStrategyStore {
         const contribTax = deduction * 0.15;
         const clearedStep1 = (this.data.stateData[SUPER_STATES.CONTRIBUTION_CLEARANCE]?.amount || 0) - contribTax;
         
+        const recontribStep = this.data.stateData[SUPER_STATES.RECONTRIBUTION];
         const closureStep = this.data.stateData[SUPER_STATES.PENSION_CLOSURE];
-        const recontribAmount = this.data.stateData[SUPER_STATES.RECONTRIBUTION]?.recontributionAmount || 0;
         
         // Retention Buffer (Optional hold-back for insurance/account survival)
         const buffer = this.data.accumulationRetentionBuffer || 0;
         
-        // Use user-adjusted closing balances if provided, fallback to July 1 static data
-        const currentAcc = (closureStep?.closingAccumulationBalance !== undefined) ? closureStep.closingAccumulationBalance : this.data.accumulationBalance;
-        const currentPen = (closureStep?.closingPensionBalance !== undefined) ? closureStep.closingPensionBalance : this.data.pensionBalance;
+        // Use user-adjusted closing balances if provided (Prioritize Stage 5 reconciliation data)
+        const currentAcc = (recontribStep?.closingAccumulationBalance !== undefined) ? recontribStep.closingAccumulationBalance : 
+                          ((closureStep?.closingAccumulationBalance !== undefined) ? closureStep.closingAccumulationBalance : this.data.accumulationBalance);
+        
+        const currentPen = (recontribStep?.closingPensionBalance !== undefined) ? recontribStep.closingPensionBalance : 
+                          ((closureStep?.closingPensionBalance !== undefined) ? closureStep.closingPensionBalance : this.data.pensionBalance);
         
         const closedBalance = currentPen - (closureStep?.proRataPayout || 0);
         
         // Final Consolidation Estimate
-        // Fixed: currentAcc is assumed to be the absolute current balance as 
-        // entered by the user (which usually includes Step 1).
-        const restartValTotal = currentAcc + closedBalance - buffer;
+        // Fixed: We now treat the Current Accumulation as the FINAL consolidated total
+        // as the user confirmed all pension funds have been moved there.
+        const restartValTotal = currentAcc - buffer;
         const pensionStart = Math.min(restartValTotal, caps.tbc);
         const excessTBC = Math.max(0, restartValTotal - caps.tbc);
 

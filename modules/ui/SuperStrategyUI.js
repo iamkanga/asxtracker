@@ -433,10 +433,10 @@ export default class SuperStrategyUI {
                     
                     const labelMap = {
                         [SUPER_STATES.CONTRIBUTION_CLEARANCE]: 'Eligibility',
-                        [SUPER_STATES.NOI_SUBMISSION]: 'NOI',
+                        [SUPER_STATES.NOI_SUBMISSION]: 'Tax Strategy',
                         [SUPER_STATES.FUND_ACKNOWLEDGEMENT]: 'Approval',
                         [SUPER_STATES.PENSION_CLOSURE]: 'P10 Restart',
-                        [SUPER_STATES.RECONTRIBUTION]: 'Limits',
+                        [SUPER_STATES.RECONTRIBUTION]: 'Reconciliation',
                         [SUPER_STATES.PENSION_COMMENCEMENT]: 'Restart',
                         [SUPER_STATES.FINALISED]: 'Final'
                     };
@@ -662,36 +662,6 @@ export default class SuperStrategyUI {
                 break;
             }
 
-            case SUPER_STATES.RECONTRIBUTION: {
-                const stateData = superStrategyStore.getStateData(SUPER_STATES.RECONTRIBUTION);
-                const calc = superStrategyStore.getCalculatedValues();
-                fieldsHtml = `
-                    <div style="margin-bottom: 24px; padding: 18px; background: rgba(255,255,255,0.02); border-radius: 0; border: 1px solid rgba(255,255,255,0.05);">
-                        <div style="font-size: 0.65rem; color: var(--color-accent); font-weight: 800; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 14px;">Regulatory Limits & Consolidation</div>
-                        
-                        <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 20px;">TBA</div>
-
-                        <div class="${CSS_CLASSES.FORM_GROUP}" style="margin-bottom:20px;">
-                            <label style="font-size:0.62rem;color:var(--text-muted);font-weight:800;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;display:block;opacity:0.55;">Re-contribution Amount</label>
-                            <input type="number" id="${IDS.SUPER_RECONTRIBUTE_AMOUNT}" class="${CSS_CLASSES.FORM_CONTROL}"
-                                   value="${stateData.recontributionAmount || ''}" placeholder="0.00" step="0.01"
-                                   style="border-radius:0;padding:12px;font-weight:700;outline:none;">
-                            <div style="font-size: 0.62rem; color: var(--color-accent); margin-top: 8px; font-weight: 600; opacity: 0.8;">
-                                <i class="fas fa-info-circle"></i> This amount must be within your available NCC caps.
-                            </div>
-                        </div>
-
-                        ${(() => {
-                            const eligibility = superStrategyStore.getRecontributionEligibility();
-                            if (!eligibility.eligible) {
-                                return this._renderOrangeWarning('Cap Conflict', eligibility.reason);
-                            }
-                            return '';
-                        })()}
-                    </div>
-                `;
-                break;
-            }
 
             case SUPER_STATES.PENSION_COMMENCEMENT: {
                 const stateData = superStrategyStore.getStateData(SUPER_STATES.PENSION_COMMENCEMENT);
@@ -709,7 +679,7 @@ export default class SuperStrategyUI {
                         </div>
 
                         <div class="${CSS_CLASSES.FORM_GROUP}" style="margin-bottom:20px;" onclick="const inp = this.querySelector('input'); if(inp && document.activeElement !== inp) { try { inp.showPicker(); } catch (e) { inp.click(); } }">
-                            <label style="font-size:0.62rem;color:var(--text-muted);font-weight:800;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;display:block;opacity:0.55;">Planned Commencement Date</label>
+                            <label style="font-size:0.62rem;color:var(--text-muted);font-weight:800;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;display:block;opacity:0.55;">Commencement Date</label>
                             <input type="${stateData.commencementDate ? 'date' : 'text'}" 
                                    id="${IDS.SUPER_COMMENCE_DATE}" 
                                    class="${CSS_CLASSES.FORM_CONTROL}"
@@ -747,7 +717,6 @@ export default class SuperStrategyUI {
                 
                 fieldsHtml = `
                     <div id="${IDS.SUPER_STEP_DETAIL}" style="padding: 0; background: transparent; border-radius: 0; margin: 0 0 -10px;">
-                        
                         <div class="super-audit-card">
                             <!-- Header -->
                             <div class="super-audit-header">
@@ -768,18 +737,15 @@ export default class SuperStrategyUI {
                                 <div class="super-audit-grid">
                                     <div class="super-audit-row">
                                         <div class="super-audit-label">Accumulation</div>
-                                        <div class="super-audit-value">${formatCurrency(audit.baseline.accumulation)}</div>
+                                        <div class="super-audit-value" style="font-size: 0.95rem; font-weight: 900;">${formatCurrency(audit.baseline.accumulation)}</div>
                                     </div>
                                     <div class="super-audit-row">
                                         <div class="super-audit-label">Pension</div>
-                                        <div class="super-audit-value">${formatCurrency(audit.baseline.pension)}</div>
+                                        <div class="super-audit-value" style="font-size: 0.95rem; font-weight: 900;">${formatCurrency(audit.baseline.pension)}</div>
                                     </div>
                                     <div class="super-audit-row full-width">
-                                        <div class="super-audit-divider"></div>
-                                        <div style="display: flex; justify-content: space-between; align-items: baseline;">
-                                            <span class="super-audit-label" style="font-size: 0.65rem; opacity: 0.8;">Total Member Balance</span>
-                                            <span class="super-audit-value large">${formatCurrency(audit.baseline.total)}</span>
-                                        </div>
+                                        <div class="super-audit-label">Total Member Balance</div>
+                                        <div class="super-audit-value" style="font-size: 1.25rem; font-weight: 950; color: var(--color-accent);">${formatCurrency(audit.baseline.total)}</div>
                                     </div>
                                 </div>
                             </div>
@@ -792,29 +758,29 @@ export default class SuperStrategyUI {
                                 <div class="super-audit-grid">
                                     <div class="super-audit-row full-width">
                                         <div class="super-audit-label">Clearance</div>
-                                        <div class="super-audit-value">${formatDate(audit.timeline.clearanceDate)}</div>
+                                        <div class="super-audit-value" style="font-size: 0.85rem; font-weight: 800; color: #fff;">${formatDate(audit.timeline.clearanceDate)}</div>
                                     </div>
                                     <div class="super-audit-row">
                                         <div class="super-audit-label">NOI Filed</div>
-                                        <div class="super-audit-value">${formatDate(audit.timeline.noiFiledDate)}</div>
+                                        <div class="super-audit-value" style="font-size: 0.85rem; font-weight: 800; color: #fff;">${formatDate(audit.timeline.noiFiledDate)}</div>
                                     </div>
                                     <div class="super-audit-row">
                                         <div class="super-audit-label">NOI Approval</div>
-                                        <div class="super-audit-value">${formatDate(audit.timeline.fundAckDate)}</div>
+                                        <div class="super-audit-value" style="font-size: 0.85rem; font-weight: 800; color: #fff;">${formatDate(audit.timeline.fundAckDate)}</div>
                                     </div>
                                     <div class="super-audit-row">
                                         <div class="super-audit-label">Concessional</div>
-                                        <div class="super-audit-value accent">${formatCurrency(audit.timeline.mccAmount)}</div>
+                                        <div class="super-audit-value accent" style="font-size: 0.95rem; font-weight: 900;">${formatCurrency(audit.timeline.mccAmount)}</div>
                                     </div>
                                     <div class="super-audit-row">
                                         <div class="super-audit-label">Non-Concessional</div>
-                                        <div class="super-audit-value ${audit.timeline.nccAvailable ? '' : 'negative'}">
+                                        <div class="super-audit-value ${audit.timeline.nccAvailable ? '' : 'negative'}" style="font-size: 0.95rem; font-weight: 900;">
                                             ${audit.timeline.nccAvailable ? formatCurrency(audit.timeline.nccAmount) : 'Cap Used'}
                                         </div>
                                     </div>
-                                    <div class="super-audit-row full-width" style="margin-top: 4px; padding: 10px; background: rgba(var(--accent-rgb, 120, 100, 255), 0.05); border: 1px solid rgba(var(--accent-rgb, 120, 100, 255), 0.1);">
-                                        <div class="super-audit-label" style="color: var(--color-accent); opacity: 0.8;">Strategy Completion</div>
-                                        <div class="super-audit-value large">${formatDate(audit.timeline.completionDate)}</div>
+                                    <div class="super-audit-row full-width">
+                                        <div class="super-audit-label">Strategy Completion</div>
+                                        <div class="super-audit-value" style="font-size: 0.85rem; font-weight: 800; color: #fff;">${formatDate(audit.timeline.completionDate)}</div>
                                     </div>
                                 </div>
                             </div>
@@ -827,52 +793,51 @@ export default class SuperStrategyUI {
                                 <div class="super-audit-grid">
                                     <div class="super-audit-row">
                                         <div class="super-audit-label">Gross Contribution</div>
-                                        <div class="super-audit-value" style="display: flex; flex-direction: column; align-items: flex-end;">
-                                            <div style="font-size: 0.95rem; font-weight: 950; color: #fff;">${formatCurrency(audit.forensics.grossContribution)}</div>
-                                            <div style="font-size: 0.58rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">
-                                                <span style="color: var(--color-accent);">${formatCurrency(audit.timeline.mccAmount)} CC</span> + 
-                                                <span style="color: #fff;">${formatCurrency(audit.timeline.nccAmount)} NCC</span>
+                                        <div class="super-audit-value" style="display: flex; flex-direction: column; gap: 4px;">
+                                            <div style="font-size: 0.95rem; font-weight: 900; color: #fff;">${formatCurrency(audit.forensics.grossContribution)}</div>
+                                            <div style="font-size: 0.52rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; opacity: 0.6; letter-spacing: 0.5px; white-space: nowrap;">
+                                                <span style="color: var(--color-accent);">${formatCurrency(audit.timeline.mccAmount)} CC</span> + ${formatCurrency(audit.timeline.nccAmount)} NCC
                                             </div>
                                         </div>
                                     </div>
                                     <div class="super-audit-row">
                                         <div class="super-audit-label">Tax (15%)</div>
-                                        <div class="super-audit-value negative">-${formatCurrency(audit.forensics.contributionTax)}</div>
+                                        <div class="super-audit-value negative" style="font-size: 0.95rem; font-weight: 950;">-${formatCurrency(audit.forensics.contributionTax)}</div>
                                     </div>
                                     <div class="super-audit-row">
                                         <div class="super-audit-label">Net Recontribution</div>
-                                        <div class="super-audit-value accent">${formatCurrency(audit.forensics.netRecontribution)}</div>
+                                        <div class="super-audit-value accent" style="font-size: 0.95rem; font-weight: 950;">${formatCurrency(audit.forensics.netRecontribution)}</div>
                                     </div>
                                     <div class="super-audit-row">
-                                        <div class="super-audit-label">Closure Payout</div>
-                                        <div class="super-audit-value">${formatCurrency(audit.forensics.closurePayout)}</div>
+                                        <div class="super-audit-label">Pro-Rata Exit Withdrawal</div>
+                                        <div class="super-audit-value" style="font-size: 0.95rem; font-weight: 950;">${formatCurrency(audit.forensics.closurePayout)}</div>
                                     </div>
                                 </div>
                             </div>
 
                             <!-- Group 4: Final Results -->
-                            <div class="super-audit-footer">
+                            <div class="super-audit-section">
                                 <div class="super-audit-section-title" style="color: var(--color-accent); opacity: 1;">
                                     <i class="fas fa-check-double"></i> Final Post-Strategy Result
                                 </div>
-                                <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 4px;">
+                                <div class="super-audit-grid">
                                     <div class="super-audit-row">
                                         <div class="super-audit-label">Restart Date</div>
-                                        <div class="super-audit-value" style="font-size: 0.9rem;">${formatDate(audit.result.restartDate)}</div>
+                                        <div class="super-audit-value" style="font-size: 0.85rem; font-weight: 800; color: #fff;">${formatDate(audit.result.restartDate)}</div>
                                     </div>
-                                    <div class="super-audit-row" style="text-align: right;">
+                                    <div class="super-audit-row">
                                         <div class="super-audit-label">New Pension Start</div>
-                                        <div class="super-audit-value positive" style="font-size: 1.4rem; font-weight: 950; line-height: 1;">${formatCurrency(audit.result.newPensionStart)}</div>
+                                        <div class="super-audit-value positive" style="font-size: 1.15rem; font-weight: 950;">${formatCurrency(audit.result.newPensionStart)}</div>
                                     </div>
-                                </div>
-                                <div class="super-audit-footer-summary">
-                                    <span class="super-audit-label" style="font-size: 0.65rem; color: var(--text-muted); opacity: 0.8;">Remaining Accumulation</span>
-                                    <span class="super-audit-value large">${formatCurrency(audit.result.remainingAccumulation)}</span>
+                                    <div class="super-audit-row full-width">
+                                        <div class="super-audit-label">Remaining Accumulation Balance</div>
+                                        <div class="super-audit-value" style="font-size: 1.15rem; font-weight: 950; color: #fff;">${formatCurrency(audit.result.remainingAccumulation)}</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
-                         <button id="super-final-reset-btn" class="${CSS_CLASSES.PRIMARY_PILL_BTN}" style="width: 100%; border-radius: 0; padding: 16px; font-weight: 950; font-size: 0.9rem; background: var(--color-accent); color: #000; border: none; cursor: pointer; margin-bottom: 14px; text-transform: uppercase; letter-spacing: 1px;">
+                        <button id="super-final-reset-btn" class="${CSS_CLASSES.PRIMARY_PILL_BTN}" style="width: 100%; border-radius: 0; padding: 16px; font-weight: 950; font-size: 0.9rem; background: var(--color-accent); color: #000; border: none; cursor: pointer; margin-bottom: 14px; text-transform: uppercase; letter-spacing: 1px;">
                             Archive & Restart Pipeline
                         </button>
                         <button id="super-back-btn" style="width: 100%; padding: 12px; border-radius: 0; background: rgba(255,255,255,0.05); color: var(--text-muted); border: 1px solid rgba(255,255,255,0.1); cursor: pointer; font-weight: 600; font-size: 0.8rem; transition: all 0.2s;">
@@ -890,8 +855,12 @@ export default class SuperStrategyUI {
                 const noiData = superStrategyStore.getStateData(SUPER_STATES.NOI_SUBMISSION);
                 const calc = superStrategyStore.getCalculatedValues();
                 
-                const currentAcc = (closureData?.closingAccumulationBalance !== undefined) ? closureData.closingAccumulationBalance : data.accumulationBalance;
-                const activePensionVal = (closureData?.closingPensionBalance !== undefined) ? closureData.closingPensionBalance : data.pensionBalance;
+                const currentAcc = (stateData?.closingAccumulationBalance !== undefined) ? stateData.closingAccumulationBalance : 
+                                 ((closureData?.closingAccumulationBalance !== undefined) ? closureData.closingAccumulationBalance : data.accumulationBalance);
+                
+                const activePensionVal = (stateData?.closingPensionBalance !== undefined) ? stateData.closingPensionBalance : 
+                                       ((closureData?.closingPensionBalance !== undefined) ? closureData.closingPensionBalance : data.pensionBalance);
+                
                 const closedBalanceNet = activePensionVal - (closureData?.proRataPayout || 0);
                 const activeDeduction = noiData?.isNonConcessionalMode ? 0 : (noiData?.deductionAmount || 0);
                 const clearedStep1 = (step1Data?.amount || 0) - (activeDeduction * 0.15);
@@ -899,23 +868,17 @@ export default class SuperStrategyUI {
 
                 fieldsHtml = `
                     <!-- 1. Strategic Market Adjustments -->
-                    <div style="margin-bottom: 24px; padding: 18px; background: rgba(255,255,255,0.02); border-radius: 0; border: 1px solid rgba(255,255,255,0.05);">
-                        <div style="font-size: 0.65rem; color: var(--color-accent); font-weight: 800; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 14px;">Review Brighter Super Valuations</div>
-                        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:16px; margin-bottom:12px; align-items: start;">
-                            <div class="${CSS_CLASSES.FORM_GROUP}" style="display: flex; flex-direction: column;">
-                                <label style="font-size:0.6rem; color:var(--text-muted); font-weight:800; text-transform:uppercase; margin-bottom:8px; min-height: 24px; display: flex; align-items: flex-end;">Current Accumulation</label>
+                    <div style="margin-bottom: 12px; padding: 10px 12px; background: rgba(255,255,255,0.02); border-radius: 0; border: 1px solid rgba(255,255,255,0.05);">
+                        <div style="font-size: 0.65rem; color: var(--color-accent); font-weight: 800; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px;">Review Brighter Super Valuation</div>
+                        <div style="margin-bottom:0;">
+                            <div class="${CSS_CLASSES.FORM_GROUP}" style="display: flex; flex-direction: column; margin-bottom: 4px;">
+                                <label style="font-size:0.6rem; color:var(--text-muted); font-weight:800; text-transform:uppercase; margin-bottom:2px; display: flex; align-items: flex-end;">Current Accumulation Balance</label>
                                 <input type="number" id="super-closing-acc-balance" class="${CSS_CLASSES.FORM_CONTROL}"
                                        value="${currentAcc}"
-                                       style="border-radius:0; padding:12px; font-weight:700; width:100%; height: 42px;">
-                            </div>
-                            <div class="${CSS_CLASSES.FORM_GROUP}" style="display: flex; flex-direction: column;">
-                                <label style="font-size:0.6rem; color:var(--text-muted); font-weight:800; text-transform:uppercase; margin-bottom:8px; min-height: 24px; display: flex; align-items: flex-end;">Current Pension</label>
-                                <input type="number" id="super-closing-pen-balance" class="${CSS_CLASSES.FORM_CONTROL}"
-                                       value="${activePensionVal}"
-                                       style="border-radius:0; padding:12px; font-weight:700; width:100%; height: 42px;">
+                                       style="border-radius:0; padding:8px 10px; font-weight:700; width:100%; height: 36px;">
                             </div>
                         </div>
-                        <div style="font-size: 0.6rem; color: var(--text-muted); font-weight: 500; opacity: 0.6;">*Update to current market values to ensure the restart is accurate.</div>
+                        <div style="font-size: 0.58rem; color: var(--text-muted); font-weight: 500; opacity: 0.6;">*Update to your actual consolidated fund balance for maximum accuracy.</div>
                     </div>
 
                     <!-- 2. Brighter Super Retention Buffer -->
@@ -928,30 +891,17 @@ export default class SuperStrategyUI {
                         </div>
                         <div style="font-size:0.68rem; color:var(--text-muted); line-height:1.4; opacity:0.8;">
                              <i class="fas fa-info-circle" style="margin-right:4px; color:var(--color-accent);"></i>
-                             <strong>Brighter Super Rule:</strong> A minimum balance of $8,000 must be retained to keep your accumulation account open during a transfer. Check your specific PDS for your required safety threshold.
+                             <strong>Brighter Super Rule:</strong> A minimum balance of $8,000 must be retained to keep your accumulation account open.
                         </div>
                     </div>
 
                     <!-- 3. Consolidated Strategy Command -->
-                    <div style="margin-bottom: 28px; padding: 22px; background: rgba(var(--accent-rgb, 120, 100, 255), 0.12); border-radius: 0; border: 1px solid rgba(var(--accent-rgb, 120, 100, 255), 0.25); box-shadow: 0 8px 32px rgba(0,0,0,0.3); overflow: hidden;">
-                    <div style="font-size: 0.65rem; color: var(--color-accent); font-weight: 950; text-transform: uppercase; letter-spacing: 2.5px; margin-bottom: 20px;">FY ${fy - 1}/${String(fy).slice(-2)} Consolidation Command</div>
-                        
-                        <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.03);">
-                            <span style="font-size: 0.62rem; color: rgba(255,255,255,0.6); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Current Acc. Balance</span>
-                            <span style="font-size: 0.95rem; color: #fff; font-weight: 800;">${formatCurrency(calc.currentAcc)}</span>
-                        </div>
-                        
-                        <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.03);">
-                            <span style="font-size: 0.62rem; color: rgba(255,255,255,0.6); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Pension Closure (Net)</span>
-                            <span style="font-size: 0.95rem; color: #fff; font-weight: 800;">${formatCurrency(closedBalanceNet)}</span>
-                        </div>
+                    <div style="margin-bottom: 20px; padding: 16px; background: rgba(var(--accent-rgb, 120, 100, 255), 0.12); border-radius: 0; border: 1px solid rgba(var(--accent-rgb, 120, 100, 255), 0.25); box-shadow: 0 8px 32px rgba(0,0,0,0.3); overflow: hidden;">
+                    <div style="font-size: 0.65rem; color: var(--color-accent); font-weight: 950; text-transform: uppercase; letter-spacing: 2.5px; margin-bottom: 16px;">FY ${fy - 1}/${String(fy).slice(-2)} Consolidation Command</div>
                         
                         <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.06);">
-                            <div style="display: flex; flex-direction: column; opacity: 0.4;">
-                                <span style="font-size: 0.62rem; color: rgba(255,255,255,0.6); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Personal Contribution (Step 1)</span>
-                                <span style="font-size: 0.58rem; color: var(--color-positive); font-weight: 600; margin-top: 2px;">(Included in Valuation)</span>
-                            </div>
-                            <span style="font-size: 0.95rem; color: #fff; font-weight: 800; opacity: 0.4;">${formatCurrency(clearedStep1)}</span>
+                            <span style="font-size: 0.62rem; color: rgba(255,255,255,0.6); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Verified Consolidated Total</span>
+                            <span style="font-size: 0.95rem; color: #fff; font-weight: 800;">${formatCurrency(calc.currentAcc)}</span>
                         </div>
 
                         ${buffer > 0 ? `
@@ -971,31 +921,13 @@ export default class SuperStrategyUI {
                         ${calc.excessTBC > 0 ? this._renderOrangeWarning(`TBC Overlap Detected (${formatCurrency(calc.contributionCaps.tbc).replace(',000,000', '.0')}M Cap)`, `Your restart exceeds the Transfer Balance Cap. You can only put ${formatCurrency(calc.contributionCaps.tbc)} into the tax-free pension. The remaining ${formatCurrency(calc.excessTBC)} MUST stay in accumulation.`) : ''}
 
                         <!-- Fixed Account Verification Note -->
-                        <div style="background: rgba(0,0,0,0.2); padding: 12px; border-radius: 0; border: 1px solid rgba(255,255,255,0.03); margin-top: 12px; font-size: 0.65rem; color: var(--text-muted); line-height: 1.4;">
-                            <i class="fas fa-shield-check" style="margin-right: 6px; color: var(--color-positive); opacity: 0.7;"></i>
-                            <strong>Data Integrity:</strong> Your manual valuation above should match your fund dashboard, which already includes your completed Step 1 contribution.
+                        <div style="background: transparent; padding: 8px 0; border-radius: 0; margin-top: 10px; font-size: 0.65rem; color: var(--text-muted); line-height: 1.4;">
+                            <i class="fas fa-info-circle" style="margin-right: 6px; color: var(--color-accent); opacity: 0.8;"></i><strong>Data Integrity:</strong> Your manual valuation above should match your fund dashboard, which already includes your confirmed Step 1 contribution.
                         </div>
                     </div>
 
 
 
-                    <!-- Available to Re-Contribute Tile (Redundant tile removed) -->
-
-                    <div class="${CSS_CLASSES.FORM_GROUP}" style="margin-bottom: 20px;" onclick="const inp = this.querySelector('input'); if(inp && document.activeElement !== inp) { try { inp.showPicker(); } catch (e) { inp.click(); } }">
-                        <label style="font-size: 0.7rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; display: block; opacity: 0.7;">Re-Contribution Amount</label>
-                        <input type="number" id="${IDS.SUPER_RECONTRIBUTION_AMOUNT}" class="${CSS_CLASSES.FORM_CONTROL}"
-                               value="${stateData.recontributionAmount || ''}" placeholder="0.00" step="0.01"
-                               ${!eligibility.eligible ? 'disabled' : ''}
-                               max="${eligibility.maxAmount}"
-                               style="border-radius: 0; padding: 12px; font-weight: 700; width: 100%; outline: none; ${!eligibility.eligible ? 'opacity: 0.4;' : ''}">
-                        
-                        ${!eligibility.eligible ? `
-                        <div style="font-size: 0.65rem; color: #ff3b30; font-weight: 800; margin-top: 8px; text-transform: uppercase; letter-spacing: 0.8px; display: flex; align-items: center; gap: 6px;">
-                            <i class="fas fa-lock"></i> 
-                            <span>Contribution Blocked: ${calc.totalBalance >= calc.contributionCaps.tbc ? 'TSB Limit Reached' : 'Cap Exhausted'}</span>
-                        </div>
-                        ` : ''}
-                    </div>
                     <div class="${CSS_CLASSES.FORM_GROUP}" style="margin-bottom: 20px;" onclick="const inp = this.querySelector('input'); if(inp && document.activeElement !== inp) { try { inp.showPicker(); } catch (e) { inp.click(); } }">
                         <label style="font-size: 0.7rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; display: block; opacity: 0.7;">Re-Contribution Date</label>
                         <input type="${stateData.recontributionDate ? 'date' : 'text'}" 
@@ -1045,9 +977,13 @@ export default class SuperStrategyUI {
                                    background:${validation.valid ? 'var(--color-accent)' : 'rgba(255,255,255,0.06)'};
                                    color:${validation.valid ? '#000' : 'var(--text-muted)'};border:none;
                                    opacity:${validation.valid ? '1' : '0.5'};">
-                        ${validation.valid 
-                            ? (superStrategyStore.data.stateData[SUPER_STATES.NOI_SUBMISSION]?.skipped ? 'Skip & Keep as Non-Concessional →' : 'Complete &amp; Advance →') 
-                            : validation.message}
+                        ${(() => {
+                            if (!validation.valid) return validation.message;
+                            if (current === SUPER_STATES.NOI_SUBMISSION && superStrategyStore.data.stateData[SUPER_STATES.NOI_SUBMISSION]?.skipped) {
+                                return 'Skip & Keep as Non-Concessional →';
+                            }
+                            return 'Complete & Advance →';
+                        })()}
                     </button>
                     <button id="super-reset-btn" style="padding:12px 16px;border-radius:0;background:rgba(255,59,48,0.12);color:#ff3b30;border:none;cursor:pointer;font-weight:600;font-size:0.8rem;" title="Reset Pipeline">
                         <i class="fas fa-sync-alt" style="font-size:0.75rem;"></i>
@@ -1220,18 +1156,19 @@ export default class SuperStrategyUI {
                 </div>
             </details>
  
-            <!-- Steps 2 & 3: NOI -->
+            <!-- Steps 2 & 3: Strategy & Approval -->
             <details class="super-accordion">
                 <summary>
                     <div style="display:flex; flex-direction:column; gap:8px;">
                         <div style="display:inline-flex; align-items:center; gap:12px;">
-                            <span style="font-size:0.75rem; color:#fff; font-weight:900; text-transform:uppercase; letter-spacing:1.5px;">Stages 2 & 3 - Notice of Intent (NOI)</span>
+                            <span style="font-size:0.75rem; color:#fff; font-weight:900; text-transform:uppercase; letter-spacing:1.5px;">Stages 2 & 3 - Tax Strategy & Approval</span>
                         </div>
                     </div>
                 </summary>
                 <div class="super-accordion-content" style="padding-top:10px;">
                     <ul style="font-size:0.75rem; color:var(--text-muted); line-height:1.6; margin-bottom:12px; padding-left:20px; list-style-type: disc;">
-                        <li><strong>Lock-in Rule</strong>: A Notice of Intent must be filed and acknowledged BEFORE restarting a pension to secure tax benefits.</li>
+                        <li><strong>Contribution Strategy</strong>: Decide whether to claim a personal tax deduction (Concessional) or stay after-tax (Non-Concessional).</li>
+                        <li><strong>Lock-in Rule</strong>: If claiming a deduction, a 'Notice of Intent' must be filed and acknowledged BEFORE the pension restart to secure benefits.</li>
                     </ul>
                 </div>
             </details>
@@ -1254,18 +1191,18 @@ export default class SuperStrategyUI {
                 </div>
             </details>
  
-            <!-- Step 5: Limits -->
+            <!-- Step 5: Reconciliation -->
             <details class="super-accordion">
                 <summary>
                     <div style="display:flex; flex-direction:column; gap:8px;">
                         <div style="display:inline-flex; align-items:center; gap:12px;">
-                            <span style="font-size:0.75rem; color:#fff; font-weight:900; text-transform:uppercase; letter-spacing:1.5px;">Stage 5 - Re-Contribution Limits</span>
+                            <span style="font-size:0.75rem; color:#fff; font-weight:900; text-transform:uppercase; letter-spacing:1.5px;">Stage 5 - Final Balance Reconciliation</span>
                         </div>
                     </div>
                 </summary>
                 <div class="super-accordion-content" style="padding-top:10px;">
                     <ul style="font-size:0.75rem; color:var(--text-muted); line-height:1.6; margin-bottom:12px; padding-left:20px; list-style-type: disc;">
-                        <li><strong>Audit Documentation</strong>: Document exactly how much is being moved so your final Audit Report is accurate.</li>
+                        <li><strong>Actual Alignment</strong>: Align the strategy with your actual fund balances to ensure the final pension restart is mathematically perfect.</li>
                     </ul>
                 </div>
             </details>
@@ -2118,12 +2055,43 @@ export default class SuperStrategyUI {
                 const recontribEl = this.container.querySelector(`#${IDS.SUPER_RECONTRIBUTION_AMOUNT}`);
                 const dateEl = this.container.querySelector(`#${IDS.SUPER_RECONTRIBUTION_DATE}`);
 
+                if (accEl) accEl.addEventListener('input', (e) => {
+                    const val = parseFloat(e.target.value) || 0;
+                    // SILENT UPDATE: Updates memory so math works, but skips global render-triggering save
+                    superStrategyStore.updateStateData(current, { closingAccumulationBalance: val }, true);
+                    
+                    // PASSIVE UPDATE (Focus Safety):
+                    // Update the calculation results and validation state without re-rendering the whole panel.
+                    const newCalc = superStrategyStore.getCalculatedValues();
+                    const nextVal = superStrategyStore.validateCurrentState(current);
+                    
+                    // 1. Update the Summary Box total
+                    const valDisplay = this.container.querySelector('[style*="Estimated Restart Valuation"] + [style*="color: var(--color-positive)"]');
+                    const totalRow = this.container.querySelector('[style*="Verified Consolidated Total"] + span');
+                    
+                    if (valDisplay) valDisplay.innerText = `$${newCalc.newPensionStart.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+                    if (totalRow) totalRow.innerText = `$${val.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+                    
+                    // 2. Update the button state
+                    const advBtn = this.container.querySelector('#super-advance-btn');
+                    if (advBtn) {
+                        advBtn.style.background = nextVal.valid ? 'var(--color-accent)' : 'rgba(255,255,255,0.06)';
+                        advBtn.style.color = nextVal.valid ? '#000' : 'var(--text-muted)';
+                        advBtn.style.opacity = nextVal.valid ? '1' : '0.5';
+                        advBtn.innerText = nextVal.valid ? 'Complete & Advance →' : nextVal.message;
+                    }
+                });
+                // Final Save on Blur/Change
                 if (accEl) accEl.addEventListener('change', (e) => {
-                    superStrategyStore.updateStateData(SUPER_STATES.PENSION_CLOSURE, { closingAccumulationBalance: parseFloat(e.target.value) || 0 });
-                    this.render(); 
+                    superStrategyStore.updateStateData(current, { closingAccumulationBalance: parseFloat(e.target.value) || 0 });
+                    this.render();
+                }); 
+
+                if (penEl) penEl.addEventListener('input', (e) => {
+                    superStrategyStore.updateStateData(current, { closingPensionBalance: parseFloat(e.target.value) || 0 }, true);
                 });
                 if (penEl) penEl.addEventListener('change', (e) => {
-                    superStrategyStore.updateStateData(SUPER_STATES.PENSION_CLOSURE, { closingPensionBalance: parseFloat(e.target.value) || 0 });
+                    superStrategyStore.updateStateData(current, { closingPensionBalance: parseFloat(e.target.value) || 0 });
                     this.render();
                 });
                 if (bufferEl) bufferEl.addEventListener('change', (e) => {
