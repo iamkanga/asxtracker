@@ -164,3 +164,26 @@
 .code-pill:active {
     transform: translateY(0);
 }
+
+/* Deep Link Highlight Animation (v1153) */
+.market-stream-item-wrapper.pulse-highlight {
+    animation: pulse-highlight-animation 3s ease-out;
+    position: relative;
+    z-index: 10;
+    border: 1px solid var(--color-accent);
+}
+
+@keyframes pulse-highlight-animation {
+    0% {
+        box-shadow: 0 0 0 0 rgba(var(--color-accent-rgb), 0.7);
+        background: rgba(var(--color-accent-rgb), 0.2);
+    }
+    30% {
+        box-shadow: 0 0 20px 10px rgba(var(--color-accent-rgb), 0);
+        background: rgba(var(--color-accent-rgb), 0.1);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(var(--color-accent-rgb), 0);
+        background: transparent;
+    }
+}

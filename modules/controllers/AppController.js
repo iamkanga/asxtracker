@@ -41,6 +41,7 @@ import { PullToRefresh } from '../ui/PullToRefresh.js';
 import { StateAuditor } from '../state/StateAuditor.js';
 import { StateHealthPanel } from '../state/StateHealthPanel.js';
 import { runHealthCheck, startRaceRegressionMonitor } from '../state/AppHealthTest.js';
+import { marketIndexController } from '../ui/MarketIndexController.js';
 // renderSortSelect removed
 
 export class AppController {
@@ -146,6 +147,9 @@ export class AppController {
 
         // Initialize Navigation Manager (Back Button Support)
         navManager.init();
+
+        // v1153: Handle Deep Links (Announcements, etc.)
+        this._handleDeepLinks();
 
         // 1. Event Bindings (Global)
         this._bindGlobalEvents();
@@ -501,7 +505,6 @@ export class AppController {
                     ToastManager.error('Failed to update mute status.');
                     return;
                 }
-
                 // 3. User Feedback
                 const statusText = newStatus ? 'Muted' : 'Unmuted';
                 ToastManager.info(`${shareToUpdate ? (shareToUpdate.code || 'Share') : 'Share'} is now ${statusText}.`);
@@ -3397,6 +3400,74 @@ export class AppController {
             } catch (e) {
                 console.warn('[AppController] Snapshot trigger failed (passive):', e);
             }
+        }
+    }
+
+    /**
+     * Parses the current URL for deep links and triggers the corresponding UI state.
+     * v1153: Added support for ?announcementId= to deep-link straight to an announcement.
+     */
+    _handleDeepLinks() {
+        try {
+            const params = new URLSearchParams(window.location.search);
+            // v1153: Support multiple parameter names used by different email systems / versions
+            let targetId = params.get('announcementId') || params.get('alertId') || params.get('id') || params.get('targetId');
+
+            // v1155: Regex Fallback - If no explicit param, scan the full URL for the standard ASX/MarketIndex ID pattern
+            // Updated to be more resilient (removed strict word boundaries that might fail in some URL structures)
+            if (!targetId) {
+                const hrefMatch = window.location.href.match(/[0-9]{0,1}[23456]A[A-Z0-9]{5,}/i);
+                if (hrefMatch) {
+                    targetId = hrefMatch[0].toUpperCase();
+                    console.log(`[AppController] Detected announcement ID via URL pattern: ${targetId}`);
+                }
+            }
+
+            // v1156: SECONDARY REGEX - If no targetId, check for a generic company profile URL (/asx/CODE)
+            let targetSymbol = null;
+            if (!targetId) {
+                const codeMatch = window.location.href.match(/marketindex\.com\.au\/asx\/([a-z0-9]{3,4})\b/i);
+                if (codeMatch) {
+                    targetSymbol = codeMatch[1].toUpperCase();
+                    console.log(`[AppController] Detected stock code via URL pattern: ${targetSymbol}`);
+                }
+            }
+
+            if (targetId || targetSymbol) {
+                console.log(`[AppController] Deep link detected: targetId=${targetId}, symbol=${targetSymbol}`);
+
+                // Wait for data to be ready before triggering modal
+                const triggerDeepLink = async () => {
+                    const originalHref = window.location.href;
+                    const success = await marketIndexController.openModal(targetId, targetSymbol);
+
+                    if (!success && targetId && originalHref.includes('marketindex.com.au')) {
+                        console.warn('[AppController] Deep link targeting failed. Performing auto-redirect fallback to original URL.');
+                        // Fallback: If we couldn't find the target in our app to highlight it,
+                        // let the user see it on the official website so they aren't "stuck" on our dashboard.
+                        window.location.href = originalHref;
+                        return;
+                    }
+
+                    // Clean up URL to avoid re-triggering on manual refresh
+                    const url = new URL(window.location);
+                    // Remove all possible trigger params for cleanliness
+                    ['announcementId', 'alertId', 'id', 'targetId'].forEach(p => url.searchParams.delete(p));
+                    // Update state without refreshing
+                    window.history.replaceState({}, '', url);
+                };
+
+                // If store is already ready, trigger now, else wait for event
+                if (this.notificationStore?.isReady) {
+                    triggerDeepLink();
+                } else {
+                    document.addEventListener(EVENTS.NOTIFICATION_READY, () => {
+                        triggerDeepLink();
+                    }, { once: true });
+                }
+            }
+        } catch (e) {
+            console.error('[AppController] Deep link handling failed:', e);
         }
     }
 }

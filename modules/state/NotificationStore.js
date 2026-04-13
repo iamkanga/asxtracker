@@ -2509,8 +2509,68 @@ export class NotificationStore {
 
                         // 2. Ensure Code/ID
                         if (!item.code) item.code = 'MARKET';
+                        // v1158: MANDRILL/MAILCHIMP URL DECODER
+                        // Firestore stores email tracking redirect URLs (mandrillapp.com/track/click/...),
+                        // NOT direct Market Index URLs. The real destination is base64-encoded in the 'p' parameter.
+                        // We decode it to get the actual Market Index URL, then construct the specific announcement URL.
+                        if (item.link) {
+                            let resolvedUrl = item.link;
 
-                        // FIX: If ID is missing, generate a STABLE one based on content if possible
+                            // 1. Decode Mandrill tracking URLs to extract the real destination
+                            if (item.link.includes('mandrillapp.com/track/click')) {
+                                try {
+                                    const urlObj = new URL(item.link);
+                                    const pParam = urlObj.searchParams.get('p');
+                                    if (pParam) {
+                                        // Fix Base64 URL encoding characters and padding
+                                        let base64 = pParam.replace(/-/g, '+').replace(/_/g, '/');
+                                        while (base64.length % 4) base64 += '=';
+                                        
+                                        const outerJson = JSON.parse(atob(base64));
+                                        if (outerJson.p) {
+                                            const innerJson = JSON.parse(outerJson.p);
+                                            if (innerJson.url) {
+                                                resolvedUrl = innerJson.url.replace(/\\\//g, '/');
+                                            }
+                                        }
+                                    }
+                                } catch (e) {
+                                    console.warn('[NotificationStore] Failed to decode Mandrill URL:', e.message);
+                                }
+                            }
+
+                            // 2. Redirect to the company's announcements page
+                            // Market Index requires a specific document ID in announcement URLs (e.g. -3A691173)
+                            // which isn't available in the Firestore data. The announcements list page is the 
+                            // best working destination we can construct.
+                            if (resolvedUrl.includes('marketindex.com.au/asx/') && !resolvedUrl.includes('/announcements')) {
+                                const codeMatch = resolvedUrl.match(/marketindex\.com\.au\/asx\/([a-z0-9]{2,5})\b/i);
+                                const urlCode = codeMatch ? codeMatch[1].toLowerCase() : (item.code || '').replace(/.*[:]/, '').trim().toLowerCase();
+
+                                if (urlCode) {
+                                    resolvedUrl = `https://www.marketindex.com.au/asx/${urlCode}/announcements`;
+                                }
+                            }
+
+                            item.link = resolvedUrl;
+                        }
+
+                        // v1158: Extract announcement ID from the link (if it's now an announcement URL)
+                        if (item.link) {
+                            const idMatch = item.link.match(/[0-9]{0,1}[23456]A[A-Z0-9]{5,}/i);
+                            if (idMatch) {
+                                item.id = idMatch[0].toUpperCase();
+                            }
+                        }
+
+                        // Fallback: check the headline/title for an announcement ID
+                        if (!item.id || !/[23456]A/i.test(item.id)) {
+                            const textSource = `${item.title || ''} ${item.headline || ''}`;
+                            const idMatch = textSource.match(/[0-9]{0,1}[23456]A[A-Z0-9]{5,}/i);
+                            if (idMatch) item.id = idMatch[0].toUpperCase();
+                        }
+
+                        // FIX: If ID is STILL missing, generate a STABLE one based on content if possible
                         if (!item.id) {
                             const title = item.title || item.headline || item.desc || '';
                             const safeTitle = title.replace(/[^a-zA-Z0-9]/g, '').substring(0, 32);

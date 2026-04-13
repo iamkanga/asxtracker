@@ -97,11 +97,11 @@ export class MarketIndexController {
         }
     }
 
-    openModal() {
-        if (!this.modal) return;
+    openModal(targetId = null, targetSymbol = null) {
+        if (!this.modal) return Promise.resolve(false);
 
         // v1149: Prevent double-opening if already visible
-        if (!this.modal.classList.contains('hidden')) return;
+        if (!this.modal.classList.contains('hidden')) return Promise.resolve(false);
 
         // Ensure initially hidden for animation clarity
         // v2.3 Animation: Reset before showing
@@ -113,7 +113,13 @@ export class MarketIndexController {
         void this.modal.offsetWidth; // Force Reflow
         this.modal.classList.add('show');
         document.body.style.overflow = 'hidden';
-        this.render(notificationStore.getMarketIndexAlerts());
+
+        // v1156: Re-render with symbol filter if provided from a generic deep link
+        const alerts = notificationStore.getMarketIndexAlerts();
+        const filtered = targetSymbol 
+            ? alerts.filter(a => (a.code || '').replace(/.*[:]/, '').trim().toUpperCase() === targetSymbol)
+            : alerts;
+        this.render(filtered);
 
         // Register with NavigationManager for Back Button support
         navManager.pushState(() => {
@@ -121,6 +127,37 @@ export class MarketIndexController {
                 this.closeModal(true);
             }
         });
+
+        // v1153: Deep Link Targeting - Scroll to specific announcement
+        if (targetId) {
+            console.log(`[MarketIndexController] Searching for deep link target: ${targetId}`);
+            
+            return new Promise((resolve) => {
+                const attemptScroll = (retryCount = 0) => {
+                    const element = this.listContainer.querySelector(`.market-stream-item-wrapper[data-alert-id="${targetId}"]`);
+                    if (element) {
+                        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        element.classList.add('pulse-highlight');
+                        // Remove highlight class after animation finishes
+                        setTimeout(() => element.classList.remove('pulse-highlight'), 3000);
+                        console.log(`[MarketIndexController] Successfully targeted ${targetId}`);
+                        resolve(true); // Success
+                    } else if (retryCount < 3) {
+                        // v1153: Retry if not found immediately (data might still be rendering)
+                        console.log(`[MarketIndexController] Target ${targetId} not found, retrying... (${retryCount + 1})`);
+                        setTimeout(() => attemptScroll(retryCount + 1), 600);
+                    } else {
+                        console.warn(`[MarketIndexController] Deep link target ${targetId} not found after retries.`);
+                        resolve(false); // Failure
+                    }
+                };
+                
+                // v1156: Reduced initial delay for better perceived performance
+                setTimeout(() => attemptScroll(), 500);
+            });
+        }
+
+        return Promise.resolve(true); // No targetId, so open is successful by default
     }
 
     closeModal(fromNav = false) {
@@ -197,8 +234,11 @@ export class MarketIndexController {
             const badgeClass = isCompany ? 'badge-company' : 'badge-report';
             const badgeText = isCompany ? extractedCode : 'MARKET';
 
-            const href = alert.link || '#';
-            const target = alert.link ? '_blank' : '_self';
+            // v1153: Ensure we prefer the direct announcement document link if available
+            // If the link is generic (e.g. only company profile), and we have an ID like 6A...,
+            // we should technically have gotten a better link from the backend, but we'll trust alert.link first.
+            const href = alert.link || alert.url || '#';
+            const target = (href && href !== '#') ? '_blank' : '_self';
 
             const isRead = notificationStore.readAnnouncements?.has(id);
             const readClass = isRead ? 'is-read' : '';
