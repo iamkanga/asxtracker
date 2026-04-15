@@ -1,10 +1,11 @@
-import { IDS, CSS_CLASSES, UI_ICONS } from '../utils/AppConstants.js';
+import { IDS, CSS_CLASSES, UI_ICONS, STORAGE_KEYS } from '../utils/AppConstants.js';
 import { formatCurrency } from '../utils/formatters.js';
 import { navManager } from '../utils/NavigationManager.js';
+import { AppState } from '../state/AppState.js';
 
 export default class CalculatorUI {
     constructor() {
-        this.currentMode = 'dividend'; // 'dividend' or 'simple'
+        this.currentMode = 'dividend'; // 'dividend', 'simple', or 'currency'
         this.container = null; // Container element
 
         // Simple Calc State
@@ -15,6 +16,49 @@ export default class CalculatorUI {
             resetNext: false,
             history: ''
         };
+        
+        // Currency Calc State
+        this.currencyReversed = false;
+        this.selectedCurrencyPair = 'AUDTHB=X';
+        
+        this.currencyOptions = [
+            { id: 'AUDTHB=X', label: 'THB (Thai Baht) 🇹🇭', baseLabel: 'Australian Dollar (AUD) 🇦🇺', targetLabel: 'Thai Baht (THB) 🇹🇭', baseIcon: 'fa-dollar-sign', targetIcon: 'fa-money-bill', targetSym: 'THB' },
+            { id: 'AUDUSD=X', label: 'USD (US Dollar) 🇺🇸', baseLabel: 'Australian Dollar (AUD) 🇦🇺', targetLabel: 'US Dollar (USD) 🇺🇸', baseIcon: 'fa-dollar-sign', targetIcon: 'fa-dollar-sign', targetSym: 'USD' },
+            { id: 'AUDGBP=X', label: 'GBP (British Pound) 🇬🇧', baseLabel: 'Australian Dollar (AUD) 🇦🇺', targetLabel: 'British Pound (GBP) 🇬🇧', baseIcon: 'fa-dollar-sign', targetIcon: 'fa-pound-sign', targetSym: 'GBP' },
+            { id: 'AUDEUR=X', label: 'EUR (Euro) 🇪🇺', baseLabel: 'Australian Dollar (AUD) 🇦🇺', targetLabel: 'Euro (EUR) 🇪🇺', baseIcon: 'fa-dollar-sign', targetIcon: 'fa-euro-sign', targetSym: 'EUR' },
+            { id: 'AUDJPY=X', label: 'JPY (Japanese Yen) 🇯🇵', baseLabel: 'Australian Dollar (AUD) 🇦🇺', targetLabel: 'Japanese Yen (JPY) 🇯🇵', baseIcon: 'fa-dollar-sign', targetIcon: 'fa-yen-sign', targetSym: 'JPY' },
+            { id: 'AUDNZD=X', label: 'NZD (New Zealand Dollar) 🇳🇿', baseLabel: 'Australian Dollar (AUD) 🇦🇺', targetLabel: 'NZ Dollar (NZD) 🇳🇿', baseIcon: 'fa-dollar-sign', targetIcon: 'fa-money-bill', targetSym: 'NZD' },
+            { id: 'USDTHB=X', label: 'THB (from USD) 🇹🇭', baseLabel: 'US Dollar (USD) 🇺🇸', targetLabel: 'Thai Baht (THB) 🇹🇭', baseIcon: 'fa-dollar-sign', targetIcon: 'fa-money-bill', targetSym: 'THB' }
+        ];
+
+        this.loadPreferences();
+    }
+
+    loadPreferences() {
+        try {
+            const saved = localStorage.getItem(STORAGE_KEYS.CALC_PREFS);
+            if (saved) {
+                const prefs = JSON.parse(saved);
+                if (prefs.mode) this.currentMode = prefs.mode;
+                if (prefs.selectedPair) this.selectedCurrencyPair = prefs.selectedPair;
+                if (prefs.currencyReversed !== undefined) this.currencyReversed = prefs.currencyReversed;
+            }
+        } catch (e) {
+            console.error('Failed to load Calculator preferences', e);
+        }
+    }
+
+    savePreferences() {
+        try {
+            const prefs = {
+                mode: this.currentMode,
+                selectedPair: this.selectedCurrencyPair,
+                currencyReversed: this.currencyReversed
+            };
+            localStorage.setItem(STORAGE_KEYS.CALC_PREFS, JSON.stringify(prefs));
+        } catch (e) {
+            console.error('Failed to save Calculator preferences', e);
+        }
     }
 
     /**
@@ -98,6 +142,9 @@ export default class CalculatorUI {
                     </button>
                     <button class="segment-btn ${this.currentMode === 'simple' ? 'active' : ''}" data-mode="simple" style="flex: 1; padding: 10px; border: none; background: transparent; color: var(--text-muted); font-weight: 600; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
                         Standard
+                    </button>
+                    <button class="segment-btn ${this.currentMode === 'currency' ? 'active' : ''}" data-mode="currency" style="flex: 1; padding: 10px; border: none; background: transparent; color: var(--text-muted); font-weight: 600; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+                        Currency
                     </button>
                 </div>
 
@@ -229,6 +276,45 @@ export default class CalculatorUI {
                         }
                     </style>
                 </div>
+
+                <!-- Currency Calculator -->
+                <div id="${IDS.CALC_CONTENT_CURRENCY}" class="${this.currentMode === 'currency' ? '' : CSS_CLASSES.HIDDEN} w-full h-full flex-column">
+                    <div style="background: rgba(255,255,255,0.03); border-radius: 12px; padding: 15px; text-align: center; margin-bottom: 20px;">
+                        <span style="font-size: 0.9rem; color: var(--text-muted);"><i class="fas fa-globe"></i> Live Exchange Rates</span>
+                        <div id="calc-currency-rate-display" style="font-size: 1.2rem; font-weight: bold; margin-top: 8px;">Loading...</div>
+                    </div>
+
+                    <div style="display: flex; flex-direction: column; gap: 15px;">
+                        <!-- Top Input (Base/Source) -->
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="input-label" id="calc-curr-label-1">Australian Dollar (AUD) 🇦🇺</label>
+                            <div class="input-wrapper">
+                                <i class="fas fa-dollar-sign input-icon" id="calc-curr-icon-1"></i>
+                                <input type="number" id="${IDS.CALC_CURR_BASE}" class="standard-input" placeholder="0.00" step="0.01" style="font-size: 1.2rem; font-weight: bold;">
+                            </div>
+                        </div>
+
+                        <!-- Reverse & Select -->
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0 5px;">
+                            <button id="${IDS.CALC_CURR_REVERSE_BTN}" style="background: transparent; border: none; color: var(--color-accent); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.2s; flex-shrink: 0; padding: 10px;">
+                                <i class="fas fa-exchange-alt" style="transform: rotate(90deg); font-size: 1.6rem;"></i>
+                            </button>
+                            <select id="${IDS.CALC_CURR_SELECT}" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 8px 12px; border-radius: 8px; outline: none; cursor: pointer; font-size: 0.9rem; max-width: 200px;">
+                                ${this.currencyOptions.map(opt => `<option value="${opt.id}" style="background: #121212; color: #ffffff;" ${this.selectedCurrencyPair === opt.id ? 'selected' : ''}>${opt.label}</option>`).join('')}
+                            </select>
+                        </div>
+
+                        <!-- Bottom Output (Target) -->
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="input-label" id="calc-curr-label-2">Thai Baht (THB) 🇹🇭</label>
+                            <div class="input-wrapper">
+                                <i class="fas fa-money-bill input-icon" id="calc-curr-icon-2"></i>
+                                <input type="number" id="${IDS.CALC_CURR_TARGET_VAL}" class="standard-input" placeholder="0.00" style="font-size: 1.2rem; font-weight: bold; color: var(--color-accent);" readonly>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         `;
     }
@@ -246,6 +332,8 @@ export default class CalculatorUI {
                 // Update active state
                 modeBtns.forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
+                
+                this.savePreferences();
             });
         });
 
@@ -272,22 +360,61 @@ export default class CalculatorUI {
                 else if (btn.dataset.action) this.handleAction(btn.dataset.action);
             });
         }
+
+        // --- Currency Calculator Bindings ---
+        const currBaseIp = this.container.querySelector(`#${IDS.CALC_CURR_BASE}`);
+        const currSelectIp = this.container.querySelector(`#${IDS.CALC_CURR_SELECT}`);
+        const currReverseBtn = this.container.querySelector(`#${IDS.CALC_CURR_REVERSE_BTN}`);
+
+        if (currBaseIp) {
+            currBaseIp.addEventListener('input', () => this.calculateCurrency());
+        }
+        if (currSelectIp) {
+            currSelectIp.addEventListener('change', (e) => {
+                this.selectedCurrencyPair = e.target.value;
+                this.updateCurrencyLabels();
+                this.calculateCurrency();
+                this.savePreferences();
+            });
+        }
+        if (currReverseBtn) {
+            currReverseBtn.addEventListener('click', () => {
+                this.currencyReversed = !this.currencyReversed;
+                this.updateCurrencyLabels();
+                this.calculateCurrency();
+                this.savePreferences();
+                
+                // Add tiny animation class to flip icon visually
+                const icon = currReverseBtn.querySelector('i');
+                if (icon) {
+                    icon.style.transition = 'transform 0.3s ease';
+                    icon.style.transform = `rotate(${this.currencyReversed ? -90 : 90}deg)`;
+                }
+            });
+        }
     }
 
     switchTab(mode) {
         this.currentMode = mode;
         const divContent = this.container.querySelector(`#${IDS.CALC_CONTENT_DIVIDEND}`);
         const simpleContent = this.container.querySelector(`#${IDS.CALC_CONTENT_SIMPLE}`);
+        const currContent = this.container.querySelector(`#${IDS.CALC_CONTENT_CURRENCY}`);
 
-        if (divContent && simpleContent) {
+        if (divContent && simpleContent && currContent) {
+            divContent.classList.add(CSS_CLASSES.HIDDEN);
+            simpleContent.classList.add(CSS_CLASSES.HIDDEN);
+            currContent.classList.add(CSS_CLASSES.HIDDEN);
+
             if (mode === 'dividend') {
                 divContent.classList.remove(CSS_CLASSES.HIDDEN);
-                simpleContent.classList.add(CSS_CLASSES.HIDDEN);
                 this.calculateDividend();
-            } else {
-                divContent.classList.add(CSS_CLASSES.HIDDEN);
+            } else if (mode === 'simple') {
                 simpleContent.classList.remove(CSS_CLASSES.HIDDEN);
                 this.updateDisplay();
+            } else if (mode === 'currency') {
+                currContent.classList.remove(CSS_CLASSES.HIDDEN);
+                this.updateCurrencyLabels();
+                this.calculateCurrency();
             }
         }
     }
@@ -362,6 +489,77 @@ export default class CalculatorUI {
     setText(selector, text) {
         const el = this.container.querySelector(selector);
         if (el) el.textContent = text;
+    }
+
+    // --- Currency Logic ---
+    updateCurrencyLabels() {
+        const label1 = this.container.querySelector('#calc-curr-label-1');
+        const label2 = this.container.querySelector('#calc-curr-label-2');
+        const icon1 = this.container.querySelector('#calc-curr-icon-1');
+        const icon2 = this.container.querySelector('#calc-curr-icon-2');
+
+        const activeOpt = this.currencyOptions.find(o => o.id === this.selectedCurrencyPair) || this.currencyOptions[0];
+
+        if (this.currencyReversed) {
+            if (label1) label1.textContent = activeOpt.targetLabel;
+            if (label2) label2.textContent = activeOpt.baseLabel;
+            if (icon1) { icon1.className = `fas ${activeOpt.targetIcon} input-icon`; }
+            if (icon2) { icon2.className = `fas ${activeOpt.baseIcon} input-icon`; }
+        } else {
+            if (label1) label1.textContent = activeOpt.baseLabel;
+            if (label2) label2.textContent = activeOpt.targetLabel;
+            if (icon1) { icon1.className = `fas ${activeOpt.baseIcon} input-icon`; }
+            if (icon2) { icon2.className = `fas ${activeOpt.targetIcon} input-icon`; }
+        }
+        
+        // Also update the reverse icon initial angle dynamically if needed
+        const currReverseBtn = this.container.querySelector(`#${IDS.CALC_CURR_REVERSE_BTN}`);
+        if(currReverseBtn) {
+            const icon = currReverseBtn.querySelector('i');
+            if (icon) {
+                icon.style.transform = `rotate(${this.currencyReversed ? -90 : 90}deg)`;
+            }
+        }
+    }
+
+    calculateCurrency() {
+        if (!this.container) return;
+        const rateDisplay = this.container.querySelector('#calc-currency-rate-display');
+        const baseIp = this.container.querySelector(`#${IDS.CALC_CURR_BASE}`);
+        const targetIp = this.container.querySelector(`#${IDS.CALC_CURR_TARGET_VAL}`);
+        
+        if (!rateDisplay || !baseIp || !targetIp) return;
+
+        const liveData = AppState.livePrices.get(this.selectedCurrencyPair);
+        let rate = 0;
+        if (liveData && liveData.live && liveData.live > 0) {
+            rate = liveData.live;
+        } else {
+            rateDisplay.textContent = 'Exchange rate unavailable';
+            targetIp.value = '';
+            return;
+        }
+
+        const activeOpt = this.currencyOptions.find(o => o.id === this.selectedCurrencyPair) || this.currencyOptions[0];
+
+        rateDisplay.textContent = `1 ${activeOpt.id.substring(0, 3)} = ${rate.toFixed(4)} ${activeOpt.targetSym}`;
+
+        const inputVal = parseFloat(baseIp.value);
+        if (isNaN(inputVal)) {
+            targetIp.value = '';
+            return;
+        }
+
+        let result = 0;
+        if (this.currencyReversed) {
+            // Target to Base
+            result = inputVal / rate;
+        } else {
+            // Base to Target
+            result = inputVal * rate;
+        }
+
+        targetIp.value = result.toFixed(2);
     }
 
     // --- Simple Calculator Logic ---

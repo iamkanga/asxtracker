@@ -106,7 +106,10 @@ export const STORAGE_KEYS = {
     WIDGET_DASHBOARD_ITEMS: 'ASX_NEXT_widgetDashboardItems',
 
     // Superannuation Strategy Engine
-    SUPER_STRATEGY: 'ASX_NEXT_superStrategy'
+    SUPER_STRATEGY: 'ASX_NEXT_superStrategy',
+
+    // Calculator Preferences
+    CALC_PREFS: 'ASX_NEXT_calcPrefs'
 };
 
 export const EVENTS = {
@@ -1658,6 +1661,11 @@ export const IDS = {
     CALC_RESULT_GROSS: 'calc-result-gross',
     CALC_RESULT_TAX: 'calc-result-tax',
     CALC_Display: 'calc-display',
+    CALC_CONTENT_CURRENCY: 'calc-content-currency',
+    CALC_CURR_BASE: 'calc-curr-base',
+    CALC_CURR_TARGET_VAL: 'calc-curr-target-val',
+    CALC_CURR_SELECT: 'calc-curr-select',
+    CALC_CURR_REVERSE_BTN: 'calc-curr-reverse-btn',
 
     // Dashboard IDs
     DASHBOARD_REORDER_TOGGLE: 'dashboard-reorder-toggle',
