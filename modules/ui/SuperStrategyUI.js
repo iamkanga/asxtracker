@@ -918,7 +918,7 @@ export default class SuperStrategyUI {
                             <div style="font-size: 1.6rem; font-weight: 950; color: var(--color-positive); line-height: 1;">${formatCurrency(calc.newPensionStart)}</div>
                         </div>
 
-                        ${calc.excessTBC > 0 ? this._renderOrangeWarning(`TBC Overlap Detected (${formatCurrency(calc.contributionCaps.tbc).replace(',000,000', '.0')}M Cap)`, `Your restart exceeds the Transfer Balance Cap. You can only put ${formatCurrency(calc.contributionCaps.tbc)} into the tax-free pension. The remaining ${formatCurrency(calc.excessTBC)} MUST stay in accumulation.`) : ''}
+                        ${calc.excessTBC > 0 ? this._renderOrangeWarning(`TBC Overlap Detected (${formatCurrency(calc.contributionCaps.tbc).replace(',000,000.00', '.0').replace(',000,000', '.0')}M Cap)`, `Your restart exceeds the Transfer Balance Cap. You can only put ${formatCurrency(calc.contributionCaps.tbc)} into the tax-free pension. The remaining ${formatCurrency(calc.excessTBC)} MUST stay in accumulation.`) : ''}
 
                         <!-- Fixed Account Verification Note -->
                         <div style="background: transparent; padding: 8px 0; border-radius: 0; margin-top: 10px; font-size: 0.65rem; color: var(--text-muted); line-height: 1.4;">
@@ -1063,8 +1063,8 @@ export default class SuperStrategyUI {
                         <ul style="margin:0; padding-left:14px; list-style-type:circle;">
                             <li>$120,000 standard annual cap from after-tax savings.</li>
                             <li><strong>Bring-Forward:</strong> Up to $360,000 over 3 years trigger.</li>
-                            <li><strong>Balance Limits:</strong> TSB must be &lt; $1.66M for the 3-year window.</li>
-                            <li>Caps reduce to $240k or $0 as balance approaches $1.9M.</li>
+                            <li><strong>Balance Limits:</strong> TSB must be &lt; $1.76M for the 3-year window.</li>
+                            <li>Caps reduce to $240k or $0 as balance approaches $2.0M.</li>
                         </ul>
                     </div>
                 </details>
@@ -1075,14 +1075,14 @@ export default class SuperStrategyUI {
                         <div style="font-size:0.6rem; color:#ffa500; font-weight:800; text-transform:uppercase; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;">
                             Transfer Cap <i class="fas fa-chevron-down" style="font-size:0.5rem; opacity:0.4;"></i>
                         </div>
-                        <div style="font-size:1.2rem; font-weight:950; color:#fff;">${formatCurrency(calc.contributionCaps.tbc).replace(',000,000', '.0M')}</div>
+                        <div style="font-size:1.2rem; font-weight:950; color:#fff;">${formatCurrency(calc.contributionCaps.tbc).replace(',000,000.00', '.0M').replace(',000,000', '.0M')}</div>
                         <div style="font-size:0.55rem; color:rgba(255,255,255,0.4); margin-top:4px;">Pension Entry Limit TBC</div>
                     </summary>
                     <div style="padding:12px; background:rgba(0,0,0,0.2); font-size:0.65rem; color:var(--text-muted); line-height:1.4; border:1px solid rgba(255,165,0,0.1); border-top:none;">
                         <div style="font-weight:900; color:#ffa500; text-transform:uppercase; margin-bottom:6px; letter-spacing:0.5px;">Quick Reference</div>
                         <ul style="margin:0; padding-left:14px; list-style-type:circle;">
                             <li>The limit on the amount of super that can be moved to pension phase.</li>
-                            <li>Currently $1.9 million for the 2024-25 financial year.</li>
+                            <li>Currently $2.0 million for the 2025-26 financial year.</li>
                             <li>Earnings inside a pension are generally tax-free (0%).</li>
                             <li>Excess funds must remain in accumulation (15% tax phase).</li>
                         </ul>
@@ -1108,7 +1108,7 @@ export default class SuperStrategyUI {
                             <li><strong>Concessional (CC):</strong> $30,000 cap. Claim a tax deduction to reduce personal taxable income.</li>
                             <li><strong>Non-Concessional (NCC):</strong> $120,000 cap. Creates a 0% tax component for heirs.</li>
                             <li><strong>Bring-Forward:</strong> Contributing >$120k triggers a 3-year window (up to $360k total).</li>
-                            <li><strong>TSB Guard:</strong> NCC eligibility is blocked if your Total Super Balance exceeds $1.9M at 30 June.</li>
+                            <li><strong>TSB Guard:</strong> NCC eligibility is blocked if your Total Super Balance exceeds $2.0M at 30 June.</li>
                             <li><strong>Age Limit:</strong> All voluntary contributions are legally restricted after age 75.</li>
                             <li><strong>Notice of Intent:</strong> Must be filed and acknowledged BEFORE you start a pension to lock in tax benefits.</li>
                         </ul>
@@ -1132,7 +1132,7 @@ export default class SuperStrategyUI {
                     <ul style="font-size:0.75rem; color:var(--text-muted); line-height:1.6; margin-bottom:12px; padding-left:20px; list-style-type: disc;">
                         <li><strong>Concessional (CC) Age Limit</strong>: Personal deductible contributions are restricted after age 67.</li>
                         <li><strong>Non-Concessional (NCC) Age Limit</strong>: Voluntary contributions are prohibited after age 75.</li>
-                        <li><strong>TSB Cap</strong>: NCC eligibility is blocked if your Total Super Balance (TSB) is $2.1 million or more as of 30 June 2026.</li>
+                        <li><strong>TSB Cap</strong>: NCC eligibility is blocked if your Total Super Balance (TSB) is $2.0 million or more as of 30 June 2025.</li>
                     </ul>
                 </div>
             </details>
