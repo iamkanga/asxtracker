@@ -793,13 +793,13 @@ export class PortfolioChartUI {
                 <div style="display:flex; flex-direction:column; gap:4px; flex-shrink: 0; min-width: 140px; padding: 6px 0;">
                     <div style="display:flex; justify-content: space-between; align-items: baseline; margin-bottom: 2px;">
                         <span style="font-size: 0.65rem; color: ${color}; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px;">${label}</span>
-                        <span style="font-size: 0.75rem; font-weight: 800; color: #fff; opacity: 0.9;">$${Math.floor(current).toLocaleString('en-AU')}</span>
+                        <span style="font-size: 0.75rem; font-weight: 800; color: #fff;">$${Math.floor(current).toLocaleString('en-AU')}</span>
                     </div>
                     <div style="height: 3px; background: rgba(255,255,255,0.08); border-radius: 2px; position: relative;">
                         <div style="position: absolute; left: 0; top: 0; height: 100%; width: ${progress}%; background: ${color}; opacity: 0.4; border-radius: 2px;"></div>
                         <div style="position: absolute; left: calc(${progress}% - 1px); top: -2px; width: 2px; height: 7px; background: #fff; box-shadow: 0 0 4px ${color}; z-index: 2;"></div>
                     </div>
-                    <div style="display:flex; justify-content: space-between; font-size: 0.55rem; color: rgba(255,255,255,0.4); font-weight: 700; margin-top: 1px;">
+                    <div style="display:flex; justify-content: space-between; font-size: 0.55rem; color: #fff; font-weight: 700; margin-top: 1px;">
                         <span>L: $${Math.floor(low).toLocaleString('en-AU')}</span>
                         <span>H: $${Math.floor(high).toLocaleString('en-AU')}</span>
                     </div>
