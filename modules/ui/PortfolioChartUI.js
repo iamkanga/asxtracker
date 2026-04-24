@@ -116,6 +116,11 @@ export class PortfolioChartUI {
                         <div style="width: 40px; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.2);"></div>
                     </div>
                     
+                    <!-- High/Low Stats Summary (Innovative Range Display) -->
+                    <div class="control-row high-low-row" style="display:none; gap:20px; justify-content:center; overflow-x:auto; padding: 0 16px; -webkit-overflow-scrolling: touch; scrollbar-width: none; margin-bottom: -4px;">
+                        <!-- Dynamically populated -->
+                    </div>
+
                     <!-- Timeframe Toggles -->
                     <div class="control-row timeframe-row" style="display:flex; gap:14px; justify-content:center; overflow-x:auto; padding: 4px 8px; -webkit-overflow-scrolling: touch; flex-shrink:0;">
                         ${['1d', '5d', '1m', '3m', '6m', '1y', '3y', '5y', '10y', 'max'].map(r => `
@@ -167,8 +172,10 @@ export class PortfolioChartUI {
                 #portfolio-chart-modal .active {
                     color: var(--color-accent) !important;
                 }
-                #portfolio-chart-modal .timeframe-row::-webkit-scrollbar { display: none; }
-                #portfolio-chart-modal .timeframe-row { 
+                #portfolio-chart-modal .timeframe-row::-webkit-scrollbar,
+                #portfolio-chart-modal .high-low-row::-webkit-scrollbar { display: none; }
+                #portfolio-chart-modal .timeframe-row,
+                #portfolio-chart-modal .high-low-row { 
                     -ms-overflow-style: none; 
                     scrollbar-width: none; 
                 }
@@ -440,6 +447,11 @@ export class PortfolioChartUI {
             const key = `cat_${catId}`;
             if (this.categorySeries[catId]) this.categorySeries[catId].applyOptions({ visible: !!this.visibleLayers[key] });
         });
+
+        // Update Stats UI to match new visibility
+        if (this.lastData) {
+            this._updateStats(this.lastData.total, this.lastData.shares, this.lastData.super);
+        }
     }
 
     async loadData() {
@@ -620,7 +632,12 @@ export class PortfolioChartUI {
             }
 
             if (this.chart) this.chart.timeScale().fitContent();
-            this._updateStats(totalData);
+            
+            // Store for UI updates (like toggles)
+            this.lastData = { total: totalData, shares: sharesData, super: superData };
+
+            // Pass visible series to stats updater for High/Low calculations
+            this._updateStats(totalData, sharesData, superData);
 
             if (loading) loading.style.display = 'none';
         } catch (e) {
@@ -732,11 +749,12 @@ export class PortfolioChartUI {
         return currentBalance;
     }
 
-    _updateStats(data) {
-        if (!data || data.length === 0) return;
+    _updateStats(totalData, sharesData = [], superData = []) {
+        if (!totalData || totalData.length === 0) return;
 
-        const first = data[0].value;
-        const last = data[data.length - 1].value;
+        // 1. Update Header Summary (Based on Total)
+        const first = totalData[0].value;
+        const last = totalData[totalData.length - 1].value;
         const change = last - first;
         const pctChange = first !== 0 ? (change / first) * 100 : 0;
 
@@ -755,5 +773,50 @@ export class PortfolioChartUI {
                 </div>
             `;
         }
+
+        // 2. Update High/Low Innovative Stats Row
+        const highLowRow = this.modal.querySelector('.high-low-row');
+        if (!highLowRow) return;
+
+        const renderRangeStat = (label, data, color) => {
+            if (!data || data.length === 0) return '';
+            const values = data.map(d => d.value);
+            const high = Math.max(...values);
+            const low = Math.min(...values);
+            const current = data[data.length - 1].value;
+            
+            // Calculate relative position for the progress bar
+            const range = high - low;
+            const progress = range !== 0 ? ((current - low) / range) * 100 : 100;
+
+            return `
+                <div style="display:flex; flex-direction:column; gap:4px; flex-shrink: 0; min-width: 140px; padding: 6px 0;">
+                    <div style="display:flex; justify-content: space-between; align-items: baseline; margin-bottom: 2px;">
+                        <span style="font-size: 0.65rem; color: ${color}; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px;">${label}</span>
+                        <span style="font-size: 0.75rem; font-weight: 800; color: #fff; opacity: 0.9;">$${Math.floor(current).toLocaleString('en-AU')}</span>
+                    </div>
+                    <div style="height: 3px; background: rgba(255,255,255,0.08); border-radius: 2px; position: relative;">
+                        <div style="position: absolute; left: 0; top: 0; height: 100%; width: ${progress}%; background: ${color}; opacity: 0.4; border-radius: 2px;"></div>
+                        <div style="position: absolute; left: calc(${progress}% - 1px); top: -2px; width: 2px; height: 7px; background: #fff; box-shadow: 0 0 4px ${color}; z-index: 2;"></div>
+                    </div>
+                    <div style="display:flex; justify-content: space-between; font-size: 0.55rem; color: rgba(255,255,255,0.4); font-weight: 700; margin-top: 1px;">
+                        <span>L: $${Math.floor(low).toLocaleString('en-AU')}</span>
+                        <span>H: $${Math.floor(high).toLocaleString('en-AU')}</span>
+                    </div>
+                </div>
+            `;
+        };
+
+        let html = '';
+        if (this.visibleLayers.total) html += renderRangeStat('Total', totalData, '#06FF4F');
+        if (this.visibleLayers.super) html += renderRangeStat('Super', superData, '#9C27B0');
+        if (this.visibleLayers.shares) html += renderRangeStat('Shares', sharesData, '#a49393');
+
+        highLowRow.innerHTML = html;
+        highLowRow.style.display = html ? 'flex' : 'none';
+        
+        // Ensure standard flex centering if only one or two items
+        const itemCount = (html.match(/min-width: 140px/g) || []).length;
+        highLowRow.style.justifyContent = itemCount > 2 ? 'flex-start' : 'center';
     }
 }
