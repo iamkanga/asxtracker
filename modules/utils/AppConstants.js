@@ -1226,6 +1226,26 @@ export const CSS_CLASSES = {
     DISPLAY_FLEX: 'display-flex',
     FONT_1_1_REM: 'font-1-1-rem',
 
+    // Dividend Hero Card
+    DIV_HERO_CARD: 'div-hero-card',
+    DIV_HERO_HEADER: 'div-hero-header',
+    DIV_FRANKING_BADGE: 'div-franking-badge',
+    DIV_HERO_BADGE: 'div-hero-badge',
+    DIV_METRICS_GRID: 'div-metrics-grid',
+    DIV_METRIC: 'div-metric',
+    DIV_METRIC_LABEL: 'div-metric-label',
+    DIV_METRIC_VALUE: 'div-metric-value',
+    DIV_SPARKLINE_CONTAINER: 'div-sparkline-container',
+    DIV_SPARKLINE_BARS: 'div-sparkline-bars',
+    DIV_SPARKLINE_BAR: 'div-sparkline-bar',
+    DIV_EXDATE_BANNER: 'div-exdate-banner',
+    DIV_CAGR_ROW: 'div-cagr-row',
+    DIV_CAGR_ITEM: 'div-cagr-item',
+    DIV_CAGR_VALUE: 'div-cagr-value',
+    DIV_LOADING: 'div-loading',
+    DIV_STALE_INDICATOR: 'div-stale-indicator',
+    DIV_CONSISTENCY_ROW: 'div-consistency-row',
+
     // Calculator Classes
     CALC_KEYPAD: 'calc-keypad',
     CALC_KEY: 'calc-key',

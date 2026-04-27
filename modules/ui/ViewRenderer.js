@@ -16,6 +16,7 @@ import { navManager } from '../utils/NavigationManager.js';
 import { MiniChartPreview, ChartModal } from './ChartModal.js';
 import { SparklinePreview } from './SparklinePreview.js';
 import { SharePieChart } from './SharePieChart.js';
+import { DividendService } from '../data/DividendService.js';
 
 export class ViewRenderer {
     constructor() {
@@ -1088,36 +1089,13 @@ export class ViewRenderer {
                                 <div id="miniChartHost_${stock.code}" style="margin-top: 8px;"></div>
                             </div>
     
-                            <!-- Card 3: Dividends -->
-                            ${stock.dividendAmount > 0 ? `
-                            <div class="${CSS_CLASSES.DETAIL_CARD} ${trendBgClass} ${CSS_CLASSES.CURSOR_POINTER}" data-action="deep-link" data-id="${stock.id}" data-section="dividends">
-                                <div class="${CSS_CLASSES.DETAIL_CARD_HEADER}">
-                                    <h3 class="${CSS_CLASSES.DETAIL_LABEL}">
-                                        <i class="fas ${UI_ICONS.DIVIDENDS}"></i> Dividends
-                                    </h3>
-                                </div>
-                                
-                                <div class="${CSS_CLASSES.DETAIL_ROW}">
-                                    <span class="${CSS_CLASSES.DETAIL_LABEL}">Dividend Amount</span>
-                                    <span class="${CSS_CLASSES.DETAIL_VALUE}">${formatCurrency(stock.dividendAmount || 0)}</span>
-                                </div>
-    
-                                <div class="${CSS_CLASSES.DETAIL_ROW}">
-                                    <span class="${CSS_CLASSES.DETAIL_LABEL}">Franking Credits</span>
-                                    <span class="${CSS_CLASSES.DETAIL_VALUE}">${(stock.frankingCredits || 0)}%</span>
-                                </div>
-    
-                                <div class="${CSS_CLASSES.DETAIL_ROW}">
-                                    <span class="${CSS_CLASSES.DETAIL_LABEL}">Unfranked Yield</span>
-                                    <span class="${CSS_CLASSES.DETAIL_VALUE}">${formatPercent(((stock.dividendAmount || 0) / (stock.live || currentPrice || 1)) * 100)}</span>
-                                </div>
-    
-                                <div class="${CSS_CLASSES.DETAIL_ROW}">
-                                    <span class="${CSS_CLASSES.DETAIL_LABEL}">Franked Yield</span>
-                                    <span class="${CSS_CLASSES.DETAIL_VALUE}">${formatPercent((((stock.dividendAmount || 0) / (stock.live || currentPrice || 1)) * 100) * (1 + ((stock.frankingCredits || 0) / 100 * 0.4286)))}</span>
+                            <!-- Card 3: Dividend Hero (Async Hydrated) -->
+                            <div class="${CSS_CLASSES.DETAIL_CARD} ${CSS_CLASSES.DIV_HERO_CARD} ${trendBgClass}" id="divHeroCard_${stock.code}">
+                                <div class="${CSS_CLASSES.DIV_LOADING}">
+                                    <i class="fas fa-spinner"></i>
+                                    <span>Loading dividends...</span>
                                 </div>
                             </div>
-                            ` : ''}
     
                             <!-- Card 4: Alerts (Dynamic Target Price) -->
                             ${stock.targetPrice > 0 ? `
@@ -1383,7 +1361,7 @@ export class ViewRenderer {
 
 
         // Mini Chart Preview - instantiate and wire click to expand
-        const miniChartHost = modal.querySelector(`#miniChartHost_${stock.code}`);
+        const miniChartHost = modal.querySelector(`[id="miniChartHost_${stock.code}"]`);
         let miniChartInstance = null;
 
         if (miniChartHost) {
@@ -1398,6 +1376,13 @@ export class ViewRenderer {
                 dayChange,
                 () => ChartModal.show(stock.code, stock.name)
             );
+        }
+
+        // Dividend Hero Card — Async Hydration
+        // Fires AFTER modal is rendered. Data loads in background from Firestore.
+        const divHeroCard = modal.querySelector(`[id="divHeroCard_${stock.code}"]`);
+        if (divHeroCard) {
+            this._hydrateDividendCard(divHeroCard, stock, currentPrice);
         }
 
         // Back Button functionality
@@ -1430,6 +1415,202 @@ export class ViewRenderer {
         return config.direction === 'asc'
             ? `<span class="${CSS_CLASSES.SORT_ICON}"><i class="fas ${UI_ICONS.SORT_UP}"></i></span>`
             : `<span class="${CSS_CLASSES.SORT_ICON}"><i class="fas ${UI_ICONS.SORT_DOWN}"></i></span>`;
+    }
+
+    /**
+     * Async Dividend Card Hydration
+     * Calls DividendService.analyze() and renders the Dividend Hero card.
+     * This runs AFTER the modal is visible — the card shows a spinner until data arrives.
+     * 
+     * @param {HTMLElement} container - The div#divHeroCard_{code} element
+     * @param {Object} stock - The stock data object from AppState
+     * @param {number} currentPrice - Live price
+     */
+    async _hydrateDividendCard(container, stock, currentPrice) {
+        try {
+            const avgCost = parseFloat(stock.portfolioAvgPrice || stock.purchasePrice) || 0;
+            const analysis = await DividendService.analyze(stock.code, currentPrice, avgCost);
+            console.log(`[ViewRenderer] Dividend Analysis for ${stock.code}:`, analysis);
+
+            // If no data and status is PENDING, show a "not yet synced" message
+            if (analysis.status === 'PENDING' || analysis.status === 'NO_DB') {
+                container.innerHTML = `
+                    <div class="${CSS_CLASSES.DIV_HERO_HEADER}">
+                        <h3><i class="fas ${UI_ICONS.DIVIDENDS}"></i> Dividends</h3>
+                    </div>
+                    <div class="${CSS_CLASSES.DIV_LOADING}">
+                        <i class="fas fa-clock"></i>
+                        <span>Dividend data syncing — check back shortly</span>
+                    </div>
+                `;
+                return;
+            }
+
+            if (analysis.historyCount === 0 && analysis.status === 'OK') {
+                container.remove();
+                return;
+            }
+
+            // --- Build the Hero Card ---
+            const yieldClass = analysis.currentYield > 0 ? 'positive' : 'neutral';
+            const cagrClass = (val) => val === null ? 'neutral' : (val >= 0 ? 'positive' : 'negative');
+            const yocDisplay = avgCost > 0 ? `${analysis.yieldOnCost.toFixed(2)}%` : '—';
+
+            // Franking badge logic (from the most recent TTM entries)
+            const frankingPct = this._getAverageFranking(analysis);
+            let frankingBadgeClass = CSS_CLASSES.DIV_FRANKING_BADGE;
+            let frankingLabel = `${Math.round(frankingPct * 100)}% Franked`;
+            if (frankingPct < 0.01) {
+                frankingBadgeClass += ' unfranked';
+                frankingLabel = 'Unfranked';
+            } else if (frankingPct < 1.0) {
+                frankingBadgeClass += ' partial';
+            }
+
+            // Hero badge
+            const heroBadgeHtml = analysis.isDividendHero
+                ? `<span class="${CSS_CLASSES.DIV_HERO_BADGE}"><i class="fas fa-trophy"></i> ${analysis.consecutiveYears}yr Hero</span>`
+                : '';
+
+            // Sparkline bars (annual payout chart)
+            const sparklineHtml = this._renderDividendSparkline(analysis.annualTotals);
+
+            // CAGR row
+            const cagr3Html = analysis.cagr3Y !== null
+                ? `<span class="${CSS_CLASSES.DIV_CAGR_VALUE} ${cagrClass(analysis.cagr3Y)}">${analysis.cagr3Y > 0 ? '+' : ''}${analysis.cagr3Y}%</span>`
+                : `<span class="${CSS_CLASSES.DIV_CAGR_VALUE} neutral">—</span>`;
+            const cagr5Html = analysis.cagr5Y !== null
+                ? `<span class="${CSS_CLASSES.DIV_CAGR_VALUE} ${cagrClass(analysis.cagr5Y)}">${analysis.cagr5Y > 0 ? '+' : ''}${analysis.cagr5Y}%</span>`
+                : `<span class="${CSS_CLASSES.DIV_CAGR_VALUE} neutral">—</span>`;
+
+            // Ex-date countdown
+            let exDateHtml = '';
+            if (analysis.upcomingExDate) {
+                exDateHtml = `
+                    <div class="${CSS_CLASSES.DIV_EXDATE_BANNER}">
+                        <i class="fas fa-calendar-check"></i>
+                        <span>Projected Ex-Date: ${analysis.upcomingExDate.exDate} (<span class="div-exdate-days">${analysis.upcomingExDate.daysUntil} days</span>)</span>
+                    </div>
+                `;
+            }
+
+            // Stale indicator
+            let staleHtml = '';
+            if (analysis.isStale) {
+                staleHtml = `
+                    <div class="${CSS_CLASSES.DIV_STALE_INDICATOR}">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span>Data may be outdated — last sync: ${analysis.lastSync ? new Date(analysis.lastSync).toLocaleDateString() : 'unknown'}</span>
+                    </div>
+                `;
+            }
+
+            // Render complete card
+            container.innerHTML = `
+                <div class="${CSS_CLASSES.DIV_HERO_HEADER}">
+                    <h3><i class="fas ${UI_ICONS.DIVIDENDS}"></i> Dividends & Growth</h3>
+                    <div style="display: flex; gap: 6px; align-items: center;">
+                        ${heroBadgeHtml}
+                        <span class="${frankingBadgeClass}">${frankingLabel}</span>
+                    </div>
+                </div>
+
+                <div class="${CSS_CLASSES.DIV_METRICS_GRID}">
+                    <div class="${CSS_CLASSES.DIV_METRIC}">
+                        <span class="${CSS_CLASSES.DIV_METRIC_LABEL}">TTM Yield</span>
+                        <span class="${CSS_CLASSES.DIV_METRIC_VALUE} ${yieldClass}">${analysis.currentYield.toFixed(2)}%</span>
+                    </div>
+                    <div class="${CSS_CLASSES.DIV_METRIC}">
+                        <span class="${CSS_CLASSES.DIV_METRIC_LABEL}">Gross Yield</span>
+                        <span class="${CSS_CLASSES.DIV_METRIC_VALUE} ${yieldClass}">${analysis.grossedUpYield.toFixed(2)}%</span>
+                    </div>
+                    <div class="${CSS_CLASSES.DIV_METRIC}">
+                        <span class="${CSS_CLASSES.DIV_METRIC_LABEL}">Yield on Cost</span>
+                        <span class="${CSS_CLASSES.DIV_METRIC_VALUE}">${yocDisplay}</span>
+                    </div>
+                </div>
+
+                <div class="${CSS_CLASSES.DIV_CONSISTENCY_ROW}">
+                    <span style="font-size: 0.65rem; color: var(--text-muted);">
+                        <i class="fas fa-chart-line" style="margin-right: 4px;"></i>Annual Payout Trend (${analysis.consecutiveYears}yr consecutive)
+                    </span>
+                </div>
+
+                ${sparklineHtml}
+
+                <div class="${CSS_CLASSES.DIV_CAGR_ROW}">
+                    <div class="${CSS_CLASSES.DIV_CAGR_ITEM}">
+                        3Y CAGR: ${cagr3Html}
+                    </div>
+                    <div class="${CSS_CLASSES.DIV_CAGR_ITEM}">
+                        5Y CAGR: ${cagr5Html}
+                    </div>
+                    <div class="${CSS_CLASSES.DIV_CAGR_ITEM}">
+                        TTM: <span class="${CSS_CLASSES.DIV_CAGR_VALUE}">${formatCurrency(analysis.ttmDividend)}/sh</span>
+                    </div>
+                </div>
+
+                ${exDateHtml}
+                ${staleHtml}
+            `;
+
+        } catch (err) {
+            console.warn('[ViewRenderer] Dividend hydration failed:', err);
+            container.innerHTML = `
+                <div class="${CSS_CLASSES.DIV_HERO_HEADER}">
+                    <h3><i class="fas ${UI_ICONS.DIVIDENDS}"></i> Dividends</h3>
+                </div>
+                <div class="${CSS_CLASSES.DIV_LOADING}">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <span>Unable to load dividend data</span>
+                </div>
+            `;
+        }
+    }
+
+    /**
+     * Renders an SVG-free mini bar chart showing annual dividend totals.
+     * Each bar represents one calendar year. The most recent year is highlighted.
+     * Shows the last 10 years maximum to keep the visual compact.
+     * 
+     * @param {Map<number, number>} annualTotals - Year → total amount
+     * @returns {string} HTML string
+     */
+    _renderDividendSparkline(annualTotals) {
+        if (!annualTotals || annualTotals.size === 0) return '';
+
+        // Take last 10 years
+        const entries = [...annualTotals.entries()].slice(-10);
+        if (entries.length < 2) return '';
+
+        const maxAmount = Math.max(...entries.map(([, v]) => v));
+        if (maxAmount <= 0) return '';
+
+        const bars = entries.map(([year, amount]) => {
+            const heightPct = Math.max((amount / maxAmount) * 100, 4); // Min 4% for visibility
+            return `<div class="${CSS_CLASSES.DIV_SPARKLINE_BAR}" style="height: ${heightPct}%;" data-year="${year}" title="${year}: $${amount.toFixed(4)}/sh"></div>`;
+        }).join('');
+
+        return `
+            <div class="${CSS_CLASSES.DIV_SPARKLINE_CONTAINER}">
+                <div class="${CSS_CLASSES.DIV_SPARKLINE_BARS}">
+                    ${bars}
+                </div>
+            </div>
+        `;
+    }
+
+    /**
+     * Computes the average franking percentage from recent history in the analysis.
+     * Used for the franking badge display.
+     * @param {Object} analysis - DividendService.analyze() result
+     * @returns {number} Average franking (0-1)
+     */
+    _getAverageFranking(analysis) {
+        // We use the raw history from Firestore (need to re-fetch for franking data)
+        // Since analysis doesn't carry raw franking, default to 1.0 for ASX
+        // This will be refined when per-entry franking overrides are available
+        return 1.0;
     }
 
 

@@ -1,0 +1,273 @@
+/* ============================================================================
+   DIVIDEND HERO CARD — Viewing Modal Integration
+   Feature: styles/features/dividends.css
+   ============================================================================ */
+
+/* --- Container --- */
+.div-hero-card {
+    position: relative;
+    overflow: hidden;
+}
+
+/* --- Header with Franking Badge --- */
+.div-hero-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.div-hero-header h3 {
+    margin: 0;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-color);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* --- Franking Badge --- */
+.div-franking-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: var(--radius-pill);
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    background: rgba(6, 255, 79, 0.12);
+    color: var(--color-positive);
+    border: 1px solid rgba(6, 255, 79, 0.25);
+}
+
+.div-franking-badge.partial {
+    background: rgba(255, 193, 7, 0.12);
+    color: var(--color-warning);
+    border-color: rgba(255, 193, 7, 0.25);
+}
+
+.div-franking-badge.unfranked {
+    background: rgba(136, 136, 136, 0.12);
+    color: var(--color-neutral);
+    border-color: rgba(136, 136, 136, 0.25);
+}
+
+/* --- Hero Badge (10yr+ Dividend History) --- */
+.div-hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: var(--radius-pill);
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    background: linear-gradient(135deg, rgba(255, 193, 7, 0.15), rgba(255, 152, 0, 0.15));
+    color: var(--color-warning);
+    border: 1px solid rgba(255, 193, 7, 0.3);
+    animation: div-hero-glow 3s ease-in-out infinite alternate;
+}
+
+@keyframes div-hero-glow {
+    0% { box-shadow: 0 0 4px rgba(255, 193, 7, 0.1); }
+    100% { box-shadow: 0 0 12px rgba(255, 193, 7, 0.25); }
+}
+
+/* --- Metrics Grid (3-col) --- */
+.div-metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.div-metric {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px 4px;
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 6px;
+    min-width: 0;
+}
+
+.div-metric-label {
+    font-size: 0.6rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    margin-bottom: 4px;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+.div-metric-value {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-color);
+    line-height: 1.2;
+}
+
+.div-metric-value.positive {
+    color: var(--color-positive);
+}
+
+.div-metric-value.negative {
+    color: var(--color-negative);
+}
+
+.div-metric-value.neutral {
+    color: var(--text-muted);
+}
+
+/* --- Payout Sparkline (Annual Bar Chart) --- */
+.div-sparkline-container {
+    width: 100%;
+    height: 56px;
+    margin-bottom: 10px;
+    position: relative;
+    overflow: hidden;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.div-sparkline-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 100%;
+    padding: 4px 6px;
+}
+
+.div-sparkline-bar {
+    flex: 1;
+    min-width: 0;
+    border-radius: 2px 2px 0 0;
+    background: var(--color-accent);
+    opacity: 0.6;
+    transition: opacity 0.2s ease, background 0.2s ease;
+    position: relative;
+}
+
+.div-sparkline-bar:last-child {
+    opacity: 1;
+    background: var(--color-positive);
+}
+
+.div-sparkline-bar:hover {
+    opacity: 1;
+}
+
+/* Year label on hover (via title/tooltip) */
+.div-sparkline-bar::after {
+    content: attr(data-year);
+    position: absolute;
+    top: -14px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.5rem;
+    color: var(--text-muted);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+.div-sparkline-bar:hover::after {
+    opacity: 1;
+}
+
+/* --- Ex-Date Countdown Banner --- */
+.div-exdate-banner {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    background: rgba(255, 193, 7, 0.08);
+    border: 1px solid rgba(255, 193, 7, 0.2);
+    margin-top: 4px;
+}
+
+.div-exdate-banner i {
+    color: var(--color-warning);
+    font-size: 0.85rem;
+}
+
+.div-exdate-banner span {
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: var(--text-color);
+}
+
+.div-exdate-banner .div-exdate-days {
+    font-weight: 700;
+    color: var(--color-warning);
+}
+
+/* --- CAGR Row (compact 2-col under sparkline) --- */
+.div-cagr-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.div-cagr-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+}
+
+.div-cagr-item .div-cagr-value {
+    font-weight: 700;
+    font-size: 0.78rem;
+}
+
+/* --- Loading State --- */
+.div-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 20px;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+}
+
+.div-loading i {
+    animation: fa-spin 1s linear infinite;
+}
+
+/* --- Stale Data Indicator --- */
+.div-stale-indicator {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.6rem;
+    color: var(--text-muted);
+    opacity: 0.6;
+    margin-top: 6px;
+}
+
+.div-stale-indicator i {
+    font-size: 0.55rem;
+}
+
+/* --- Consistency Row --- */
+.div-consistency-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
