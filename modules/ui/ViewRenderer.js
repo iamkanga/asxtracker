@@ -1487,9 +1487,20 @@ export class ViewRenderer {
             let exDateHtml = '';
             if (analysis.upcomingExDate) {
                 exDateHtml = `
-                    <div class="${CSS_CLASSES.DIV_EXDATE_BANNER}">
-                        <i class="fas fa-calendar-check"></i>
-                        <span>Projected Ex-Date: ${analysis.upcomingExDate.exDate} (<span class="div-exdate-days">${analysis.upcomingExDate.daysUntil} days</span>)</span>
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px; padding: 4px 0; border-top: 1px solid rgba(255,255,255,0.05);">
+                        <div style="display: flex; flex-direction: column;">
+                            <span style="font-size: 0.75rem; font-weight: 600; color: var(--text-color);">
+                                <i class="fas fa-calendar-check" style="color: var(--color-warning); margin-right: 6px;"></i>
+                                Projected Ex-Date: ${analysis.upcomingExDate.exDate} 
+                                <span style="color: var(--color-warning); font-weight: 700;">(${analysis.upcomingExDate.daysUntil}d)</span>
+                            </span>
+                            <span style="font-size: 0.58rem; color: var(--text-muted); opacity: 0.7; margin-left: 20px;">
+                                <i class="fas fa-info-circle"></i> Estimated date; verify on ASX.
+                            </span>
+                        </div>
+                        <a href="https://www.asx.com.au/markets/company/${stock.code}" target="_blank" rel="noopener noreferrer" class="div-asx-verify-link">
+                            Verify <i class="fas fa-external-link-alt" style="font-size: 0.55rem; margin-left: 2px;"></i>
+                        </a>
                     </div>
                 `;
             }
@@ -1508,11 +1519,8 @@ export class ViewRenderer {
             // Render complete card
             container.innerHTML = `
                 <div class="${CSS_CLASSES.DIV_HERO_HEADER}">
-                    <h3><i class="fas ${UI_ICONS.DIVIDENDS}"></i> Dividends & Growth</h3>
-                    <div style="display: flex; gap: 6px; align-items: center;">
-                        ${heroBadgeHtml}
-                        <span class="${frankingBadgeClass}">${frankingLabel}</span>
-                    </div>
+                    <h3><i class="fas ${UI_ICONS.DIVIDENDS}"></i> Dividends</h3>
+                    ${heroBadgeHtml}
                 </div>
 
                 <div class="${CSS_CLASSES.DIV_METRICS_GRID}">
@@ -1530,10 +1538,8 @@ export class ViewRenderer {
                     </div>
                 </div>
 
-                <div class="${CSS_CLASSES.DIV_CONSISTENCY_ROW}">
-                    <span style="font-size: 0.65rem; color: var(--text-muted);">
-                        <i class="fas fa-chart-line" style="margin-right: 4px;"></i>Annual Payout Trend (${analysis.consecutiveYears}yr consecutive)
-                    </span>
+                <div style="display: flex; align-items: center; margin-bottom: 8px; padding-left: 4px;">
+                    <span class="${frankingBadgeClass}">${frankingLabel}</span>
                 </div>
 
                 ${sparklineHtml}
