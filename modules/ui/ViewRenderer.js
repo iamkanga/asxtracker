@@ -1588,11 +1588,17 @@ export class ViewRenderer {
 
         const bars = entries.map(([year, amount]) => {
             const heightPct = Math.max((amount / maxAmount) * 100, 4); // Min 4% for visibility
-            return `<div class="${CSS_CLASSES.DIV_SPARKLINE_BAR}" style="height: ${heightPct}%;" data-year="${year}" title="${year}: $${amount.toFixed(4)}/sh"></div>`;
+            // Provide custom data-tooltip (mobile/custom CSS) and remove native title to avoid double display
+            return `<div class="${CSS_CLASSES.DIV_SPARKLINE_BAR}" style="height: ${heightPct}%;" data-year="${year}" data-tooltip="${year}: $${amount.toFixed(4)}/sh" onclick="this.classList.toggle('active')"></div>`;
         }).join('');
 
+        // V1156: Inject a script-free touch handler logic using standard onclick toggle 
+        // to handle mobile "hover" simulation via the .active class
         return `
-            <div class="${CSS_CLASSES.DIV_SPARKLINE_CONTAINER}">
+            <div class="${CSS_CLASSES.DIV_SPARKLINE_CONTAINER}" onclick="
+                const bars = this.querySelectorAll('.${CSS_CLASSES.DIV_SPARKLINE_BAR}');
+                bars.forEach(b => { if(b !== event.target) b.classList.remove('active'); });
+            ">
                 <div class="${CSS_CLASSES.DIV_SPARKLINE_BARS}">
                     ${bars}
                 </div>

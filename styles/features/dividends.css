@@ -131,12 +131,13 @@
 /* --- Payout Sparkline (Annual Bar Chart) --- */
 .div-sparkline-container {
     width: 100%;
-    height: 56px;
+    height: 75px; /* Increased from 56px to give room for labels */
     margin-bottom: 10px;
     position: relative;
-    overflow: hidden;
+    overflow: visible; /* Allows tooltips to spill over the top of the container */
     border-radius: 4px;
     background: rgba(0, 0, 0, 0.1);
+    padding-top: 18px; /* Give space at the top for the year label */
 }
 
 .div-sparkline-bars {
@@ -166,23 +167,57 @@
     opacity: 1;
 }
 
-/* Year label on hover (via title/tooltip) */
-.div-sparkline-bar::after {
-    content: attr(data-year);
+/* Year label removed (merged into tooltip) */
+
+/* Default Tooltip centering */
+.div-sparkline-bar::before {
+    content: attr(data-tooltip);
     position: absolute;
-    top: -14px;
+    bottom: 100%;
     left: 50%;
-    transform: translateX(-50%);
-    font-size: 0.5rem;
-    color: var(--text-muted);
-    opacity: 0;
-    transition: opacity 0.2s ease;
+    transform: translateX(-50%) translateY(-18px);
+    background: rgba(0, 0, 0, 0.9);
+    color: #fff;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.65rem;
     white-space: nowrap;
+    opacity: 0;
     pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    z-index: 10;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    border: 1px solid rgba(255,255,255,0.1);
 }
 
-.div-sparkline-bar:hover::after {
+.div-sparkline-bar:hover::before,
+.div-sparkline-bar:active::before,
+.div-sparkline-bar.active::before {
     opacity: 1;
+    transform: translateX(-50%) translateY(-22px);
+}
+
+/* Edge Case handling: First bar tooltip aligns left */
+.div-sparkline-bar:first-child::before {
+    left: 0;
+    transform: translateX(0) translateY(-18px);
+}
+.div-sparkline-bar:first-child:hover::before,
+.div-sparkline-bar:first-child:active::before,
+.div-sparkline-bar:first-child.active::before {
+    transform: translateX(0) translateY(-22px);
+}
+
+/* Edge Case handling: Last bar tooltip aligns right */
+.div-sparkline-bar:last-child::before {
+    left: auto;
+    right: 0;
+    transform: translateX(0) translateY(-18px);
+}
+.div-sparkline-bar:last-child:hover::before,
+.div-sparkline-bar:last-child:active::before,
+.div-sparkline-bar:last-child.active::before {
+    transform: translateX(0) translateY(-22px);
 }
 
 /* --- Ex-Date Countdown Banner --- */
