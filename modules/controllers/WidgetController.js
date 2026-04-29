@@ -4,7 +4,7 @@
  * and events.
  */
 import { AppState } from '../state/AppState.js';
-import { widgetPanel, WIDGET_MODULES } from '../ui/WidgetPanel.js?v=1152';
+import { widgetPanel, WIDGET_MODULES } from '../ui/WidgetPanel.js';
 import { EVENTS, CSS_CLASSES, UI_ICONS } from '../utils/AppConstants.js';
 
 export class WidgetController {

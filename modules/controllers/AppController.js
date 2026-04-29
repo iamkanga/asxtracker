@@ -7,25 +7,25 @@
 import { AuthService } from '../auth/AuthService.js';
 import { DataService } from '../data/DataService.js';
 import { AppService } from '../data/AppService.js';
-import { ViewRenderer } from '../ui/ViewRenderer.js?v=1168';
+import { ViewRenderer } from '../ui/ViewRenderer.js';
 import { AppState } from '../state/AppState.js';
 import { HeaderLayout } from '../ui/HeaderLayout.js';
 import { processShares, getSingleShareData, getASXCodesStatus } from '../data/DataProcessor.js';
 import { WatchlistUI } from '../ui/WatchlistUI.js';
-import { ShareFormUI } from '../ui/ShareFormUI.js?v=1040';
-import { SearchDiscoveryUI } from '../ui/SearchDiscoveryUI.js?v=1040'; // Added
-import { NotificationUI } from '../ui/NotificationUI.js?v=1040';
+import { ShareFormUI } from '../ui/ShareFormUI.js';
+import { SearchDiscoveryUI } from '../ui/SearchDiscoveryUI.js'; // Added
+import { NotificationUI } from '../ui/NotificationUI.js';
 import { NotificationStore } from '../state/NotificationStore.js';
 
 import { SnapshotUI } from '../ui/SnapshotUI.js'; // Added
 import { LinkHelper } from '../utils/LinkHelper.js';
-import { SettingsUI } from '../ui/SettingsUI.js?v=55';
+import { SettingsUI } from '../ui/SettingsUI.js';
 import { FavoriteLinksUI } from '../ui/FavoriteLinksUI.js';
 import { QuickNavUI } from '../ui/QuickNavUI.js'; // Added
 import { notificationStore } from '../state/NotificationStore.js';
-import { DashboardViewRenderer } from '../ui/DashboardViewRenderer.js?v=1075';
-import { ModalController } from './ModalController.js?v=1040';
-import ResearchLinksUI from '../ui/ResearchLinksUI.js?v=1116';
+import { DashboardViewRenderer } from '../ui/DashboardViewRenderer.js';
+import { ModalController } from './ModalController.js';
+import ResearchLinksUI from '../ui/ResearchLinksUI.js';
 import { CashController } from './CashController.js';
 import { SecurityController } from './SecurityController.js';
 import { SecurityUI } from '../ui/SecurityUI.js';
@@ -34,7 +34,7 @@ import CalculatorUI from '../ui/CalculatorUI.js';
 import { AnalogClock } from '../ui/AnalogClock.js';
 import { AiSummaryUI } from '../ui/AiSummaryUI.js';
 import { ScrollManager } from '../ui/ScrollManager.js';
-import { IDS, CSS_CLASSES, EVENTS, WATCHLIST_ICON_POOL, ALL_SHARES_ID, CASH_WATCHLIST_ID, DASHBOARD_WATCHLIST_ID, PORTFOLIO_ID, UI_ICONS, USER_MESSAGES, STORAGE_KEYS, WATCHLIST_MODES, SORT_OPTIONS, WATCHLIST_NAMES, DASHBOARD_SYMBOLS, DASHBOARD_LINKS, SUMMARY_TYPES, BRIEFING_BLACKLIST } from '../utils/AppConstants.js?v=1029';
+import { IDS, CSS_CLASSES, EVENTS, WATCHLIST_ICON_POOL, ALL_SHARES_ID, CASH_WATCHLIST_ID, DASHBOARD_WATCHLIST_ID, PORTFOLIO_ID, UI_ICONS, USER_MESSAGES, STORAGE_KEYS, WATCHLIST_MODES, SORT_OPTIONS, WATCHLIST_NAMES, DASHBOARD_SYMBOLS, DASHBOARD_LINKS, SUMMARY_TYPES, BRIEFING_BLACKLIST } from '../utils/AppConstants.js';
 import { ToastManager } from '../ui/ToastManager.js';
 import { navManager } from '../utils/NavigationManager.js';
 import { PullToRefresh } from '../ui/PullToRefresh.js';
@@ -383,7 +383,7 @@ export class AppController {
 
         document.addEventListener(EVENTS.OPEN_PORTFOLIO_CHART, () => {
             // Lazy import to keep boot fast
-            import('../ui/PortfolioChartUI.js?v=1151').then(module => {
+            import('../ui/PortfolioChartUI.js').then(module => {
                 module.PortfolioChartUI.show();
             });
         });
