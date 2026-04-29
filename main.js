@@ -4,13 +4,13 @@
  * Bootstraps the AppController.
  */
 
-import { AppController } from './modules/controllers/AppController.js';
+import { AppController } from './modules/controllers/AppController.js?v=1173';
 import { SplashScreen } from './modules/ui/SplashScreen.js';
 import { marketIndexController } from './modules/ui/MarketIndexController.js';
-import { widgetPanel } from './modules/ui/WidgetPanel.js';
-import { widgetController } from './modules/controllers/WidgetController.js';
+import { widgetPanel } from './modules/ui/WidgetPanel.js?v=1173';
+import { widgetController } from './modules/controllers/WidgetController.js?v=1173';
 
-console.log('%c [MAIN] ASX TRACKER v1168 ', 'background: #222; color: #bada55; font-weight: bold;');
+console.log('%c [MAIN] ASX TRACKER v1173 ', 'background: #222; color: #bada55; font-weight: bold;');
 
 const app = new AppController();
 const splash = new SplashScreen();

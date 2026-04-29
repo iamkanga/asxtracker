@@ -168,11 +168,9 @@ function fetchYahooDividends_(ticker) {
     return []; // Stock doesn't pay dividends — valid result
   }
 
-  // Determine franking default based on suffix
-  // .AX = Australian Securities Exchange → default 100% franked
-  // Everything else → default 0% (unfranked)
-  const isASX = symbol.endsWith('.AX');
-  const defaultFranking = isASX ? 1.0 : 0.0;
+  // Yahoo Finance does NOT provide franking data. 
+  // We set this to null (Unknown) so the UI can display it as such.
+  const defaultFranking = null; 
 
   // Transform V8 timestamp map → sorted array (Descending by date)
   return Object.keys(divEvents)

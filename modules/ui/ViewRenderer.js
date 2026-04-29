@@ -1457,14 +1457,23 @@ export class ViewRenderer {
             const yocDisplay = avgCost > 0 ? `${analysis.yieldOnCost.toFixed(2)}%` : '—';
 
             // Franking badge logic (from the most recent TTM entries)
-            const frankingPct = this._getAverageFranking(analysis);
+            const frankingPct = analysis.averageFranking;
             let frankingBadgeClass = CSS_CLASSES.DIV_FRANKING_BADGE;
-            let frankingLabel = `${Math.round(frankingPct * 100)}% Franked`;
-            if (frankingPct < 0.01) {
+            let frankingLabel = '';
+
+            // Strict check: if franking is null, or if it's the old '1.0' default from the global sync
+            // without being verified by a primary source, mark it as Unknown.
+            if (frankingPct === null || frankingPct === undefined || (frankingPct === 1.0 && analysis.status === 'OK')) {
                 frankingBadgeClass += ' unfranked';
-                frankingLabel = 'Unfranked';
-            } else if (frankingPct < 1.0) {
-                frankingBadgeClass += ' partial';
+                frankingLabel = 'Franking Unknown';
+            } else {
+                frankingLabel = `${Math.round(frankingPct * 100)}% Franked`;
+                if (frankingPct < 0.01) {
+                    frankingBadgeClass += ' unfranked';
+                    frankingLabel = 'Unfranked';
+                } else if (frankingPct < 1.0) {
+                    frankingBadgeClass += ' partial';
+                }
             }
 
             // Hero badge
@@ -1524,15 +1533,15 @@ export class ViewRenderer {
                 </div>
 
                 <div class="${CSS_CLASSES.DIV_METRICS_GRID}">
-                    <div class="${CSS_CLASSES.DIV_METRIC}">
+                    <div class="div-metric-v2">
                         <span class="${CSS_CLASSES.DIV_METRIC_LABEL}">TTM Yield</span>
                         <span class="${CSS_CLASSES.DIV_METRIC_VALUE} ${yieldClass}">${analysis.currentYield.toFixed(2)}%</span>
                     </div>
-                    <div class="${CSS_CLASSES.DIV_METRIC}">
+                    <div class="div-metric-v2">
                         <span class="${CSS_CLASSES.DIV_METRIC_LABEL}">Gross Yield</span>
-                        <span class="${CSS_CLASSES.DIV_METRIC_VALUE} ${yieldClass}">${analysis.grossedUpYield.toFixed(2)}%</span>
+                        <span class="${CSS_CLASSES.DIV_METRIC_VALUE} ${yieldClass}">${(analysis.averageFranking !== null && analysis.averageFranking !== 1.0) ? analysis.grossedUpYield.toFixed(2) + '%' : '—'}</span>
                     </div>
-                    <div class="${CSS_CLASSES.DIV_METRIC}">
+                    <div class="div-metric-v2">
                         <span class="${CSS_CLASSES.DIV_METRIC_LABEL}">Yield on Cost</span>
                         <span class="${CSS_CLASSES.DIV_METRIC_VALUE}">${yocDisplay}</span>
                     </div>
@@ -1618,12 +1627,7 @@ export class ViewRenderer {
      * @param {Object} analysis - DividendService.analyze() result
      * @returns {number} Average franking (0-1)
      */
-    _getAverageFranking(analysis) {
-        // We use the raw history from Firestore (need to re-fetch for franking data)
-        // Since analysis doesn't carry raw franking, default to 1.0 for ASX
-        // This will be refined when per-entry franking overrides are available
-        return 1.0;
-    }
+
 
 
 

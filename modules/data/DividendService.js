@@ -132,8 +132,12 @@ export class DividendService {
      * @param {number} franking - Franking percentage as decimal (1.0 = 100%)
      * @returns {number} Grossed-up amount
      */
-    static grossUp(amount, franking = 1.0) {
+    static grossUp(amount, franking = null) {
         if (!amount || amount <= 0) return 0;
+        // If franking is unknown (null), we cannot calculate a grossed-up value.
+        // Return raw amount (0% franking assumption for math)
+        if (franking === null) return amount;
+        
         const safeFranking = Math.min(Math.max(franking || 0, 0), 1);
         return amount + (amount * safeFranking * FRANKING_GROSS_UP_FACTOR);
     }
@@ -164,12 +168,20 @@ export class DividendService {
     static getTTMDividends(history) {
         if (!Array.isArray(history) || history.length === 0) return 0;
 
-        const cutoff = new Date();
+        // Find the most recent dividend date in the history
+        // This anchors our 12-month window to the "last payment" rather than "today",
+        // preventing a 50% yield drop just because today is 1 day past last year's ex-date.
+        const sorted = [...history].sort((a, b) => b.exDate.localeCompare(a.exDate));
+        const mostRecentDate = new Date(sorted[0].exDate);
+        
+        const cutoff = new Date(mostRecentDate);
         cutoff.setFullYear(cutoff.getFullYear() - 1);
+        // We go back 364 days from the most recent to capture a full cycle (e.g. 2 semi-annuals)
         const cutoffStr = cutoff.toISOString().split('T')[0];
 
         return history.reduce((sum, entry) => {
-            if (entry?.exDate >= cutoffStr) {
+            // Include everything from the most recent payment back 1 year
+            if (entry?.exDate > cutoffStr && entry?.exDate <= sorted[0].exDate) {
                 return sum + (parseFloat(entry.amount) || 0);
             }
             return sum;
@@ -200,12 +212,15 @@ export class DividendService {
         if (!currentPrice || currentPrice <= 0) return 0;
         if (!Array.isArray(history) || history.length === 0) return 0;
 
-        const cutoff = new Date();
+        // Use same anchored window as getTTMDividends
+        const sorted = [...history].sort((a, b) => b.exDate.localeCompare(a.exDate));
+        const mostRecentDate = new Date(sorted[0].exDate);
+        const cutoff = new Date(mostRecentDate);
         cutoff.setFullYear(cutoff.getFullYear() - 1);
         const cutoffStr = cutoff.toISOString().split('T')[0];
 
         const ttmGrossed = history.reduce((sum, entry) => {
-            if (entry?.exDate >= cutoffStr) {
+            if (entry?.exDate > cutoffStr && entry?.exDate <= sorted[0].exDate) {
                 return sum + DividendService.grossUp(
                     parseFloat(entry.amount) || 0,
                     entry.franking ?? 1.0
@@ -230,6 +245,34 @@ export class DividendService {
         const ttm = DividendService.getTTMDividends(history);
         return (ttm / avgCostPrice) * 100;
     }
+
+    /**
+     * Calculates the average franking level of the TTM dividends.
+     * @param {Array} history 
+     * @returns {number} Average franking (0.0 to 1.0)
+     */
+    static getAverageFranking(history) {
+        if (!Array.isArray(history) || history.length === 0) return null;
+
+        // Use same anchored window as getTTMDividends
+        const sorted = [...history].sort((a, b) => b.exDate.localeCompare(a.exDate));
+        const mostRecentDate = new Date(sorted[0].exDate);
+        const cutoff = new Date(mostRecentDate);
+        cutoff.setFullYear(cutoff.getFullYear() - 1);
+        const cutoffStr = cutoff.toISOString().split('T')[0];
+
+        const ttmEntries = history.filter(e => e.exDate > cutoffStr && e.exDate <= sorted[0].exDate);
+        if (ttmEntries.length === 0) return null;
+
+        // If ANY entry in the TTM has null franking, the average is considered Unknown (null)
+        // because we don't want to show a misleading partial average.
+        const hasUnknown = ttmEntries.some(e => e.franking === null || e.franking === undefined);
+        if (hasUnknown) return null;
+
+        const sumFranking = ttmEntries.reduce((sum, e) => sum + (parseFloat(e.franking) || 0), 0);
+        return sumFranking / ttmEntries.length;
+    }
+
 
     // ========================================================================
     // GROWTH METRICS (CAGR)
@@ -266,18 +309,18 @@ export class DividendService {
      */
     static getCAGR(history, years = 5) {
         const annuals = DividendService.getAnnualTotals(history);
-        if (annuals.size < years + 1) return null; // Need N+1 years of data
-
-        const sortedYears = [...annuals.keys()].sort((a, b) => a - b);
+        
+        // We must only compare COMPLETE years. 
+        // If we are in 2026, the 2026 total is likely just one half-year payment.
+        // Comparing a half-year (2026) to a full-year (2021) results in false negative growth.
         const currentYear = new Date().getFullYear();
+        const sortedYears = [...annuals.keys()]
+            .filter(y => y < currentYear) // Exclude the incomplete current year
+            .sort((a, b) => a - b);
 
-        // Use the most recent COMPLETE year as end, go back N years for start
-        // If current year data is incomplete, use previous year as endpoint
-        let endYear = currentYear;
-        if (!annuals.has(currentYear)) {
-            endYear = sortedYears[sortedYears.length - 1];
-        }
+        if (sortedYears.length < years + 1) return null;
 
+        const endYear = sortedYears[sortedYears.length - 1];
         const startYear = endYear - years;
 
         const startVal = annuals.get(startYear);
@@ -304,9 +347,13 @@ export class DividendService {
         const annuals = DividendService.getAnnualTotals(history);
         if (annuals.size === 0) return 0;
 
-        const years = [...annuals.keys()].sort((a, b) => b - a); // Descending
-        let consecutive = 0;
+        const currentYear = new Date().getFullYear();
+        const years = [...annuals.keys()].sort((a, b) => b - a); // Descending (2026, 2025, 2024...)
+        
+        // If the most recent payment was more than 1 year ago, the streak is broken
+        if (currentYear - years[0] > 1) return 0;
 
+        let consecutive = 0;
         for (let i = 0; i < years.length; i++) {
             if (i === 0) {
                 consecutive = 1;
@@ -453,6 +500,7 @@ export class DividendService {
             cagr5Y: DividendService.getCAGR(history, 5),
             consecutiveYears: DividendService.getConsecutiveYears(history),
             isDividendHero: DividendService.isDividendHero(history),
+            averageFranking: DividendService.getAverageFranking(history),
             upcomingExDate: DividendService.getUpcomingExDate(history),
             annualTotals: DividendService.getAnnualTotals(history),
             historyCount: history.length
