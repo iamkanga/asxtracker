@@ -174,6 +174,14 @@ export class DividendService {
         const sorted = [...history].sort((a, b) => b.exDate.localeCompare(a.exDate));
         const mostRecentDate = new Date(sorted[0].exDate);
         
+        // STALENESS GUARD: If the most recent payment is > 24 months old, 
+        // this is no longer a dividend-paying stock in the current context.
+        const twoYearsAgo = new Date();
+        twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
+        if (mostRecentDate < twoYearsAgo) {
+            return 0;
+        }
+
         const cutoff = new Date(mostRecentDate);
         cutoff.setFullYear(cutoff.getFullYear() - 1);
         // We go back 364 days from the most recent to capture a full cycle (e.g. 2 semi-annuals)
@@ -182,7 +190,9 @@ export class DividendService {
         return history.reduce((sum, entry) => {
             // Include everything from the most recent payment back 1 year
             if (entry?.exDate > cutoffStr && entry?.exDate <= sorted[0].exDate) {
-                return sum + (parseFloat(entry.amount) || 0);
+                const amt = parseFloat(entry.amount) || 0;
+                console.log(`[DividendService] TTM Inclusion: ${entry.exDate} | $${amt}`);
+                return sum + amt;
             }
             return sum;
         }, 0);
@@ -215,6 +225,12 @@ export class DividendService {
         // Use same anchored window as getTTMDividends
         const sorted = [...history].sort((a, b) => b.exDate.localeCompare(a.exDate));
         const mostRecentDate = new Date(sorted[0].exDate);
+
+        // STALENESS GUARD
+        const twoYearsAgo = new Date();
+        twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
+        if (mostRecentDate < twoYearsAgo) return 0;
+
         const cutoff = new Date(mostRecentDate);
         cutoff.setFullYear(cutoff.getFullYear() - 1);
         const cutoffStr = cutoff.toISOString().split('T')[0];
@@ -398,6 +414,14 @@ export class DividendService {
     static getUpcomingExDate(history) {
         if (!Array.isArray(history) || history.length === 0) return null;
 
+        const sorted = [...history].sort((a, b) => b.exDate.localeCompare(a.exDate));
+        const lastExDate = new Date(sorted[0].exDate);
+
+        // STALENESS GUARD: Don't project for "ghost" payers (inactive > 24m)
+        const twoYearsAgo = new Date();
+        twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
+        if (lastExDate < twoYearsAgo) return null;
+
         const today = new Date();
         const todayStr = today.toISOString().split('T')[0];
 
@@ -467,7 +491,20 @@ export class DividendService {
      * @returns {Promise<Object>} Complete dividend analysis
      */
     static async analyze(ticker, currentPrice = 0, avgCostPrice = 0) {
-        const { history, lastSync, status } = await DividendService.getHistory(ticker);
+        if (!ticker) return { status: 'INVALID' };
+        let { history, lastSync, status } = await DividendService.getHistory(ticker);
+
+        // Apply manual overrides (e.g. Franking %) from AppState
+        const override = AppState.data?.dividendOverrides?.[ticker.toUpperCase()];
+        let hasManualOverride = false;
+        if (override && Array.isArray(history)) {
+            if (override.franking !== undefined) {
+                hasManualOverride = true;
+                // Apply manual franking override to all history entries 
+                // so that average calculations pick it up.
+                history = history.map(h => ({ ...h, franking: override.franking }));
+            }
+        }
 
         if (status !== 'OK' || history.length === 0) {
             return {
@@ -503,7 +540,8 @@ export class DividendService {
             averageFranking: DividendService.getAverageFranking(history),
             upcomingExDate: DividendService.getUpcomingExDate(history),
             annualTotals: DividendService.getAnnualTotals(history),
-            historyCount: history.length
+            historyCount: history.length,
+            hasManualOverride
         };
     }
 }

@@ -164,6 +164,26 @@ export class AppService {
     }
 
     /**
+     * Saves a dividend override (e.g. Franking %) for a stock.
+     * @param {string} ticker 
+     * @param {Object} data 
+     */
+    async saveDividendOverride(ticker, data) {
+        try {
+            const user = AppState.user;
+            if (!user) return { ok: false, error: 'User not logged in' };
+
+            const result = await userStore.saveDividendOverride(user.uid, ticker, data);
+            if (result.ok) {
+                ToastManager.success(`Updated ${ticker} dividend preferences.`);
+            }
+            return result;
+        } catch (err) {
+            console.error('[AppService] Override fail:', err);
+        }
+    }
+
+    /**
      * Wipes all user data across all sub-collections.
      */
     async wipeUserData() {

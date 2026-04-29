@@ -7,7 +7,7 @@
 import { AuthService } from '../auth/AuthService.js';
 import { DataService } from '../data/DataService.js';
 import { AppService } from '../data/AppService.js';
-import { ViewRenderer } from '../ui/ViewRenderer.js?v=1173';
+import { ViewRenderer } from '../ui/ViewRenderer.js?v=1184';
 import { AppState } from '../state/AppState.js';
 import { HeaderLayout } from '../ui/HeaderLayout.js';
 import { processShares, getSingleShareData, getASXCodesStatus } from '../data/DataProcessor.js';
@@ -515,6 +515,49 @@ export class AppController {
             }
         });
 
+        // Dividend Override Listener
+        document.addEventListener(EVENTS.DIV_OVERRIDE_CLICK, async (e) => {
+            const { ticker, current } = e.detail;
+            const user = AppState.user;
+            if (!user) {
+                ToastManager.error(USER_MESSAGES.AUTH_REQUIRED);
+                return;
+            }
+
+            const input = prompt(`Manual Franking Override for ${ticker}\nEnter percentage (0-100):`, 
+                current !== null ? Math.round(current * 100) : "100");
+            
+            if (input === null) return;
+            
+            const pct = parseFloat(input);
+            if (isNaN(pct) || pct < 0 || pct > 100) {
+                ToastManager.error("Please enter a valid percentage between 0 and 100.");
+                return;
+            }
+
+            const frankingValue = pct / 100;
+            await this.appService.saveDividendOverride(ticker, { franking: frankingValue });
+            
+            // 2. IMMEDIATE UI REFRESH (for the open modal/card)
+            // We find the open dividend card by its standard ID pattern
+            const cardId = `divHeroCard_${ticker}`;
+            const container = document.getElementById(cardId);
+            if (container && this.viewRenderer) {
+                // Find current data context
+                const allShares = AppState.data.shares || [];
+                const stock = allShares.find(s => (s.shareName || s.code || '').toUpperCase() === ticker.toUpperCase());
+                const priceData = AppState.livePrices?.get(ticker.toUpperCase());
+                const price = priceData ? priceData.live : 0;
+                
+                if (stock) {
+                    // Re-trigger the async hydration to update the specific card element
+                    this.viewRenderer._hydrateDividendCard(container, stock, price);
+                }
+            }
+
+            // 3. Trigger re-analysis and re-render for the watchlist
+            this.updateDataAndRender(false);
+        });
 
 
         // 2. RECONNECTION SAFETY NET

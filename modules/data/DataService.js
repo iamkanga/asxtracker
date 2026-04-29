@@ -135,6 +135,32 @@ export class DataService {
     }
 
     /**
+     * Saves a manual dividend override (like Franking %) for a specific stock.
+     * @param {string} ticker - ASX code
+     * @param {Object} data - { franking: number }
+     */
+    async saveDividendOverride(ticker, data) {
+        try {
+            const user = AuthService.getCurrentUser();
+            if (!user) return { ok: false, error: 'User not logged in' };
+
+            const overrideRef = doc(db, 'user_metadata_overrides', user.uid, 'tickers', ticker);
+            await updateDoc(overrideRef, data).catch(async (err) => {
+                // If document doesn't exist, use setDoc (which is handled by addDoc-like logic in some wrappers, but here we use Firebase direct)
+                // Actually, standard Firebase: if update fails because it doesn't exist, we should use setDoc.
+                // For simplicity in this env, we'll try to get the parent or just use a more robust helper.
+                const { setDoc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+                await setDoc(overrideRef, data, { merge: true });
+            });
+
+            return { ok: true };
+        } catch (err) {
+            console.error('[DataService] Save Override Fail:', err);
+            return { ok: false, error: err.message };
+        }
+    }
+
+    /**
      * Ask Gemini (Smart Alerts or Market Chat).
      * @param {string} mode 'explain' | 'chat'
      * @param {string} query User question (for chat)

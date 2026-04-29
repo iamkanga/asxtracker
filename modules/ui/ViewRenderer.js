@@ -1428,9 +1428,10 @@ export class ViewRenderer {
      */
     async _hydrateDividendCard(container, stock, currentPrice) {
         try {
+            const ticker = stock.code || stock.shareName;
             const avgCost = parseFloat(stock.portfolioAvgPrice || stock.purchasePrice) || 0;
-            const analysis = await DividendService.analyze(stock.code, currentPrice, avgCost);
-            console.log(`[ViewRenderer] Dividend Analysis for ${stock.code}:`, analysis);
+            const analysis = await DividendService.analyze(ticker, currentPrice, avgCost);
+            console.log(`[ViewRenderer] Dividend Analysis for ${ticker}:`, analysis);
 
             // If no data and status is PENDING, show a "not yet synced" message
             if (analysis.status === 'PENDING' || analysis.status === 'NO_DB') {
@@ -1446,7 +1447,10 @@ export class ViewRenderer {
                 return;
             }
 
-            if (analysis.historyCount === 0 && analysis.status === 'OK') {
+            // --- HIDE LOGIC ---
+            // If no dividends in the last 24 months (ttmDividend is 0 due to guard)
+            // and no upcoming ex-date is known, hide the container entirely.
+            if (analysis.ttmDividend === 0 && !analysis.upcomingExDate && analysis.status === 'OK') {
                 container.remove();
                 return;
             }
@@ -1463,7 +1467,8 @@ export class ViewRenderer {
 
             // Strict check: if franking is null, or if it's the old '1.0' default from the global sync
             // without being verified by a primary source, mark it as Unknown.
-            if (frankingPct === null || frankingPct === undefined || (frankingPct === 1.0 && analysis.status === 'OK')) {
+            // PIVOT: If hasManualOverride is true, we trust it even if it's 1.0 (100%).
+            if (frankingPct === null || frankingPct === undefined || (frankingPct === 1.0 && analysis.status === 'OK' && !analysis.hasManualOverride)) {
                 frankingBadgeClass += ' unfranked';
                 frankingLabel = 'Franking Unknown';
             } else {
@@ -1475,6 +1480,16 @@ export class ViewRenderer {
                     frankingBadgeClass += ' partial';
                 }
             }
+
+            const frankingHtml = `
+                <div class="div-franking-container" 
+                     onclick="document.dispatchEvent(new CustomEvent('DIV_OVERRIDE_CLICK', { detail: { ticker: '${ticker}', current: ${frankingPct} } }))"
+                     title="Click to set manual franking"
+                     style="cursor: pointer; display: flex; align-items: center; margin-bottom: 8px; padding-left: 4px;">
+                    <span class="${frankingBadgeClass}">${frankingLabel}</span>
+                    <i class="fas fa-edit" style="font-size: 0.6rem; margin-left: 6px; opacity: 0.3;"></i>
+                </div>
+            `;
 
             // Hero badge
             const heroBadgeHtml = analysis.isDividendHero
@@ -1492,22 +1507,22 @@ export class ViewRenderer {
                 ? `<span class="${CSS_CLASSES.DIV_CAGR_VALUE} ${cagrClass(analysis.cagr5Y)}">${analysis.cagr5Y > 0 ? '+' : ''}${analysis.cagr5Y}%</span>`
                 : `<span class="${CSS_CLASSES.DIV_CAGR_VALUE} neutral">—</span>`;
 
-            // Ex-date countdown
+            // Ex-date countdown (Clean, standard colors)
             let exDateHtml = '';
             if (analysis.upcomingExDate) {
                 exDateHtml = `
                     <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px; padding: 4px 0; border-top: 1px solid rgba(255,255,255,0.05);">
                         <div style="display: flex; flex-direction: column;">
                             <span style="font-size: 0.75rem; font-weight: 600; color: var(--text-color);">
-                                <i class="fas fa-calendar-check" style="color: var(--color-warning); margin-right: 6px;"></i>
+                                <i class="fas fa-calendar-check" style="color: var(--text-muted); margin-right: 6px;"></i>
                                 Projected Ex-Date: ${analysis.upcomingExDate.exDate} 
-                                <span style="color: var(--color-warning); font-weight: 700;">(${analysis.upcomingExDate.daysUntil}d)</span>
+                                <span style="color: var(--text-muted); font-weight: 400; opacity: 0.8;">(${analysis.upcomingExDate.daysUntil}d)</span>
                             </span>
-                            <span style="font-size: 0.58rem; color: var(--text-muted); opacity: 0.7; margin-left: 20px;">
+                            <span style="font-size: 0.58rem; color: var(--text-muted); opacity: 0.5; margin-left: 20px;">
                                 <i class="fas fa-info-circle"></i> Estimated date; verify on ASX.
                             </span>
                         </div>
-                        <a href="https://www.asx.com.au/markets/company/${stock.code}" target="_blank" rel="noopener noreferrer" class="div-asx-verify-link">
+                        <a href="https://www.asx.com.au/markets/company/${ticker}" target="_blank" rel="noopener noreferrer" class="div-asx-verify-link">
                             Verify <i class="fas fa-external-link-alt" style="font-size: 0.55rem; margin-left: 2px;"></i>
                         </a>
                     </div>
@@ -1532,6 +1547,8 @@ export class ViewRenderer {
                     ${heroBadgeHtml}
                 </div>
 
+                ${frankingHtml}
+
                 <div class="${CSS_CLASSES.DIV_METRICS_GRID}">
                     <div class="div-metric-v2">
                         <span class="${CSS_CLASSES.DIV_METRIC_LABEL}">TTM Yield</span>
@@ -1539,7 +1556,7 @@ export class ViewRenderer {
                     </div>
                     <div class="div-metric-v2">
                         <span class="${CSS_CLASSES.DIV_METRIC_LABEL}">Gross Yield</span>
-                        <span class="${CSS_CLASSES.DIV_METRIC_VALUE} ${yieldClass}">${(analysis.averageFranking !== null && analysis.averageFranking !== 1.0) ? analysis.grossedUpYield.toFixed(2) + '%' : '—'}</span>
+                        <span class="${CSS_CLASSES.DIV_METRIC_VALUE} ${yieldClass}">${(analysis.averageFranking !== null) ? analysis.grossedUpYield.toFixed(2) + '%' : '—'}</span>
                     </div>
                     <div class="div-metric-v2">
                         <span class="${CSS_CLASSES.DIV_METRIC_LABEL}">Yield on Cost</span>
@@ -1547,9 +1564,7 @@ export class ViewRenderer {
                     </div>
                 </div>
 
-                <div style="display: flex; align-items: center; margin-bottom: 8px; padding-left: 4px;">
-                    <span class="${frankingBadgeClass}">${frankingLabel}</span>
-                </div>
+
 
                 ${sparklineHtml}
 

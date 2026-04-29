@@ -109,7 +109,10 @@ export const STORAGE_KEYS = {
     SUPER_STRATEGY: 'ASX_NEXT_superStrategy',
 
     // Calculator Preferences
-    CALC_PREFS: 'ASX_NEXT_calcPrefs'
+    CALC_PREFS: 'ASX_NEXT_calcPrefs',
+
+    // Dividend Manual Overrides
+    DIVIDEND_OVERRIDES: 'ASX_NEXT_dividendOverrides'
 };
 
 export const EVENTS = {
@@ -195,7 +198,11 @@ export const EVENTS = {
     SUPER_READY: 'super-ready',
 
     // Dashboard Preferences
-    DASHBOARD_PREFS_CHANGED: 'dashboard-prefs-changed'
+    DASHBOARD_PREFS_CHANGED: 'dashboard-prefs-changed',
+
+    // Dividend Overrides
+    DIV_OVERRIDE_CLICK: 'DIV_OVERRIDE_CLICK',
+    DIV_OVERRIDE_SAVE: 'DIV_OVERRIDE_SAVE'
 };
 
 export const SORT_OPTIONS = {
