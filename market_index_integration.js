@@ -1,5 +1,5 @@
 /**
- * 📰 MARKET INDEX INTEGRATION (FULL STABILIZED VERSION)
+ * 📰 MARKET INDEX INTEGRATION (SAFETIED VERSION)
  * 
  * OBJECTIVE:
  * A lightweight "Sidecar" script to ingest Market Index emails (Company Alerts & Reports),
@@ -8,7 +8,7 @@
 
 const MARKET_INDEX_CONFIG = {
   ENABLED: true,
-  GMAIL_QUERY: 'marketindex.com.au is:unread',
+  GMAIL_QUERY: 'marketindex is:unread',
   BATCH_SIZE: 10,
   FIREBASE: {
     PROJECT_ID: 'asx-watchlist-app',
@@ -26,7 +26,7 @@ function processMarketIndexEmails() {
   try {
     const threads = GmailApp.search(MARKET_INDEX_CONFIG.GMAIL_QUERY, 0, MARKET_INDEX_CONFIG.BATCH_SIZE);
     if (threads.length === 0) {
-      console.log('[MarketIndex] No new emails found.');
+      console.log('[MarketIndex] No unread emails found.');
       return;
     }
 
@@ -35,10 +35,14 @@ function processMarketIndexEmails() {
     const processedThreads = [];
 
     threads.forEach(thread => {
+      let threadHasProcessedData = false;
+      
       thread.getMessages().forEach(msg => {
-        if (MARKET_INDEX_CONFIG.GMAIL_QUERY.includes('is:unread') && !msg.isUnread()) return; 
+        if (!msg.isUnread()) return; 
         
         const subject = msg.getSubject();
+        console.log(`[MarketIndex] Inspecting: "${subject}"`);
+        
         const bodyHtml = msg.getBody(); 
         const date = msg.getDate();
         const link = `https://mail.google.com/mail/u/0/#inbox/${msg.getId()}`; 
@@ -46,33 +50,49 @@ function processMarketIndexEmails() {
         
         if (type === 'COMPANY_ALERT') {
             const data = extractCompanyAlertData_(subject, bodyHtml, date, link);
-            if (data) alertsBatch.push(data);
+            if (data) {
+              alertsBatch.push(data);
+              threadHasProcessedData = true;
+            }
         } else if (type === 'MARKET_REPORT') {
             const data = extractMarketReportData_(subject, bodyHtml, date, link);
-            if (data) reportsBatch.push(data);
+            if (data) {
+              reportsBatch.push(data);
+              threadHasProcessedData = true;
+            }
         }
       });
-      processedThreads.push(thread);
+      
+      // ONLY trash the thread if we actually found and extracted something from it
+      if (threadHasProcessedData) {
+        processedThreads.push(thread);
+      }
     });
 
     let alertsSuccess = true;
     if (alertsBatch.length > 0) {
         alertsSuccess = saveAlertsToFirestore_(alertsBatch);
-        if (alertsSuccess) console.log(`[MarketIndex] Injected ${alertsBatch.length} Company Alerts.`);
+        if (alertsSuccess) console.log(`[MarketIndex] ✅ Injected ${alertsBatch.length} Company Alerts.`);
     }
     
     let reportsSuccess = true;
     if (reportsBatch.length > 0) {
         reportsSuccess = saveReportsToFirestore_(reportsBatch);
-        if (reportsSuccess) console.log(`[MarketIndex] Injected ${reportsBatch.length} Market Reports.`);
+        if (reportsSuccess) console.log(`[MarketIndex] ✅ Injected ${reportsBatch.length} Market Reports.`);
     }
 
-    if (alertsSuccess && reportsSuccess) {
-        processedThreads.forEach(thread => GmailApp.moveThreadToTrash(thread));
-        console.log('[MarketIndex] Cycle Complete. Threads Trashed.');
+    // FINAL CLEANUP
+    if (processedThreads.length > 0 && (alertsSuccess || reportsSuccess)) {
+        processedThreads.forEach(thread => {
+          thread.markRead(); // Mark as read so it doesn't loop
+          GmailApp.moveThreadToTrash(thread);
+        });
+        console.log(`[MarketIndex] Cycle Complete. ${processedThreads.length} threads moved to trash.`);
+    } else {
+        console.log('[MarketIndex] No data extracted from unread emails. Leaving in inbox.');
     }
   } catch (e) {
-    console.error('[MarketIndex] failure:', e);
+    console.error('[MarketIndex] Error:', e);
   }
 }
 
@@ -80,10 +100,12 @@ function processMarketIndexEmails() {
 
 function classifyEmail_(subject) {
   const s = subject.toUpperCase();
-  if (s.includes('[') && s.includes(']') && !s.includes('MARKET INDEX')) {
-    return 'COMPANY_ALERT';
+  // Standard Alerts usually have [CODE] or keywords like Dividend/Announcement
+  if ((s.includes('[') && s.includes(']')) || s.includes('DIVIDEND') || s.includes('ANNOUNCEMENT') || s.includes('HALT')) {
+    if (!s.includes('MARKET INDEX')) return 'COMPANY_ALERT';
   }
-  if (s.includes('REPORT') || s.includes('WRAP') || s.includes('RAP') || s.includes('MIDDAY') || s.includes('UPDATE')) {
+  // Market Reports
+  if (s.includes('REPORT') || s.includes('WRAP') || s.includes('RAP') || s.includes('MIDDAY') || s.includes('UPDATE') || s.includes('MORNING') || s.includes('EVENING')) {
     return 'MARKET_REPORT';
   }
   return 'UNKNOWN';
@@ -182,13 +204,8 @@ function writeFirestoreDocMI_(path, payload) {
       headers: { Authorization: 'Bearer ' + token },
       muteHttpExceptions: true
     });
-    if (resp.getResponseCode() >= 400) {
-      console.error("[DEBUG] Firestore Error: " + resp.getContentText());
-      return false;
-    }
-    return true;
+    return resp.getResponseCode() < 400;
   } catch (e) {
-    console.error("[DEBUG] Network Error: " + e);
     return false;
   }
 }
@@ -201,13 +218,10 @@ function setupMarketIndexTriggers() {
 }
 
 function syncMarketIndexHistory() {
-  const historyQuery = 'marketindex.com.au -in:trash'; 
+  const historyQuery = 'marketindex is:unread'; // Re-scans all unread
   console.log('[MarketIndex] Manual History Sync...');
   try {
-    const originalValue = MARKET_INDEX_CONFIG.GMAIL_QUERY;
-    MARKET_INDEX_CONFIG.GMAIL_QUERY = historyQuery;
     processMarketIndexEmails();
-    MARKET_INDEX_CONFIG.GMAIL_QUERY = originalValue;
   } catch (e) {
     console.error('[MarketIndex] Manual Sync Failed:', e);
   }
