@@ -63,6 +63,7 @@ function processMarketIndexEmails() {
     // 2. PROCESS LOOP
     const alertsBatch = [];
     const reportsBatch = [];
+    const processedThreads = [];
 
     threads.forEach((thread, tIdx) => {
       const messages = thread.getMessages();
@@ -93,25 +94,30 @@ function processMarketIndexEmails() {
         }
       });
       
-      // 3. IMMEDIATE CLEANUP (Anti-Timeout Strategy)
-      // We move threads to trash IMMEDIATELY after processing their messages.
-      // This ensures that if the script times out later in the loop, we don't 
-      // duplicate work in the next run.
-      GmailApp.moveThreadToTrash(thread);
+      processedThreads.push(thread);
     });
 
     // 4. INJECT (Batch Writes to Firestore)
+    let alertsSuccess = true;
     if (alertsBatch.length > 0) {
-        saveAlertsToFirestore_(alertsBatch);
-        console.log(`[MarketIndex] Injected ${alertsBatch.length} Company Alerts.`);
+        alertsSuccess = saveAlertsToFirestore_(alertsBatch);
+        if (alertsSuccess) console.log(`[MarketIndex] Injected ${alertsBatch.length} Company Alerts.`);
     }
     
+    let reportsSuccess = true;
     if (reportsBatch.length > 0) {
-        saveReportsToFirestore_(reportsBatch);
-        console.log(`[MarketIndex] Injected ${reportsBatch.length} Market Reports.`);
+        reportsSuccess = saveReportsToFirestore_(reportsBatch);
+        if (reportsSuccess) console.log(`[MarketIndex] Injected ${reportsBatch.length} Market Reports.`);
     }
 
-    console.log('[MarketIndex] Cycle Complete.');
+    // 5. IMMEDIATE CLEANUP (Anti-Timeout Strategy)
+    // We move threads to trash ONLY AFTER successful processing.
+    if (alertsSuccess && reportsSuccess) {
+        processedThreads.forEach(thread => GmailApp.moveThreadToTrash(thread));
+        console.log('[MarketIndex] Cycle Complete. Threads Trashed.');
+    } else {
+        console.error('[MarketIndex] Cycle failed to inject all data. Keeping threads in inbox for retry.');
+    }
 
   } catch (e) {
     console.error('[MarketIndex] CRITICAL FAILURE:', e);
@@ -128,21 +134,27 @@ function processMarketIndexEmails() {
 function classifyEmail_(subject) {
   const s = subject.toUpperCase();
   
-  if (s.includes('REPORT') || s.includes('WRAP') || s.includes('WEEKLY') || s.includes('MIDDAY') || s.includes('CHART') || s.includes('MORNING') || s.includes('EVENING') || s.includes('PREVIEW')) {
-    return 'MARKET_REPORT';
-  }
+  // 1. COMPANY ALERTS FIRST (To prevent "Annual Report" or "Trading Update" from being swallowed)
   
-  // Typical Format: "[BHP] Change in substantial holding"
-  if (s.includes('[') && s.includes(']')) {
+  // Pattern A: "[BHP] Change in substantial holding"
+  // Exclude "[Market Index]" wraps from being caught here.
+  if (s.includes('[') && s.includes(']') && !s.includes('[MARKET INDEX]')) {
     return 'COMPANY_ALERT';
   }
   
-  if (s.match(/^[A-Z]{3,6}\s*:/)) { // "BHP: Headline" or "BHP : Headline"
+  // Pattern B: "BHP: Headline" or "BHP - Headline" or "ASX:WDS - Headline"
+  if (s.match(/^(?:ASX:)?\s*[A-Z0-9]{2,6}\s*[-:]/)) {
      return 'COMPANY_ALERT';
   }
   
+  // Pattern C: Specific alert keywords
   if (s.includes('PRICE PAUSE') || s.includes('TRADING HALT') || s.includes('REINSTATEMENT')) {
      return 'COMPANY_ALERT';
+  }
+
+  // 2. MARKET REPORTS SECOND
+  if (s.includes('REPORT') || s.includes('WRAP') || s.includes('RAP') || s.includes('WEEKLY') || s.includes('MIDDAY') || s.includes('CHART') || s.includes('MORNING') || s.includes('EVENING') || s.includes('PREVIEW') || s.includes('UPDATE') || s.includes('SUMMARY') || s.includes('DIGEST')) {
+    return 'MARKET_REPORT';
   }
   
   return 'UNKNOWN';
@@ -158,9 +170,9 @@ function extractCompanyAlertData_(subject, body, date, emailLink) {
     let headline = subject;
     
     // Pattern 1: [BHP] Headline
-    const bracketMatch = subject.match(/\[([A-Za-z0-9]{3,})\]\s*(.*)/);
-    // Pattern 2: BHP: Headline
-    const colonMatch = subject.match(/^([A-Za-z0-9]{3,})\s*:\s*(.*)/);
+    const bracketMatch = subject.match(/\[([A-Za-z0-9]{2,6})\]\s*(.*)/i);
+    // Pattern 2: BHP: Headline or BHP - Headline
+    const colonMatch = subject.match(/^([A-Za-z0-9]{2,6})\s*[-:]\s*(.*)/i);
 
     if (bracketMatch) {
       code = bracketMatch[1].toUpperCase();
@@ -223,7 +235,7 @@ function getBestMarketIndexUrl_(body, fallback) {
       const link = match[1];
       const text = match[2];
       
-      const ctaPattern = /Read Full|Read Online|Read Article|View.*Browser|Web Version|View Online|Read Story|Read More|Read Next|Morning Wrap|Evening Wrap|Read this online|Open in browser/i;
+      const ctaPattern = /Read Full|Read Online|Read Article|View.*Browser|Web Version|View Online|Read Story|Read More|Read Next|Morning Wrap|Evening Wrap|Morning Rap|Evening Rap|Read this online|Open in browser/i;
       
       if (ctaPattern.test(text)) {
           if (!link.includes('unsubscribe') && !link.includes('privacy') && !link.includes('preferences')) {
@@ -311,7 +323,7 @@ function saveAlertsToFirestore_(items) {
       }
   };
   
-  writeFirestoreDocMI_(streamPath, batchPayload);
+  return writeFirestoreDocMI_(streamPath, batchPayload);
 }
 
 function saveReportsToFirestore_(items) {
@@ -327,7 +339,7 @@ function saveReportsToFirestore_(items) {
       }
   };
   
-  writeFirestoreDocMI_(streamPath, batchPayload);
+  return writeFirestoreDocMI_(streamPath, batchPayload);
 }
 
 
@@ -337,12 +349,12 @@ function mapAlertToFirestore_(item) {
     return {
         mapValue: {
             fields: {
-                code: { stringValue: item.code },
-                headline: { stringValue: item.headline },
-                date: { stringValue: item.date },
-                timestamp: { integerValue: item.timestamp.toString() },
-                link: { stringValue: item.link },
-                type: { stringValue: item.type }
+                code: { stringValue: item.code || 'UNKNOWN' },
+                headline: { stringValue: item.headline || 'Company Alert' },
+                date: { stringValue: item.date || new Date().toISOString() },
+                timestamp: { integerValue: (item.timestamp || Date.now()).toString() },
+                link: { stringValue: item.link || '#' },
+                type: { stringValue: item.type || 'announcement' }
             }
         }
     };
@@ -352,12 +364,12 @@ function mapReportToFirestore_(item) {
     return {
         mapValue: {
             fields: {
-                title: { stringValue: item.title },
-                summary: { stringValue: item.summary },
-                date: { stringValue: item.date },
-                timestamp: { integerValue: item.timestamp.toString() },
-                link: { stringValue: item.link },
-                type: { stringValue: item.type }
+                title: { stringValue: item.title || 'Market Report' },
+                summary: { stringValue: item.summary || 'Summary unavailable' },
+                date: { stringValue: item.date || new Date().toISOString() },
+                timestamp: { integerValue: (item.timestamp || Date.now()).toString() },
+                link: { stringValue: item.link || '#' },
+                type: { stringValue: item.type || 'report' }
             }
         }
     };
@@ -369,14 +381,22 @@ function writeFirestoreDocMI_(pathFragment, payload) {
     const token = ScriptApp.getOAuthToken();
     
     try {
-        UrlFetchApp.fetch(firestoreUrl, {
+        const resp = UrlFetchApp.fetch(firestoreUrl, {
             method: 'patch',
             contentType: 'application/json',
             payload: JSON.stringify(payload),
-            headers: { Authorization: `Bearer ${token}` }
+            headers: { Authorization: `Bearer ${token}` },
+            muteHttpExceptions: true
         });
+        
+        if (resp.getResponseCode() >= 400) {
+            console.error(`[MarketIndex] Firestore Write Failed: HTTP ${resp.getResponseCode()} - ${resp.getContentText().substring(0, 300)}`);
+            return false;
+        }
+        return true;
     } catch (e) {
-        console.warn('[MarketIndex] FireStore Write Fail (Standard/Patch):', e);
+        console.warn('[MarketIndex] FireStore Write Exception:', e);
+        return false;
     }
 }
 
