@@ -266,7 +266,7 @@ class SuperStrategyStore {
 
             case SUPER_STATES.FUND_ACKNOWLEDGEMENT:
                 // Auto-skip if NOI was skipped
-                if (this.data.stateData?.[SUPER_STATES.NOI_SUBMISSION]?.skipped) {
+                if (this.data.stateData?.[SUPER_STATES.NOI_SUBMISSION]?.isNonConcessionalMode) {
                     return { valid: true, message: 'Fund acknowledgement skipped (Not required).' };
                 }
                 if (!sd.acknowledged) return { valid: false, message: 'Fund acknowledgement is required before proceeding.' };

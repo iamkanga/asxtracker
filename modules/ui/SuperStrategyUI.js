@@ -632,7 +632,7 @@ export default class SuperStrategyUI {
                         </div>
 
                         ${(stateData.closureDate && new Date(stateData.closureDate).getMonth() !== 5 && getCurrentFinancialYear(new Date(stateData.closureDate)) === getCurrentFinancialYear()) ? `
-                            ${this._renderOrangeWarning('Strategic Alert: Timing Trap', 'Pushing your closure to May 31st and restarting on June 1st allows you to avoid mandatory drawdowns while keeping your funds tax-free.')}
+                            ${this._renderOrangeWarning('Strategic Alert: Timing Trap', 'Commencing your new pension on or after June 1st exempts it from mandatory drawdowns for the rest of this financial year.<br><br>Note: The pro-rata minimum for your existing pension must still be paid out before it can be closed.')}
                         ` : ''}
 
                         ${(() => {
@@ -960,8 +960,10 @@ export default class SuperStrategyUI {
                                    opacity:${validation.valid ? '1' : '0.5'};">
                         ${(() => {
                             if (!validation.valid) return validation.message;
-                            if (current === SUPER_STATES.NOI_SUBMISSION && superStrategyStore.data.stateData[SUPER_STATES.NOI_SUBMISSION]?.skipped) {
-                                return 'Skip & Keep as Non-Concessional →';
+                            if (current === SUPER_STATES.NOI_SUBMISSION) {
+                                return stateData.isNonConcessionalMode 
+                                    ? 'Skip & Keep as Non-Concessional →' 
+                                    : 'Confirm Concessional Strategy →';
                             }
                             return 'Complete & Advance →';
                         })()}
