@@ -217,6 +217,7 @@ export class AppController {
 
         // REACTIVE REFRESH: Centralize UI updates when prices arrive
         StateAuditor.on('PRICES_UPDATED', () => {
+            this.checkAppHealth(); // Evaluate freshness to clear stale styling immediately
             if (!AppState.isLocked && this.watchlistUI && AppState.watchlist.id) {
                 this.updateDataAndRender(false);
             }
@@ -1389,28 +1390,36 @@ export class AppController {
                 }
 
                 if (this._lastBackgroundTime) {
-                    const STALE_THRESHOLD = 15 * 60 * 1000;
-                    const timeDiff = now - this._lastBackgroundTime;
-
-                    // SMART RESUME: If away for 1-15 mins, silent catch-up refresh
-                    if (timeDiff > (1 * 60 * 1000) && timeDiff <= STALE_THRESHOLD) {
-                        this._refreshAllPrices(AppState.data.shares || []);
+                    // OPTIMISTIC WAKE W/ TARGETED PATCHING (Always trigger on resume)
+                    // Do not pulse 'loading' visually during background updates.
+                    const fetchStartTime = Date.now();
+                    const wasStale = (Date.now() - (AppState.lastGlobalFetch || 0) > 15 * 60 * 1000);
+                    
+                    if (wasStale) {
+                         document.body.classList.add('is-stale');
+                         AppState.health.status = 'stale';
+                         if (this.headerLayout) this.headerLayout.updateConnectionStatus(true, 'stale');
                     }
 
-                    // TRADITIONAL RESUME: If away for > 15 minutes
-                    if (timeDiff > STALE_THRESHOLD) {
-                        // Mark as stale for long sleeps (> 6 hours)
-                        if (timeDiff > (6 * 60 * 60 * 1000)) {
+                    // Trigger a background refresh silently
+                    this._refreshAllPrices(AppState.data.shares || [], true).then(() => {
+                        // The event PRICES_UPDATED will trigger DOM patch, turning opacity to 1.0 instantly.
+                        const elapsed = Date.now() - fetchStartTime;
+                        if (elapsed <= 10000) {
+                            AppState.health.status = 'healthy';
+                            document.body.classList.remove('is-stale');
+                            if (this.headerLayout) this.headerLayout.updateConnectionStatus(true, 'healthy');
+                        } else {
                             AppState.health.status = 'stale';
+                            document.body.classList.add('is-stale');
                             if (this.headerLayout) this.headerLayout.updateConnectionStatus(true, 'stale');
                         }
-
-                        // User Feedback
-                        ToastManager.show('Welcome Back - Refreshing Data...', 'refresh');
-
-                        // Full Refresh
-                        this._refreshAllPrices(AppState.data.shares || [], true);
-                    }
+                    }).catch(err => {
+                        console.error('Optimistic wake fetch failed', err);
+                        AppState.health.status = 'stale';
+                        document.body.classList.add('is-stale');
+                        if (this.headerLayout) this.headerLayout.updateConnectionStatus(true, 'stale');
+                    });
 
                     // Reset Timer
                     this._lastBackgroundTime = 0;
@@ -1426,6 +1435,7 @@ export class AppController {
         if (this._healthMonitorInterval) clearInterval(this._healthMonitorInterval);
 
         this._lastHealthTick = Date.now();
+        this.checkAppHealth(); // Evaluate immediately upon boot
 
         // Run check every 30 seconds
         this._healthMonitorInterval = setInterval(() => {
@@ -1461,21 +1471,49 @@ export class AppController {
             newStatus = 'stale';
         }
 
+        // 4. FETCH AGE CHECK (15 Minutes) - Background Timer Source of Truth
+        const fetchAge = now - (AppState.lastGlobalFetch || 0);
+        if (fetchAge > 15 * 60 * 1000) {
+            newStatus = 'stale';
+        }
+
         // Update Global State
         if (health.status !== newStatus) {
+            const wasHealthy = health.status === 'healthy';
             health.status = newStatus;
 
             // Only update UI if we are connected (disconnected state handles its own UI)
             if (AppState.user && this.headerLayout) {
                 this.headerLayout.updateConnectionStatus(true, newStatus);
             }
+            
+            if (newStatus === 'stale') {
+                document.body.classList.add('is-stale');
+                // Trigger background refresh silently if we just became stale!
+                if (wasHealthy) {
+                    this._refreshAllPrices(AppState.data.shares || [], true).then(() => {
+                        const elapsed = Date.now() - (AppState.lastGlobalFetch || 0);
+                        if (elapsed <= 15 * 60 * 1000) {
+                            AppState.health.status = 'healthy';
+                            document.body.classList.remove('is-stale');
+                            if (this.headerLayout) this.headerLayout.updateConnectionStatus(true, 'healthy');
+                        }
+                    });
+                }
+            } else {
+                document.body.classList.remove('is-stale');
+            }
+        } else if (newStatus === 'stale') {
+            document.body.classList.add('is-stale');
+        } else {
+            document.body.classList.remove('is-stale');
         }
     }
 
 
-    async updateDataAndRender(fetchFresh = false) {
-        // Trigger Loading State on Connection Dot if explicit fetch requested
-        if (fetchFresh && this.headerLayout) {
+    async updateDataAndRender(fetchFresh = false, isManual = false) {
+        // Trigger Loading State on Connection Dot if explicit fetch requested AND it's manual
+        if (fetchFresh && isManual && this.headerLayout) {
             this.headerLayout.updateConnectionStatus(AppState.user !== null, 'loading');
         }
 
@@ -1618,7 +1656,24 @@ export class AppController {
             AppState.hiddenAssets
         );
 
-        this.viewRenderer.render(mergedData, summaryMetrics);
+        // HYBRID RENDERING APPROACH
+        // If this is a silent update (fetchFresh=false), try patching first to avoid animations/flickering.
+        const structureKey = JSON.stringify(mergedData.map(d => d.code));
+        const prevStructureKey = this.viewRenderer._lastRenderedStructureKey;
+
+        if (!fetchFresh && structureKey === prevStructureKey) {
+            // Structure hasn't changed. Attempt a targeted DOM patch.
+            const patchSuccess = this.viewRenderer.patchPricesInDOM(mergedData, summaryMetrics);
+            if (!patchSuccess) {
+                // Failsafe: Full render if DOM nodes are missing or patching failed
+                this.viewRenderer.render(mergedData, summaryMetrics);
+                this.viewRenderer._lastRenderedStructureKey = structureKey;
+            }
+        } else {
+            // Structural change (Sort/Delete/Add) or explicit fetch requested -> Full Wipe and Rebuild
+            this.viewRenderer.render(mergedData, summaryMetrics);
+            this.viewRenderer._lastRenderedStructureKey = structureKey;
+        }
 
         // Ensure Header Title / Gradient updates with new data
         if (this.watchlistUI) {
@@ -1682,6 +1737,7 @@ export class AppController {
                                 if (AppState.watchlist.id === originalWatchlistId) {
                                     // Recover Health Status to Healthy
                                     AppState.health.status = 'healthy';
+                                    document.body.classList.remove('is-stale');
                                     if (this.headerLayout) {
                                         this.headerLayout.updateConnectionStatus(true, 'healthy');
                                     }
@@ -1886,9 +1942,8 @@ export class AppController {
         });
 
         // === STEP 5: RENDER (Fire-and-Forget, Non-Blocking) ===
-        // We set fetchFresh to true to ensure we attempt to get recent prices for the new view.
-        // The global fetch lock and 5-minute throttle will still protect against data waste.
-        this.updateDataAndRender(true).catch(e => console.warn('Render error:', e));
+        // Decouple Navigation from Data: No network fetch on view change, just use AppState memory.
+        this.updateDataAndRender(false).catch(e => console.warn('Render error:', e));
 
         // === STEP 6: Cleanup & Persist (Background Operations) ===
         if (!isBoot && this.headerLayout) this.headerLayout.closeSidebar();
@@ -2544,7 +2599,8 @@ export class AppController {
             if (btn) {
                 e.preventDefault(); // Good practice for buttons
                 ToastManager.show('Refreshing Live Prices...', 'refresh');
-                this.updateDataAndRender(true);
+                // Pass isManual = true to trigger visual pulse
+                this.updateDataAndRender(true, true);
             }
         });
 

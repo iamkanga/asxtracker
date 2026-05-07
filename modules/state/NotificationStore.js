@@ -85,6 +85,9 @@ export class NotificationStore {
             // Always subscribe to Market Index, even for guests
             this._subscribeToMarketIndex();
 
+            // 🔧 DEBUG: Allow reset via console: document.dispatchEvent(new Event('reset-market-dismissed'))
+            document.addEventListener('reset-market-dismissed', () => this.resetDismissedAnnouncements());
+
             if (userId) {
                 this._subscribeToPinned(userId);
                 // Subscribe to Live Preferences (Rules)
@@ -1958,6 +1961,43 @@ export class NotificationStore {
     }
 
     /**
+     * 🔧 RESET — Clears ALL dismissed announcements from BOTH localStorage AND Firestore.
+     * Use this when the dismissed list has grown stale and is hiding valid items.
+     * Call from browser console: notificationStore.resetDismissedAnnouncements()
+     */
+    async resetDismissedAnnouncements() {
+        // 1. Clear in-memory
+        this.dismissedAnnouncements.clear();
+        this.readAnnouncements.clear();
+
+        // 2. Clear localStorage
+        localStorage.removeItem('asx_market_stream_dismissed');
+        localStorage.removeItem('asx_market_stream_read');
+
+        // 3. Clear Firestore cloud sync
+        if (this.userId) {
+            try {
+                const prefRef = doc(db, `artifacts/${APP_ID}/users/${this.userId}/preferences/config`);
+                await updateDoc(prefRef, {
+                    dismissedMarketAlerts: [],
+                    readMarketAlerts: []
+                });
+                console.log('[NotificationStore] ✅ Dismissed & read state reset in Firestore.');
+            } catch (e) {
+                console.warn('[NotificationStore] Failed to reset Firestore dismissals:', e);
+            }
+        }
+
+        // 4. Re-notify UI
+        this._notifyCountChange();
+        document.dispatchEvent(new CustomEvent(EVENTS.MARKET_INDEX_UPDATED, {
+            detail: { count: this.marketIndexAlerts.length, alerts: this.marketIndexAlerts }
+        }));
+
+        console.log(`[NotificationStore] ✅ Reset complete. ${this.marketIndexAlerts.length} alert(s) now visible.`);
+    }
+
+    /**
      * Shared Utility: Resolves various timestamp formats to numeric milliseconds.
      */
     _parseTimestamp(timeVal) {
@@ -2478,6 +2518,8 @@ export class NotificationStore {
                     batches.push(doc.data());
                 });
 
+                console.log(`[MarketIndex] 📡 Snapshot received: ${batches.length} batch(es)`);
+
 
                 // Flatten batches into a single list of alerts
                 let allAlerts = [];
@@ -2491,6 +2533,8 @@ export class NotificationStore {
                         // V2: Document itself is the alert (Single Item Document)
                         items = [batch];
                     }
+
+                    console.log(`[MarketIndex]   Batch: ${batch.batchType || 'unknown'} → ${items.length} item(s)`);
 
                     // Pre-process items to ensure timestamp exists
                     items.forEach(item => {
@@ -2605,6 +2649,9 @@ export class NotificationStore {
                 this.marketIndexAlerts = Array.from(uniqueMap.values())
                     .filter(item => item && item.timestamp)
                     .sort((a, b) => b.timestamp - a.timestamp);
+
+                console.log(`[MarketIndex] ✅ Final: ${this.marketIndexAlerts.length} alert(s) after dedup/filter`);
+                this.marketIndexAlerts.forEach((a, i) => console.log(`[MarketIndex]   [${i}] ${a.code}: ${(a.title || a.headline || '').substring(0, 50)}`));
 
                 // Dispatch event for UI
                 document.dispatchEvent(new CustomEvent(EVENTS.MARKET_INDEX_UPDATED, {

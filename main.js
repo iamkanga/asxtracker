@@ -10,7 +10,7 @@ import { marketIndexController } from './modules/ui/MarketIndexController.js';
 import { widgetPanel } from './modules/ui/WidgetPanel.js';
 import { widgetController } from './modules/controllers/WidgetController.js';
 
-console.log('%c [MAIN] ASX TRACKER v1184 ', 'background: #222; color: #bada55; font-weight: bold;');
+console.log('%c [MAIN] ASX TRACKER v1186 ', 'background: #222; color: #bada55; font-weight: bold;');
 
 const app = new AppController();
 const splash = new SplashScreen();

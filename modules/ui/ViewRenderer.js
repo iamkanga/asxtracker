@@ -146,7 +146,97 @@ export class ViewRenderer {
         }
     }
 
+    /**
+     * Updates text content of existing DOM elements without destroying them.
+     * Prevents animation flickering on minor price updates.
+     */
+    patchPricesInDOM(data, summaryMetrics = null) {
+        if (!this.container) return false;
+        
+        // 1. Update Summary Metrics if present
+        if (summaryMetrics) {
+            const sumContainer = document.getElementById('portfolio-summary');
+            if (sumContainer) {
+                const valNode = sumContainer.querySelector(`[data-type="${SUMMARY_TYPES.VALUE}"] .${CSS_CLASSES.METRIC_VALUE_LARGE}`);
+                if (valNode) valNode.textContent = formatCurrency(summaryMetrics.totalValue);
 
+                const dayNode = sumContainer.querySelector(`[data-type="${SUMMARY_TYPES.DAY_CHANGE}"]`);
+                if (dayNode) {
+                    const lNode = dayNode.querySelector(`.${CSS_CLASSES.METRIC_VALUE_LARGE}`);
+                    const pNode = dayNode.querySelector(`.${CSS_CLASSES.METRIC_PERCENT_SMALL}`);
+                    if (lNode) {
+                        lNode.textContent = formatCurrency(Math.abs(summaryMetrics.dayChangeValue));
+                        lNode.className = `${CSS_CLASSES.METRIC_VALUE_LARGE} ${summaryMetrics.dayChangeValue >= 0 ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}`;
+                    }
+                    if (pNode) {
+                        pNode.textContent = formatPercent(summaryMetrics.dayChangePercent);
+                        pNode.className = `${CSS_CLASSES.METRIC_PERCENT_SMALL} ${summaryMetrics.dayChangePercent >= 0 ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}`;
+                    }
+                }
+            }
+        }
+
+        // 2. Patch individual shares
+        const isPortfolioView = AppState.watchlist.id === PORTFOLIO_ID || AppState.isPortfolioVisible;
+
+        let patchedCount = 0;
+
+        data.forEach(item => {
+            const nodes = this.container.querySelectorAll(`[data-code="${item.code}"]`);
+            if (nodes.length === 0) return;
+            
+            const price = item.currentPrice || 0;
+            const changePercent = item.dayChangePercent || 0;
+            const changeValue = isPortfolioView ? (item.dayChangeValue || 0) : (item.dayChangePerShare || 0);
+
+            nodes.forEach(node => {
+                const targetNode = node.classList.contains(CSS_CLASSES.CARD) || node.tagName.toLowerCase() === 'tr' ? node : node.closest(`.${CSS_CLASSES.CARD}, tr`);
+                if (!targetNode) return;
+                
+                // Update Trend Classes
+                let trendClass = CSS_CLASSES.TREND_UP;
+                if (changePercent < 0) trendClass = CSS_CLASSES.TREND_DOWN;
+                else if (changePercent === 0) trendClass = CSS_CLASSES.TREND_NEUTRAL;
+
+                let gradeClass = CSS_CLASSES.DASHBOARD_GRADE_NEUTRAL;
+                if (changePercent > 0) gradeClass = CSS_CLASSES.DASHBOARD_GRADE_UP;
+                else if (changePercent < 0) gradeClass = CSS_CLASSES.DASHBOARD_GRADE_DOWN;
+
+                targetNode.classList.remove(CSS_CLASSES.TREND_UP, CSS_CLASSES.TREND_DOWN, CSS_CLASSES.TREND_NEUTRAL);
+                targetNode.classList.remove(CSS_CLASSES.DASHBOARD_GRADE_UP, CSS_CLASSES.DASHBOARD_GRADE_DOWN, CSS_CLASSES.DASHBOARD_GRADE_NEUTRAL);
+                targetNode.classList.add(trendClass, gradeClass);
+
+                // Update Price
+                const priceNode = targetNode.querySelector(`.${CSS_CLASSES.CARD_PRICE}`);
+                if (priceNode) priceNode.textContent = formatCurrency(price);
+
+                // Update Change Value & Percent
+                const valNode = targetNode.querySelector(`.${CSS_CLASSES.CHANGE_VALUE}`);
+                if (valNode) {
+                    valNode.textContent = formatCurrency(Math.abs(changeValue));
+                    valNode.className = `${CSS_CLASSES.CHANGE_VALUE} ${changeValue >= 0 ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}`;
+                }
+
+                const pctNode = targetNode.querySelector(`.${CSS_CLASSES.CHANGE_PERCENT}`);
+                if (pctNode) {
+                    const text = pctNode.textContent.includes('(') ? `(${formatPercent(changePercent)})` : formatPercent(changePercent);
+                    pctNode.textContent = text;
+                    pctNode.className = `${CSS_CLASSES.CHANGE_PERCENT} ${CSS_CLASSES.TEXT_SM} ${changePercent >= 0 ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}`;
+                }
+
+                // Table View Special Handling
+                if (targetNode.tagName.toLowerCase() === 'tr' && targetNode.cells.length >= 3) {
+                    targetNode.cells[1].textContent = formatCurrency(price);
+                    targetNode.cells[2].innerHTML = `${formatCurrency(Math.abs(changeValue))} (${formatPercent(changePercent)})`;
+                    targetNode.cells[2].className = `${CSS_CLASSES.DESKTOP_ONLY} ${changeValue >= 0 ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE} ${CSS_CLASSES.CHANGE_VALUE}`;
+                }
+                
+                patchedCount++;
+            });
+        });
+
+        return patchedCount > 0;
+    }
 
     /**
      * Helper to render Rating icons.

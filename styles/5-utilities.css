@@ -572,3 +572,34 @@
         background-position: -200% 0;
     }
 }
+
+/* Dim-on-Stale Static First UI */
+body.is-stale .price,
+body.is-stale .price-change,
+body.is-stale .summary-card .value,
+body.is-stale .metric-value-large,
+body.is-stale .metric-percent-small,
+body.is-stale .card-price,
+body.is-stale .change-value,
+body.is-stale .change-percent,
+body.is-stale .metric-value,
+body.is-stale td:nth-child(2),
+body.is-stale td:nth-child(3) {
+    opacity: 0.6 !important;
+    transition: opacity 0.5s ease;
+}
+
+body:not(.is-stale) .price,
+body:not(.is-stale) .price-change,
+body:not(.is-stale) .summary-card .value,
+body:not(.is-stale) .metric-value-large,
+body:not(.is-stale) .metric-percent-small,
+body:not(.is-stale) .card-price,
+body:not(.is-stale) .change-value,
+body:not(.is-stale) .change-percent,
+body:not(.is-stale) .metric-value,
+body:not(.is-stale) td:nth-child(2),
+body:not(.is-stale) td:nth-child(3) {
+    opacity: 1.0 !important;
+    transition: opacity 0s !important;
+}
