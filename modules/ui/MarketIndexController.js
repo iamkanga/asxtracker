@@ -2,6 +2,7 @@ import { notificationStore } from '../state/NotificationStore.js';
 import { EVENTS } from '../utils/AppConstants.js';
 import { navManager } from '../utils/NavigationManager.js';
 import { LinkHelper } from '../utils/LinkHelper.js';
+import { ToastManager } from './ToastManager.js';
 
 export class MarketIndexController {
     constructor() {
@@ -199,15 +200,30 @@ export class MarketIndexController {
         if (!this.listContainer) return;
 
         // Filter out dismissed items
-        const visibleAlerts = (alerts || []).filter(a => !notificationStore.dismissedAnnouncements.has(a.id || `${a.code}-${a.timestamp}`));
+        const rawAlerts = alerts || [];
+        const visibleAlerts = rawAlerts.filter(a => !notificationStore.dismissedAnnouncements.has(a.id || `${a.code}-${a.timestamp}`));
 
+        console.log(`[MarketIndexController] Rendering: ${visibleAlerts.length} visible / ${rawAlerts.length} total. (${rawAlerts.length - visibleAlerts.length} filtered)`);
 
         if (visibleAlerts.length === 0) {
             this.listContainer.innerHTML = `
                 <div class="empty-state" style="padding: 40px; text-align: center; color: var(--text-muted);">
                     <i class="fas fa-satellite-dish" style="font-size: 24px; margin-bottom: 10px;"></i>
                     <p>No recent announcement data.</p>
+                    ${rawAlerts.length > 0 ? `
+                        <button id="reset-market-ui-btn" style="margin-top: 15px; padding: 8px 16px; border-radius: 6px; background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2); cursor: pointer;">
+                            Show ${rawAlerts.length} Hidden Items
+                        </button>
+                    ` : ''}
                 </div>`;
+            
+            const resetBtn = this.listContainer.querySelector('#reset-market-ui-btn');
+            if (resetBtn) {
+                resetBtn.onclick = () => {
+                    notificationStore.resetDismissedAnnouncements();
+                    ToastManager.info('Market Index view reset.');
+                };
+            }
             return;
         }
 

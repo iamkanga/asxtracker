@@ -224,6 +224,13 @@ export class CashPieChart {
         this.modal.querySelector('.pie-close-btn').addEventListener('click', close);
         this.modal.querySelector(`.${CSS_CLASSES.MODAL_OVERLAY}`).addEventListener('click', close);
 
+        // Global modal untap listener to close on backdrop click
+        this.modal.addEventListener('click', (e) => {
+            if (e.target === this.modal || e.target.classList.contains(CSS_CLASSES.MODAL_OVERLAY)) {
+                close();
+            }
+        });
+
         // Bind History Button
         const historyBtn = this.modal.querySelector('.cash-pie-history-btn');
         if (historyBtn) {

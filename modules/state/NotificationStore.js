@@ -1984,11 +1984,11 @@ export class NotificationStore {
                 });
                 console.log('[NotificationStore] ✅ Dismissed & read state reset in Firestore.');
             } catch (e) {
-                console.warn('[NotificationStore] Failed to reset Firestore dismissals:', e);
+                console.error('[NotificationStore] Failed to clear cloud sync:', e);
             }
         }
 
-        // 4. Re-notify UI
+        // 4. Trigger UI Updates
         this._notifyCountChange();
         document.dispatchEvent(new CustomEvent(EVENTS.MARKET_INDEX_UPDATED, {
             detail: { count: this.marketIndexAlerts.length, alerts: this.marketIndexAlerts }
@@ -2510,15 +2510,15 @@ export class NotificationStore {
             // "artifacts/asx-watchlist-app/alerts_stream"
             // Note: APP_ID is "asx-watchlist-app" defined at top
             const streamRef = collection(db, "artifacts", APP_ID, "alerts_stream");
-            const q = query(streamRef, orderBy('timestamp', 'desc'), limit(50));
+            const q = query(streamRef, orderBy('timestamp', 'desc'), limit(200));
 
-            this.unsubscribeMarketIndex = onSnapshot(q, (snapshot) => {
-                const batches = [];
-                snapshot.forEach((doc) => {
-                    batches.push(doc.data());
-                });
+                this.unsubscribeMarketIndex = onSnapshot(q, (snapshot) => {
+                    const batches = [];
+                    snapshot.forEach((doc) => {
+                        batches.push({ id: doc.id, ...doc.data() });
+                    });
 
-                console.log(`[MarketIndex] 📡 Snapshot received: ${batches.length} batch(es)`);
+                    console.log(`[MarketIndex] 📡 Snapshot received: ${batches.length} batch(es) from Firestore`);
 
 
                 // Flatten batches into a single list of alerts
@@ -2534,7 +2534,7 @@ export class NotificationStore {
                         items = [batch];
                     }
 
-                    console.log(`[MarketIndex]   Batch: ${batch.batchType || 'unknown'} → ${items.length} item(s)`);
+                    console.log(`[MarketIndex]   Processing Batch: ${batch.batchType || 'unknown'} (${batch.id}) → ${items.length} item(s)`);
 
                     // Pre-process items to ensure timestamp exists
                     items.forEach(item => {
@@ -2614,44 +2614,63 @@ export class NotificationStore {
                             if (idMatch) item.id = idMatch[0].toUpperCase();
                         }
 
-                        // FIX: If ID is STILL missing, generate a STABLE one based on content if possible
+                        // v1159: ENHANCED ID STABILITY
                         if (!item.id) {
                             const title = item.title || item.headline || item.desc || '';
                             const safeTitle = title.replace(/[^a-zA-Z0-9]/g, '').substring(0, 32);
-                            // If timestamp is truly stable from backend, use it. Otherwise use title hash.
-                            const tsPart = (t && !isNaN(t)) ? t : safeTitle;
+                            // Ensure we have a string for the ID part
+                            const tsPart = (t && !isNaN(t)) ? String(t) : safeTitle;
                             item.id = `${item.code}-${tsPart}`;
                         }
+
+                        // Add diagnostic metadata for filtering visibility
+                        item._sourceDoc = batch.id;
+                        item._parsedTime = new Date(item.timestamp).toLocaleString();
 
                         allAlerts.push(item);
                     });
                 });
 
-                // FIX: Deduplicate Items based on Content Signature (Code + Time)
-                // This protects against the backend script sending the same email in multiple batches.
+                // FIX: Deduplicate Items based on Content Signature (Code + Normalized Title)
+                // This protects against the backend script sending the same email in multiple batches,
+                // even if the batch timestamps or extraction IDs vary slightly.
                 const uniqueMap = new Map();
                 allAlerts.forEach(item => {
-                    // Create a robust signature. If exact timestamp matches, it's a dupe.
-                    // We can also add headline check if paranoid, but code+time is usually enough for email alerts.
-                    // Using ID is safest if ID is deterministic.
-                    const sig = item.id || `${item.code}|${item.timestamp}`;
+                    const title = item.title || item.headline || '';
+                    const cleanTitle = title.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 64);
+                    
+                    // Signature: Code + Day + Normalized Title (Stable across batches)
+                    // If we have a real ASX announcement ID, we use that as a primary key.
+                    const dateObj = new Date(item.timestamp);
+                    const dayKey = isNaN(dateObj.getTime()) ? '' : dateObj.toISOString().split('T')[0];
+                    const sig = item.id && item.id.includes('A') ? item.id : `${item.code}|${dayKey}|${cleanTitle}`;
 
-                    // If collision, keep the one with more data or just the first one?
-                    // Newest batch usually processed last? actually batches order is not guaranteed here.
-                    // Let's just keep the first one encountered.
                     if (!uniqueMap.has(sig)) {
                         uniqueMap.set(sig, item);
+                    } else {
+                        // Collision: Keep the one with the more specific ID or higher timestamp
+                        const existing = uniqueMap.get(sig);
+                        if (item.timestamp > existing.timestamp) {
+                            uniqueMap.set(sig, item);
+                        }
                     }
                 });
 
                 // Sort by timestamp descending (newest first)
-                // Filter out invalid items just in case
                 this.marketIndexAlerts = Array.from(uniqueMap.values())
                     .filter(item => item && item.timestamp)
                     .sort((a, b) => b.timestamp - a.timestamp);
 
-                console.log(`[MarketIndex] ✅ Final: ${this.marketIndexAlerts.length} alert(s) after dedup/filter`);
-                this.marketIndexAlerts.forEach((a, i) => console.log(`[MarketIndex]   [${i}] ${a.code}: ${(a.title || a.headline || '').substring(0, 50)}`));
+                console.log(`[MarketIndex] ✅ Final List Ready: ${this.marketIndexAlerts.length} total items (after deduplication)`);
+                
+                // Diagnostic summary
+                const summary = this.marketIndexAlerts.slice(0, 10).map(a => ({
+                    code: a.code,
+                    id: a.id,
+                    time: a._parsedTime,
+                    title: (a.title || a.headline || '').substring(0, 40)
+                }));
+                console.table(summary);
 
                 // Dispatch event for UI
                 document.dispatchEvent(new CustomEvent(EVENTS.MARKET_INDEX_UPDATED, {

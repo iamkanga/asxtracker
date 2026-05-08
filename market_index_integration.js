@@ -1,30 +1,30 @@
 /**
  * ============================================================================
- * 📰 MARKET INDEX → FIRESTORE PIPELINE
+ *  MARKET INDEX  FIRESTORE PIPELINE
  * ============================================================================
  *
  * A standalone Google Apps Script that monitors Gmail for Market Index emails,
  * classifies them (Company Alert vs. Market Report), extracts the best
  * actionable URL, and writes structured data to Firestore.
  *
- * ── PIPELINE ──
- *   SCOUT  →  CLASSIFY  →  EXTRACT  →  INJECT  →  CLEAN
+ *  PIPELINE 
+ *   SCOUT    CLASSIFY    EXTRACT    INJECT    CLEAN
  *   Gmail      Subject      HTML        Firestore   Mark Read
  *
- * ── DESIGN PRINCIPLES ──
- * • Self-contained: Zero dependencies on other .gs files.
- * • Defensive: Every external call wrapped in try/catch.
- * • Idempotent: Re-running on the same inbox is safe (unread guard).
- * • Testable: TRASH_AFTER_SUCCESS = false keeps emails in inbox.
+ *  DESIGN PRINCIPLES 
+ *  Self-contained: Zero dependencies on other .gs files.
+ *  Defensive: Every external call wrapped in try/catch.
+ *  Idempotent: Re-running on the same inbox is safe (unread guard).
+ *  Testable: TRASH_AFTER_SUCCESS = false keeps emails in inbox.
  *
- * ── SETUP ──
+ *  SETUP 
  * 1. Paste this file into Google Apps Script.
  * 2. Run `setupTrigger()` once.
  * 3. Emails process every 10 minutes automatically.
  *
- * ── TESTING vs PRODUCTION ──
- * • Testing:    TRASH_AFTER_SUCCESS = false  (emails stay, marked read only)
- * • Production: TRASH_AFTER_SUCCESS = true   (emails trashed after success)
+ *  TESTING vs PRODUCTION 
+ *  Testing:    TRASH_AFTER_SUCCESS = false  VERSION: '1.2.1', // v1159: Explicit Code Mapping
+  TRASH_AFTER_SUCCESS: true, // v1159: Trash processed emails to avoid duplicate processing
  */
 
 // =============================================================================
@@ -37,14 +37,15 @@ const MI_CONFIG = {
 
   /**
    * TESTING MODE FLAG
-   * ─────────────────
+   * 
    * false = Emails are ONLY marked as read after successful Firestore write.
    *         They remain in the inbox/archive for manual inspection.
    * true  = Emails are marked read AND moved to trash after success.
    *
    * LEAVE AS `false` DURING TESTING. Flip to `true` when fully validated.
    */
-  TRASH_AFTER_SUCCESS: true,
+  VERSION: '1.2.1', // v1159: Explicit Code Mapping
+  TRASH_AFTER_SUCCESS: true, // v1159: Trash processed emails to avoid duplicate processing
 
   /** Gmail search query. Simple keyword + is:unread is most reliable (from: can miss). */
   GMAIL_QUERY: 'marketindex is:unread',
@@ -63,7 +64,7 @@ const MI_CONFIG = {
 };
 
 // =============================================================================
-// LINK EXTRACTION — BLOCKLIST & PRIORITY KEYWORDS
+// LINK EXTRACTION  BLOCKLIST & PRIORITY KEYWORDS
 // =============================================================================
 
 /**
@@ -86,13 +87,13 @@ const URL_BLOCKLIST = [
 ];
 
 /**
- * PRIMARY CTA button text — these indicate the actual article/announcement link.
+ * PRIMARY CTA button text  these indicate the actual article/announcement link.
  * These are checked FIRST and take absolute priority.
  */
 const CTA_PRIMARY = /Read\s*Full|Read\s*Online|Read\s*Article|Read\s*Story|Read\s*More|Read\s*Next|Read\s*this\s*online|Read\s*full\s*\w+\s*Wrap/i;
 
 /**
- * SECONDARY CTA button text — lower confidence. Only used if no primary CTA found.
+ * SECONDARY CTA button text  lower confidence. Only used if no primary CTA found.
  * "View in Browser" is a common Mailchimp/email boilerplate that SOMETIMES is the
  * only usable link, but is often junk.
  */
@@ -136,27 +137,27 @@ const REPORT_INDICATORS = /WRAP|RAP|REPORT|MIDDAY|MORNING|EVENING|AFTERNOON|PREV
 // =============================================================================
 
 /**
- * Primary trigger function — called every 10 minutes by Apps Script trigger.
- * Orchestrates the full SCOUT → CLASSIFY → EXTRACT → INJECT → CLEAN pipeline.
+ * Primary trigger function  called every 10 minutes by Apps Script trigger.
+ * Orchestrates the full SCOUT  CLASSIFY  EXTRACT  INJECT  CLEAN pipeline.
  */
 function processMarketIndexEmails() {
   if (!MI_CONFIG.ENABLED) {
-    Logger.log('[Pipeline] ⏸️  Integration DISABLED. Skipping.');
+    Logger.log('[Pipeline]   Integration DISABLED. Skipping.');
     return;
   }
 
-  Logger.log('[Pipeline] 🔍 Scouting for unread Market Index emails...');
+  Logger.log('[Pipeline]  Scouting for unread Market Index emails...');
 
   try {
-    // ── SCOUT ──
+    //  SCOUT 
     const threads = GmailApp.search(MI_CONFIG.GMAIL_QUERY, 0, MI_CONFIG.BATCH_SIZE);
 
     if (threads.length === 0) {
-      Logger.log('[Pipeline] 📭 No unread emails found. Done.');
+      Logger.log('[Pipeline]  No unread emails found. Done.');
       return;
     }
 
-    Logger.log(`[Pipeline] 📬 Found ${threads.length} thread(s). Processing...`);
+    Logger.log(`[Pipeline]  Found ${threads.length} thread(s). Processing...`);
 
     // Accumulators for the two Firestore buckets
     const alertItems = [];
@@ -165,13 +166,13 @@ function processMarketIndexEmails() {
     // Track which threads had at least one successful extraction
     const succeededThreads = [];
 
-    // ── PROCESS EACH THREAD ──
+    //  PROCESS EACH THREAD 
     for (let t = 0; t < threads.length; t++) {
       const thread = threads[t];
       const messages = thread.getMessages();
       let threadYieldedData = false;
 
-      Logger.log(`[Pipeline] ── Thread ${t + 1}/${threads.length} (${messages.length} msg) ──`);
+      Logger.log(`[Pipeline]  Thread ${t + 1}/${threads.length} (${messages.length} msg) `);
 
       for (let m = 0; m < messages.length; m++) {
         const msg = messages[m];
@@ -183,24 +184,24 @@ function processMarketIndexEmails() {
         const bodyHtml = msg.getBody();
         const date = msg.getDate();
 
-        Logger.log(`[Pipeline]   📧 "${subject}"`);
+        Logger.log(`[Pipeline]    "${subject}"`);
 
-        // ── CLASSIFY ──
+        //  CLASSIFY 
         const classification = classifySubject_(subject);
-        Logger.log(`[Pipeline]   → Classification: ${classification}`);
+        Logger.log(`[Pipeline]    Classification: ${classification}`);
 
         if (classification === 'UNKNOWN') {
-          Logger.log('[Pipeline]   ⚠️  Unrecognised subject pattern. Skipping message.');
+          Logger.log('[Pipeline]     Unrecognised subject pattern. Skipping message.');
           continue;
         }
 
-        // ── EXTRACT ──
+        //  EXTRACT 
         if (classification === 'COMPANY_ALERT') {
           const data = extractAlert_(subject, bodyHtml, date);
           if (data) {
             alertItems.push(data);
             threadYieldedData = true;
-            Logger.log(`[Pipeline]   ✅ Alert: [${data.code}] ${data.headline}`);
+            Logger.log(`[Pipeline]    Alert: [${data.code}] ${data.headline}`);
             Logger.log(`[Pipeline]      Link: ${data.link}`);
           }
         } else if (classification === 'MARKET_REPORT') {
@@ -208,7 +209,7 @@ function processMarketIndexEmails() {
           if (data) {
             reportItems.push(data);
             threadYieldedData = true;
-            Logger.log(`[Pipeline]   ✅ Report: ${data.title}`);
+            Logger.log(`[Pipeline]    Report: ${data.title}`);
             Logger.log(`[Pipeline]      Link: ${data.link}`);
           }
         }
@@ -219,27 +220,27 @@ function processMarketIndexEmails() {
       }
     }
 
-    // ── INJECT ──
+    //  INJECT 
     let alertsWritten = false;
     let reportsWritten = false;
 
     if (alertItems.length > 0) {
       alertsWritten = writeToStream_('COMPANY_ALERTS', alertItems, mapAlertFields_);
       Logger.log(alertsWritten
-        ? `[Pipeline] 🟢 Wrote ${alertItems.length} alert(s) to Firestore.`
-        : `[Pipeline] 🔴 FAILED to write alerts. Emails will NOT be touched.`
+        ? `[Pipeline]  Wrote ${alertItems.length} alert(s) to Firestore.`
+        : `[Pipeline]  FAILED to write alerts. Emails will NOT be touched.`
       );
     }
 
     if (reportItems.length > 0) {
       reportsWritten = writeToStream_('MARKET_REPORT', reportItems, mapReportFields_);
       Logger.log(reportsWritten
-        ? `[Pipeline] 🟢 Wrote ${reportItems.length} report(s) to Firestore.`
-        : `[Pipeline] 🔴 FAILED to write reports. Emails will NOT be touched.`
+        ? `[Pipeline]  Wrote ${reportItems.length} report(s) to Firestore.`
+        : `[Pipeline]  FAILED to write reports. Emails will NOT be touched.`
       );
     }
 
-    // ── CLEAN ──
+    //  CLEAN 
     // Only mark/trash threads whose data was successfully written.
     const writeSucceeded = alertsWritten || reportsWritten;
 
@@ -253,18 +254,18 @@ function processMarketIndexEmails() {
       });
 
       const action = MI_CONFIG.TRASH_AFTER_SUCCESS ? 'marked read + trashed' : 'marked read (testing mode)';
-      Logger.log(`[Pipeline] 🧹 ${succeededThreads.length} thread(s) ${action}.`);
+      Logger.log(`[Pipeline]  ${succeededThreads.length} thread(s) ${action}.`);
     }
 
     // Nothing extracted at all
     if (alertItems.length === 0 && reportItems.length === 0) {
-      Logger.log('[Pipeline] 📝 No actionable data extracted from any message.');
+      Logger.log('[Pipeline]  No actionable data extracted from any message.');
     }
 
-    Logger.log('[Pipeline] ✔️  Cycle complete.');
+    Logger.log('[Pipeline]   Cycle complete.');
 
   } catch (e) {
-    Logger.log(`[Pipeline] 💥 FATAL: ${e.message}`);
+    Logger.log(`[Pipeline]  FATAL: ${e.message}`);
     Logger.log(`[Pipeline] Stack: ${e.stack}`);
   }
 }
@@ -278,12 +279,12 @@ function processMarketIndexEmails() {
  * Report, or is unrecognised.
  *
  * Decision tree:
- *   0. If subject starts with ASX:CODE → COMPANY_ALERT (always, even if 'Report' appears)
- *   1. If subject contains a bracketed ticker [XXX] → COMPANY_ALERT
+ *   0. If subject starts with ASX:CODE  COMPANY_ALERT (always, even if 'Report' appears)
+ *   1. If subject contains a bracketed ticker [XXX]  COMPANY_ALERT
  *      (unless it also contains broad report keywords like "Market Index Report")
- *   2. If subject contains alert-specific keywords (Dividend, Halt, etc.) → COMPANY_ALERT
- *   3. If subject contains report keywords (Wrap, Morning, etc.) → MARKET_REPORT
- *   4. Otherwise → UNKNOWN
+ *   2. If subject contains alert-specific keywords (Dividend, Halt, etc.)  COMPANY_ALERT
+ *   3. If subject contains report keywords (Wrap, Morning, etc.)  MARKET_REPORT
+ *   4. Otherwise  UNKNOWN
  *
  * @param {string} subject - The email subject line.
  * @returns {'COMPANY_ALERT'|'MARKET_REPORT'|'UNKNOWN'}
@@ -293,14 +294,14 @@ function classifySubject_(subject) {
 
   const upper = subject.toUpperCase();
 
-  // Rule 0: ASX:CODE prefix → ALWAYS a Company Alert
+  // Rule 0: ASX:CODE prefix  ALWAYS a Company Alert
   // e.g. "ASX:FBR - Sensitive Ann: Quarterly Activities/Appendix 4C Cash Flow Report"
   // The word "Report" in the subject is part of the announcement title, not a market wrap.
   if (ALERT_INDICATORS.HAS_ASX_TICKER.test(subject)) {
     return 'COMPANY_ALERT';
   }
 
-  // Rule 1: Bracketed ticker → Company Alert (unless it looks like a report header)
+  // Rule 1: Bracketed ticker  Company Alert (unless it looks like a report header)
   if (ALERT_INDICATORS.HAS_BRACKET_TICKER.test(subject)) {
     // Guard: "[Market Index] Evening Wrap" is a report, not a company alert
     if (upper.includes('MARKET INDEX') && REPORT_INDICATORS.test(subject)) {
@@ -309,7 +310,7 @@ function classifySubject_(subject) {
     return 'COMPANY_ALERT';
   }
 
-  // Rule 2: Alert keywords without brackets → Company Alert
+  // Rule 2: Alert keywords without brackets  Company Alert
   if (ALERT_INDICATORS.KEYWORDS.test(subject)) {
     // But not if it's clearly a broad market report ("Dividend Report" without a ticker)
     if (REPORT_INDICATORS.test(subject) && !ALERT_INDICATORS.HAS_ASX_TICKER.test(subject)) {
@@ -318,7 +319,7 @@ function classifySubject_(subject) {
     return 'COMPANY_ALERT';
   }
 
-  // Rule 3: Report keywords → Market Report
+  // Rule 3: Report keywords  Market Report
   if (REPORT_INDICATORS.test(subject)) {
     return 'MARKET_REPORT';
   }
@@ -347,7 +348,7 @@ function extractAlert_(subject, bodyHtml, date) {
     let headline = subject;
 
     // Pattern 1: ASX:FBR - Headline (Market Index format)
-    const asxMatch = subject.match(/^ASX:([A-Za-z0-9]{2,5})\s*[-–—]\s*(.*)/i);
+    const asxMatch = subject.match(/^ASX:([A-Za-z0-9]{2,5})\s*[-]\s*(.*)/i);
     // Pattern 2: [BHP] Some Headline Text
     const bracketMatch = subject.match(/\[([A-Za-z0-9]{2,5})\]\s*(.*)/);
     // Pattern 3: BHP: Some Headline Text
@@ -376,7 +377,7 @@ function extractAlert_(subject, bodyHtml, date) {
       type: 'announcement',
     };
   } catch (e) {
-    Logger.log(`[Extract] ⚠️  Alert parse error: ${e.message}`);
+    Logger.log(`[Extract]   Alert parse error: ${e.message}`);
     return null;
   }
 }
@@ -422,7 +423,7 @@ function extractReport_(subject, bodyHtml, date) {
       type: 'report',
     };
   } catch (e) {
-    Logger.log(`[Extract] ⚠️  Report parse error: ${e.message}`);
+    Logger.log(`[Extract]   Report parse error: ${e.message}`);
     return null;
   }
 }
@@ -435,7 +436,7 @@ function extractReport_(subject, bodyHtml, date) {
  * The "brain" of the integration. Scans the HTML body and returns the single
  * best URL to link to in the app.
  *
- * ── PRIORITY TIERS ──
+ *  PRIORITY TIERS 
  * Tier 0 (Highest): Direct PDF links (.pdf in any <a> href)
  * Tier 1: CTA button links ("Read Full", "Read Online", "Evening Wrap", etc.)
  * Tier 2: Content-path links (/asx-announcements/, /reports/, /news/, etc.)
@@ -451,7 +452,7 @@ function extractReport_(subject, bodyHtml, date) {
 function findBestUrl_(html) {
   if (!html) return null;
 
-  // ── PHASE 1: Parse all <a> tags into structured link objects ──
+  //  PHASE 1: Parse all <a> tags into structured link objects 
   // We iterate each anchor individually to avoid the "first link wins" regex bug.
   const anchorRegex = /<a[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
   const links = [];
@@ -470,14 +471,14 @@ function findBestUrl_(html) {
     links.push({ href, innerText, innerHtml });
   }
 
-  // ── TIER 0: Direct PDF Links ──
+  //  TIER 0: Direct PDF Links 
   const pdfLink = links.find(l => /\.pdf(\?|$|#)/i.test(l.href));
   if (pdfLink) {
     Logger.log(`[URL] Tier 0 (PDF): ${pdfLink.href}`);
     return pdfLink.href;
   }
 
-  // ── TIER 1A: PRIMARY CTA Button Links ──
+  //  TIER 1A: PRIMARY CTA Button Links 
   // "Read Full Announcement", "Read full Evening Wrap", etc.
   const primaryCta = links.find(l => {
     const text = l.innerText || l.innerHtml;
@@ -488,8 +489,8 @@ function findBestUrl_(html) {
     return primaryCta.href;
   }
 
-  // ── TIER 1B: SECONDARY CTA Button Links ──
-  // "View Online", "Web Version" — only if no primary CTA found.
+  //  TIER 1B: SECONDARY CTA Button Links 
+  // "View Online", "Web Version"  only if no primary CTA found.
   const secondaryCta = links.find(l => {
     const text = l.innerText || l.innerHtml;
     return CTA_SECONDARY.test(text) && !CTA_JUNK_TEXT.test(text);
@@ -499,7 +500,7 @@ function findBestUrl_(html) {
     return secondaryCta.href;
   }
 
-  // ── TIER 2: Content-Path Links ──
+  //  TIER 2: Content-Path Links 
   // URLs with paths that indicate real article/announcement/report content.
   const contentPaths = [
     '/asx-announcements/',
@@ -520,7 +521,7 @@ function findBestUrl_(html) {
     return contentLink.href;
   }
 
-  // ── TIER 3: Stock-Specific Pages ──
+  //  TIER 3: Stock-Specific Pages 
   // URLs like marketindex.com.au/asx/BHP/announcements (deep pages, not just /asx/BHP)
   const stockDeepLink = links.find(l => {
     if (!l.href.includes('/asx/')) return false;
@@ -533,7 +534,7 @@ function findBestUrl_(html) {
     return stockDeepLink.href;
   }
 
-  // ── TIER 4: Any Trusted-Domain Link ──
+  //  TIER 4: Any Trusted-Domain Link 
   // Sweep all links from trusted domains (marketindex, asx, mandrill tracking)
   const trustedLink = links.find(l => TRUSTED_DOMAINS.test(l.href));
   if (trustedLink) {
@@ -541,7 +542,7 @@ function findBestUrl_(html) {
     return trustedLink.href;
   }
 
-  // ── PHASE 2: Fallback — Regex sweep of raw HTML for non-anchor URLs ──
+  //  PHASE 2: Fallback  Regex sweep of raw HTML for non-anchor URLs 
   // Some emails embed URLs in tracking pixels or inline styles.
   const rawUrlRegex = /https?:\/\/(?:www\.)?(?:marketindex\.com\.au|asx\.com\.au|mandrillapp\.com\/track\/click)\/[^\s"'<>]+/gi;
   const rawUrls = (html.match(rawUrlRegex) || []).filter(url => !isBlockedUrl_(url));
@@ -566,7 +567,7 @@ function findBestUrl_(html) {
     return rawUrls[0];
   }
 
-  Logger.log('[URL] ⚠️  No usable URL found in email body.');
+  Logger.log('[URL]   No usable URL found in email body.');
   return null;
 }
 
@@ -649,6 +650,7 @@ function mapReportFields_(item) {
   return {
     mapValue: {
       fields: {
+        code: { stringValue: 'MARKET' }, // Explicit for frontend stability
         title: { stringValue: item.title || '' },
         summary: { stringValue: item.summary || '' },
         date: { stringValue: item.date || '' },
@@ -684,13 +686,13 @@ function writeFirestoreDoc_(docPath, payload) {
     const code = response.getResponseCode();
 
     if (code >= 400) {
-      Logger.log(`[Firestore] ❌ Write FAILED (HTTP ${code}): ${response.getContentText().substring(0, 300)}`);
+      Logger.log(`[Firestore]  Write FAILED (HTTP ${code}): ${response.getContentText().substring(0, 300)}`);
       return false;
     }
 
     return true;
   } catch (e) {
-    Logger.log(`[Firestore] 💥 Exception: ${e.message}`);
+    Logger.log(`[Firestore]  Exception: ${e.message}`);
     return false;
   }
 }
@@ -700,7 +702,7 @@ function writeFirestoreDoc_(docPath, payload) {
 // =============================================================================
 
 /**
- * 🛠️ ONE-TIME SETUP
+ *  ONE-TIME SETUP
  * Run this function once to register the time-based trigger.
  * It will clean up any existing trigger for this function first.
  */
@@ -709,7 +711,7 @@ function setupTrigger() {
   ScriptApp.getProjectTriggers().forEach(trigger => {
     if (trigger.getHandlerFunction() === 'processMarketIndexEmails') {
       ScriptApp.deleteTrigger(trigger);
-      Logger.log('[Setup] 🗑️  Removed existing trigger.');
+      Logger.log('[Setup]   Removed existing trigger.');
     }
   });
 
@@ -719,141 +721,112 @@ function setupTrigger() {
     .everyMinutes(10)
     .create();
 
-  Logger.log('[Setup] ✅ Trigger created. Emails will be processed every 10 minutes.');
-  Logger.log(`[Setup] 📋 Trash mode: ${MI_CONFIG.TRASH_AFTER_SUCCESS ? 'PRODUCTION (will trash)' : 'TESTING (mark read only)'}`);
+  Logger.log('[Setup]  Trigger created. Emails will be processed every 10 minutes.');
+  Logger.log(`[Setup]  Trash mode: ${MI_CONFIG.TRASH_AFTER_SUCCESS ? 'PRODUCTION (will trash)' : 'TESTING (mark read only)'}`);
 }
 
 /**
- * 🧪 MANUAL TEST RUN
+ *  MANUAL TEST RUN
  * Runs the pipeline once immediately. Useful for testing without waiting
  * for the trigger interval.
  */
 function manualRun() {
-  Logger.log('═══════════════════════════════════════════════');
-  Logger.log('  MANUAL RUN — Market Index Pipeline');
+  Logger.log('');
+  Logger.log('  MANUAL RUN  Market Index Pipeline');
   Logger.log(`  Trash Mode: ${MI_CONFIG.TRASH_AFTER_SUCCESS ? 'PRODUCTION' : 'TESTING'}`);
-  Logger.log('═══════════════════════════════════════════════');
+  Logger.log('');
   processMarketIndexEmails();
 }
 
 // =============================================================================
-// 7. DIAGNOSTIC TOOL
+// =============================================================================
+// 7. DIAGNOSTIC TOOLS
 // =============================================================================
 
-/**
- * 🔬 DIAGNOSTIC — Run this to debug Gmail search issues.
- * Tests multiple query variations and reports what it finds.
- * THIS DOES NOT MODIFY ANY EMAILS. Read-only inspection.
- */
 function diagnoseMI() {
-  Logger.log('═══════════════════════════════════════════════');
-  Logger.log('  🔬 DIAGNOSTIC — Gmail Search Debug');
-  Logger.log('═══════════════════════════════════════════════');
+  Logger.log('=== DIAGNOSTIC - Gmail Search Debug ===');
 
-  // Test 1: Current query
   const queries = [
-    'marketindex is:unread',
-    'from:no-reply@marketindex.com.au is:unread',
-    'from:marketindex.com.au is:unread',
-    'marketindex',
-    'from:marketindex.com.au',
-    'subject:"Market Index" is:unread',
-    'subject:"Evening Wrap" is:unread',
-    'subject:"ASX:SUL" is:unread',
+    MI_CONFIG.GMAIL_QUERY,
+    'from:marketindex in:trash',
+    'subject:"Morning Wrap" in:trash',
+    'subject:"Evening Wrap" in:trash'
   ];
 
   queries.forEach(q => {
     try {
-      const results = GmailApp.search(q, 0, 5);
-      Logger.log(`  Query: "${q}"  →  ${results.length} thread(s)`);
+      const results = GmailApp.search(q, 0, 10);
+      Logger.log('\nQuery: "' + q + '" -> ' + results.length + ' thread(s)');
       results.forEach((thread, i) => {
-        const subject = thread.getFirstMessageSubject();
+        const msg = thread.getMessages()[0];
+        const subject = msg.getSubject();
         const unread = thread.isUnread();
-        Logger.log(`    [${i}] ${unread ? '📩 UNREAD' : '📨 read'}: "${subject}"`);
+        const date = msg.getDate();
+        const classification = classifySubject_(subject);
+        Logger.log('  [' + i + '] ' + date.toLocaleDateString() + ' | ' + (unread ? 'UNREAD' : 'read') + ' | Class: ' + classification);
+        Logger.log('      Subject: "' + subject + '"');
       });
     } catch (e) {
-      Logger.log(`  Query: "${q}"  →  ❌ ERROR: ${e.message}`);
+      Logger.log('Query: "' + q + '" -> ERROR: ' + e.message);
     }
   });
 
-  // Test 2: Check if MI_CONFIG is intact
-  Logger.log('');
-  Logger.log('  Config Check:');
-  Logger.log(`    MI_CONFIG.ENABLED = ${MI_CONFIG.ENABLED}`);
-  Logger.log(`    MI_CONFIG.GMAIL_QUERY = "${MI_CONFIG.GMAIL_QUERY}"`);
-  Logger.log(`    MI_CONFIG.BATCH_SIZE = ${MI_CONFIG.BATCH_SIZE}`);
-  Logger.log(`    MI_CONFIG.TRASH_AFTER_SUCCESS = ${MI_CONFIG.TRASH_AFTER_SUCCESS}`);
-  Logger.log(`    MI_CONFIG.STREAM_PATH = "${MI_CONFIG.STREAM_PATH}"`);
-
-  Logger.log('');
-  Logger.log('═══════════════════════════════════════════════');
-  Logger.log('  Diagnostic complete. Check results above.');
-  Logger.log('═══════════════════════════════════════════════');
+  Logger.log('\nConfig Check:');
+  Logger.log('  ENABLED = ' + MI_CONFIG.ENABLED);
+  Logger.log('  GMAIL_QUERY = "' + MI_CONFIG.GMAIL_QUERY + '"');
+  Logger.log('  TRASH_AFTER_SUCCESS = ' + MI_CONFIG.TRASH_AFTER_SUCCESS);
+  Logger.log('\n=== Diagnostic complete ===');
 }
 
 /**
- * 🔍 VERIFY — Reads back data from Firestore to confirm writes persisted.
+ * VERIFY - Reads back data from Firestore to confirm writes persisted.
  * Run this after manualRun() to check if data actually exists.
  */
 function verifyFirestoreData() {
-  Logger.log('═══════════════════════════════════════════════');
-  Logger.log('  🔍 VERIFY — Firestore Data Check');
-  Logger.log('═══════════════════════════════════════════════');
-
+  Logger.log('=== VERIFY - Firestore Data Check ===');
   const collectionPath = MI_CONFIG.STREAM_PATH;
-  const url = `${MI_CONFIG.FIREBASE.BASE_URL}/projects/${MI_CONFIG.FIREBASE.PROJECT_ID}/databases/(default)/documents/${collectionPath}?pageSize=5&orderBy=timestamp%20desc`;
+  const url = MI_CONFIG.FIREBASE.BASE_URL + '/projects/' + MI_CONFIG.FIREBASE.PROJECT_ID + '/databases/(default)/documents/' + collectionPath + '?pageSize=15&orderBy=timestamp%20desc';
 
   try {
     const token = ScriptApp.getOAuthToken();
     const response = UrlFetchApp.fetch(url, {
       method: 'get',
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { Authorization: 'Bearer ' + token },
       muteHttpExceptions: true,
     });
 
     const code = response.getResponseCode();
-    Logger.log(`  HTTP Status: ${code}`);
+    Logger.log('HTTP Status: ' + code);
 
     if (code >= 400) {
-      Logger.log(`  ❌ FAILED: ${response.getContentText().substring(0, 500)}`);
+      Logger.log('FAILED: ' + response.getContentText().substring(0, 500));
       return;
     }
 
     const data = JSON.parse(response.getContentText());
     const docs = data.documents || [];
 
-    Logger.log(`  📄 Documents found: ${docs.length}`);
+    Logger.log('Documents found: ' + docs.length);
 
     docs.forEach((doc, i) => {
       const name = doc.name || 'unknown';
       const shortName = name.split('/').pop();
       const fields = doc.fields || {};
       const batchType = fields.batchType ? fields.batchType.stringValue : 'N/A';
-      const timestamp = fields.timestamp ? fields.timestamp.integerValue : 'N/A';
       const items = fields.items && fields.items.arrayValue ? fields.items.arrayValue.values || [] : [];
 
-      Logger.log(`  ── Doc ${i + 1}: ${shortName} ──`);
-      Logger.log(`     Type: ${batchType}`);
-      Logger.log(`     Timestamp: ${timestamp} (${new Date(Number(timestamp)).toISOString()})`);
-      Logger.log(`     Items: ${items.length}`);
+      Logger.log('\n[Doc ' + (i + 1) + '] ' + shortName + ' | Type: ' + batchType + ' | Items: ' + items.length);
 
       items.forEach((item, j) => {
         const f = item.mapValue ? item.mapValue.fields : {};
         const code = f.code ? f.code.stringValue : '';
         const headline = f.headline ? f.headline.stringValue : f.title ? f.title.stringValue : '';
-        Logger.log(`       [${j}] ${code ? '[' + code + '] ' : ''}${headline.substring(0, 60)}`);
+        Logger.log('    -> ' + (code ? '[' + code + '] ' : '') + headline.substring(0, 60));
       });
     });
 
-    if (docs.length === 0) {
-      Logger.log('  ⚠️  NO DOCUMENTS FOUND in alerts_stream!');
-      Logger.log('  This means the writes are failing silently or writing to the wrong path.');
-      Logger.log(`  Expected path: ${collectionPath}`);
-    }
-
   } catch (e) {
-    Logger.log(`  💥 Error: ${e.message}`);
+    Logger.log('Error: ' + e.message);
   }
-
-  Logger.log('═══════════════════════════════════════════════');
+  Logger.log('\n=== VERIFY COMPLETE ===');
 }

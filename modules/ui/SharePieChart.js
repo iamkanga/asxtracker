@@ -257,6 +257,12 @@ export class SharePieChart {
 
         // Global modal untap listener
         this.modal.addEventListener('click', (e) => {
+            // If we click the modal backdrop (the flex container itself) or the overlay, close it
+            if (e.target === this.modal || e.target.classList.contains(CSS_CLASSES.MODAL_OVERLAY)) {
+                close();
+                return;
+            }
+
             if (e.target.closest('.interactive-row') || e.target.closest('.pie-slice')) return;
             // Target background/header to clear
             this._activeId = null;
