@@ -71,6 +71,44 @@ export class NotificationStore {
                     const parsedRead = JSON.parse(storedRead);
                     if (Array.isArray(parsedRead)) this.readAnnouncements = new Set(parsedRead);
                 }
+
+                // v1160: AUTO-PRUNE stale dismissed IDs on boot
+                // Prevents dismissed set from growing unbounded and hiding new items.
+                // Strategy: Keep ASX announcement IDs (e.g. 2A1671287) but prune
+                // timestamp-based IDs (e.g. MARKET-1778485042807) older than 14 days,
+                // and purge legacy regex-extracted IDs (e.g. 6ADCC80F) that cause
+                // cross-day collisions for market reports.
+                if (this.dismissedAnnouncements.size > 0) {
+                    const MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000; // 14 days
+                    const now = Date.now();
+                    const isValidAsxId = (id) => /^[0-9]?[23456]A[A-Z0-9]{5,}$/i.test(id);
+                    const before = this.dismissedAnnouncements.size;
+                    const pruned = new Set();
+
+                    this.dismissedAnnouncements.forEach(id => {
+                        // Keep valid ASX announcement IDs (company alerts)
+                        if (isValidAsxId(id)) {
+                            pruned.add(id);
+                            return;
+                        }
+                        // Keep timestamp-based IDs (MARKET-<ts>, CODE-<ts>) if recent
+                        const tsMatch = id.match(/-(\d{13,})$/);
+                        if (tsMatch) {
+                            const ts = Number(tsMatch[1]);
+                            if ((now - ts) < MAX_AGE_MS) {
+                                pruned.add(id);
+                            }
+                            return;
+                        }
+                        // Drop everything else (legacy regex IDs like 6ADCC80F)
+                    });
+
+                    this.dismissedAnnouncements = pruned;
+                    if (pruned.size < before) {
+                        console.log(`[NotificationStore] 🧹 Pruned ${before - pruned.size} stale dismissed IDs (${pruned.size} remaining)`);
+                        localStorage.setItem('asx_market_stream_dismissed', JSON.stringify([...pruned]));
+                    }
+                }
             } catch (e) { /* ignore */ }
 
             // FIX: Load Cached Scanner Rules to prevent "Zero Notifications" on boot
@@ -2599,26 +2637,36 @@ export class NotificationStore {
                             item.link = resolvedUrl;
                         }
 
-                        // v1158: Extract announcement ID from the link (if it's now an announcement URL)
-                        if (item.link) {
-                            const idMatch = item.link.match(/[0-9]{0,1}[23456]A[A-Z0-9]{5,}/i);
-                            if (idMatch) {
-                                item.id = idMatch[0].toUpperCase();
+                        // v1160: ID GENERATION - Split logic for Company Alerts vs Market Reports
+                        // CRITICAL FIX: Market reports (Evening/Morning Wraps) must NOT use regex-based
+                        // ASX announcement ID extraction. The regex picks up static tracking codes from
+                        // Mandrill email links (e.g. 6ADCC80F) that are SHARED across all Evening Wraps,
+                        // causing ID collision: dismissing one Evening Wrap hides ALL future ones.
+                        const isMarketReport = (item.code === 'MARKET' || batch.batchType === 'MARKET_REPORT');
+
+                        if (!isMarketReport) {
+                            // COMPANY ALERTS ONLY: Extract ASX announcement ID from the link
+                            if (item.link) {
+                                const idMatch = item.link.match(/[0-9]{0,1}[23456]A[A-Z0-9]{5,}/i);
+                                if (idMatch) {
+                                    item.id = idMatch[0].toUpperCase();
+                                }
+                            }
+
+                            // Fallback: check the headline/title for an announcement ID
+                            if (!item.id || !/[23456]A/i.test(item.id)) {
+                                const textSource = `${item.title || ''} ${item.headline || ''}`;
+                                const idMatch = textSource.match(/[0-9]{0,1}[23456]A[A-Z0-9]{5,}/i);
+                                if (idMatch) item.id = idMatch[0].toUpperCase();
                             }
                         }
 
-                        // Fallback: check the headline/title for an announcement ID
-                        if (!item.id || !/[23456]A/i.test(item.id)) {
-                            const textSource = `${item.title || ''} ${item.headline || ''}`;
-                            const idMatch = textSource.match(/[0-9]{0,1}[23456]A[A-Z0-9]{5,}/i);
-                            if (idMatch) item.id = idMatch[0].toUpperCase();
-                        }
-
-                        // v1159: ENHANCED ID STABILITY
+                        // UNIVERSAL FALLBACK: Timestamp-based unique ID
+                        // For market reports this is ALWAYS used (guarantees uniqueness per article).
+                        // For company alerts this is only used if no ASX ID was found above.
                         if (!item.id) {
                             const title = item.title || item.headline || item.desc || '';
                             const safeTitle = title.replace(/[^a-zA-Z0-9]/g, '').substring(0, 32);
-                            // Ensure we have a string for the ID part
                             const tsPart = (t && !isNaN(t)) ? String(t) : safeTitle;
                             item.id = `${item.code}-${tsPart}`;
                         }
@@ -2640,10 +2688,12 @@ export class NotificationStore {
                     const cleanTitle = title.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 64);
                     
                     // Signature: Code + Day + Normalized Title (Stable across batches)
-                    // If we have a real ASX announcement ID, we use that as a primary key.
+                    // For company alerts with real ASX IDs (e.g. 2A1671287), use the ID directly.
+                    // For market reports (MARKET-<ts>), use content-based signature.
                     const dateObj = new Date(item.timestamp);
                     const dayKey = isNaN(dateObj.getTime()) ? '' : dateObj.toISOString().split('T')[0];
-                    const sig = item.id && item.id.includes('A') ? item.id : `${item.code}|${dayKey}|${cleanTitle}`;
+                    const isRealAsxId = item.id && /^[0-9]?[23456]A[A-Z0-9]{5,}$/i.test(item.id);
+                    const sig = isRealAsxId ? item.id : `${item.code}|${dayKey}|${cleanTitle}`;
 
                     if (!uniqueMap.has(sig)) {
                         uniqueMap.set(sig, item);
