@@ -71,6 +71,11 @@ export const AuthService = {
         }
 
         const provider = new GoogleAuthProvider();
+        
+        // V72: Add Gmail Readonly Scope
+        // This allows the app to scan the user's own inbox for Market Index notifications
+        // without requiring a background Apps Script for every user.
+        provider.addScope('https://www.googleapis.com/auth/gmail.readonly');
 
         // V71: Smart Login Hint - Auto-select last known account
         const lastEmail = localStorage.getItem('asx_last_email');
@@ -88,6 +93,13 @@ export const AuthService = {
 
         try {
             const result = await signInWithPopup(auth, provider);
+            
+            // Capture OAuth Access Token for Gmail API usage
+            const credential = GoogleAuthProvider.credentialFromResult(result);
+            if (credential?.accessToken) {
+                localStorage.setItem('asx_gmail_token', credential.accessToken);
+            }
+
             // Persist email for next time
             if (result.user && result.user.email) {
                 localStorage.setItem('asx_last_email', result.user.email);

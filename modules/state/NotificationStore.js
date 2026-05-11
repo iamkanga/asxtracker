@@ -13,6 +13,7 @@ import { userStore } from '../data/DataService.js';
 import { EVENTS, STORAGE_KEYS, DASHBOARD_SYMBOLS, SECTOR_INDUSTRY_MAP } from '../utils/AppConstants.js';
 import { doc, getDoc, updateDoc, arrayUnion, arrayRemove, onSnapshot, setDoc, getDocFromServer, collection, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getBestShareMatch } from '../data/DataProcessor.js';
+import { MailService } from '../services/MailService.js';
 
 const APP_ID = "asx-watchlist-app";
 
@@ -123,8 +124,13 @@ export class NotificationStore {
             // Always subscribe to Market Index, even for guests
             this._subscribeToMarketIndex();
 
+            // V72: Personal Gmail Integration
+            // Fetch alerts directly from the user's own inbox
+            this.refreshPersonalAlerts();
+
             // 🔧 DEBUG: Allow reset via console: document.dispatchEvent(new Event('reset-market-dismissed'))
             document.addEventListener('reset-market-dismissed', () => this.resetDismissedAnnouncements());
+            document.addEventListener('refresh-personal-alerts', () => this.refreshPersonalAlerts());
 
             if (userId) {
                 this._subscribeToPinned(userId);
@@ -2679,57 +2685,11 @@ export class NotificationStore {
                     });
                 });
 
-                // FIX: Deduplicate Items based on Content Signature (Code + Normalized Title)
-                // This protects against the backend script sending the same email in multiple batches,
-                // even if the batch timestamps or extraction IDs vary slightly.
-                const uniqueMap = new Map();
-                allAlerts.forEach(item => {
-                    const title = item.title || item.headline || '';
-                    const cleanTitle = title.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 64);
-                    
-                    // Signature: Code + Day + Normalized Title (Stable across batches)
-                    // For company alerts with real ASX IDs (e.g. 2A1671287), use the ID directly.
-                    // For market reports (MARKET-<ts>), use content-based signature.
-                    const dateObj = new Date(item.timestamp);
-                    const dayKey = isNaN(dateObj.getTime()) ? '' : dateObj.toISOString().split('T')[0];
-                    const isRealAsxId = item.id && /^[0-9]?[23456]A[A-Z0-9]{5,}$/i.test(item.id);
-                    const sig = isRealAsxId ? item.id : `${item.code}|${dayKey}|${cleanTitle}`;
+                // V72: Update shared alerts and trigger merge
+                this.sharedAlerts = allAlerts;
+                this._updateMergedAlerts();
 
-                    if (!uniqueMap.has(sig)) {
-                        uniqueMap.set(sig, item);
-                    } else {
-                        // Collision: Keep the one with the more specific ID or higher timestamp
-                        const existing = uniqueMap.get(sig);
-                        if (item.timestamp > existing.timestamp) {
-                            uniqueMap.set(sig, item);
-                        }
-                    }
-                });
-
-                // Sort by timestamp descending (newest first)
-                this.marketIndexAlerts = Array.from(uniqueMap.values())
-                    .filter(item => item && item.timestamp)
-                    .sort((a, b) => b.timestamp - a.timestamp);
-
-                console.log(`[MarketIndex] ✅ Final List Ready: ${this.marketIndexAlerts.length} total items (after deduplication)`);
-                
-                // Diagnostic summary
-                const summary = this.marketIndexAlerts.slice(0, 10).map(a => ({
-                    code: a.code,
-                    id: a.id,
-                    time: a._parsedTime,
-                    title: (a.title || a.headline || '').substring(0, 40)
-                }));
-                console.table(summary);
-
-                // Dispatch event for UI
-                document.dispatchEvent(new CustomEvent(EVENTS.MARKET_INDEX_UPDATED, {
-                    detail: {
-                        count: this.marketIndexAlerts.length,
-                        alerts: this.marketIndexAlerts
-                    }
-                }));
-                this._notifyCountChange();
+                console.log(`[MarketIndex] ✅ Shared Stream Synced: ${allAlerts.length} total raw items`);
             }, (error) => {
                 console.error("[NotificationStore] Market Index Stream Error:", error);
             });
@@ -2737,6 +2697,75 @@ export class NotificationStore {
         } catch (e) {
             console.error("[NotificationStore] Failed to subscribe to Market Index:", e);
         }
+    }
+
+    /**
+     * V72: Personal Gmail Integration
+     * Fetches alerts from the current user's Gmail inbox and merges them with shared alerts.
+     */
+    async refreshPersonalAlerts() {
+        if (!this.userId) return;
+
+        console.log('[NotificationStore] 📧 Scanning personal Gmail for Market Index alerts...');
+        const personal = await MailService.fetchMarketAlerts();
+        
+        if (personal && personal.length > 0) {
+            console.log(`[NotificationStore] ✅ Found ${personal.length} personal alerts.`);
+            this.personalAlerts = personal;
+            this._updateMergedAlerts();
+            
+            // Mark as read in Gmail if user has already dismissed them in the app
+            const toMarkRead = personal
+                .filter(a => this.dismissedAnnouncements.has(a.id))
+                .map(a => a.id.split('-').pop()) // Extract message ID part if possible
+                .filter(id => id && id.length > 10); // Sanity check
+
+            if (toMarkRead.length > 0) {
+                // MailService.markAsRead(toMarkRead); // Optional: don't auto-mark read yet to be safe
+            }
+        } else {
+            console.log('[NotificationStore] ℹ️ No unread personal alerts found.');
+        }
+    }
+
+    /**
+     * Merges shared (Firestore) and personal (Gmail) alerts into a single deduplicated list.
+     */
+    _updateMergedAlerts() {
+        const shared = this.sharedAlerts || [];
+        const personal = this.personalAlerts || [];
+        const all = [...shared, ...personal];
+
+        const uniqueMap = new Map();
+        all.forEach(item => {
+            const title = item.title || item.headline || '';
+            const cleanTitle = title.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 64);
+            const dateObj = new Date(item.timestamp);
+            const dayKey = isNaN(dateObj.getTime()) ? '' : dateObj.toISOString().split('T')[0];
+            const isRealAsxId = item.id && /^[0-9]?[23456]A[A-Z0-9]{5,}$/i.test(item.id);
+            const sig = isRealAsxId ? item.id : `${item.code}|${dayKey}|${cleanTitle}`;
+
+            if (!uniqueMap.has(sig)) {
+                uniqueMap.set(sig, item);
+            } else {
+                const existing = uniqueMap.get(sig);
+                if (item.timestamp > existing.timestamp) {
+                    uniqueMap.set(sig, item);
+                }
+            }
+        });
+
+        this.marketIndexAlerts = Array.from(uniqueMap.values())
+            .filter(item => item && item.timestamp)
+            .sort((a, b) => b.timestamp - a.timestamp);
+
+        document.dispatchEvent(new CustomEvent(EVENTS.MARKET_INDEX_UPDATED, {
+            detail: {
+                count: this.marketIndexAlerts.length,
+                alerts: this.marketIndexAlerts
+            }
+        }));
+        this._notifyCountChange();
     }
 
     /**
