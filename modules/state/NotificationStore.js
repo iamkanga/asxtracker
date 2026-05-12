@@ -2550,17 +2550,23 @@ export class NotificationStore {
     _subscribeToMarketIndex() {
         if (this.unsubscribeMarketIndex) this.unsubscribeMarketIndex();
 
-        try {
-            // "artifacts/asx-watchlist-app/alerts_stream"
-            // Note: APP_ID is "asx-watchlist-app" defined at top
-            const streamRef = collection(db, "artifacts", APP_ID, "alerts_stream");
-            const q = query(streamRef, orderBy('timestamp', 'desc'), limit(200));
+        // v1161: Private Vault Model - Only subscribe if User ID exists
+        if (!this.userId) {
+            console.warn('[MarketIndex] 🔒 No User ID available. Skipping private alert subscription.');
+            return;
+        }
 
-                this.unsubscribeMarketIndex = onSnapshot(q, (snapshot) => {
-                    const batches = [];
-                    snapshot.forEach((doc) => {
-                        batches.push({ id: doc.id, ...doc.data() });
-                    });
+        try {
+            // Target Path: artifacts/asx-watchlist-app/users/{userId}/market_alerts
+            // v1161: Transitioned from global "alerts_stream" to private user vault.
+            const streamRef = collection(db, "artifacts", APP_ID, "users", this.userId, "market_alerts");
+            const q = query(streamRef, orderBy('timestamp', 'desc'), limit(100));
+
+            this.unsubscribeMarketIndex = onSnapshot(q, (snapshot) => {
+                const batches = [];
+                snapshot.forEach((doc) => {
+                    batches.push({ id: doc.id, ...doc.data() });
+                });
 
                     console.log(`[MarketIndex] 📡 Snapshot received: ${batches.length} batch(es) from Firestore`);
 

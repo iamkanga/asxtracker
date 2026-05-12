@@ -41,17 +41,22 @@ const MI_CONFIG = {
    * false = Emails are ONLY marked as read after successful Firestore write.
    *         They remain in the inbox/archive for manual inspection.
    * true  = Emails are marked read AND moved to trash after success.
-   *
-   * LEAVE AS `false` DURING TESTING. Flip to `true` when fully validated.
    */
-  VERSION: '1.2.1', // v1159: Explicit Code Mapping
-  TRASH_AFTER_SUCCESS: true, // v1159: Trash processed emails to avoid duplicate processing
+  VERSION: '1.2.2', // v1161: User-Scoped Isolation
+  TRASH_AFTER_SUCCESS: true, 
 
-  /** Gmail search query. Simple keyword + is:unread is most reliable (from: can miss). */
+  /** Gmail search query. */
   GMAIL_QUERY: 'marketindex is:unread',
 
-  /** Maximum threads per execution to avoid Apps Script 6-minute timeout. */
+  /** Maximum threads per execution. */
   BATCH_SIZE: 10,
+
+  /** 
+   * USER IDENTIFIER
+   * Set this to your unique User ID from the app's Profile/Settings page.
+   * This ensures your emails are only visible to you.
+   */
+  USER_ID: 'sh3zcZGXSceviejDNJQsjRJjVgJ3', 
 
   /** Firestore REST API configuration. */
   FIREBASE: {
@@ -59,8 +64,13 @@ const MI_CONFIG = {
     BASE_URL: 'https://firestore.googleapis.com/v1',
   },
 
-  /** Firestore collection path (relative to project). */
-  STREAM_PATH: 'artifacts/asx-watchlist-app/alerts_stream',
+  /** 
+   * Firestore collection path.
+   * v1161: Transitioned to private user-scoped path.
+   */
+  get STREAM_PATH() {
+    return `artifacts/asx-watchlist-app/users/${this.USER_ID}/market_alerts`;
+  }
 };
 
 // =============================================================================
