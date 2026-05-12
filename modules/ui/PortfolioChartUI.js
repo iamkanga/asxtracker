@@ -366,8 +366,18 @@ export class PortfolioChartUI {
             rightPriceScale: { borderVisible: false, scaleMargins: { top: 0.1, bottom: 0.1 } },
             timeScale: { borderVisible: false, rightOffset: 5 },
             crosshair: {
-                vertLine: { color: 'rgba(164, 147, 147, 0.5)', labelBackgroundColor: '#111' },
-                horzLine: { color: 'rgba(164, 147, 147, 0.5)', labelBackgroundColor: '#111' }
+                vertLine: { 
+                    color: 'rgba(164, 147, 147, 0.8)', 
+                    width: 1,
+                    style: 2, // Dotted
+                    labelBackgroundColor: '#a49393', // Coffee (Accent)
+                },
+                horzLine: { 
+                    color: 'rgba(164, 147, 147, 0.8)', 
+                    width: 1,
+                    style: 2, // Dotted
+                    labelBackgroundColor: '#06FF4F', // Total color (Neon Green)
+                }
             },
             localization: {
                 priceFormatter: (price) => {
@@ -433,6 +443,93 @@ export class PortfolioChartUI {
             lineWidth: 2,
             visible: this.visibleLayers.shares,
             priceFormat: accountingFormat
+        });
+
+        // Dynamic "Scrub" Price Line (Highlight box for mobile scrubbing)
+        // This simulates the "Last Price" label but for the point under your finger.
+        // We initialize it on the "Total" series by default.
+        this.scrubPriceLine = this.series.total.createPriceLine({
+            price: 0,
+            color: 'rgba(6, 255, 79, 0.3)',
+            lineWidth: 1,
+            lineStyle: 0, // Solid
+            axisLabelVisible: true,
+            title: '',
+            axisLabelColor: '#06FF4F', // Neon Green Background
+            axisLabelTextColor: '#000', // Black Text for maximum clarity
+        });
+        this.scrubPriceLine._parentSeries = this.series.total;
+        this.scrubPriceLine.applyOptions({ visible: false });
+
+        // CROSSHAIR MOVE LISTENER (Mobile Scrubbing Support)
+        this.chart.subscribeCrosshairMove(param => {
+            if (!this.chart) return;
+
+            if (!param.time || !param.point || param.point.x < 0) {
+                if (this.scrubPriceLine) this.scrubPriceLine.applyOptions({ visible: false });
+                return;
+            }
+
+            // Identify which series to track for the highlight (Total first, then Shares, then Super)
+            let seriesToTrack = null;
+            if (this.visibleLayers.total) seriesToTrack = this.series.total;
+            else if (this.visibleLayers.shares) seriesToTrack = this.series.shares;
+            else if (this.visibleLayers.super) seriesToTrack = this.series.super;
+            else if (Object.keys(this.categorySeries).length > 0) {
+                const firstCatId = Object.keys(this.categorySeries).find(cid => this.visibleLayers[`cat_${cid}`]);
+                if (firstCatId) seriesToTrack = this.categorySeries[firstCatId];
+            }
+
+            if (!seriesToTrack) {
+                if (this.scrubPriceLine) this.scrubPriceLine.applyOptions({ visible: false });
+                return;
+            }
+
+            // Get the value for the tracked series at this point
+            const data = param.seriesData.get(seriesToTrack);
+            if (data && (data.value !== undefined || data.close !== undefined)) {
+                const price = data.value !== undefined ? data.value : data.close;
+                
+                // Update and show the scrub line
+                // Note: We re-attach/re-create if series changes, but simple update is usually enough
+                // if we attach it to the tracked series.
+                if (this.scrubPriceLine) {
+                    // Identify color based on series
+                    let trackColor = '#06FF4F';
+                    if (seriesToTrack === this.series.shares) trackColor = '#a49393';
+                    else if (seriesToTrack === this.series.super) trackColor = '#9C27B0';
+                    else if (seriesToTrack !== this.series.total) {
+                        const catId = Object.keys(this.categorySeries).find(cid => this.categorySeries[cid] === seriesToTrack);
+                        if (catId) trackColor = this._getCategoryColor(catId, 0);
+                    }
+
+                    // Re-create if parent series changed OR if color needs updating
+                    if (this.scrubPriceLine._parentSeries !== seriesToTrack) {
+                        if (this.scrubPriceLine._parentSeries) {
+                            this.scrubPriceLine._parentSeries.removePriceLine(this.scrubPriceLine);
+                        }
+                        this.scrubPriceLine = seriesToTrack.createPriceLine({
+                            price: price,
+                            color: trackColor + '4D',
+                            lineWidth: 1,
+                            lineStyle: 0,
+                            axisLabelVisible: true,
+                            title: '',
+                            axisLabelColor: trackColor,
+                            axisLabelTextColor: '#000',
+                        });
+                        this.scrubPriceLine._parentSeries = seriesToTrack;
+                        this.scrubPriceLine._lastColor = trackColor;
+                    }
+
+                    this.scrubPriceLine.applyOptions({
+                        price: price,
+                        visible: true
+                    });
+                }
+            } else {
+                if (this.scrubPriceLine) this.scrubPriceLine.applyOptions({ visible: false });
+            }
         });
 
         this.loadData();

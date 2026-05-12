@@ -298,16 +298,19 @@ export class ChartComponent {
                 },
             },
             crosshair: {
-                // "No background selection" - match chart bg or transparent
                 vertLine: {
                     color: '#a49393', // Accent Line
-                    labelBackgroundColor: '#111', // Match bg to hide "box" feel
-                    labelFontColor: '#a49393', // Accent Text
+                    width: 1,
+                    style: 2, // Dotted
+                    labelBackgroundColor: '#a49393', // Solid Coffee for Date
+                    labelVisible: true,
                 },
                 horzLine: {
                     color: '#a49393',
-                    labelBackgroundColor: '#111',
-                    labelFontColor: '#a49393',
+                    width: 1,
+                    style: 2, // Dotted
+                    labelBackgroundColor: '#06FF4F', // Neon Green for Price
+                    labelVisible: true,
                 },
             },
         });
@@ -321,6 +324,41 @@ export class ChartComponent {
             const { width, height } = entries[0].contentRect;
             if (this.chart) this.chart.applyOptions({ width, height });
         }).observe(div);
+
+        // Dynamic "Scrub" Highlight Line
+        this.chart.subscribeCrosshairMove(param => {
+            if (!this.chart || !this.series) return;
+
+            if (!param.time || !param.point || param.point.x < 0) {
+                if (this.scrubPriceLine) this.scrubPriceLine.applyOptions({ visible: false });
+                return;
+            }
+
+            const data = param.seriesData.get(this.series);
+            if (data && (data.value !== undefined || data.close !== undefined)) {
+                const price = data.value !== undefined ? data.value : data.close;
+                
+                if (!this.scrubPriceLine) {
+                    this.scrubPriceLine = this.series.createPriceLine({
+                        price: price,
+                        color: 'rgba(6, 255, 79, 0.4)',
+                        lineWidth: 1,
+                        lineStyle: 0,
+                        axisLabelVisible: true,
+                        title: '',
+                        axisLabelColor: '#06FF4F',
+                        axisLabelTextColor: '#000',
+                    });
+                } else {
+                    this.scrubPriceLine.applyOptions({
+                        price: price,
+                        visible: true
+                    });
+                }
+            } else {
+                if (this.scrubPriceLine) this.scrubPriceLine.applyOptions({ visible: false });
+            }
+        });
     }
 
     /**
@@ -334,6 +372,7 @@ export class ChartComponent {
         if (this.series) {
             this.chart.removeSeries(this.series);
             this.lastPriceLine = null;
+            this.scrubPriceLine = null;
         }
 
         // Theme Colors
@@ -404,8 +443,8 @@ export class ChartComponent {
             lineStyle: 1, // Dotted
             axisLabelVisible: true,
             title: '',
-            axisLabelColor: '#111', // Background (matches chart)
-            axisLabelTextColor: '#a49393', // Text (Coffee)
+            axisLabelColor: '#a49393', // Background (Coffee)
+            axisLabelTextColor: '#000', // Black Text for highlight effect
         });
     }
 

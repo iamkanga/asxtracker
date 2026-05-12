@@ -119,9 +119,9 @@ export const AuthService = {
         if (!auth) return;
         try {
             await firebaseSignOut(auth);
-            // Optional: Clear hint on explicit sign out? 
-            // Better to keep it for quick re-login unless user wants to switch.
-            // localStorage.removeItem('asx_last_email'); 
+            // Hard reset: Reload clears all in-memory state, timers, and listeners.
+            // The app re-bootstraps fresh and shows the login/splash screen.
+            window.location.reload();
         } catch (error) {
             console.error("AuthService Sign-Out Error:", error);
             throw error;
