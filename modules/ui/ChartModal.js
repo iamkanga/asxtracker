@@ -155,12 +155,14 @@ export class ChartComponent {
                     top: 8px;
                     left: 8px;
                     font-size: 0.75rem;
-                    background: rgba(17, 17, 17, 0.75);
-                    padding: 4px 8px;
-                    border-radius: 4px;
+                    background: rgba(17, 17, 17, 0.85);
+                    padding: 8px 12px;
+                    border-radius: 6px;
                     z-index: 5;
                     pointer-events: none;
                     white-space: nowrap;
+                    border: 1px solid rgba(255,255,255,0.05);
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
                 }
 
                 .${CSS_CLASSES.CHART_OVERLAY_LOADER} {
@@ -211,12 +213,12 @@ export class ChartComponent {
                     <div class="${CSS_CLASSES.CHART_OVERLAY_LOADER}">
                         <i class="fas fa-spinner fa-spin fa-2x"></i>
                     </div>
-                    <div class="chart-period-overlay" id="chartPeriodStats_${this.code}" style="display: flex; flex-direction: column; gap: 2px;">
-                        <div class="chart-range-row">
-                            <span class="chart-period-low" style="color:#ffffff;">L: --</span>
-                            <span class="chart-period-high" style="color:#ffffff; margin-left:8px;">H: --</span>
+                    <div class="chart-period-overlay" id="chartPeriodStats_${this.code}" style="display: flex; flex-direction: column; gap: 6px;">
+                        <div class="chart-range-row" style="display: flex; gap: 6px;">
+                            <span class="chart-period-low" style="background: rgba(255, 49, 49, 0.15); color: #FF3131; padding: 2px 8px; border-radius: 4px; font-weight: 800; font-size: 0.7rem; border: 1px solid rgba(255, 49, 49, 0.2);">L: --</span>
+                            <span class="chart-period-high" style="background: rgba(6, 255, 79, 0.15); color: #06FF4F; padding: 2px 8px; border-radius: 4px; font-weight: 800; font-size: 0.7rem; border: 1px solid rgba(6, 255, 79, 0.2);">H: --</span>
                         </div>
-                        <span class="chart-period-change" style="color:#a49393; font-weight:800; font-size: 0.86rem;">--</span>
+                        <span class="chart-period-change" style="color:#a49393; font-weight:900; font-size: 0.9rem; margin-left: 2px;">--</span>
                     </div>
                 </div>
                 <div class="${CSS_CLASSES.CHART_CONTROLS}">
@@ -592,13 +594,24 @@ export class ChartComponent {
 
         let periodHigh = -Infinity;
         let periodLow = Infinity;
+        let highIdx = -1;
+        let lowIdx = -1;
 
-        for (const candle of data) {
+        data.forEach((candle, i) => {
             const h = candle.high !== undefined ? candle.high : candle.close;
             const l = candle.low !== undefined ? candle.low : candle.close;
-            if (h > periodHigh) periodHigh = h;
-            if (l < periodLow) periodLow = l;
-        }
+            if (h >= periodHigh) {
+                periodHigh = h;
+                highIdx = i;
+            }
+            if (l <= periodLow) {
+                periodLow = l;
+                lowIdx = i;
+            }
+        });
+
+        // Update Markers on Chart
+        this._updateMarkers(data, highIdx, lowIdx);
 
         // Percentage Change Calculation
         const first = data[0];
@@ -622,6 +635,48 @@ export class ChartComponent {
             // User Request: Use coffee color instead of sentiment colors
             changeEl.style.color = '#a49393';
         }
+    }
+
+    /**
+     * Adds High/Low markers to the chart series.
+     */
+    _updateMarkers(data, highIdx, lowIdx) {
+        if (!this.series || !data || data.length === 0) return;
+
+        const markers = [];
+        const formatDate = (ts) => {
+            const d = new Date(ts * 1000);
+            return d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
+        };
+
+        // 1. High Marker
+        if (highIdx !== -1) {
+            markers.push({
+                time: data[highIdx].time,
+                position: 'aboveBar',
+                color: '#06FF4F', // Green
+                shape: 'arrowDown',
+                text: `High: ${formatDate(data[highIdx].time)}`,
+                size: 1.5
+            });
+        }
+
+        // 2. Low Marker
+        if (lowIdx !== -1) {
+            markers.push({
+                time: data[lowIdx].time,
+                position: 'belowBar',
+                color: '#FF3131', // Red
+                shape: 'arrowUp',
+                text: `Low: ${formatDate(data[lowIdx].time)}`,
+                size: 1.5
+            });
+        }
+
+        // Sort markers by time
+        markers.sort((a, b) => a.time - b.time);
+        
+        this.series.setMarkers(markers);
     }
 
     destroy() {

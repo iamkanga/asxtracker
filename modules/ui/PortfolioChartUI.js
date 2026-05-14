@@ -717,16 +717,7 @@ export class PortfolioChartUI {
                 this.categorySeries[catId].setData(catBuffers[catId]);
             });
 
-            // 7. Markers
-            if (totalData.length > 0 && this.series.total) {
-                this.series.total.setMarkers([{
-                    time: totalData[totalData.length - 1].time,
-                    position: 'aboveBar',
-                    color: '#e91e63',
-                    shape: 'arrowDown',
-                    text: 'LIVE'
-                }]);
-            }
+            // 7. Markers logic handled in _updateStats -> _updateMarkers
 
             if (this.chart) this.chart.timeScale().fitContent();
             
@@ -871,6 +862,9 @@ export class PortfolioChartUI {
             `;
         }
 
+        // 2. Markers for High/Low (On the Chart)
+        this._updateMarkers(totalData, sharesData, superData);
+
         // 2. Update High/Low Innovative Stats Row
         const highLowRow = this.modal.querySelector('.high-low-row');
         if (!highLowRow) return;
@@ -896,9 +890,9 @@ export class PortfolioChartUI {
                         <div style="position: absolute; left: 0; top: 0; height: 100%; width: ${progress}%; background: ${color}; opacity: 0.4; border-radius: 2px;"></div>
                         <div style="position: absolute; left: calc(${progress}% - 1px); top: -2px; width: 2px; height: 7px; background: #fff; box-shadow: 0 0 4px ${color}; z-index: 2;"></div>
                     </div>
-                    <div style="display:flex; justify-content: space-between; font-size: 0.55rem; color: #fff; font-weight: 700; margin-top: 1px;">
-                        <span>L: $${Math.floor(low).toLocaleString('en-AU')}</span>
-                        <span>H: $${Math.floor(high).toLocaleString('en-AU')}</span>
+                    <div style="display:flex; justify-content: space-between; font-size: 0.65rem; font-weight: 900; margin-top: 4px; gap: 8px;">
+                        <span style="background: rgba(255, 49, 49, 0.1); color: #FF3131; padding: 2px 6px; border-radius: 4px; flex: 1; text-align: center; border: 1px solid rgba(255, 49, 49, 0.2);">L: $${Math.floor(low).toLocaleString('en-AU')}</span>
+                        <span style="background: rgba(6, 255, 79, 0.1); color: #06FF4F; padding: 2px 6px; border-radius: 4px; flex: 1; text-align: center; border: 1px solid rgba(6, 255, 79, 0.2);">H: $${Math.floor(high).toLocaleString('en-AU')}</span>
                     </div>
                 </div>
             `;
@@ -915,5 +909,91 @@ export class PortfolioChartUI {
         // Ensure standard flex centering if only one or two items
         const itemCount = (html.match(/min-width: 140px/g) || []).length;
         highLowRow.style.justifyContent = itemCount > 2 ? 'flex-start' : 'center';
+    }
+
+    /**
+     * Identifies High/Low points in the data and adds markers to the chart.
+     */
+    _updateMarkers(totalData, sharesData, superData) {
+        // Identify which series should receive markers (Priority: Total > Shares > Super)
+        let primaryData = null;
+        let primarySeries = null;
+
+        if (this.visibleLayers.total) {
+            primaryData = totalData;
+            primarySeries = this.series.total;
+        } else if (this.visibleLayers.shares) {
+            primaryData = sharesData;
+            primarySeries = this.series.shares;
+        } else if (this.visibleLayers.super) {
+            primaryData = superData;
+            primarySeries = this.series.super;
+        } else {
+            // Check categories
+            const activeCatId = Object.keys(this.categorySeries).find(cid => this.visibleLayers[`cat_${cid}`]);
+            if (activeCatId) {
+                primarySeries = this.categorySeries[activeCatId];
+                // We'd need to fetch the actual data for this category, but usually users care about the main 3.
+                // For now, we skip markers for minor categories to keep it clean.
+            }
+        }
+
+        if (!primarySeries || !primaryData || primaryData.length === 0) return;
+
+        // Clear markers from all potential series to avoid ghost markers when toggling layers
+        Object.values(this.series).forEach(s => s && s.setMarkers([]));
+        Object.values(this.categorySeries).forEach(s => s && s.setMarkers([]));
+
+        const values = primaryData.map(d => d.value);
+        const highVal = Math.max(...values);
+        const lowVal = Math.min(...values);
+
+        // Find indices (last occurrence to prioritize recent data if equal)
+        const highIdx = primaryData.findLastIndex(d => d.value === highVal);
+        const lowIdx = primaryData.findLastIndex(d => d.value === lowVal);
+
+        const markers = [];
+        const formatDate = (ts) => {
+            const d = new Date(ts * 1000);
+            return d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
+        };
+
+        // 1. High Marker
+        markers.push({
+            time: primaryData[highIdx].time,
+            position: 'aboveBar',
+            color: '#06FF4F', // Standard High Green
+            shape: 'arrowDown',
+            text: `High: ${formatDate(primaryData[highIdx].time)}`,
+            size: 1.5
+        });
+
+        // 2. Low Marker
+        markers.push({
+            time: primaryData[lowIdx].time,
+            position: 'belowBar',
+            color: '#FF3131', // Standard Low Red
+            shape: 'arrowUp',
+            text: `Low: ${formatDate(primaryData[lowIdx].time)}`,
+            size: 1.5
+        });
+
+        // 3. LIVE Marker (Pink)
+        // Only add if it doesn't overlap perfectly with high or low
+        const lastPoint = primaryData[primaryData.length - 1];
+        if (highIdx !== primaryData.length - 1 && lowIdx !== primaryData.length - 1) {
+            markers.push({
+                time: lastPoint.time,
+                position: 'aboveBar',
+                color: '#e91e63',
+                shape: 'arrowDown',
+                text: 'LIVE'
+            });
+        }
+
+        // Sort markers by time (Lightweight Charts requirement)
+        markers.sort((a, b) => a.time - b.time);
+        
+        primarySeries.setMarkers(markers);
     }
 }
