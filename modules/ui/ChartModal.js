@@ -643,6 +643,16 @@ export class ChartComponent {
     _updateMarkers(data, highIdx, lowIdx) {
         if (!this.series || !data || data.length === 0) return;
 
+        // Management of Axis Price Lines
+        if (this.highPriceLine) {
+            this.series.removePriceLine(this.highPriceLine);
+            this.highPriceLine = null;
+        }
+        if (this.lowPriceLine) {
+            this.series.removePriceLine(this.lowPriceLine);
+            this.lowPriceLine = null;
+        }
+
         const markers = [];
         const formatDate = (ts) => {
             const d = new Date(ts * 1000);
@@ -651,6 +661,9 @@ export class ChartComponent {
 
         // 1. High Marker
         if (highIdx !== -1) {
+            const highVal = data[highIdx].high !== undefined ? data[highIdx].high : data[highIdx].close;
+            
+            // Marker on Graph
             markers.push({
                 time: data[highIdx].time,
                 position: 'aboveBar',
@@ -659,10 +672,25 @@ export class ChartComponent {
                 text: `High: ${formatDate(data[highIdx].time)}`,
                 size: 1.5
             });
+
+            // Label on Axis
+            this.highPriceLine = this.series.createPriceLine({
+                price: highVal,
+                color: '#06FF4F',
+                lineWidth: 1,
+                lineStyle: 2,
+                axisLabelVisible: true,
+                title: 'HIGH',
+                axisLabelColor: '#06FF4F',
+                axisLabelTextColor: '#000',
+            });
         }
 
         // 2. Low Marker
         if (lowIdx !== -1) {
+            const lowVal = data[lowIdx].low !== undefined ? data[lowIdx].low : data[lowIdx].close;
+
+            // Marker on Graph
             markers.push({
                 time: data[lowIdx].time,
                 position: 'belowBar',
@@ -670,6 +698,18 @@ export class ChartComponent {
                 shape: 'arrowUp',
                 text: `Low: ${formatDate(data[lowIdx].time)}`,
                 size: 1.5
+            });
+
+            // Label on Axis
+            this.lowPriceLine = this.series.createPriceLine({
+                price: lowVal,
+                color: '#FF3131',
+                lineWidth: 1,
+                lineStyle: 2,
+                axisLabelVisible: true,
+                title: 'LOW',
+                axisLabelColor: '#FF3131',
+                axisLabelTextColor: '#000',
             });
         }
 

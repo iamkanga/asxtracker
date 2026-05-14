@@ -881,18 +881,18 @@ export class PortfolioChartUI {
             const progress = range !== 0 ? ((current - low) / range) * 100 : 100;
 
             return `
-                <div style="display:flex; flex-direction:column; gap:4px; flex-shrink: 0; min-width: 140px; padding: 6px 0;">
-                    <div style="display:flex; justify-content: space-between; align-items: baseline; margin-bottom: 2px;">
+                <div style="display:flex; flex-direction:column; gap:2px; flex-shrink: 0; min-width: 130px; padding: 4px 0;">
+                    <div style="display:flex; justify-content: space-between; align-items: baseline;">
                         <span style="font-size: 0.65rem; color: ${color}; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px;">${label}</span>
                         <span style="font-size: 0.75rem; font-weight: 800; color: #fff;">$${Math.floor(current).toLocaleString('en-AU')}</span>
                     </div>
-                    <div style="height: 3px; background: rgba(255,255,255,0.08); border-radius: 2px; position: relative;">
+                    <div style="height: 3px; background: rgba(255,255,255,0.08); border-radius: 2px; position: relative; margin: 4px 0;">
                         <div style="position: absolute; left: 0; top: 0; height: 100%; width: ${progress}%; background: ${color}; opacity: 0.4; border-radius: 2px;"></div>
                         <div style="position: absolute; left: calc(${progress}% - 1px); top: -2px; width: 2px; height: 7px; background: #fff; box-shadow: 0 0 4px ${color}; z-index: 2;"></div>
                     </div>
-                    <div style="display:flex; justify-content: space-between; font-size: 0.65rem; font-weight: 900; margin-top: 4px; gap: 8px;">
-                        <span style="background: rgba(255, 49, 49, 0.1); color: #FF3131; padding: 2px 6px; border-radius: 4px; flex: 1; text-align: center; border: 1px solid rgba(255, 49, 49, 0.2);">L: $${Math.floor(low).toLocaleString('en-AU')}</span>
-                        <span style="background: rgba(6, 255, 79, 0.1); color: #06FF4F; padding: 2px 6px; border-radius: 4px; flex: 1; text-align: center; border: 1px solid rgba(6, 255, 79, 0.2);">H: $${Math.floor(high).toLocaleString('en-AU')}</span>
+                    <div style="display:flex; justify-content: space-between; font-size: 0.6rem; font-weight: 800;">
+                        <span style="color: #FF3131;">L: $${Math.floor(low).toLocaleString('en-AU')}</span>
+                        <span style="color: #06FF4F;">H: $${Math.floor(high).toLocaleString('en-AU')}</span>
                     </div>
                 </div>
             `;
@@ -915,85 +915,107 @@ export class PortfolioChartUI {
      * Identifies High/Low points in the data and adds markers to the chart.
      */
     _updateMarkers(totalData, sharesData, superData) {
-        // Identify which series should receive markers (Priority: Total > Shares > Super)
-        let primaryData = null;
-        let primarySeries = null;
-
-        if (this.visibleLayers.total) {
-            primaryData = totalData;
-            primarySeries = this.series.total;
-        } else if (this.visibleLayers.shares) {
-            primaryData = sharesData;
-            primarySeries = this.series.shares;
-        } else if (this.visibleLayers.super) {
-            primaryData = superData;
-            primarySeries = this.series.super;
-        } else {
-            // Check categories
-            const activeCatId = Object.keys(this.categorySeries).find(cid => this.visibleLayers[`cat_${cid}`]);
-            if (activeCatId) {
-                primarySeries = this.categorySeries[activeCatId];
-                // We'd need to fetch the actual data for this category, but usually users care about the main 3.
-                // For now, we skip markers for minor categories to keep it clean.
-            }
-        }
-
-        if (!primarySeries || !primaryData || primaryData.length === 0) return;
-
-        // Clear markers from all potential series to avoid ghost markers when toggling layers
+        // Clear markers from all potential series
         Object.values(this.series).forEach(s => s && s.setMarkers([]));
         Object.values(this.categorySeries).forEach(s => s && s.setMarkers([]));
 
-        const values = primaryData.map(d => d.value);
-        const highVal = Math.max(...values);
-        const lowVal = Math.min(...values);
+        // Management of Axis Price Lines (Price lines on the right sidebar)
+        if (!this.axisPriceLines) this.axisPriceLines = [];
+        this.axisPriceLines.forEach(line => {
+            if (line && line._parentSeries) line._parentSeries.removePriceLine(line);
+        });
+        this.axisPriceLines = [];
 
-        // Find indices (last occurrence to prioritize recent data if equal)
-        const highIdx = primaryData.findLastIndex(d => d.value === highVal);
-        const lowIdx = primaryData.findLastIndex(d => d.value === lowVal);
+        const seriesToMark = [];
+        if (this.visibleLayers.total) seriesToMark.push({ data: totalData, series: this.series.total, label: 'Total' });
+        if (this.visibleLayers.shares) seriesToMark.push({ data: sharesData, series: this.series.shares, label: 'Shares' });
+        if (this.visibleLayers.super) seriesToMark.push({ data: superData, series: this.series.super, label: 'Super' });
 
-        const markers = [];
+        if (seriesToMark.length === 0) return;
+
         const formatDate = (ts) => {
             const d = new Date(ts * 1000);
             return d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
         };
 
-        // 1. High Marker
-        markers.push({
-            time: primaryData[highIdx].time,
-            position: 'aboveBar',
-            color: '#06FF4F', // Standard High Green
-            shape: 'arrowDown',
-            text: `High: ${formatDate(primaryData[highIdx].time)}`,
-            size: 1.5
-        });
+        seriesToMark.forEach(config => {
+            const { data, series, label } = config;
+            if (!data || data.length === 0 || !series) return;
 
-        // 2. Low Marker
-        markers.push({
-            time: primaryData[lowIdx].time,
-            position: 'belowBar',
-            color: '#FF3131', // Standard Low Red
-            shape: 'arrowUp',
-            text: `Low: ${formatDate(primaryData[lowIdx].time)}`,
-            size: 1.5
-        });
+            const values = data.map(d => d.value);
+            const highVal = Math.max(...values);
+            const lowVal = Math.min(...values);
+            const highIdx = data.findLastIndex(d => d.value === highVal);
+            const lowIdx = data.findLastIndex(d => d.value === lowVal);
 
-        // 3. LIVE Marker (Pink)
-        // Only add if it doesn't overlap perfectly with high or low
-        const lastPoint = primaryData[primaryData.length - 1];
-        if (highIdx !== primaryData.length - 1 && lowIdx !== primaryData.length - 1) {
-            markers.push({
-                time: lastPoint.time,
-                position: 'aboveBar',
-                color: '#e91e63',
-                shape: 'arrowDown',
-                text: 'LIVE'
+            // 1. High/Low Markers (On the line graph)
+            series.setMarkers([
+                {
+                    time: data[highIdx].time,
+                    position: 'aboveBar',
+                    color: '#06FF4F',
+                    shape: 'arrowDown',
+                    text: `${label} High: ${formatDate(data[highIdx].time)}`,
+                    size: 1.5
+                },
+                {
+                    time: data[lowIdx].time,
+                    position: 'belowBar',
+                    color: '#FF3131',
+                    shape: 'arrowUp',
+                    text: `${label} Low: ${formatDate(data[lowIdx].time)}`,
+                    size: 1.5
+                }
+            ]);
+
+            // 2. Axis Price Lines (Right Sidebar)
+            const highLine = series.createPriceLine({
+                price: highVal,
+                color: '#06FF4F',
+                lineWidth: 1,
+                lineStyle: 2,
+                axisLabelVisible: true,
+                title: `${label.toUpperCase()} H`,
+                axisLabelColor: '#06FF4F',
+                axisLabelTextColor: '#000',
             });
-        }
+            highLine._parentSeries = series;
+            this.axisPriceLines.push(highLine);
 
-        // Sort markers by time (Lightweight Charts requirement)
-        markers.sort((a, b) => a.time - b.time);
-        
-        primarySeries.setMarkers(markers);
+            const lowLine = series.createPriceLine({
+                price: lowVal,
+                color: '#FF3131',
+                lineWidth: 1,
+                lineStyle: 2,
+                axisLabelVisible: true,
+                title: `${label.toUpperCase()} L`,
+                axisLabelColor: '#FF3131',
+                axisLabelTextColor: '#000',
+            });
+            lowLine._parentSeries = series;
+            this.axisPriceLines.push(lowLine);
+        });
+
+        // 3. LIVE Marker (Pink) - Add to the first active series
+        const primary = seriesToMark[0];
+        if (primary && primary.data && primary.data.length > 0) {
+            const lastPoint = primary.data[primary.data.length - 1];
+            const currentMarkers = primary.series.getMarkers();
+            
+            // Check for overlap with existing markers on the same series
+            const hasOverlap = currentMarkers.some(m => m.time === lastPoint.time);
+            if (!hasOverlap) {
+                primary.series.setMarkers([
+                    ...currentMarkers,
+                    {
+                        time: lastPoint.time,
+                        position: 'aboveBar',
+                        color: '#e91e63',
+                        shape: 'arrowDown',
+                        text: 'LIVE'
+                    }
+                ].sort((a, b) => a.time - b.time));
+            }
+        }
     }
 }
