@@ -142,8 +142,9 @@ export class DataManagementUI {
                 setTimeout(() => {
                     if (modal.parentElement) modal.remove();
                     if (cameFromSettings) {
-                        const { GeneralSettingsUI } = require('./GeneralSettingsUI.js');
-                        GeneralSettingsUI.showModal();
+                        import('./GeneralSettingsUI.js').then(module => {
+                            module.GeneralSettingsUI.showModal();
+                        });
                     }
                 }, 450);
             }
@@ -175,8 +176,9 @@ export class DataManagementUI {
                 modal.classList.add(CSS_CLASSES.HIDDEN);
                 if (modal.parentElement) modal.remove();
                 if (cameFromSettings) {
-                    const { GeneralSettingsUI } = require('./GeneralSettingsUI.js');
-                    GeneralSettingsUI.showModal();
+                    import('./GeneralSettingsUI.js').then(module => {
+                        module.GeneralSettingsUI.showModal();
+                    });
                 }
             }, 450);
             navManager.popStateSilently();

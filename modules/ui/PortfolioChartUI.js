@@ -1,5 +1,5 @@
 import { formatCurrency, formatPercent } from '../utils/formatters.js';
-import { UI_ICONS, CSS_CLASSES, IDS, EVENTS, CASH_CATEGORIES } from '../utils/AppConstants.js';
+import { UI_ICONS, CSS_CLASSES, IDS, EVENTS, CASH_CATEGORIES, PORTFOLIO_ID } from '../utils/AppConstants.js';
 import { AppState } from '../state/AppState.js';
 import { navManager } from '../utils/NavigationManager.js';
 import { DataService, userStore } from '../data/DataService.js';
@@ -51,6 +51,9 @@ export class PortfolioChartUI {
 
         // Categories Breakdown Series
         this.categorySeries = {};
+
+        // Events Layer (Buys/Sells)
+        this.showEvents = localStorage.getItem('ASX_NEXT_portfolioChartShowEvents') === 'true';
     }
 
     async render() {
@@ -147,6 +150,12 @@ export class PortfolioChartUI {
                                 style="background:transparent; border:none; outline:none; padding:4px 0; color:#fff; font-size:0.85rem; font-weight:800; cursor:pointer; display:flex; align-items:center; gap:8px;">
                              <span style="width:10px; height:10px; border-radius:2px; background:#a49393; opacity:${this.visibleLayers.shares ? 1 : 0.4};"></span>
                              Shares
+                        </button>
+
+                        <button class="layer-toggle-btn ${this.showEvents ? 'active' : ''}" data-layer="events" 
+                                style="background:transparent; border:none; outline:none; padding:4px 0; color:#fff; font-size:0.85rem; font-weight:800; cursor:pointer; display:flex; align-items:center; gap:8px;">
+                             <span style="width:10px; height:10px; border-radius:50%; background:#2196F3; opacity:${this.showEvents ? 1 : 0.4};"></span>
+                             Events
                         </button>
 
                         <!-- Divider -->
@@ -292,6 +301,17 @@ export class PortfolioChartUI {
                 }
 
                 const layer = btn.dataset.layer;
+
+                if (layer === 'events') {
+                    this.showEvents = !this.showEvents;
+                    localStorage.setItem('ASX_NEXT_portfolioChartShowEvents', this.showEvents);
+                    btn.classList.toggle('active', this.showEvents);
+                    const indicator = btn.querySelector('span');
+                    if (indicator) indicator.style.opacity = this.showEvents ? 1 : 0.4;
+                    this._updateMarkers(this.lastTotalData, this.lastSharesData, this.lastSuperData);
+                    return;
+                }
+
                 this.visibleLayers[layer] = !this.visibleLayers[layer];
                 localStorage.setItem('ASX_NEXT_portfolioChartLayers', JSON.stringify(this.visibleLayers));
                 const isActive = this.visibleLayers[layer];
@@ -584,7 +604,15 @@ export class PortfolioChartUI {
                 .filter(s => getSnapTs(s) >= startTs)
                 .sort((a, b) => getSnapTs(a) - getSnapTs(b));
 
-            sortedSnapshots.forEach(s => {
+            // --- DATA CLEANING: Remove known April 2nd Transient Blip ---
+            // This ignores the erroneous data point at 8:29 AM on April 2nd to ensure a smooth graph.
+            const glitchTs = new Date('2026-04-02T08:29:25').getTime() / 1000;
+            const cleanedSnapshots = sortedSnapshots.filter(s => {
+                const ts = getSnapTs(s);
+                return Math.abs(ts - glitchTs) > 30; // Ignore point if within 30s of glitch
+            });
+
+            cleanedSnapshots.forEach(s => {
                 const time = getSnapTs(s);
                 totalData.push({ time, value: s.total });
                 sharesData.push({ time, value: s.shares });
@@ -863,6 +891,10 @@ export class PortfolioChartUI {
         }
 
         // 2. Markers for High/Low (On the Chart)
+        this.lastTotalData = totalData;
+        this.lastSharesData = sharesData;
+        this.lastSuperData = superData;
+        
         this._updateMarkers(totalData, sharesData, superData);
 
         // 2. Update High/Low Innovative Stats Row
@@ -938,7 +970,7 @@ export class PortfolioChartUI {
             return d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
         };
 
-        seriesToMark.forEach(config => {
+        seriesToMark.forEach((config, idx) => {
             const { data, series, label } = config;
             if (!data || data.length === 0 || !series) return;
 
@@ -948,8 +980,7 @@ export class PortfolioChartUI {
             const highIdx = data.findLastIndex(d => d.value === highVal);
             const lowIdx = data.findLastIndex(d => d.value === lowVal);
 
-            // 1. High/Low Markers (On the line graph)
-            series.setMarkers([
+            const markers = [
                 {
                     time: data[highIdx].time,
                     position: 'aboveBar',
@@ -966,9 +997,80 @@ export class PortfolioChartUI {
                     text: `${label} Low: ${formatDate(data[lowIdx].time)}`,
                     size: 1.5
                 }
-            ]);
+            ];
+            // 3. Add LIVE Marker (Pink) to the FIRST visible series only
+            if (idx === 0) {
+                const lastPoint = data[data.length - 1];
+                // Avoid duplicating if LIVE point is also high/low
+                if (highIdx !== data.length - 1 && lowIdx !== data.length - 1) {
+                    markers.push({
+                        time: lastPoint.time,
+                        position: 'aboveBar',
+                        color: '#e91e63',
+                        shape: 'arrowDown',
+                        text: 'LIVE'
+                    });
+                }
+            }
 
-            // 2. Axis Price Lines (Right Sidebar)
+            // 5. Add Transaction Events (Buy/Sell) if enabled
+            if (this.showEvents && label === 'Shares') {
+                const march3rd = new Date('2026-03-03').getTime() / 1000;
+                const portfolioShares = (AppState.data.shares || []).filter(s => 
+                    (parseInt(s.portfolioShares) || 0) > 0
+                );
+
+                portfolioShares.forEach(share => {
+                    const dateStr = share.purchaseDate || share.entryDate;
+                    if (!dateStr) return;
+
+                    // Normalize date to timestamp
+                    let ts;
+                    if (dateStr.includes('-')) {
+                        ts = new Date(dateStr).getTime() / 1000;
+                    } else if (dateStr.includes('/')) {
+                        const parts = dateStr.split('/');
+                        const d = parts[0].padStart(2, '0');
+                        const m = parts[1].padStart(2, '0');
+                        const y = parts[2];
+                        ts = new Date(`${y}-${m}-${d}`).getTime() / 1000;
+                    } else {
+                        ts = new Date(dateStr).getTime() / 1000;
+                    }
+
+                    if (isNaN(ts) || ts < march3rd) return;
+
+                    // SNAP: Find the closest timestamp in our chart data
+                    // This ensures the marker sits exactly on a data point
+                    let closest = data[0];
+                    let minDiff = Math.abs(data[0].time - ts);
+                    
+                    for (let i = 1; i < data.length; i++) {
+                        const diff = Math.abs(data[i].time - ts);
+                        if (diff < minDiff) {
+                            minDiff = diff;
+                            closest = data[i];
+                        }
+                    }
+
+                    // Only show if the closest point is within 2 days (handles weekend buys etc)
+                    if (minDiff > 172800) return;
+
+                    const isSell = share.buySell === 'sell';
+                    markers.push({
+                        time: closest.time,
+                        position: 'inBar', // Sit exactly on the line
+                        color: isSell ? '#FF9800' : '#2196F3',
+                        shape: 'circle',
+                        text: `${share.code} ${isSell ? 'SELL' : 'BUY'}`,
+                        size: 0.8
+                    });
+                });
+            }
+
+            series.setMarkers(markers.sort((a, b) => a.time - b.time));
+
+            // 4. Axis Price Lines (Right Sidebar)
             const highLine = series.createPriceLine({
                 price: highVal,
                 color: '#06FF4F',
@@ -995,27 +1097,5 @@ export class PortfolioChartUI {
             lowLine._parentSeries = series;
             this.axisPriceLines.push(lowLine);
         });
-
-        // 3. LIVE Marker (Pink) - Add to the first active series
-        const primary = seriesToMark[0];
-        if (primary && primary.data && primary.data.length > 0) {
-            const lastPoint = primary.data[primary.data.length - 1];
-            const currentMarkers = primary.series.getMarkers();
-            
-            // Check for overlap with existing markers on the same series
-            const hasOverlap = currentMarkers.some(m => m.time === lastPoint.time);
-            if (!hasOverlap) {
-                primary.series.setMarkers([
-                    ...currentMarkers,
-                    {
-                        time: lastPoint.time,
-                        position: 'aboveBar',
-                        color: '#e91e63',
-                        shape: 'arrowDown',
-                        text: 'LIVE'
-                    }
-                ].sort((a, b) => a.time - b.time));
-            }
-        }
     }
 }
