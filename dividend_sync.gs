@@ -247,40 +247,61 @@ function filterTickersNeedingSync_(tickers) {
   const cutoffMs = Date.now() - (DIV_CONFIG.SYNC_INTERVAL_DAYS * 24 * 60 * 60 * 1000);
   const needsSync = [];
 
-  tickers.forEach(ticker => {
-    try {
-      const docUrl = `${cfg.BASE_URL}/projects/${cfg.PROJECT_ID}/databases/(default)/documents/artifacts/${cfg.PROJECT_ID}/metadata_dividends/${ticker}`;
-      const resp = UrlFetchApp.fetch(docUrl, {
-        headers: { Authorization: `Bearer ${token}` },
-        muteHttpExceptions: true
-      });
+  if (!tickers || tickers.length === 0) return needsSync;
 
-      // Document doesn't exist → needs initial sync
-      if (resp.getResponseCode() === 404) {
+  const url = `${cfg.BASE_URL}/projects/${cfg.PROJECT_ID}/databases/(default)/documents:batchGet`;
+  
+  // Format document paths for the batchGet request
+  const documents = tickers.map(ticker => 
+    `projects/${cfg.PROJECT_ID}/databases/(default)/documents/artifacts/${cfg.PROJECT_ID}/metadata_dividends/${ticker}`
+  );
+
+  const payload = {
+    documents: documents
+  };
+
+  try {
+    const resp = UrlFetchApp.fetch(url, {
+      method: 'post',
+      contentType: 'application/json',
+      payload: JSON.stringify(payload),
+      headers: { Authorization: `Bearer ${token}` },
+      muteHttpExceptions: true
+    });
+
+    if (resp.getResponseCode() !== 200) {
+      console.error('[DivSync] BatchGet failed HTTP', resp.getResponseCode());
+      return tickers; // Fallback: Assume all need sync on API failure
+    }
+
+    const results = JSON.parse(resp.getContentText());
+    
+    results.forEach(result => {
+      let docName = '';
+      if (result.found) docName = result.found.name;
+      else if (result.missing) docName = result.missing;
+      
+      if (!docName) return; // Skip readTime-only response objects
+      
+      const ticker = docName.split('/').pop();
+      
+      if (result.missing) {
         needsSync.push(ticker);
-        return;
-      }
-
-      // Document exists → check lastSync freshness
-      if (resp.getResponseCode() === 200) {
-        const docData = JSON.parse(resp.getContentText());
-        const lastSync = docData?.fields?.lastSync?.stringValue;
-
+      } else if (result.found) {
+        const lastSync = result.found.fields?.lastSync?.stringValue;
         if (!lastSync || new Date(lastSync).getTime() < cutoffMs) {
           needsSync.push(ticker);
         }
-        // else: recently synced, skip
-      } else {
-        // Unexpected HTTP code → assume needs sync
-        needsSync.push(ticker);
       }
-    } catch (e) {
-      // On any error, assume it needs sync (safe default)
-      needsSync.push(ticker);
-    }
-  });
+    });
+    
+  } catch (e) {
+     console.error('[DivSync] BatchGet exception:', e);
+     return tickers; // Fallback
+  }
 
-  return needsSync;
+  // Preserve original sorting format
+  return tickers.filter(t => needsSync.includes(t));
 }
 
 /**
