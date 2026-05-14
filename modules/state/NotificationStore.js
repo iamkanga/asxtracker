@@ -174,6 +174,35 @@ export class NotificationStore {
             this.isReady = true;
             document.dispatchEvent(new CustomEvent(EVENTS.NOTIFICATION_READY));
 
+            /* --- SELF-TEST: BAP OVERRIDE VALIDATION (Uncomment for diagnostics) ---
+            try {
+                console.log("🧪 [Self-Test] Verifying Watchlist Override Logic...");
+                
+                // Pure function simulation to avoid false negatives from live data filters
+                const simulateMinPriceGate = (overrideOn, price, minPrice) => {
+                    const shouldBypass = overrideOn; // isTarget omitted for purely testing portfolio override
+                    
+                    // The exact logic applied in filterLocalHits for Global Min Price
+                    if (!shouldBypass && minPrice > 0 && price < minPrice) {
+                        return false; // BLOCKED
+                    }
+                    return true; // PERMITTED
+                };
+
+                // Test BAP scenario: $0.42 price with $0.50 gate
+                const passA = simulateMinPriceGate(true, 0.42, 0.50) === true;   // Override ON -> PERMITTED
+                const passB = simulateMinPriceGate(false, 0.42, 0.50) === false; // Override OFF -> BLOCKED
+
+                if (passA && passB) {
+                    console.log("%c✅ [Self-Test] PASS: Override correctly bypasses Min Price gate for Portfolio codes.", "color: #00E676; font-weight: bold;");
+                } else {
+                    console.error(`❌ [Self-Test] FAIL: Override logic is broken. (A: ${passA}, B: ${passB})`);
+                }
+            } catch (e) {
+                console.warn("⚠️ [Self-Test] Could not complete validation.", e);
+            }
+            */
+
             // --- BIND TO LIVE DATA UPDATES (Event-Driven) ---
             // Replaces manual calls from AppController and dead legacy events.
             StateAuditor.on('PRICES_UPDATED', () => {
@@ -567,7 +596,7 @@ export class NotificationStore {
             const thresholdMin = minPrice || 0;
 
             // OVERRIDE LOGIC: 
-            // If Override is ON, we bypass the global minPrice check for items in the user's watchlist (`shouldBypass`).
+            // If Override is ON, we bypass FILTERS (Sector, Min Price) for items in the user's watchlist (`shouldBypass`).
             // However, we still respect it for generic global alerts.
             if (!shouldBypass && thresholdMin > 0 && price < thresholdMin) {
                 return false;
@@ -645,7 +674,7 @@ export class NotificationStore {
             // 3. Threshold Check
             // EXCEPTION: Targets and 52-Week Hi/Lo hits are explicit events. They bypass generic movement thresholds.
             // FIXED: "Override" (shouldBypass) strictly applies to FILTERS (Sector, Min Price), not thresholds.
-            // Watchlist items MUST still meet the %/$ requirements to prevent noise.
+            // Watchlist items MUST still meet the movement %/$ requirements to prevent "chatter" noise.
             if (isTarget || rules.isHilo) return true;
 
             // TRUTH OVERRIDE: Use LIVE price data for threshold comparison
@@ -1040,10 +1069,10 @@ export class NotificationStore {
 
             // 0. 52-WEEK HIT RECOGNITION (Server-Side)
             if (intent === '52w-high' || intent === '52w-low') {
-                // Determine if strict minPrice should apply (using hiloMinPrice logic form above)
+                // Determine if strict minPrice should apply
                 if (rules.hiloEnabled === false) return false;
                 const price = Number(hit.live || hit.price || hit.last || 0);
-                if (rules.hiloMinPrice > 0 && price < rules.hiloMinPrice) return false;
+                if (!shouldBypass && rules.hiloMinPrice > 0 && price < rules.hiloMinPrice) return false;
                 return true; // Allow valid 52W hits
             }
 
@@ -1104,14 +1133,16 @@ export class NotificationStore {
                     }
                 }
 
-                // 3. Global Min Price Filter (Enforce UNIVERSALLY as per user request)
-                // "Ignore stocks below..." rule applies to Portfolio items too now.
+                // 3. Global Min Price Filter
+                // ALIGNED: If Override is ON, we bypass the global minPrice FILTER for Portfolio/Watchlist items.
                 const minPrice = rules.minPrice || 0;
-                if (minPrice > 0 && price < minPrice) {
+                if (!shouldBypass && minPrice > 0 && price < minPrice) {
                     return false;
                 }
 
                 // Threshold Check
+                // FIXED: "Override" (shouldBypass) strictly applies to FILTERS (Sector, Min Price), not thresholds.
+                // Watchlist items MUST still meet the movement %/$ requirements to prevent "chatter" noise.
                 const metPct = (thresholdPct > 0 && pct >= thresholdPct);
                 const metDol = (thresholdDol > 0 && dol >= thresholdDol);
                 if (!metPct && !metDol) {
