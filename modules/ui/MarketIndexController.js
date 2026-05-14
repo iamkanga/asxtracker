@@ -264,24 +264,32 @@ export class MarketIndexController {
 
             return `
                 <div class="market-stream-item-wrapper ${readClass}" data-alert-id="${id}">
-                    <a href="${href}" target="${target}" class="market-stream-item" style="${readStyle1}">
+                    <a href="${href}" target="${target}" class="market-stream-item" style="padding-bottom: 44px; ${readStyle1}">
                         <div class="stream-meta">
                             <span class="stream-badge ${badgeClass}">${badgeText}</span>
                             <span class="stream-time">${dateStr}</span>
                         </div>
                         <div class="stream-title" style="color: var(--text-color);">${alert.title || alert.headline}</div>
                         ${alert.summary ? `<div class="stream-summary" style="margin-top: 5px;">${alert.summary}</div>` : ''}
-                        <div class="stream-footer" style="padding-bottom: 4px;">
-                            <span class="stream-source"><i class="fas fa-rss"></i> Market Index</span>
-                            <i class="fas fa-external-link-alt" style="font-size: 0.7rem; opacity: 0.4; color: var(--color-accent);"></i>
-                        </div>
+                        <!-- Footer removed, replaced by action buttons below -->
                     </a>
                     
-                    ${isCompany ? `
-                    <button class="code-pill" data-code="${extractedCode}" style="position: absolute; bottom: 8px; left: 16px; z-index: 10; border: 1px solid rgba(var(--color-accent-rgb, 100, 150, 255), 0.4); border-radius: 4px; background: rgba(30, 30, 30, 0.9); color: var(--color-accent, #6496ff); padding: 4px 10px; font-size: 0.75rem; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.2);" title="View ${extractedCode} Details">
-                        <i class="fas fa-search-dollar"></i> View ${extractedCode}
-                    </button>
-                    ` : ''}
+                    <div style="position: absolute; bottom: 12px; left: 16px; right: 16px; z-index: 10; display: flex; align-items: center; height: 26px; box-sizing: border-box;">
+                        ${isCompany ? `
+                        <button class="code-pill" data-code="${extractedCode}" style="border: 1px solid rgba(var(--color-accent-rgb, 100, 150, 255), 0.4); border-radius: 4px; background: rgba(30, 30, 30, 0.9); color: var(--color-accent, #6496ff); padding: 0 10px; height: 26px; font-size: 0.75rem; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 4px; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.2); box-sizing: border-box; margin-right: 8px; line-height: 1;" title="View ${extractedCode} Details">
+                            <i class="fas fa-search-dollar" style="vertical-align: middle;"></i> View ${extractedCode}
+                        </button>
+                        ` : ''}
+                        <button class="analysis-pill" data-url="${href}" style="border: 1px solid rgba(var(--color-accent-rgb, 100, 150, 255), 0.4); border-radius: 4px; background: rgba(30, 30, 30, 0.9); color: var(--color-accent, #6496ff); padding: 0 10px; height: 26px; font-size: 0.75rem; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 4px; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.2); box-sizing: border-box; line-height: 1;" title="Analyze Announcement">
+                            <i class="fas fa-robot" style="vertical-align: middle;"></i> Analyze
+                        </button>
+                        
+                        <div style="flex: 1;"></div>
+                        
+                        <button class="announcement-pill" style="border: 1px solid rgba(var(--color-accent-rgb, 100, 150, 255), 0.4); border-radius: 4px; background: rgba(30, 30, 30, 0.9); color: var(--color-accent, #6496ff); padding: 0 10px; height: 26px; font-size: 0.75rem; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 4px; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.2); box-sizing: border-box; line-height: 1;" title="Source Document">
+                            <i class="fas fa-satellite-dish" style="vertical-align: middle;"></i> Announcement
+                        </button>
+                    </div>
                     <button class="stream-dismiss-btn" data-id="${id}" title="Dismiss"
                         style="position: absolute; top: 12px; right: 12px; background: transparent; border: none; color: var(--text-color); cursor: pointer; padding: 5px; z-index: 15; transition: opacity 0.2s, transform 0.2s; ${readStyle2}">
                         <i class="fas fa-times" style="font-size: 0.8rem;"></i>
@@ -300,6 +308,8 @@ export class MarketIndexController {
             const alertId = wrapper.getAttribute('data-alert-id');
             const link = wrapper.querySelector('.market-stream-item');
             const codePill = wrapper.querySelector('.code-pill');
+            const analysisPill = wrapper.querySelector('.analysis-pill');
+            const announcementPill = wrapper.querySelector('.announcement-pill');
             const dismissBtn = wrapper.querySelector('.stream-dismiss-btn');
 
             // 1. SMART TAP (Link Ghosting)
@@ -308,14 +318,14 @@ export class MarketIndexController {
                 let isScrolling = false;
 
                 const handleTouchStart = (e) => {
-                    if (e.target.closest('.code-pill') || e.target.closest('.stream-dismiss-btn')) return;
+                    if (e.target.closest('.code-pill') || e.target.closest('.analysis-pill') || e.target.closest('.announcement-pill') || e.target.closest('.stream-dismiss-btn')) return;
                     isScrolling = false;
                     startX = e.touches ? e.touches[0].clientX : e.clientX;
                     startY = e.touches ? e.touches[0].clientY : e.clientY;
                 };
 
                 const handleTouchEnd = (e) => {
-                    if (e.target.closest('.code-pill') || e.target.closest('.stream-dismiss-btn')) return;
+                    if (e.target.closest('.code-pill') || e.target.closest('.analysis-pill') || e.target.closest('.stream-dismiss-btn')) return;
                     if (isScrolling) return;
 
                     const endX = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
@@ -357,7 +367,45 @@ export class MarketIndexController {
                 });
             }
 
-            // 3. DISMISS BUTTON
+            // 3. ANALYSIS BUTTON
+            if (analysisPill) {
+                analysisPill.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const url = analysisPill.dataset.url;
+                    const textPayload = `Summarize this in a couple of sentences and tell me the likely effect on the share price making sure you highlight any key points: ${url}`;
+                    
+                    if (navigator.share) {
+                        navigator.share({
+                            text: textPayload
+                        }).catch(err => {
+                            if (err.name !== 'AbortError') {
+                                console.warn('[MarketIndexController] Share failed:', err);
+                            }
+                        });
+                    } else {
+                        // Fallback: Copy to clipboard
+                        navigator.clipboard.writeText(textPayload).then(() => {
+                            if (window.ToastManager) window.ToastManager.success('Analysis prompt copied to clipboard!');
+                            else if (ToastManager) ToastManager.success('Analysis prompt copied to clipboard!');
+                        }).catch(err => {
+                            console.error('Clipboard copy failed', err);
+                        });
+                    }
+                });
+            }
+
+            // 4. ANNOUNCEMENT BUTTON
+            if (announcementPill) {
+                announcementPill.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const docUrl = link?.getAttribute('href');
+                    if (docUrl && docUrl !== '#') window.open(docUrl, '_blank');
+                });
+            }
+
+            // 5. DISMISS BUTTON
             if (dismissBtn) {
                 dismissBtn.addEventListener('click', (e) => {
                     e.preventDefault();
