@@ -129,28 +129,10 @@ export class WidgetPanel {
             }
 
             document.body.appendChild(this.container);
-            this.container.className = CSS_CLASSES.WIDGET_PANEL;
-
-            const isMobile = window.innerWidth <= 540;
-            const panelWidth = isMobile ? '100vw' : '380px';
-
-            this.container.style.cssText = `
-                display: flex !important;
-                visibility: visible !important;
-                opacity: 1 !important;
-                position: fixed !important;
-                top: 60px !important;
-                ${isMobile ? 'left: 0 !important; right: 0 !important;' : 'right: 0 !important; left: auto !important;'}
-                width: ${panelWidth} !important;
-                height: calc(100vh - 60px) !important;
-                background: var(--modal-content-bg, var(--card-bg, #1a1a2e)) !important;
-                z-index: 20000 !important;
-                border-left: ${isMobile ? 'none' : '1px solid rgba(255,255,255,0.08)'} !important;
-                box-shadow: -10px 0 50px rgba(0,0,0,0.8) !important;
-                pointer-events: all !important;
-                transform: translateX(0) !important;
-                transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-            `;
+            this.container.style.display = 'flex';
+            this.container.style.visibility = 'visible';
+            this.container.style.opacity = '1';
+            
             this.render();
         } else {
             // CLOSING
@@ -164,7 +146,6 @@ export class WidgetPanel {
                 }, 300);
             }
 
-            this.container.style.transform = 'translateX(100%)';
             setTimeout(() => {
                 if (this.container.classList.contains(CSS_CLASSES.WIDGET_HIDDEN)) {
                     this.container.style.display = 'none';
@@ -268,10 +249,18 @@ export class WidgetPanel {
         `;
 
         // 2. DYNAMIC MODULES
-        const activeModules = WIDGET_MODULES.filter(module => {
-            const userPref = config.find(c => c.id === module.id);
-            return userPref ? userPref.visible : module.default;
-        });
+        const activeModules = WIDGET_MODULES
+            .filter(module => {
+                const userPref = config.find(c => c.id === module.id);
+                return userPref ? userPref.visible : module.default;
+            })
+            .sort((a, b) => {
+                // Sort by the index in the saved config to maintain drag-and-drop order
+                const indexA = config.findIndex(c => c.id === a.id);
+                const indexB = config.findIndex(c => c.id === b.id);
+                if (indexA === -1 || indexB === -1) return 0;
+                return indexA - indexB;
+            });
 
         html += activeModules.map(module => {
             // Hero-promoted modules are already handled or removed

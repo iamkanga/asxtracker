@@ -2599,7 +2599,6 @@ export class NotificationStore {
                     batches.push({ id: doc.id, ...doc.data() });
                 });
 
-                    console.log(`[MarketIndex] 📡 Snapshot received: ${batches.length} batch(es) from Firestore`);
 
 
                 // Flatten batches into a single list of alerts
@@ -2615,7 +2614,6 @@ export class NotificationStore {
                         items = [batch];
                     }
 
-                    console.log(`[MarketIndex]   Processing Batch: ${batch.batchType || 'unknown'} (${batch.id}) → ${items.length} item(s)`);
 
                     // Pre-process items to ensure timestamp exists
                     items.forEach(item => {
@@ -2726,7 +2724,6 @@ export class NotificationStore {
                 this.sharedAlerts = allAlerts;
                 this._updateMergedAlerts();
 
-                console.log(`[MarketIndex] ✅ Shared Stream Synced: ${allAlerts.length} total raw items`);
             }, (error) => {
                 console.error("[NotificationStore] Market Index Stream Error:", error);
             });
@@ -2746,11 +2743,11 @@ export class NotificationStore {
         const token = localStorage.getItem('asx_gmail_token');
         if (!token) return;
 
-        console.log('[NotificationStore] 📧 Scanning personal Gmail for Market Index alerts...');
+        // console.log('[NotificationStore] 📧 Scanning personal Gmail for Market Index alerts...');
         const personal = await MailService.fetchMarketAlerts();
         
         if (personal && personal.length > 0) {
-            console.log(`[NotificationStore] ✅ Found ${personal.length} personal alerts.`);
+            // console.log(`[NotificationStore] ✅ Found ${personal.length} personal alerts.`);
             this.personalAlerts = personal;
             this._updateMergedAlerts();
             
@@ -2764,7 +2761,7 @@ export class NotificationStore {
                 // MailService.markAsRead(toMarkRead); // Optional: don't auto-mark read yet to be safe
             }
         } else {
-            console.log('[NotificationStore] ℹ️ No unread personal alerts found.');
+            // console.log('[NotificationStore] ℹ️ No unread personal alerts found.');
         }
     }
 
