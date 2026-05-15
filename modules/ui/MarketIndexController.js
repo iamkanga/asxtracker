@@ -279,10 +279,10 @@ export class MarketIndexController {
                         <button class="code-pill" data-code="${extractedCode}" style="border: 1px solid rgba(var(--color-accent-rgb, 100, 150, 255), 0.4); border-radius: 4px; background: rgba(30, 30, 30, 0.9); color: var(--color-accent, #6496ff); padding: 0 10px; height: 26px; font-size: 0.75rem; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 4px; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.2); box-sizing: border-box; margin-right: 8px; line-height: 1;" title="View ${extractedCode} Details">
                             <i class="fas fa-search-dollar" style="vertical-align: middle;"></i> View ${extractedCode}
                         </button>
-                        ` : ''}
                         <button class="analysis-pill" data-url="${href}" style="border: 1px solid rgba(var(--color-accent-rgb, 100, 150, 255), 0.4); border-radius: 4px; background: rgba(30, 30, 30, 0.9); color: var(--color-accent, #6496ff); padding: 0 10px; height: 26px; font-size: 0.75rem; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 4px; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.2); box-sizing: border-box; line-height: 1;" title="Analyze Announcement">
                             <i class="fas fa-robot" style="vertical-align: middle;"></i> Analyze
                         </button>
+                        ` : ''}
                         
                         <div style="flex: 1;"></div>
                         
@@ -372,6 +372,10 @@ export class MarketIndexController {
                 analysisPill.addEventListener('click', (e) => {
                     e.preventDefault();
                     e.stopPropagation();
+                    
+                    // Mark as read (Ghosting effect)
+                    this.markAsRead(alertId, wrapper);
+
                     const url = analysisPill.dataset.url;
                     const textPayload = `Summarize this in a couple of sentences and tell me the likely effect on the share price making sure you highlight any key points: ${url}`;
                     
@@ -400,6 +404,10 @@ export class MarketIndexController {
                 announcementPill.addEventListener('click', (e) => {
                     e.preventDefault();
                     e.stopPropagation();
+
+                    // Mark as read (Ghosting effect)
+                    this.markAsRead(alertId, wrapper);
+
                     const docUrl = link?.getAttribute('href');
                     if (docUrl && docUrl !== '#') window.open(docUrl, '_blank');
                 });
