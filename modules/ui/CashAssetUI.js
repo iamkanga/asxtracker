@@ -382,19 +382,43 @@ export class CashAssetUI {
         });
 
         const commentsContainer = modal.querySelector(`#${IDS.COMMENTS_LIST_CONTAINER}`);
-        const addComment = (text = '') => {
+        const addComment = (commentObj = { text: '', height: null }) => {
+            // Support both legacy string-only and new object format (Handles both 'text' and 'body' for compatibility)
+            const text = typeof commentObj === 'string' ? commentObj : (commentObj.body || commentObj.text || '');
+            const savedHeight = typeof commentObj === 'object' ? commentObj.height : null;
+
             const div = document.createElement('div');
             div.setAttribute('class', 'relative w-full mb-2');
             div.innerHTML = `
-                <textarea class="${CSS_CLASSES.STANDARD_TEXTAREA} w-full" rows="1" placeholder="Note..." style="padding-right: 30px;">${text}</textarea>
+                <textarea class="${CSS_CLASSES.STANDARD_TEXTAREA} w-full" rows="1" placeholder="Note..." style="padding-right: 30px; overflow-y: hidden; resize: vertical; ${savedHeight ? `height: ${savedHeight};` : ''}">${text}</textarea>
                 <button type="button" class="delete-comment text-coffee" style="position: absolute; top: 8px; right: 8px; background: none; border: none; padding: 0; cursor: pointer; opacity: 0.8;">
                     <i class="fas ${UI_ICONS.CLOSE}"></i>
                 </button>
             `;
+
+            const textarea = div.querySelector('textarea');
+            
+            // Auto-expand logic (Growth only to respect manual/saved height)
+            const autoExpand = () => {
+                if (textarea.scrollHeight > textarea.offsetHeight) {
+                    textarea.style.height = textarea.scrollHeight + 'px';
+                }
+            };
+
+            textarea.addEventListener('input', autoExpand);
+            
+            // Initial fit if no height provided
+            if (text && !savedHeight) {
+                requestAnimationFrame(() => {
+                    textarea.style.height = 'auto';
+                    textarea.style.height = textarea.scrollHeight + 'px';
+                });
+            }
+
             div.querySelector('.delete-comment').addEventListener('click', () => div.remove());
             commentsContainer.appendChild(div);
         };
-        comments.forEach(c => addComment(c.text || c));
+        comments.forEach(c => addComment(c));
         modal.querySelector(`#${IDS.BTN_ADD_COMMENT}`).addEventListener('click', () => addComment());
 
         const close = () => {
@@ -476,7 +500,11 @@ export class CashAssetUI {
             }
         }
 
-        const comments = [...modal.querySelectorAll('textarea')].map(t => ({ text: t.value.trim(), date: new Date().toISOString() })).filter(c => c.text);
+        const comments = [...modal.querySelectorAll('textarea')].map(t => ({ 
+            body: t.value.trim(), // Standardize on 'body' for app-wide compatibility
+            height: t.style.height, // Persistent UI State
+            date: new Date().toISOString() 
+        })).filter(c => c.body);
 
         return { name, balance, category, color, comments };
     }

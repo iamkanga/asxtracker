@@ -42,7 +42,11 @@ export function normalizeComments(comments) {
             // Combine Title and Body as requested
             const combinedBody = title ? `${title}: ${body}`.trim() : body.trim();
 
-            return { body: combinedBody, date: date };
+            return { 
+                body: combinedBody, 
+                date: date,
+                height: c.height || null 
+            };
         }
 
         return null;
