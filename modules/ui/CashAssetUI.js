@@ -90,16 +90,18 @@ export class CashAssetUI {
     /**
      * Helper: Pick a color for a new/editing asset.
      */
-    _pickInitialColor(name, currentAssetId, currentCategory) {
+    _pickInitialColor(name, currentAssetId, currentCategory, ignoreTheme = false) {
         let resolvedCategoryId = currentCategory;
         const customInput = document.getElementById('custom-category-name');
         if (currentCategory === 'other' && customInput && customInput.value.trim()) {
             resolvedCategoryId = 'user_' + customInput.value.trim().toLowerCase().replace(/[^a-z0-9]/g, '_');
         }
 
-        // 1. Check if category already has a theme
-        const userCat = (AppState.preferences.userCategories || []).find(c => c && c.id === resolvedCategoryId);
-        if (userCat && userCat.color) return userCat.color;
+        // 1. Check if category already has a theme (unless we are resetting/ignoring)
+        if (!ignoreTheme) {
+            const userCat = (AppState.preferences.userCategories || []).find(c => c && c.id === resolvedCategoryId);
+            if (userCat && userCat.color) return userCat.color;
+        }
 
         // 2. Find first available unique color
         const usedMap = this._getUsedColors(resolvedCategoryId);
@@ -258,8 +260,11 @@ export class CashAssetUI {
             const usedMap = this._getUsedColors(currentCategoryId);
             const selectedColor = modal.dataset.selectedColor;
 
-            const hasOverride = AppState.preferences.userCategories?.some(c => c.id === currentCategoryId && c.color);
-            resetColorBtn.classList.toggle('hidden', !hasOverride);
+            const isPendingReset = modal.dataset.pendingReset === 'true';
+            const hasActualOverride = AppState.preferences.userCategories?.some(c => c.id === currentCategoryId && c.color);
+            
+            // Show Reset button only if there's an actual override and we haven't already "marked" it for reset in this session
+            resetColorBtn.classList.toggle('hidden', !hasActualOverride || isPendingReset);
 
             colorGrid.innerHTML = this.customColors.map(c => {
                 const isTaken = usedMap.has(c.toLowerCase().trim());
@@ -291,6 +296,7 @@ export class CashAssetUI {
                         return;
                     }
                     modal.dataset.selectedColor = item.dataset.color;
+                    modal.dataset.pendingReset = 'false'; // Picking a color cancels a pending reset
                     const previewDot = modal.querySelector('#current-color-preview');
                     if (previewDot) previewDot.style.backgroundColor = item.dataset.color;
                     renderPicker();
@@ -378,10 +384,14 @@ export class CashAssetUI {
         resetColorBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             if (confirm('Reset to default color?')) {
-                AppState.deleteUserCategory(this.selectedCategory);
-                modal.dataset.selectedColor = this._pickInitialColor(modal.querySelector(`#${IDS.ASSET_NAME}`).value, asset?.id, this.selectedCategory);
+                // DEFERRED RESET: Don't delete from AppState yet. Just update UI state.
+                const defaultColor = this._pickInitialColor(modal.querySelector(`#${IDS.ASSET_NAME}`).value, asset?.id, this.selectedCategory, true);
+                modal.dataset.selectedColor = defaultColor;
+                modal.dataset.pendingReset = 'true';
+                
                 const previewDot = modal.querySelector('#current-color-preview');
-                if (previewDot) previewDot.style.backgroundColor = modal.dataset.selectedColor;
+                if (previewDot) previewDot.style.backgroundColor = defaultColor;
+                
                 renderPicker();
                 this._updateModalHeaderColor(modal);
             }
@@ -505,9 +515,14 @@ export class CashAssetUI {
         }
 
         // --- PERSIST CHANGES ---
+        const isPendingReset = modal.dataset.pendingReset === 'true';
+
         if (category === 'other') {
             AppState.saveUserCategory({ id: resolvedCategory, label: customLabel, color });
             category = resolvedCategory;
+        } else if (isPendingReset) {
+            // APPLY DEFERRED RESET
+            AppState.deleteUserCategory(category);
         } else if (color) {
             const cat = this._getMergedCategories().find(c => c.id === category);
             if (cat) {
