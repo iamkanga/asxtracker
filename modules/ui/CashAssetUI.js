@@ -212,9 +212,9 @@ export class CashAssetUI {
                                 </button>
                             </div>
                             <div id="color-picker-container" class="${CSS_CLASSES.HIDDEN}" style="margin-top: 15px; margin-bottom: 25px; padding: 20px; background: var(--card-bg-light); border-radius: 8px; border: 1px solid var(--border-color);">
-                                <div class="flex justify-between items-center" style="margin-bottom: 15px;">
-                                    <div class="text-xs text-muted" style="font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.7;">Category Color Palette</div>
-                                    <button type="button" id="btn-reset-category-color" class="${CSS_CLASSES.BTN_TEXT_SMALL} hidden" style="font-size: 0.7rem;">Reset</button>
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; width: 100%;">
+                                    <div class="text-xs text-muted" style="font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.7; margin: 0;">Category Color Palette</div>
+                                    <button type="button" id="btn-reset-category-color" class="hidden" style="background: none; border: none; color: var(--accent-color); font-size: 0.75rem; font-weight: 600; cursor: pointer; padding: 0; text-transform: uppercase; letter-spacing: 0.5px;">Reset</button>
                                 </div>
                                 <div id="color-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(32px, 1fr)); gap: 14px;"></div>
                             </div>
