@@ -47,10 +47,17 @@ export class WidgetController {
 
         const config = AppState.preferences?.widgetConfig || this._getDefaultConfig();
 
-        // Combine config with module definitions
+        // Combine config with module definitions and SORT by saved order
         const allModules = WIDGET_MODULES.map(m => {
             const userPref = config.find(c => c.id === m.id);
             return { ...m, visible: userPref ? userPref.visible : m.default };
+        }).sort((a, b) => {
+            const indexA = config.findIndex(c => c.id === a.id);
+            const indexB = config.findIndex(c => c.id === b.id);
+            if (indexA === -1 && indexB === -1) return 0;
+            if (indexA === -1) return 1;
+            if (indexB === -1) return -1;
+            return indexA - indexB;
         });
 
         // Build module rows using app's square-radio-wrapper pattern

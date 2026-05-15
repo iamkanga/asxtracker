@@ -199,53 +199,6 @@ export class WidgetPanel {
             </div>
 
             <div class="${CSS_CLASSES.W_FULL} widget-scroll-container" style="flex: 1; overflow-y: auto; padding-bottom: 30px;">
-                
-                <!-- 1. PORTFOLIO HERO -->
-                <div class="widget-section-wrapper" style="padding: 12px 16px;">
-                    <div class="widget-hero-card ${stats.isUp ? 'is-up' : 'is-down'}" id="widget-portfolio-hero" 
-                         style="width: 100%; min-height: auto; padding: 18px; background: ${activeGradient}; box-shadow: 0 4px 20px rgba(0,0,0,0.4); cursor: pointer; border: none !important;">
-                        
-                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
-                            <div style="display: flex; align-items: center; gap: 6px; font-size: 0.75rem; letter-spacing: 1.5px; color: rgba(255,255,255,0.8); font-weight: 800; margin-top: 2px;">
-                                ASX TRACKER <img src="gemini-icon.png" style="width: 14px; height: 14px;">
-                            </div>
-                            <div style="display: flex; flex-direction: column; gap: 6px; align-items: flex-end;">
-                                <div style="display: flex; align-items: center; justify-content: flex-end; gap: 8px;">
-                                    <span style="font-size: 0.75rem; color: rgba(255,255,255,0.6); font-weight: 700; text-transform: uppercase;">ASX 200</span>
-                                    <span style="font-size: 0.9rem; min-width: 65px; text-align: right;">${asxHtml}</span>
-                                </div>
-                                <div style="display: flex; align-items: center; justify-content: flex-end; gap: 8px;">
-                                    <span style="font-size: 0.75rem; color: rgba(255,255,255,0.6); font-weight: 700; text-transform: uppercase;">S&P 500</span>
-                                    <span style="font-size: 0.9rem; min-width: 65px; text-align: right;">${spxHtml}</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div style="display: flex; flex-direction: column; align-items: flex-start; text-align: left; padding: 5px 0 0 0;">
-                            <div style="font-size: 0.75rem; color: rgba(255,255,255,0.6); font-weight: 700; text-transform: uppercase;">My Portfolio</div>
-                            <div style="font-size: 2rem; font-weight: 800; color: #fff; line-height: 1.1; margin-bottom: 12px;">
-                                ${stats.dayChange >= 0 ? '+' : ''}${formatCurrency(stats.dayChange)}
-                            </div>
-                            
-                            <div style="font-size: 0.75rem; color: rgba(255,255,255,0.6); font-weight: 700; text-transform: uppercase;">Day Change</div>
-                            <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 4px;">
-                                <div style="font-size: 1.4rem; font-weight: 800; color: ${stats.isUp ? 'var(--color-positive)' : 'var(--color-negative)'}; display: flex; align-items: center; gap: 6px;">
-                                    <i class="fas ${stats.isUp ? 'fa-arrow-trend-up' : 'fa-arrow-trend-down'}"></i>
-                                    ${stats.dayPct.toFixed(2)}%
-                                </div>
-                                <div style="display: flex; align-items: center; gap: 12px; font-size: 0.85rem; font-weight: 700;">
-                                    <span style="color: var(--color-positive); display: flex; align-items: center; gap: 4px;">
-                                        ${stats.winners} <i class="fas fa-arrow-trend-up" style="font-size: 0.7rem;"></i>
-                                    </span>
-                                    <span style="color: var(--color-negative); display: flex; align-items: center; gap: 4px;">
-                                        ${stats.losers} <i class="fas fa-arrow-trend-down" style="font-size: 0.7rem;"></i>
-                                    </span>
-                                    <span style="color: rgba(255, 255, 255, 0.4);">${stats.unchanged}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
         `;
 
         // 2. DYNAMIC MODULES
@@ -255,16 +208,70 @@ export class WidgetPanel {
                 return userPref ? userPref.visible : module.default;
             })
             .sort((a, b) => {
-                // Sort by the index in the saved config to maintain drag-and-drop order
                 const indexA = config.findIndex(c => c.id === a.id);
                 const indexB = config.findIndex(c => c.id === b.id);
-                if (indexA === -1 || indexB === -1) return 0;
+                if (indexA === -1 && indexB === -1) return 0;
+                if (indexA === -1) return 1;
+                if (indexB === -1) return -1;
                 return indexA - indexB;
             });
 
-        html += activeModules.map(module => {
-            // Hero-promoted modules are already handled or removed
-            if (['portfolio_summary', 'day_performance'].includes(module.id)) return '';
+        html += activeModules.map((module, index) => {
+            // Check if this module should be promoted to Hero (only if it's first and hero-capable)
+            const isHeroCandidate = ['portfolio_summary', 'day_performance'].includes(module.id);
+            const shouldBeHero = isHeroCandidate && index === 0;
+
+            if (shouldBeHero) {
+                return `
+                    <div class="widget-section-wrapper" style="padding: 12px 16px;">
+                        <div class="widget-hero-card ${stats.isUp ? 'is-up' : 'is-down'}" id="widget-portfolio-hero" 
+                             style="width: 100%; min-height: auto; padding: 18px; background: ${activeGradient}; box-shadow: 0 4px 20px rgba(0,0,0,0.4); cursor: pointer; border: none !important;">
+                            
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
+                                <div style="display: flex; align-items: center; gap: 6px; font-size: 0.75rem; letter-spacing: 1.5px; color: rgba(255,255,255,0.8); font-weight: 800; margin-top: 2px;">
+                                    ASX TRACKER <img src="gemini-icon.png" style="width: 14px; height: 14px;">
+                                </div>
+                                <div style="display: flex; flex-direction: column; gap: 6px; align-items: flex-end;">
+                                    <div style="display: flex; align-items: center; justify-content: flex-end; gap: 8px;">
+                                        <span style="font-size: 0.75rem; color: rgba(255,255,255,0.6); font-weight: 700; text-transform: uppercase;">ASX 200</span>
+                                        <span style="font-size: 0.9rem; min-width: 65px; text-align: right;">${asxHtml}</span>
+                                    </div>
+                                    <div style="display: flex; align-items: center; justify-content: flex-end; gap: 8px;">
+                                        <span style="font-size: 0.75rem; color: rgba(255,255,255,0.6); font-weight: 700; text-transform: uppercase;">S&P 500</span>
+                                        <span style="font-size: 0.9rem; min-width: 65px; text-align: right;">${spxHtml}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style="display: flex; flex-direction: column; align-items: flex-start; text-align: left; padding: 5px 0 0 0;">
+                                <div style="font-size: 0.75rem; color: rgba(255,255,255,0.6); font-weight: 700; text-transform: uppercase;">
+                                    ${module.id === 'portfolio_summary' ? 'Total Wealth' : 'My Portfolio'}
+                                </div>
+                                <div style="font-size: 2rem; font-weight: 800; color: #fff; line-height: 1.1; margin-bottom: 12px;">
+                                    ${module.id === 'portfolio_summary' ? formatCurrency(stats.totalValue) : (stats.dayChange >= 0 ? '+' : '') + formatCurrency(stats.dayChange)}
+                                </div>
+                                
+                                <div style="font-size: 0.75rem; color: rgba(255,255,255,0.6); font-weight: 700; text-transform: uppercase;">Day Change</div>
+                                <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 4px;">
+                                    <div style="font-size: 1.4rem; font-weight: 800; color: ${stats.isUp ? 'var(--color-positive)' : 'var(--color-negative)'}; display: flex; align-items: center; gap: 6px;">
+                                        <i class="fas ${stats.isUp ? 'fa-arrow-trend-up' : 'fa-arrow-trend-down'}"></i>
+                                        ${stats.dayPct.toFixed(2)}%
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 12px; font-size: 0.85rem; font-weight: 700;">
+                                        <span style="color: var(--color-positive); display: flex; align-items: center; gap: 4px;">
+                                            ${stats.winners} <i class="fas fa-arrow-trend-up" style="font-size: 0.7rem;"></i>
+                                        </span>
+                                        <span style="color: var(--color-negative); display: flex; align-items: center; gap: 4px;">
+                                            ${stats.losers} <i class="fas fa-arrow-trend-down" style="font-size: 0.7rem;"></i>
+                                        </span>
+                                        <span style="color: rgba(255, 255, 255, 0.4);">${stats.unchanged}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
 
             const content = this[module.renderer]();
             if (!content || (typeof content === 'string' && content.includes('empty'))) return '';
@@ -443,8 +450,8 @@ export class WidgetPanel {
         const daySign = totalDayChange >= 0 ? '+' : '';
 
         return `
-            <div class="widget-stat-grid">
-                <div class="widget-stat-row" style="justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 12px; margin-bottom: 12px;">
+            <div class="widget-stat-grid" style="padding: 0 18px 12px 18px;">
+                <div class="widget-stat-row" style="justify-content: space-between; padding-bottom: 8px; margin-bottom: 8px;">
                     <div class="widget-stat-item" style="align-items: flex-start;">
                         <label class="${dayClass}">Day Change</label>
                         <span class="value ${dayClass}">${daySign}${formatCurrency(Math.abs(totalDayChange))}</span>
@@ -487,7 +494,7 @@ export class WidgetPanel {
         const daySign = dayChange >= 0 ? '+' : '';
 
         return `
-            <div class="widget-stat-grid">
+            <div class="widget-stat-grid" style="padding: 0 18px 12px 18px;">
                 <div class="widget-stat-item">
                     <label>Total Wealth</label>
                     <span class="value">${formatCurrency(totalValue)}</span>
