@@ -2743,6 +2743,9 @@ export class NotificationStore {
     async refreshPersonalAlerts() {
         if (!this.userId) return;
 
+        const token = localStorage.getItem('asx_gmail_token');
+        if (!token) return;
+
         console.log('[NotificationStore] 📧 Scanning personal Gmail for Market Index alerts...');
         const personal = await MailService.fetchMarketAlerts();
         

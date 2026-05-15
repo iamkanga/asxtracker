@@ -18,10 +18,7 @@ export const MailService = {
      */
     async fetchMarketAlerts() {
         const token = localStorage.getItem('asx_gmail_token');
-        if (!token) {
-            console.warn('[MailService] No Gmail access token found. User may need to re-login.');
-            return [];
-        }
+        if (!token) return [];
 
         try {
             // 1. Search for matching threads
