@@ -201,7 +201,21 @@ export class CashAssetUI {
                 <div class="${CSS_CLASSES.MODAL_BODY}" style="flex: 1; overflow-y: auto; padding: 20px;">
                     <div class="${CSS_CLASSES.FORM_CONTAINER}">
                         <div class="${CSS_CLASSES.FORM_GROUP} stacked">
-                            <label class="${CSS_CLASSES.INPUT_LABEL}">Category</label>
+                            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 8px;">
+                                <label class="${CSS_CLASSES.INPUT_LABEL}" style="margin: 0;">Category</label>
+                                <button type="button" id="btn-toggle-color-picker" class="color-selection-pill" style="margin: 0; flex-shrink: 0;">
+                                    <div id="current-color-preview" class="color-preview-dot" style="background-color: ${startColor};"></div>
+                                    <span class="color-pill-text">Theme Color</span>
+                                    <i class="fas ${UI_ICONS.CHEVRON_DOWN} color-pill-chevron"></i>
+                                </button>
+                            </div>
+                            <div id="color-picker-container" class="${CSS_CLASSES.HIDDEN}" style="margin-top: 15px; margin-bottom: 25px; padding: 20px; background: var(--card-bg-light); border-radius: 8px; border: 1px solid var(--border-color);">
+                                <div class="flex justify-between items-center" style="margin-bottom: 15px;">
+                                    <div class="text-xs text-muted" style="font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.7;">Category Color Palette</div>
+                                    <button type="button" id="btn-reset-category-color" class="${CSS_CLASSES.BTN_TEXT_SMALL} hidden" style="font-size: 0.7rem;">Reset</button>
+                                </div>
+                                <div id="color-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(32px, 1fr)); gap: 14px;"></div>
+                            </div>
                             ${dropdownHtml}
                         </div>
                         <div class="${CSS_CLASSES.FORM_GROUP} stacked ${this.selectedCategory === 'other' ? '' : CSS_CLASSES.HIDDEN}" id="custom-category-group">
@@ -209,17 +223,7 @@ export class CashAssetUI {
                             <input type="text" id="custom-category-name" class="${CSS_CLASSES.STANDARD_INPUT}" placeholder="e.g. Savings Goal">
                         </div>
                         <div class="${CSS_CLASSES.FORM_GROUP} stacked">
-                            <div class="flex justify-between items-center mb-1">
-                                <label for="${IDS.ASSET_NAME}" class="${CSS_CLASSES.INPUT_LABEL}">Asset Name</label>
-                                <button type="button" id="btn-toggle-color-picker" class="${CSS_CLASSES.BTN_TEXT_SMALL}" style="font-size: 0.8rem; color: var(--color-accent);">Select Color</button>
-                            </div>
-                            <div id="color-picker-container" class="${CSS_CLASSES.HIDDEN} mb-3 p-3 bg-[var(--card-bg-light)] rounded border border-[var(--border-color)]">
-                                <div class="flex justify-between items-center mb-2">
-                                    <div class="text-xs text-muted">Category Color Palette</div>
-                                    <button type="button" id="btn-reset-category-color" class="${CSS_CLASSES.BTN_TEXT_SMALL} hidden" style="font-size: 0.7rem;">Reset</button>
-                                </div>
-                                <div id="color-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(28px, 1fr)); gap: 10px;"></div>
-                            </div>
+                            <label for="${IDS.ASSET_NAME}" class="${CSS_CLASSES.INPUT_LABEL}">Asset Name</label>
                             <input type="text" id="${IDS.ASSET_NAME}" class="${CSS_CLASSES.STANDARD_INPUT}" value="${asset ? asset.name : ''}" placeholder="e.g. High Interest Savings">
                         </div>
                         <div class="${CSS_CLASSES.FORM_GROUP} stacked">
@@ -287,6 +291,8 @@ export class CashAssetUI {
                         return;
                     }
                     modal.dataset.selectedColor = item.dataset.color;
+                    const previewDot = modal.querySelector('#current-color-preview');
+                    if (previewDot) previewDot.style.backgroundColor = item.dataset.color;
                     renderPicker();
                     this._updateModalHeaderColor(modal);
                 });
@@ -332,12 +338,17 @@ export class CashAssetUI {
                     if (val === 'other') {
                         modal.querySelector('#custom-category-name').focus();
                         pickerContainer.classList.remove(CSS_CLASSES.HIDDEN);
-                        togglePickerBtn.textContent = 'Hide Colors';
+                        const textEl = togglePickerBtn.querySelector('.color-pill-text');
+                        if (textEl) textEl.textContent = 'Hide Colors';
+                        togglePickerBtn.classList.add('active');
                     }
 
                     // Auto-sync color to category theme
                     modal.dataset.selectedColor = this._pickInitialColor(modal.querySelector(`#${IDS.ASSET_NAME}`).value, asset?.id, val);
                     this._updateModalHeaderColor(modal);
+                    const previewDot = modal.querySelector('#current-color-preview');
+                    if (previewDot) previewDot.style.backgroundColor = modal.dataset.selectedColor;
+                    renderOptions();
                     renderPicker();
                 });
             });
@@ -359,7 +370,9 @@ export class CashAssetUI {
 
         togglePickerBtn.addEventListener('click', () => {
             const isHidden = pickerContainer.classList.toggle(CSS_CLASSES.HIDDEN);
-            togglePickerBtn.textContent = isHidden ? 'Select Color' : 'Hide Colors';
+            togglePickerBtn.classList.toggle('active', !isHidden);
+            const textEl = togglePickerBtn.querySelector('.color-pill-text');
+            if (textEl) textEl.textContent = isHidden ? 'Theme Color' : 'Hide Colors';
         });
 
         resetColorBtn.addEventListener('click', (e) => {
@@ -367,6 +380,8 @@ export class CashAssetUI {
             if (confirm('Reset to default color?')) {
                 AppState.deleteUserCategory(this.selectedCategory);
                 modal.dataset.selectedColor = this._pickInitialColor(modal.querySelector(`#${IDS.ASSET_NAME}`).value, asset?.id, this.selectedCategory);
+                const previewDot = modal.querySelector('#current-color-preview');
+                if (previewDot) previewDot.style.backgroundColor = modal.dataset.selectedColor;
                 renderPicker();
                 this._updateModalHeaderColor(modal);
             }

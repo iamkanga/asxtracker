@@ -390,3 +390,56 @@ input[type="number"] {
     gap: 12px;
     padding: 12px;
 }
+
+/* --- Color Selection Pill (Now Rectangular) --- */
+.color-selection-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border: none !important; /* Force no border */
+    padding: 6px 12px;
+    border-radius: 6px; /* Rectangular format */
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    user-select: none;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.color-selection-pill:hover {
+    background: rgba(255, 255, 255, 0.08);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.color-selection-pill:active {
+    transform: translateY(0);
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.color-preview-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px; /* Rectangular/Square color preview */
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1), 0 1px 2px rgba(0, 0, 0, 0.3);
+    transition: background-color 0.3s ease;
+}
+
+.color-pill-text {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-color);
+    opacity: 0.9;
+    letter-spacing: 0.3px;
+}
+
+.color-pill-chevron {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    transition: transform 0.3s ease;
+}
+
+.color-selection-pill.active .color-pill-chevron {
+    transform: rotate(180deg);
+    color: var(--color-accent);
+}
