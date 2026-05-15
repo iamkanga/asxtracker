@@ -590,12 +590,17 @@ export const AppState = {
     },
 
     deleteUserCategory(categoryId) {
-        const index = this.preferences.userCategories.findIndex(c => c.id === categoryId);
+        if (!this.preferences.userCategories) return;
+        
+        const originalList = this.preferences.userCategories;
+        const index = originalList.findIndex(c => c.id === categoryId);
         if (index === -1) return;
 
-        this.preferences.userCategories.splice(index, 1);
+        // Create a new array instead of splicing in-place to prevent shared reference bugs
+        const newList = originalList.filter(c => c.id !== categoryId);
+        this.preferences.userCategories = newList;
 
-        // Clear color from assets in this category so they release their claim
+        // Clear color from assets in memory (also creates a clean state)
         if (this.data.cash) {
             this.data.cash.forEach(asset => {
                 if (asset.category === categoryId) {
@@ -604,7 +609,7 @@ export const AppState = {
             });
         }
 
-        localStorage.setItem(STORAGE_KEYS.USER_CATEGORIES, JSON.stringify(this.preferences.userCategories));
+        localStorage.setItem(STORAGE_KEYS.USER_CATEGORIES, JSON.stringify(newList));
         this._triggerSync();
     },
 
