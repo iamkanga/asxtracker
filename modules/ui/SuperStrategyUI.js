@@ -21,7 +21,8 @@ import {
     RECONTRIBUTION_RULES,
     daysUntilEOFY,
     getCurrentFinancialYear,
-    getCapData
+    getCapData,
+    isJune1stRuleApplicable
 } from '../data/SuperLegislation.js';
 
 export default class SuperStrategyUI {
@@ -837,10 +838,16 @@ export default class SuperStrategyUI {
                             </div>
                         </div>
 
-                        <button id="super-final-reset-btn" class="${CSS_CLASSES.PRIMARY_PILL_BTN}" style="width: 100%; border-radius: 0; padding: 16px; font-weight: 950; font-size: 0.9rem; background: var(--color-accent); color: #000; border: none; cursor: pointer; margin-bottom: 14px; text-transform: uppercase; letter-spacing: 1px;">
+                        <div style="margin-bottom: 14px;">
+                            <button id="super-print-report-btn" class="${CSS_CLASSES.PRIMARY_PILL_BTN}" style="width: 100%; border-radius: 0; padding: 16px; font-weight: 950; font-size: 0.9rem; background: #fff; color: #000; border: none; cursor: pointer; text-transform: uppercase; letter-spacing: 1.5px; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 4px 15px rgba(255,255,255,0.1);">
+                                <i class="fas fa-file-pdf"></i> Generate PDF Report
+                            </button>
+                        </div>
+
+                        <button id="super-final-reset-btn" class="${CSS_CLASSES.PRIMARY_PILL_BTN}" style="width: 100%; border-radius: 0; padding: 14px; font-weight: 800; font-size: 0.8rem; background: rgba(255,255,255,0.05); color: var(--text-muted); border: 1px solid rgba(255,255,255,0.1); cursor: pointer; margin-bottom: 14px; text-transform: uppercase; letter-spacing: 1px;">
                             Archive & Restart Pipeline
                         </button>
-                        <button id="super-back-btn" style="width: 100%; padding: 12px; border-radius: 0; background: rgba(255,255,255,0.05); color: var(--text-muted); border: 1px solid rgba(255,255,255,0.1); cursor: pointer; font-weight: 600; font-size: 0.8rem; transition: all 0.2s;">
+                        <button id="super-back-btn" style="width: 100%; padding: 12px; border-radius: 0; background: transparent; color: var(--text-muted); border: 1px solid rgba(255,255,255,0.05); cursor: pointer; font-weight: 600; font-size: 0.8rem; transition: all 0.2s;">
                             <i class="fas fa-arrow-left" style="margin-right: 8px; font-size: 0.75rem;"></i>Adjust Strategy Details
                         </button>
                     </div>
@@ -1855,6 +1862,13 @@ export default class SuperStrategyUI {
             });
         }
 
+        const printBtn = this.container.querySelector('#super-print-report-btn');
+        if (printBtn) {
+            printBtn.addEventListener('click', () => {
+                this._triggerPrint();
+            });
+        }
+
         // Reset button
         const resetBtn = this.container.querySelector('#super-reset-btn');
         if (resetBtn) {
@@ -2110,5 +2124,207 @@ export default class SuperStrategyUI {
                 this.render();
             });
         }
+    }
+
+    _triggerPrint() {
+        const sd = superStrategyStore.data.stateData;
+        const data = superStrategyStore.data;
+        const calc = superStrategyStore.getCalculatedValues();
+        const elig = superStrategyStore.getRecontributionEligibility();
+        
+        const formatDate = (iso) => iso ? new Date(iso).toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
+        const fmt = (val) => new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD' }).format(val);
+
+        const totalContribution = sd.CONTRIBUTION_CLEARANCE.amount || 0;
+        const concessionalAmount = sd.NOI_SUBMISSION.deductionAmount || 0;
+        const nonConcessionalAmount = totalContribution - concessionalAmount;
+        const safetyMargin = (data.accumulationBalance + data.pensionBalance) - data.capitalSafetyFloor;
+
+        // Calculate Reminder Dates
+        const eofy = new Date(calc.financialYear, 5, 30);
+        const getReminder = (weeks) => new Date(eofy.getTime() - (weeks * 7 * 24 * 60 * 60 * 1000)).toLocaleDateString('en-AU', { day: '2-digit', month: 'short' });
+
+        const printWindow = window.open('', '_blank', 'width=1000,height=950');
+        
+        const html = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Master Strategy Record - Superannuation</title>
+                <style>
+                    body { font-family: -apple-system, sans-serif; color: #000; padding: 30px; font-size: 10px; line-height: 1.2; }
+                    .header { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 3px solid #000; padding-bottom: 8px; margin-bottom: 20px; }
+                    .header h1 { font-size: 16px; margin: 0; text-transform: uppercase; font-weight: 900; }
+                    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+                    .section { margin-bottom: 15px; }
+                    .section h2 { font-size: 10px; text-transform: uppercase; background: #000; color: #fff; padding: 4px 8px; margin-bottom: 8px; letter-spacing: 0.5px; }
+                    .sub-section { margin-bottom: 10px; }
+                    .sub-section h3 { font-size: 9px; text-transform: uppercase; color: #666; margin: 0 0 4px 0; border-bottom: 1px solid #eee; }
+                    table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+                    td { padding: 3px 0; border-bottom: 1px solid #f9f9f9; }
+                    .label { font-weight: 500; color: #444; width: 60%; }
+                    .value { text-align: right; font-weight: 700; color: #000; }
+                    .highlight-row td { background: #fdfdfd; border-top: 1px solid #eee; border-bottom: 1px solid #eee; }
+                    .total-box { border: 2px solid #000; padding: 10px; background: #f9f9f9; margin-top: 5px; }
+                    .status-tag { display: inline-block; padding: 2px 6px; font-weight: 800; border: 1px solid #000; font-size: 9px; }
+                    .info-bar { background: #f0f4f8; padding: 8px; border-radius: 4px; font-size: 9px; color: #334e68; border: 1px solid #d9e2ec; margin-bottom: 10px; }
+                    .footer { margin-top: 30px; font-size: 8px; color: #888; text-align: center; border-top: 1px solid #ddd; padding-top: 8px; }
+                    @media print { body { padding: 0; } }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <div>
+                        <h1>Master Strategy Record</h1>
+                        <div style="margin-top: 2px; font-weight: 800; font-size: 10px;">FY ${calc.financialYear - 1}/${String(calc.financialYear).slice(-2)} Strategic Implementation</div>
+                    </div>
+                    <div style="text-align: right; font-size: 9px;">
+                        <div><strong>Reference ID:</strong> ${new Date().getTime().toString(16).toUpperCase()}</div>
+                        <div><strong>Generated:</strong> ${new Date().toLocaleString('en-AU')}</div>
+                    </div>
+                </div>
+
+                <div class="info-bar">
+                    <strong>STRATEGIC INSIGHT:</strong> You have <strong>${calc.daysUntilEOFY} days</strong> remaining in this financial year. 
+                    The current Non-Concessional cap availability is <strong>${fmt(elig.maxAmount)}</strong>. 
+                    Next Cap Refresh: <strong>${elig.bringForwardStatus.nextAvailableFY ? '1 July ' + (elig.bringForwardStatus.nextAvailableFY - 1) : 'Available Now'}</strong>.
+                </div>
+
+                <div class="grid">
+                    <!-- COLUMN 1 -->
+                    <div>
+                        <div class="section">
+                            <h2>1. Member Profile & Baseline (Entered)</h2>
+                            <div class="sub-section">
+                                <h3>Member Details</h3>
+                                <table>
+                                    <tr><td class="label">Age (as at 1 July)</td><td class="value">${data.ageAtJuly1} Years</td></tr>
+                                    <tr><td class="label">Date of Birth</td><td class="value">${formatDate(data.dateOfBirth)}</td></tr>
+                                </table>
+                            </div>
+                            <div class="sub-section">
+                                <h3>Starting Balances</h3>
+                                <table>
+                                    <tr><td class="label">Accumulation Balance</td><td class="value">${fmt(data.accumulationBalance)}</td></tr>
+                                    <tr><td class="label">Pension Balance</td><td class="value">${fmt(data.pensionBalance)}</td></tr>
+                                    <tr class="highlight-row"><td class="label"><strong>Total Member Balance</strong></td><td class="value"><strong>${fmt(data.accumulationBalance + data.pensionBalance)}</strong></td></tr>
+                                </table>
+                            </div>
+                            <div class="sub-section">
+                                <h3>Bring-Forward History</h3>
+                                <table>
+                                    <tr><td class="label">BF Triggered FY Ending</td><td class="value">${data.bringForwardTriggeredFY || 'Not Active'}</td></tr>
+                                    <tr><td class="label">BF Cap Used to Date</td><td class="value">${fmt(data.bringForwardUsedAmount)}</td></tr>
+                                    <tr><td class="label">Next Available NCC Cap Date</td><td class="value">1 July ${elig.bringForwardStatus.nextAvailableFY ? (elig.bringForwardStatus.nextAvailableFY - 1) : calc.financialYear}</td></tr>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h2>2. Pipeline Audit: Inputs</h2>
+                            <div class="sub-section">
+                                <h3>Stage 1: Contribution Clearance</h3>
+                                <table>
+                                    <tr><td class="label">Gross Amount Deposited</td><td class="value">${fmt(totalContribution)}</td></tr>
+                                    <tr><td class="label">Date Cleared</td><td class="value">${formatDate(sd.CONTRIBUTION_CLEARANCE.clearedDate)}</td></tr>
+                                </table>
+                            </div>
+                            <div class="sub-section">
+                                <h3>Stage 2 & 3: Tax Strategy</h3>
+                                <table>
+                                    <tr><td class="label">Concessional Amount</td><td class="value">${fmt(concessionalAmount)}</td></tr>
+                                    <tr><td class="label">Non-Concessional (NCC)</td><td class="value">${fmt(nonConcessionalAmount)}</td></tr>
+                                    <tr><td class="label">Contribution Tax (15%)</td><td class="value">-${fmt(concessionalAmount * 0.15)}</td></tr>
+                                    <tr><td class="label">NOI Submission Date</td><td class="value">${formatDate(sd.NOI_SUBMISSION.submittedDate)}</td></tr>
+                                    <tr><td class="label">Fund Acknowledged Date</td><td class="value">${formatDate(sd.FUND_ACKNOWLEDGEMENT.acknowledgedDate)}</td></tr>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h2>3. Strategic Action Deadlines</h2>
+                            <table>
+                                <tr><td class="label">4-Week Compliance Warning</td><td class="value">${getReminder(4)}</td></tr>
+                                <tr><td class="label">2-Week Final Submission</td><td class="value">${getReminder(2)}</td></tr>
+                                <tr><td class="label">1-Week Emergency Deadline</td><td class="value">${getReminder(1)}</td></tr>
+                                <tr><td class="label"><strong>EOFY Cut-off Date</strong></td><td class="value"><strong>30 June</strong></td></tr>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- COLUMN 2 -->
+                    <div>
+                        <div class="section">
+                            <h2>4. Pipeline Audit: Calculated Outcomes</h2>
+                            <div class="sub-section">
+                                <h3>Stage 4: Pension Closure</h3>
+                                <table>
+                                    <tr><td class="label">Account Closure Date</td><td class="value">${formatDate(sd.PENSION_CLOSURE.closureDate)}</td></tr>
+                                    <tr><td class="label">Pro-Rata Min. (App Calculated)</td><td class="value">${fmt(sd.PENSION_CLOSURE.proRataPayout)}</td></tr>
+                                    <tr><td class="label">Drawdown Rate Applied</td><td class="value">${calc.drawdownRate}% p.a.</td></tr>
+                                </table>
+                            </div>
+                            <div class="sub-section">
+                                <h3>Stage 5: Final Reconciliation</h3>
+                                <table>
+                                    <tr><td class="label">Date Funds Consolidated</td><td class="value">${formatDate(sd.RECONTRIBUTION.recontributionDate)}</td></tr>
+                                    <tr><td class="label">Final Consolidated Total</td><td class="value">${fmt(sd.RECONTRIBUTION.recontributionAmount)}</td></tr>
+                                    <tr><td class="label">Net Strategy Benefit</td><td class="value">${fmt(totalContribution - (concessionalAmount * 0.15))}</td></tr>
+                                </table>
+                            </div>
+                            <div class="sub-section">
+                                <h3>Stage 6: New Commencement</h3>
+                                <table>
+                                    <tr><td class="label">Commencement Date</td><td class="value">${formatDate(sd.PENSION_COMMENCEMENT.commencementDate)}</td></tr>
+                                    <tr><td class="label">June 1st Rule Applied?</td><td class="value">${isJune1stRuleApplicable(new Date(sd.PENSION_COMMENCEMENT.commencementDate)) ? 'YES (ZERO MIN)' : 'NO (STANDARD)'}</td></tr>
+                                    <tr><td class="label">Retention Buffer</td><td class="value">${fmt(data.accumulationRetentionBuffer)}</td></tr>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h2>5. Master Balance Outcomes</h2>
+                            <div class="total-box">
+                                <table>
+                                    <tr><td class="label"><strong>New Pension Balance</strong></td><td class="value" style="font-size: 13px;"><strong>${fmt(calc.newPensionStart)}</strong></td></tr>
+                                    <tr><td class="label">Excess TBC (Held in Accum)</td><td class="value">${fmt(calc.excessTBC)}</td></tr>
+                                    <tr><td class="label">Residual Accumulation</td><td class="value">${fmt(calc.residualAccumulation)}</td></tr>
+                                    <tr style="border-top: 1px solid #ccc;"><td class="label">Safety Floor Target</td><td class="value">${fmt(data.capitalSafetyFloor)}</td></tr>
+                                    <tr class="highlight-row"><td class="label">Actual Safety Margin</td><td class="value"><span style="color: ${safetyMargin >= 0 ? '#000' : '#d00'}">${fmt(safetyMargin)}</span></td></tr>
+                                </table>
+                                <div style="text-align: center; margin-top: 8px;">
+                                    <div class="status-tag">STRATEGY STATUS: ${calc.safetyFloorStatus.isSafe ? 'COMPLIANT' : 'BELOW FLOOR'}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h2>6. Contribution Cap Reference</h2>
+                            <table>
+                                <tr><td class="label">Concessional Cap</td><td class="value">${fmt(calc.contributionCaps.concessional)}</td></tr>
+                                <tr><td class="label">General NCC Cap</td><td class="value">${fmt(calc.contributionCaps.nonConcessional)}</td></tr>
+                                <tr><td class="label">Transfer Balance Cap (TBC)</td><td class="value">${fmt(calc.contributionCaps.tbc)}</td></tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="footer">
+                    <strong>AUDIT NOTICE:</strong> This record summarizes user entries and automated legislative calculations as at ${new Date().toLocaleDateString()}.<br>
+                    Verify all values against your actual fund statements. Reference: ${new Date().getTime()}
+                </div>
+
+                <script>
+                    window.onload = function() {
+                        window.print();
+                        setTimeout(function() { window.close(); }, 100);
+                    };
+                </script>
+            </body>
+            </html>
+        `;
+
+        printWindow.document.write(html);
+        printWindow.document.close();
     }
 }

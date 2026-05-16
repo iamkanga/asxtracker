@@ -136,6 +136,16 @@ export class AppController {
         });
         ptr.init();
 
+        // 0. Initialize Stores (Non-UI)
+        try {
+            const { superStrategyStore } = await import('../state/SuperStrategyStore.js');
+            if (superStrategyStore && !superStrategyStore.isReady) {
+                superStrategyStore.init();
+            }
+        } catch (e) {
+            console.error('[AppController] Failed to init SuperStrategyStore:', e);
+        }
+
         // CRITICAL DEPLOYMENT FIX: Force Unregister Service Worker to fix stale cache issues (User reported stuck on old version)
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.getRegistrations().then(function (registrations) {
@@ -1047,6 +1057,12 @@ export class AppController {
                 AppState.preferences.containerBorders = { ...AppState.preferences.containerBorders, ...prefs.containerBorders };
                 localStorage.setItem(STORAGE_KEYS.BORDER_PREFS, JSON.stringify(AppState.preferences.containerBorders));
                 needsRender = true;
+            }
+
+            // 0a.4 Sync Super Strategy
+            if (prefs.superStrategy) {
+                AppState.preferences.superStrategy = prefs.superStrategy;
+                // Note: SuperStrategyStore handles its own localStorage and dispatch via the 'cloud-preferences-loaded' event
             }
 
             // 0b. Sync Notification Prefs

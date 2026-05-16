@@ -798,6 +798,70 @@ class SuperStrategyStore {
             console.error('[SuperStrategyStore] Dispatch failed:', e);
         }
     }
+
+    /**
+     * Exports a human-readable text report of the strategy.
+     */
+    exportStrategyReport() {
+        try {
+            const audit = this.getAuditForensics();
+            const data = this.data;
+            
+            const formatDate = (iso) => iso ? new Date(iso).toLocaleDateString('en-AU', { day: '2-digit', month: 'long', year: 'numeric' }) : 'N/A';
+            const fmt = (val) => new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD' }).format(val);
+
+            let report = `==================================================\n`;
+            report += `       SUPERANNUATION STRATEGY AUDIT REPORT       \n`;
+            report += `==================================================\n\n`;
+            report += `Generated: ${new Date().toLocaleString('en-AU')}\n`;
+            report += `Financial Year: ${audit.financialYear}\n\n`;
+
+            report += `1. MEMBER POSITION (AS AT START)\n`;
+            report += `--------------------------------------------------\n`;
+            report += `Accumulation Balance:   ${fmt(data.accumulationBalance)}\n`;
+            report += `Pension Balance:        ${fmt(data.pensionBalance)}\n`;
+            report += `Safety Floor Target:    ${fmt(data.safetyFloor)}\n\n`;
+
+            report += `2. STRATEGY TIMELINE & EXECUTION\n`;
+            report += `--------------------------------------------------\n`;
+            report += `Contribution Cleared:   ${formatDate(audit.timeline.clearedDate)} (${fmt(audit.timeline.mccAmount + audit.timeline.nccAmount)})\n`;
+            report += `Pension Closed:         ${formatDate(audit.timeline.closureDate)}\n`;
+            report += `Recontribution Executed: ${formatDate(audit.timeline.recontributionDate)} (${fmt(audit.timeline.recontributionAmount)})\n`;
+            report += `New Pension Started:    ${formatDate(audit.timeline.commencementDate)}\n\n`;
+
+            report += `3. FINANCIAL FORENSICS\n`;
+            report += `--------------------------------------------------\n`;
+            report += `Gross Contribution:     ${fmt(audit.forensics.grossContribution)}\n`;
+            report += `Contribution Tax (15%): -${fmt(audit.forensics.contributionTax)}\n`;
+            report += `Net Strategy Increase:  ${fmt(audit.forensics.netRecontribution)}\n\n`;
+
+            report += `4. FINAL OUTCOME\n`;
+            report += `--------------------------------------------------\n`;
+            report += `New Pension Balance:    ${fmt(audit.result.newPensionStart)}\n`;
+            report += `Accumulation Residual:  ${fmt(audit.result.remainingAccumulation)}\n`;
+            report += `Safety Floor Status:    ${audit.result.isFloorSafe ? 'SAFE' : 'BELOW FLOOR'}\n\n`;
+
+            report += `==================================================\n`;
+            report += `   This report is for information purposes only.  \n`;
+            report += `==================================================\n`;
+
+            const blob = new Blob([report], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Super_Strategy_Report_FY${audit.financialYear}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            return { success: true };
+        } catch (e) {
+            console.error('[SuperStrategyStore] Export failed:', e);
+            return { success: false, error: e.message };
+        }
+    }
 }
 
 // Singleton export
