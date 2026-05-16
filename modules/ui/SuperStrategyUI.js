@@ -2176,6 +2176,11 @@ export default class SuperStrategyUI {
 
         const printWindow = window.open('', '_blank', 'width=1000,height=950');
         
+        if (!printWindow) {
+            alert('Pop-up blocked! Please allow pop-ups for this site to generate the PDF report.');
+            return;
+        }
+
         const html = `
             <!DOCTYPE html>
             <html>
@@ -2346,8 +2351,22 @@ export default class SuperStrategyUI {
 
                 <script>
                     window.onload = function() {
-                        window.print();
-                        setTimeout(function() { window.close(); }, 100);
+                        const isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
+                        
+                        // Give the browser time to finish layout and resource loading
+                        setTimeout(function() {
+                            window.print();
+                            
+                            // On desktop, we can close automatically after print
+                            window.onafterprint = function() {
+                                if (!isMobile) window.close();
+                            };
+                            
+                            // Fallback close for desktop only
+                            if (!isMobile) {
+                                setTimeout(function() { window.close(); }, 1000);
+                            }
+                        }, isMobile ? 1500 : 500);
                     };
                 </script>
             </body>
