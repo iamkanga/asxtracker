@@ -727,7 +727,9 @@ export class AppController {
                     cardChartOpacity: AppState.preferences.cardChartOpacity, // Fresh Read
                     researchLinks: AppState.preferences.researchLinks || [], // Fresh Read
                     favoriteLinks: AppState.preferences.favoriteLinks || [],  // Fresh Read
-                    viewMode: AppState.viewMode // Fresh Read
+                    viewMode: AppState.viewMode, // Fresh Read
+                    widgetConfig: AppState.preferences.widgetConfig || null, // Fresh Read (Fix Persistence)
+                    widgetDashboardItems: AppState.preferences.widgetDashboardItems || null // Fresh Read (Fix Persistence)
                 };
 
                 if (freshPrefs.userCategories) {
@@ -1286,6 +1288,20 @@ export class AppController {
                 AppState.preferences.viewConfigs = prefs.viewConfigs;
                 localStorage.setItem(STORAGE_KEYS.VIEW_CONFIGS, JSON.stringify(prefs.viewConfigs));
                 // No immediate render needed, key lookup handles it on switch
+            }
+
+            // 12. Sync Widget Configuration (Fix Persistence)
+            if (prefs.widgetConfig && JSON.stringify(prefs.widgetConfig) !== JSON.stringify(AppState.preferences.widgetConfig)) {
+                AppState.preferences.widgetConfig = prefs.widgetConfig;
+                localStorage.setItem(STORAGE_KEYS.WIDGET_CONFIG, JSON.stringify(prefs.widgetConfig));
+                needsRender = true;
+            }
+
+            // 13. Sync Widget Dashboard Items (Fix Persistence)
+            if (prefs.widgetDashboardItems && JSON.stringify(prefs.widgetDashboardItems) !== JSON.stringify(AppState.preferences.widgetDashboardItems)) {
+                AppState.preferences.widgetDashboardItems = prefs.widgetDashboardItems;
+                localStorage.setItem(STORAGE_KEYS.WIDGET_DASHBOARD_ITEMS, JSON.stringify(prefs.widgetDashboardItems));
+                needsRender = true;
             }
 
             if (needsRender) {

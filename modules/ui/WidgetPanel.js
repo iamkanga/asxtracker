@@ -16,7 +16,7 @@ import { LinkHelper } from '../utils/LinkHelper.js';
 export const WIDGET_MODULES = [
     { id: 'day_performance', label: 'Day Performance', description: "Today's portfolio gain/loss detail", icon: 'fa-calendar-day', renderer: '_renderDayPerformance', default: true },
     { id: 'dashboard_snapshot', label: 'Dashboard Snapshot', description: 'Live indexes, currencies & commodities', icon: 'fa-globe', renderer: '_renderDashboardSnapshot', default: true },
-    { id: 'portfolio_summary', label: 'Portfolio Summary', description: 'Total wealth with shares vs cash breakdown', icon: 'fa-wallet', renderer: '_renderPortfolioSummary', default: true },
+    { id: 'portfolio_summary', label: 'Wealth Summary', description: 'Total wealth: Shares, Super, Cash & Assets', icon: 'fa-wallet', renderer: '_renderPortfolioSummary', default: true },
     { id: 'market_movers', label: 'Market Movers', description: 'Top 6 biggest movers on the ASX', icon: 'fa-rocket', renderer: '_renderMarketMovers', default: true },
     { id: 'notifications', label: 'Latest Alerts', description: 'Most recent price alerts & notifications', icon: 'fa-bell', renderer: '_renderNotifications', default: true },
     { id: 'top_movers', label: 'Watchlist Movers', description: 'Top daily % movers in your portfolio', icon: 'fa-bolt', renderer: '_renderTopMovers', default: false },
@@ -73,7 +73,7 @@ export class WidgetPanel {
     _setupOverlay() {
         if (this.overlay) return;
         this.overlay = document.createElement('div');
-        this.overlay.id = 'widget-overlay';
+        this.overlay.id = IDS.WIDGET_OVERLAY;
         this.overlay.style.cssText = `
             position: fixed;
             top: 0;
@@ -187,10 +187,10 @@ export class WidgetPanel {
                 <div class="${CSS_CLASSES.BRIEFING_TITLE_ROW}" style="display: flex; justify-content: space-between; align-items: center;">
                     <h1 style="font-size: 1.6rem; margin: 0; font-weight: 700; color: #fff;">${this._getGreeting()}</h1>
                     <div style="display: flex; gap: 4px; align-items: center;">
-                        <button class="widget-settings-btn" id="widget-settings-trigger" title="Settings" style="background: transparent; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border: none; color: rgba(255,255,255,0.6); cursor: pointer; font-size: 1.1rem;">
-                            <i class="fas fa-cog"></i>
+                        <button class="${CSS_CLASSES.VISUAL_BTN}" id="${IDS.WIDGET_SETTINGS_TRIGGER}" title="Settings" style="background: transparent; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border: none; color: rgba(255,255,255,0.6); cursor: pointer; font-size: 1.1rem;">
+                            <i class="fas ${UI_ICONS.COG}"></i>
                         </button>
-                        <button class="widget-close-btn" id="widget-close-trigger" title="Close" style="background: transparent; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border: none; color: rgba(255,255,255,0.6); cursor: pointer; font-size: 1.1rem;">
+                        <button class="${CSS_CLASSES.MODAL_CLOSE_BTN}" id="${IDS.WIDGET_CLOSE_TRIGGER}" title="Close" style="background: transparent; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border: none; color: rgba(255,255,255,0.6); cursor: pointer; font-size: 1.1rem;">
                             <i class="fas ${UI_ICONS.CLOSE}"></i>
                         </button>
                     </div>
@@ -223,8 +223,8 @@ export class WidgetPanel {
 
             if (shouldBeHero) {
                 return `
-                    <div class="widget-section-wrapper" style="padding: 12px 16px;">
-                        <div class="widget-hero-card ${stats.isUp ? 'is-up' : 'is-down'}" id="widget-portfolio-hero" 
+                    <div class="${CSS_CLASSES.WIDGET_SECTION_WRAPPER}" style="padding: 12px 16px;">
+                        <div class="${CSS_CLASSES.WIDGET_HERO_CARD} ${stats.isUp ? 'is-up' : 'is-down'}" id="${IDS.WIDGET_PORTFOLIO_HERO}" 
                              style="width: 100%; min-height: auto; padding: 18px; background: ${activeGradient}; box-shadow: 0 4px 20px rgba(0,0,0,0.4); cursor: pointer; border: none !important;">
                             
                             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
@@ -245,13 +245,36 @@ export class WidgetPanel {
 
                             <div style="display: flex; flex-direction: column; align-items: flex-start; text-align: left; padding: 5px 0 0 0;">
                                 <div style="font-size: 0.75rem; color: rgba(255,255,255,0.6); font-weight: 700; text-transform: uppercase;">
-                                    ${module.id === 'portfolio_summary' ? 'Total Wealth' : 'My Portfolio'}
+                                    ${module.id === 'portfolio_summary' ? 'Wealth Summary' : 'My Portfolio'}
                                 </div>
-                                <div style="font-size: 2rem; font-weight: 800; color: #fff; line-height: 1.1; margin-bottom: 12px;">
+                                <div style="font-size: 2.1rem; font-weight: 800; color: #fff; line-height: 1.1; margin-bottom: ${module.id === 'portfolio_summary' ? '15px' : '12px'};">
                                     ${module.id === 'portfolio_summary' ? formatCurrency(stats.totalValue) : (stats.dayChange >= 0 ? '+' : '') + formatCurrency(stats.dayChange)}
                                 </div>
                                 
-                                <div style="font-size: 0.75rem; color: rgba(255,255,255,0.6); font-weight: 700; text-transform: uppercase;">Day Change</div>
+                                ${module.id === 'portfolio_summary' ? `
+                                    <!-- Asset Breakout in Hero -->
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; width: 100%; margin-bottom: 18px; margin-top: 5px;">
+                                        <div style="display: flex; flex-direction: column; gap: 2px;">
+                                            <span style="font-size: 0.65rem; color: rgba(255,255,255,0.5); font-weight: 700; text-transform: uppercase;">Shares</span>
+                                            <span style="font-size: 1.45rem; font-weight: 800; color: var(--asset-shares);">${formatCurrency(stats.shareValue)}</span>
+                                        </div>
+                                        <div style="display: flex; flex-direction: column; gap: 2px; align-items: flex-end; text-align: right;">
+                                            <span style="font-size: 0.65rem; color: rgba(255,255,255,0.5); font-weight: 700; text-transform: uppercase;">Super</span>
+                                            <span style="font-size: 1.45rem; font-weight: 800; color: ${this._getCategoryColor('super')};">${formatCurrency(stats.superValue)}</span>
+                                        </div>
+                                        <div style="display: flex; flex-direction: column; gap: 2px;">
+                                            <span style="font-size: 0.65rem; color: rgba(255,255,255,0.5); font-weight: 700; text-transform: uppercase;">Cash</span>
+                                            <span style="font-size: 1.45rem; font-weight: 800; color: ${this._getCategoryColor('cash_in_bank')};">${formatCurrency(stats.cashInBankValue)}</span>
+                                        </div>
+                                        <div style="display: flex; flex-direction: column; gap: 2px; align-items: flex-end; text-align: right;">
+                                            <span style="font-size: 0.65rem; color: rgba(255,255,255,0.5); font-weight: 700; text-transform: uppercase;">Other Assets</span>
+                                            <span style="font-size: 1.45rem; font-weight: 800; color: var(--app-coffee);">${formatCurrency(stats.otherValue)}</span>
+                                        </div>
+                                    </div>
+                                ` : `
+                                    <div style="font-size: 0.75rem; color: rgba(255,255,255,0.6); font-weight: 700; text-transform: uppercase;">Day Change</div>
+                                `}
+
                                 <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 4px;">
                                     <div style="font-size: 1.4rem; font-weight: 800; color: ${stats.isUp ? 'var(--color-positive)' : 'var(--color-negative)'}; display: flex; align-items: center; gap: 6px;">
                                         <i class="fas ${stats.isUp ? 'fa-arrow-trend-up' : 'fa-arrow-trend-down'}"></i>
@@ -277,16 +300,16 @@ export class WidgetPanel {
             if (!content || (typeof content === 'string' && content.includes('empty'))) return '';
 
             return `
-                <div class="widget-section-wrapper" style="padding: 8px 16px;">
-                    <div class="widget-section-card" style="background: ${activeGradient}; padding: 18px 0; box-shadow: 0 4px 15px rgba(0,0,0,0.3); border: none !important;">
-                        <div class="widget-section-header" style="padding: 0 18px 15px 18px; display: flex; justify-content: space-between; align-items: center;">
+                <div class="${CSS_CLASSES.WIDGET_SECTION_WRAPPER}" style="padding: 8px 16px;">
+                    <div class="${CSS_CLASSES.WIDGET_SECTION_CARD}" style="background: ${activeGradient}; padding: 18px 0; box-shadow: 0 4px 15px rgba(0,0,0,0.3); border: none !important;">
+                        <div class="${CSS_CLASSES.WIDGET_SECTION_HEADER}" style="padding: 0 18px 15px 18px; display: flex; justify-content: space-between; align-items: center;">
                             <div style="display: flex; align-items: center; gap: 6px; font-size: 0.75rem; letter-spacing: 1.5px; color: rgba(255,255,255,0.8); font-weight: 800;">
                                 <i class="fas ${module.icon}" style="font-size: 0.8rem; opacity: 0.9;"></i>
                                 <span style="text-transform: uppercase;">${module.label}</span>
                             </div>
                             ${module.id === 'dashboard_snapshot' ? '<i class="fas fa-pen" style="cursor: pointer; opacity: 0.4; font-size: 0.8rem;" onclick="document.dispatchEvent(new CustomEvent(\'open-widget-dashboard-picker\'))"></i>' : ''}
                         </div>
-                        <div class="widget-section-content">
+                        <div class="${CSS_CLASSES.WIDGET_SECTION_CONTENT}">
                             ${content}
                         </div>
                     </div>
@@ -304,17 +327,17 @@ export class WidgetPanel {
     _bindUIActions() {
         if (!this.container) return;
 
-        const closeBtn = this.container.querySelector('#widget-close-trigger');
+        const closeBtn = this.container.querySelector(`#${IDS.WIDGET_CLOSE_TRIGGER}`);
         if (closeBtn) closeBtn.onclick = () => this.toggle();
 
-        const settingsBtn = this.container.querySelector('#widget-settings-trigger');
+        const settingsBtn = this.container.querySelector(`#${IDS.WIDGET_SETTINGS_TRIGGER}`);
         if (settingsBtn) {
             settingsBtn.onclick = () => {
                 document.dispatchEvent(new CustomEvent('open-widget-config'));
             };
         }
 
-        const heroCard = this.container.querySelector('#widget-portfolio-hero');
+        const heroCard = this.container.querySelector(`#${IDS.WIDGET_PORTFOLIO_HERO}`);
         if (heroCard) {
             heroCard.onclick = () => {
                 this.toggle();
@@ -337,8 +360,21 @@ export class WidgetPanel {
 
         const shareValue = holdings.reduce((acc, h) => acc + h.value, 0);
         const dayChange = holdings.reduce((acc, h) => acc + h.dayChangeValue, 0);
-        const cashValue = cashItems.reduce((acc, c) => acc + (parseFloat(c.balance) || 0), 0);
+        
+        // Break out cash assets
+        let superValue = 0;
+        let cashInBankValue = 0;
+        let otherValue = 0;
 
+        cashItems.forEach(c => {
+            const val = parseFloat(c.balance) || 0;
+            const category = (c.category || '').toLowerCase();
+            if (category === 'super') superValue += val;
+            else if (category === 'cash_in_bank') cashInBankValue += val;
+            else otherValue += val;
+        });
+
+        const cashValue = superValue + cashInBankValue + otherValue;
         const totalValue = shareValue + cashValue;
         const prevShareValue = shareValue - dayChange;
         const dayPct = prevShareValue > 0 ? ((dayChange / prevShareValue) * 100) : 0;
@@ -352,6 +388,9 @@ export class WidgetPanel {
         return {
             totalValue,
             shareValue,
+            superValue,
+            cashInBankValue,
+            otherValue,
             cashValue,
             dayChange,
             dayPct,
@@ -429,13 +468,37 @@ export class WidgetPanel {
         return formatCurrency(price);
     }
 
+    /**
+     * Resolves the theme color for a specific asset category.
+     * Checks AppState.preferences.userCategories first, then falls back to standards.
+     * @param {string} categoryId 
+     * @returns {string} Hex color
+     */
+    _getCategoryColor(categoryId) {
+        if (!categoryId) return 'var(--color-accent)';
+        
+        // 1. Check User Overrides in AppState
+        const userPrefs = AppState.preferences?.userCategories || [];
+        const userPref = userPrefs.find(c => c.id === categoryId);
+        if (userPref && userPref.color) return userPref.color;
+
+        // 2. Standard Category Fallbacks (Mirroring App variables)
+        const standardColors = {
+            'super': '#9C27B0',       // Purple
+            'cash_in_bank': '#1A237E', // Deep Indigo
+            'other': 'var(--app-coffee)' // Coffee color
+        };
+
+        return standardColors[categoryId] || 'var(--color-accent)';
+    }
+
     // ──────────────────────────────────────────
     // Module Renderers
     // ──────────────────────────────────────────
 
     _renderDayPerformance() {
         const holdings = this._getPortfolioHoldings().filter(h => h.price > 0);
-        if (!holdings.length) return `<div class="widget-empty">No live portfolio data.</div>`;
+        if (!holdings.length) return `<div class="${CSS_CLASSES.WIDGET_EMPTY}">No live portfolio data.</div>`;
 
         const totalValue = holdings.reduce((acc, h) => acc + h.value, 0);
         const totalDayChange = holdings.reduce((acc, h) => acc + h.dayChangeValue, 0);
@@ -446,7 +509,7 @@ export class WidgetPanel {
         const losers = holdings.filter(h => h.pctChange < 0).length;
         const unchanged = holdings.length - winners - losers;
 
-        const dayClass = totalDayChange >= 0 ? 'text-up' : 'text-down';
+        const dayClass = totalDayChange >= 0 ? CSS_CLASSES.TEXT_UP : CSS_CLASSES.TEXT_DOWN;
         const daySign = totalDayChange >= 0 ? '+' : '';
 
         return `
@@ -470,7 +533,7 @@ export class WidgetPanel {
                         <label>Losers</label>
                         <span class="value text-down">${losers}</span>
                     </div>
-                    <div class="widget-stat-item widget-stat-small">
+                    <div class="${CSS_CLASSES.WIDGET_STAT_ITEM} ${CSS_CLASSES.WIDGET_STAT_SMALL}">
                         <label>Flat</label>
                         <span class="value" style="color:var(--text-muted);">${unchanged}</span>
                     </div>
@@ -480,39 +543,49 @@ export class WidgetPanel {
     }
 
     _renderPortfolioSummary() {
-        const holdings = this._getPortfolioHoldings();
-        const cashItems = this._getCashItems();
+        const stats = this._getPortfolioStats();
+        const dayClass = stats.dayChange >= 0 ? CSS_CLASSES.TEXT_UP : CSS_CLASSES.TEXT_DOWN;
+        const daySign = stats.dayChange >= 0 ? '+' : '';
 
-        const shareValue = holdings.reduce((acc, h) => acc + h.value, 0);
-        const dayChange = holdings.reduce((acc, h) => acc + h.dayChangeValue, 0);
-        const cashValue = cashItems.reduce((acc, c) => acc + (parseFloat(c.balance) || 0), 0);
-
-        const totalValue = shareValue + cashValue;
-        const prevShareValue = shareValue - dayChange;
-        const dayPct = prevShareValue > 0 ? ((dayChange / prevShareValue) * 100) : 0;
-        const dayClass = dayChange >= 0 ? 'text-up' : 'text-down';
-        const daySign = dayChange >= 0 ? '+' : '';
+        // Resolve colors
+        const shareColor = 'var(--asset-shares)';
+        const superColor = this._getCategoryColor('super');
+        const bankColor = this._getCategoryColor('cash_in_bank');
+        const otherColor = 'var(--app-coffee)'; // Explicit request: other assets = coffee color
 
         return `
-            <div class="widget-stat-grid" style="padding: 0 18px 12px 18px;">
-                <div class="widget-stat-item">
-                    <label>Total Wealth</label>
-                    <span class="value">${formatCurrency(totalValue)}</span>
+            <div class="${CSS_CLASSES.WIDGET_STAT_GRID}" style="padding: 0 18px 12px 18px;">
+                <div class="${CSS_CLASSES.WIDGET_STAT_ITEM}">
+                    <label>Net Wealth Overview</label>
+                    <span class="value">${formatCurrency(stats.totalValue)}</span>
                 </div>
-                <div class="widget-stat-row">
-                    <div class="widget-stat-item widget-stat-small">
+                <div class="${CSS_CLASSES.WIDGET_STAT_ROW}" style="margin-top: 10px; justify-content: space-between;">
+                    <div class="${CSS_CLASSES.WIDGET_STAT_ITEM} ${CSS_CLASSES.WIDGET_STAT_SMALL}">
                         <label>Shares</label>
-                        <span class="value">${formatCurrency(shareValue)}</span>
+                        <span class="value" style="color: ${shareColor}; font-size: 1.25rem;">${formatCurrency(stats.shareValue)}</span>
                     </div>
-                    <div class="widget-stat-item widget-stat-small">
-                        <label>Cash & Assets</label>
-                        <span class="value">${formatCurrency(cashValue)}</span>
+                    <div class="${CSS_CLASSES.WIDGET_STAT_ITEM} ${CSS_CLASSES.WIDGET_STAT_SMALL}" style="align-items: flex-end; text-align: right;">
+                        <label>Superannuation</label>
+                        <span class="value" style="color: ${superColor}; font-size: 1.25rem;">${formatCurrency(stats.superValue)}</span>
                     </div>
                 </div>
-                ${holdings.length > 0 ? `
-                    <div class="widget-day-change ${dayClass}">
-                        <span>${daySign}${formatCurrency(Math.abs(dayChange))}</span>
-                        <span>(${daySign}${dayPct.toFixed(2)}%) today</span>
+                <div class="${CSS_CLASSES.WIDGET_STAT_ROW}" style="margin-top: 10px; justify-content: space-between;">
+                    <div class="${CSS_CLASSES.WIDGET_STAT_ITEM} ${CSS_CLASSES.WIDGET_STAT_SMALL}">
+                        <label>Cash in Bank</label>
+                        <span class="value" style="color: ${bankColor}; font-size: 1.25rem;">${formatCurrency(stats.cashInBankValue)}</span>
+                    </div>
+                    <div class="${CSS_CLASSES.WIDGET_STAT_ITEM} ${CSS_CLASSES.WIDGET_STAT_SMALL}" style="align-items: flex-end; text-align: right;">
+                        <label>Other Assets</label>
+                        <span class="value" style="color: ${otherColor}; font-size: 1.25rem;">${formatCurrency(stats.otherValue)}</span>
+                    </div>
+                </div>
+                ${stats.shareValue > 0 ? `
+                    <div class="${CSS_CLASSES.WIDGET_DAY_CHANGE} ${dayClass}" style="margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 0.75rem; opacity: 0.6; text-transform: uppercase; font-weight: 700;">Market Move</span>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                             <span style="font-weight: 800; font-size: 0.95rem;">${daySign}${formatCurrency(Math.abs(stats.dayChange))}</span>
+                             <span style="font-weight: 700; font-size: 0.85rem; opacity: 0.8;">(${daySign}${stats.dayPct.toFixed(2)}%)</span>
+                        </div>
                     </div>
                 ` : ''}
             </div>
@@ -544,20 +617,20 @@ export class WidgetPanel {
                 return ld && ld.live;
             });
 
-        if (!displayItems.length) return '<div class="widget-empty">No live snapshot data</div>';
+        if (!displayItems.length) return `<div class="${CSS_CLASSES.WIDGET_EMPTY}">No live snapshot data</div>`;
 
         return displayItems.map(code => {
             const liveData = livePrices.get(code) || {};
             const price = parseFloat(liveData.live) || 0;
             const pct = parseFloat(liveData.pctChange) || 0;
-            const pctClass = pct >= 0 ? 'text-up' : 'text-down';
+            const pctClass = pct >= 0 ? CSS_CLASSES.TEXT_UP : CSS_CLASSES.TEXT_DOWN;
             const pctSign = pct >= 0 ? '+' : '';
             const priceStr = this._formatDashboardPrice(code, price);
             const url = DASHBOARD_LINKS[code] || LinkHelper.getFinanceUrl(code);
             const displayName = DASHBOARD_NAMES[code] || code;
 
             return `
-                <div class="widget-row" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 18px; cursor: pointer;" 
+                <div class="${CSS_CLASSES.WIDGET_ROW}" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 18px; cursor: pointer;" 
                      onclick="document.dispatchEvent(new CustomEvent('${EVENTS.ASX_CODE_CLICK}', { detail: { code: '${code}' } }))">
                     <div style="display: flex; align-items: center; flex: 1; text-align: left; gap: 8px;">
                         <div class="analog-clock-hook" data-code="${code}" style="width: 14px; height: 14px; flex-shrink: 0;"></div>
@@ -573,9 +646,9 @@ export class WidgetPanel {
     }
 
     _renderMarketMovers() {
-        if (!notificationStore) return '<div class="widget-empty">Data unavailable</div>';
+        if (!notificationStore) return `<div class="${CSS_CLASSES.WIDGET_EMPTY}">Data unavailable</div>`;
         const alerts = notificationStore.getGlobalAlerts(true);
-        if (!alerts || !alerts.movers) return '<div class="widget-empty">No movers found</div>';
+        if (!alerts || !alerts.movers) return `<div class="${CSS_CLASSES.WIDGET_EMPTY}">No movers found</div>`;
 
         const allMovers = [...(alerts.movers.up || []), ...(alerts.movers.down || [])];
         const enriched = allMovers.map(m => {
@@ -592,7 +665,7 @@ export class WidgetPanel {
 
         return top6.map(m => {
             const isUp = m.pctChange >= 0;
-            const colorClass = isUp ? 'text-up' : 'text-down';
+            const colorClass = isUp ? CSS_CLASSES.TEXT_UP : CSS_CLASSES.TEXT_DOWN;
             return `
                 <div class="widget-row" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 18px; cursor: pointer;"
                      onclick="document.dispatchEvent(new CustomEvent('${EVENTS.ASX_CODE_CLICK}', { detail: { code: '${m.code}' } }))">
@@ -620,12 +693,12 @@ export class WidgetPanel {
             const others = filteredAlerts.filter(a => (a.intent || '').toLowerCase() !== 'target').slice(0, 4);
             const alerts = [...targets, ...others];
 
-            if (!alerts.length) return '<div class="widget-empty">No active alerts</div>';
+            if (!alerts.length) return `<div class="${CSS_CLASSES.WIDGET_EMPTY}">No active alerts</div>`;
 
             return alerts.map(a => {
                 const message = this._formatAlertMessage(a);
                 const pct = Number(a.pct || a.pctChange || a.dayChangePercent || 0);
-                const signClass = pct >= 0 ? 'text-up' : 'text-down';
+                const signClass = pct >= 0 ? CSS_CLASSES.TEXT_UP : CSS_CLASSES.TEXT_DOWN;
                 const code = a.code || '???';
                 return `
                     <div class="widget-notification-item" style="padding: 10px 18px; cursor: pointer;" onclick="if('${code}' !== '???') document.dispatchEvent(new CustomEvent('${EVENTS.ASX_CODE_CLICK}', { detail: { code: '${code}' } }))">
@@ -635,7 +708,7 @@ export class WidgetPanel {
                 `;
             }).join('');
         } catch (e) {
-            return '<div class="widget-empty">Alerts unavailable</div>';
+            return `<div class="${CSS_CLASSES.WIDGET_EMPTY}">Alerts unavailable</div>`;
         }
     }
 
@@ -650,17 +723,17 @@ export class WidgetPanel {
     }
 
     _renderMarketSnapshot() {
-        if (!AppState.livePrices) return '<div class="widget-empty">Market data unavailable</div>';
+        if (!AppState.livePrices) return `<div class="${CSS_CLASSES.WIDGET_EMPTY}">Market data unavailable</div>`;
         const xjo = AppState.livePrices.get('^AXJO') || AppState.livePrices.get('XJO');
-        if (!xjo || typeof xjo.live === 'undefined') return '<div class="widget-empty">Market data unavailable</div>';
+        if (!xjo || typeof xjo.live === 'undefined') return `<div class="${CSS_CLASSES.WIDGET_EMPTY}">Market data unavailable</div>`;
 
         const pct = Number(xjo.pctChange || 0);
-        const changeClass = pct >= 0 ? 'text-up' : 'text-down';
+        const changeClass = pct >= 0 ? CSS_CLASSES.TEXT_UP : CSS_CLASSES.TEXT_DOWN;
         const sign = pct >= 0 ? '+' : '';
         const url = DASHBOARD_LINKS['^AXJO'] || LinkHelper.getFinanceUrl('^AXJO');
 
         return `
-            <div class="widget-row" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 18px; cursor: pointer;" onclick="window.open('${url}', '_blank', 'noopener,noreferrer')">
+            <div class="${CSS_CLASSES.WIDGET_ROW}" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 18px; cursor: pointer;" onclick="window.open('${url}', '_blank', 'noopener,noreferrer')">
                 <span style="font-weight: 800; font-size: 0.85rem; color: #fff; flex: 1; text-align: left;">ASX 200</span>
                 <div style="flex: 2; display: flex; justify-content: flex-end; align-items: center; gap: 8px;">
                     <span style="font-weight: 700; font-size: 0.85rem; color: #fff;">${Number(xjo.live || 0).toLocaleString('en-AU', { maximumFractionDigits: 1 })}</span>
@@ -678,7 +751,7 @@ export class WidgetPanel {
             return intent === 'mover' || intent === 'up' || intent === 'down';
         });
 
-        if (!movers.length) return '<div class="widget-empty">No significant movers</div>';
+        if (!movers.length) return `<div class="${CSS_CLASSES.WIDGET_EMPTY}">No significant movers</div>`;
 
         const sorted = movers.sort((a, b) => {
             const pctA = Math.abs(Number(a.pct || a.pctChange || a.dayChangePercent || 0));
@@ -697,7 +770,7 @@ export class WidgetPanel {
                 pct = Number(live.dayChangePercent ?? live.pctChange ?? live.pct ?? pct);
             }
 
-            const pctClass = pct >= 0 ? 'text-up' : 'text-down';
+            const pctClass = pct >= 0 ? CSS_CLASSES.TEXT_UP : CSS_CLASSES.TEXT_DOWN;
             return `
                 <div class="widget-row" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 18px; cursor: pointer;"
                      onclick="document.dispatchEvent(new CustomEvent('${EVENTS.ASX_CODE_CLICK}', { detail: { code: '${code}' } }))">
@@ -717,9 +790,9 @@ export class WidgetPanel {
             .sort((a, b) => b.value - a.value)
             .slice(0, 5);
 
-        if (!holdings.length) return '<div class="widget-empty">No portfolio holdings</div>';
+        if (!holdings.length) return `<div class="${CSS_CLASSES.WIDGET_EMPTY}">No portfolio holdings</div>`;
         return holdings.map(h => {
-            const pctClass = h.pctChange >= 0 ? 'text-up' : 'text-down';
+            const pctClass = h.pctChange >= 0 ? CSS_CLASSES.TEXT_UP : CSS_CLASSES.TEXT_DOWN;
             return `
                 <div class="widget-row" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 18px; cursor: pointer;"
                      onclick="document.dispatchEvent(new CustomEvent('${EVENTS.ASX_CODE_CLICK}', { detail: { code: '${h.code}' } }))">
@@ -735,18 +808,18 @@ export class WidgetPanel {
 
     _renderCashBreakdown() {
         const cashItems = this._getCashItems();
-        if (!cashItems.length) return '<div class="widget-empty">No cash assets</div>';
+        if (!cashItems.length) return `<div class="${CSS_CLASSES.WIDGET_EMPTY}">No cash assets</div>`;
 
         const totalCash = cashItems.reduce((acc, c) => acc + (parseFloat(c.balance) || 0), 0);
         return `
-            <div class="widget-row" style="padding: 10px 18px;">
+            <div class="${CSS_CLASSES.WIDGET_ROW}" style="padding: 10px 18px;">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <span style="font-weight: 800; font-size: 0.85rem; color: #fff; flex: 1; text-align: left;">Total Assets</span>
                     <span style="font-weight: 700; font-size: 0.9rem; color: var(--color-accent); flex: 1; text-align: right;">${formatCurrency(totalCash)}</span>
                 </div>
             </div>
             ${cashItems.slice(0, 5).map(c => `
-                <div class="widget-row" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 18px; cursor: pointer;" 
+                <div class="${CSS_CLASSES.WIDGET_ROW}" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 18px; cursor: pointer;" 
                      onclick="document.dispatchEvent(new CustomEvent('${EVENTS.REQUEST_QUICK_NAV}', { detail: { watchlistId: '${CASH_WATCHLIST_ID}' } }))">
                     <span class="label" style="font-size: 0.8rem; color: rgba(255,255,255,0.6); flex: 1; text-align: left;">${c.name || c.category}</span>
                     <span class="value" style="font-weight: 600; font-size: 0.85rem; color: #fff; flex: 1; text-align: right;">${formatCurrency(parseFloat(c.balance) || 0)}</span>
@@ -763,7 +836,7 @@ export class WidgetPanel {
             return name !== 'all shares' && name !== 'portfolio' && name !== 'cash & assets' && name !== 'dashboard';
         });
 
-        if (!userWatchlists.length) return '<div class="widget-empty">No watchlists found</div>';
+        if (!userWatchlists.length) return `<div class="${CSS_CLASSES.WIDGET_EMPTY}">No watchlists found</div>`;
 
         return userWatchlists.slice(0, 5).map(w => {
             const count = allShares.filter(s => {

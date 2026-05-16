@@ -628,6 +628,8 @@ export const CSS_CLASSES = {
     // Text Colors
     TEXT_POSITIVE: 'text-positive',
     TEXT_NEGATIVE: 'text-negative',
+    TEXT_UP: 'text-up',
+    TEXT_DOWN: 'text-down',
     TEXT_NEUTRAL: 'text-neutral',
     TEXT_COFFEE: 'text-coffee',
     TEXT_SHIMMER: 'text-shimmer',
@@ -855,6 +857,24 @@ export const CSS_CLASSES = {
     WIDGET_MODULE_ROW: 'widget-module-row',
     WIDGET_DRAG_HANDLE: 'widget-drag-handle',
     WIDGET_HIDDEN: 'widget-hidden',
+    WIDGET_SECTION_WRAPPER: 'widget-section-wrapper',
+    WIDGET_HERO_CARD: 'widget-hero-card',
+    WIDGET_SECTION_CARD: 'widget-section-card',
+    WIDGET_SECTION_HEADER: 'widget-section-header',
+    WIDGET_SECTION_CONTENT: 'widget-section-content',
+    WIDGET_STAT_GRID: 'widget-stat-grid',
+    WIDGET_STAT_ROW: 'widget-stat-row',
+    WIDGET_STAT_ITEM: 'widget-stat-item',
+    WIDGET_STAT_SMALL: 'widget-stat-small',
+    WIDGET_DAY_CHANGE: 'widget-day-change',
+    WIDGET_ROW: 'widget-row',
+    WIDGET_EMPTY: 'widget-empty',
+    WIDGET_NOTIFICATION_ITEM: 'widget-notification-item',
+
+    // Briefing / Morning Brief Specific
+    BRIEFING_HEADER: 'briefing-header',
+    BRIEFING_TITLE_ROW: 'briefing-title-row',
+    BRIEFING_DATE: 'briefing-date',
 
     // Peripheral UI Modules
     GLASS_EFFECT: 'glass-effect',
@@ -882,6 +902,8 @@ export const CSS_CLASSES = {
 
     // Utility Buttons
     ICON_BTN_GHOST: 'icon-btn-ghost',
+    RENAME_BTN: 'rename-btn',
+
     RENAME_BTN: 'rename-btn',
 
     // Stock Details & Form
@@ -1503,8 +1525,14 @@ export const IDS = {
     DELETE_BTN: 'addShareDeleteBtn',
     BTN_EDIT_SHARE: 'btn-edit-share',
     BTN_DELETE_SHARE: 'btn-delete-share',
-
     HEADER_MOVEMENT_COUNTS: 'header-movement-counts',
+
+    // Widget Panel
+    DAILY_BRIEFING_MODAL: 'daily-briefing-modal',
+    WIDGET_SETTINGS_TRIGGER: 'widget-settings-trigger',
+    WIDGET_CLOSE_TRIGGER: 'widget-close-trigger',
+    WIDGET_PORTFOLIO_HERO: 'widget-portfolio-hero',
+    WIDGET_OVERLAY: 'widget-overlay',
 
     // Search Discovery
     DISCOVERY_MODAL: 'discovery-modal',
