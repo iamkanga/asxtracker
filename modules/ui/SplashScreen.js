@@ -26,6 +26,10 @@ export class SplashScreen {
         this.isDataLoaded = false;
         this.currentState = 'idle';
 
+        // --- TIMING ---
+        this._bootTime = Date.now();
+        this._minDuration = 2000; // Minimum splash display time in ms (V1188: Extended for paws)
+
         // --- BINDINGS ---
         // Listen for Animation End to transition States
         const logo = this.container.querySelector(`.${CSS_CLASSES.SPLASH_LOGO}`);
@@ -42,6 +46,13 @@ export class SplashScreen {
 
         // --- START SEQUENCE ---
         this._setState(CSS_CLASSES.SPLASH_ENTER);
+
+        // --- BYPASS GATE (If logo is disabled) ---
+        // If the logo is hidden via CSS, we don't wait for animationend.
+        if (logo && getComputedStyle(logo).display === 'none') {
+            console.log('[SplashScreen] Logo disabled, bypassing entry gate.');
+            this.isEntryComplete = true;
+        }
     }
 
     _setState(state) {
@@ -79,7 +90,16 @@ export class SplashScreen {
     attemptExit() {
         // Mark data as ready.
         this.isDataLoaded = true;
-        this._checkExit();
+
+        // Ensure minimum display time for "paw prints" to travel (V1188)
+        const elapsed = Date.now() - this._bootTime;
+        const remaining = Math.max(0, this._minDuration - elapsed);
+
+        if (remaining > 0) {
+            setTimeout(() => this._checkExit(), remaining);
+        } else {
+            this._checkExit();
+        }
     }
 
     _checkExit() {
@@ -97,7 +117,7 @@ export class SplashScreen {
             if (!this.container.classList.contains(CSS_CLASSES.HIDDEN)) {
                 this.container.classList.add(CSS_CLASSES.HIDDEN);
             }
-        }, 1200);
+        }, 800);
     }
 
     _setupDOM() {

@@ -141,10 +141,11 @@
     z-index: 30;
     overflow: visible;
     /* Ensure shadows aren't clipped */
+    display: none !important; /* TEMPORARY DISABLE: Hide logo as requested */
 }
 
 .splash-logo.enter {
-    animation: slamEntry 1.6s 2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    animation: slamEntry 0.8s 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
 
 @keyframes slamEntry {
@@ -184,7 +185,7 @@
 }
 
 .splash-logo.exit {
-    animation: zoomExit 0.6s cubic-bezier(0.55, 0.055, 0.675, 0.19) forwards;
+    animation: zoomExit 0.4s cubic-bezier(0.55, 0.055, 0.675, 0.19) forwards;
 }
 
 @keyframes zoomExit {
@@ -257,8 +258,8 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    animation: authEntry 1s 2s forwards;
-    /* Synchronized with logo delay (V33) */
+    animation: authEntry 0.8s 0.3s forwards;
+    /* Synchronized with logo delay (V1187) */
     opacity: 0;
     transform: translateY(20px);
     z-index: 40;

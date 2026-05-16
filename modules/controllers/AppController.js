@@ -961,12 +961,16 @@ export class AppController {
 
         // SYNC GUARD (Directive 024): 
         // 1. If we have a local sync timer active, ignore the cloud (our write is pending).
-        // 2. If the snapshot has pending writes (local echo), or if it's from cache while online.
-        if (this._syncTimeout) {
+        // 2. If the snapshot has pending writes (local echo).
+        if (this._syncTimeout || (metadata && metadata.hasPendingWrites)) {
             return;
         }
 
-        if (metadata && (metadata.hasPendingWrites || metadata.fromCache)) {
+        // 3. CACHE HYDRATION (v1187):
+        // If Firestore persistence is enabled, the first snapshot comes from cache.
+        // We MUST allow this to hydrate AppState so that handleSecurityLock() can proceed.
+        // We only block fromCache snapshots IF we already have fresher cloud data loaded.
+        if (metadata && metadata.fromCache && this._cloudPrefsLoaded) {
             return;
         }
 
