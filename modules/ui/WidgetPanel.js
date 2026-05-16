@@ -562,21 +562,21 @@ export class WidgetPanel {
                 <div class="${CSS_CLASSES.WIDGET_STAT_ROW}" style="margin-top: 10px; justify-content: space-between;">
                     <div class="${CSS_CLASSES.WIDGET_STAT_ITEM} ${CSS_CLASSES.WIDGET_STAT_SMALL}">
                         <label>Shares</label>
-                        <span class="value" style="color: ${shareColor}; font-size: 1.25rem;">${formatCurrency(stats.shareValue)}</span>
+                        <span class="value" style="color: ${shareColor}; font-size: 1.25rem; font-weight: 800;">${formatCurrency(stats.shareValue)}</span>
                     </div>
                     <div class="${CSS_CLASSES.WIDGET_STAT_ITEM} ${CSS_CLASSES.WIDGET_STAT_SMALL}" style="align-items: flex-end; text-align: right;">
                         <label>Superannuation</label>
-                        <span class="value" style="color: ${superColor}; font-size: 1.25rem;">${formatCurrency(stats.superValue)}</span>
+                        <span class="value" style="color: ${superColor}; font-size: 1.25rem; font-weight: 800;">${formatCurrency(stats.superValue)}</span>
                     </div>
                 </div>
                 <div class="${CSS_CLASSES.WIDGET_STAT_ROW}" style="margin-top: 10px; justify-content: space-between;">
                     <div class="${CSS_CLASSES.WIDGET_STAT_ITEM} ${CSS_CLASSES.WIDGET_STAT_SMALL}">
                         <label>Cash in Bank</label>
-                        <span class="value" style="color: ${bankColor}; font-size: 1.25rem;">${formatCurrency(stats.cashInBankValue)}</span>
+                        <span class="value" style="color: ${bankColor}; font-size: 1.25rem; font-weight: 800;">${formatCurrency(stats.cashInBankValue)}</span>
                     </div>
                     <div class="${CSS_CLASSES.WIDGET_STAT_ITEM} ${CSS_CLASSES.WIDGET_STAT_SMALL}" style="align-items: flex-end; text-align: right;">
                         <label>Other Assets</label>
-                        <span class="value" style="color: ${otherColor}; font-size: 1.25rem;">${formatCurrency(stats.otherValue)}</span>
+                        <span class="value" style="color: ${otherColor}; font-size: 1.25rem; font-weight: 800;">${formatCurrency(stats.otherValue)}</span>
                     </div>
                 </div>
                 ${stats.shareValue > 0 ? `
