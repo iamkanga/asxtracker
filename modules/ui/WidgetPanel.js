@@ -175,6 +175,7 @@ export class WidgetPanel {
 
         const asxHtml = getIndexHtml('^AXJO', 'XJO');
         const spxHtml = getIndexHtml('^GSPC', 'INX');
+        const portHtml = `<span style="color: ${stats.isUp ? 'var(--color-positive)' : 'var(--color-negative)'} !important; font-weight: 700;">${stats.isUp ? '+' : ''}${stats.dayPct.toFixed(2)}%</span>`;
 
         // Styles for deep gradients
         const positiveGradient = 'linear-gradient(135deg, rgba(6, 255, 79, 0.45) 0%, rgba(10, 10, 12, 1) 100%)';
@@ -239,6 +240,10 @@ export class WidgetPanel {
                                     <div style="display: flex; align-items: center; justify-content: flex-end; gap: 8px;">
                                         <span style="font-size: 0.75rem; color: rgba(255,255,255,0.6); font-weight: 700; text-transform: uppercase;">S&P 500</span>
                                         <span style="font-size: 0.9rem; min-width: 65px; text-align: right;">${spxHtml}</span>
+                                    </div>
+                                    <div style="display: flex; align-items: center; justify-content: flex-end; gap: 8px;">
+                                        <span style="font-size: 0.75rem; color: rgba(255,255,255,0.6); font-weight: 700; text-transform: uppercase;">Portfolio</span>
+                                        <span style="font-size: 0.9rem; min-width: 65px; text-align: right;">${portHtml}</span>
                                     </div>
                                 </div>
                             </div>
