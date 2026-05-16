@@ -1050,7 +1050,7 @@ export default class SuperStrategyUI {
                     <div style="padding:12px; background:rgba(0,0,0,0.2); font-size:0.65rem; color:var(--text-muted); line-height:1.4; border:1px solid rgba(0,188,212,0.1); border-top:none;">
                         <div style="font-weight:900; color:#00bcd4; text-transform:uppercase; margin-bottom:6px; letter-spacing:0.5px;">Quick Reference</div>
                         <ul style="margin:0; padding-left:14px; list-style-type:circle;">
-                            <li>The $30,000 cap includes Employer SG and Salary Sacrifice.</li>
+                            <li>The $32,500 cap (FY 2026-27) includes Employer SG and Salary Sacrifice.</li>
                             <li><strong>Catch-up Rule:</strong> Carry forward up to 5 years of unused cap.</li>
                             <li><strong>Eligibility:</strong> Total Super Balance (TSB) must be under $500,000.</li>
                             <li>Personal deductible contributions also count toward this limit.</li>
@@ -1091,7 +1091,7 @@ export default class SuperStrategyUI {
                         <div style="font-weight:900; color:#ffa500; text-transform:uppercase; margin-bottom:6px; letter-spacing:0.5px;">Quick Reference</div>
                         <ul style="margin:0; padding-left:14px; list-style-type:circle;">
                             <li>The limit on the amount of super that can be moved to pension phase.</li>
-                            <li>Currently $2.0 million for the 2025-26 financial year.</li>
+                            <li>Currently $2.1 million for the 2026-27 financial year.</li>
                             <li>Earnings inside a pension are generally tax-free (0%).</li>
                             <li>Excess funds must remain in accumulation (15% tax phase).</li>
                         </ul>
@@ -1120,6 +1120,7 @@ export default class SuperStrategyUI {
                             <li><strong>TSB Guard:</strong> NCC eligibility is blocked if your Total Super Balance exceeds $2.0M at 30 June.</li>
                             <li><strong>Age Limit:</strong> All voluntary contributions are legally restricted after age 75.</li>
                             <li><strong>Notice of Intent:</strong> Must be filed and acknowledged BEFORE you start a pension to lock in tax benefits.</li>
+                            <li><strong>Payday Super:</strong> Effective 1 July 2026, employers must pay SG at the same time as salary/wages (Payday Super).</li>
                         </ul>
                     </div>
                 </details>
@@ -1141,7 +1142,7 @@ export default class SuperStrategyUI {
                     <ul style="font-size:0.75rem; color:var(--text-muted); line-height:1.6; margin-bottom:12px; padding-left:20px; list-style-type: disc;">
                         <li><strong>Concessional (CC) Age Limit</strong>: Personal deductible contributions are restricted after age 67.</li>
                         <li><strong>Non-Concessional (NCC) Age Limit</strong>: Voluntary contributions are prohibited after age 75.</li>
-                        <li><strong>TSB Cap</strong>: NCC eligibility is blocked if your Total Super Balance (TSB) is $2.0 million or more as of 30 June 2025.</li>
+                        <li><strong>TSB Cap</strong>: NCC eligibility is blocked if your Total Super Balance (TSB) is $2.1 million or more as of 30 June 2026.</li>
                     </ul>
                 </div>
             </details>
@@ -1177,6 +1178,7 @@ export default class SuperStrategyUI {
                         <li><strong>June 1st Rule</strong>: Commencing a pension after June 1st resets the mandatory minimum withdrawal to zero for the remainder of that financial year.</li>
                         <li><strong>Pro-rata Requirement</strong>: A mandatory proportional payment must be taken from the existing pension balance before the account is closed.</li>
                         <li><strong>Retention Buffer</strong>: Brighter Super requires a minimum of $8,000 to remain in accumulation to keep the account active.</li>
+                        <li><strong>Investment Alignment</strong>: Ensure investment options in both accumulation and pension accounts are identical before starting the process to avoid potential losses from the "sell and repurchase" cycle during the restart.</li>
                     </ul>
                 </div>
             </details>
@@ -1288,6 +1290,29 @@ export default class SuperStrategyUI {
             </details>
 
             <details class="super-accordion">
+                <summary>High Balance Tax (Div 296)</summary>
+                <div class="super-accordion-content">
+                    ${ADVICE_BOX('alert', `Tiered Tax - Effective 1 July 2026, high super balances ($3M+) attract additional tax on earnings.`)}
+                    <div style="font-size:0.75rem; color:var(--text-muted); line-height:1.5; margin-top:12px;">
+                        <strong>$3M – $10M:</strong> Earnings on this portion attract an extra 15% tax (30% total).<br>
+                        <strong>Above $10M:</strong> Earnings attract an extra 25% tax (40% total).<br>
+                        These thresholds are indexed to CPI and apply to unrealised gains.
+                    </div>
+                </div>
+            </details>
+
+            <details class="super-accordion">
+                <summary>Low Income Support (LISTO)</summary>
+                <div class="super-accordion-content">
+                    ${ADVICE_BOX('check', `Enhancement (1 July 2027) - Increased support for lower income earners.`)}
+                    <div style="font-size:0.75rem; color:var(--text-muted); line-height:1.5; margin-top:12px;">
+                        The income threshold for LISTO eligibility increases from $37,000 to <strong>$45,000</strong>.<br>
+                        The maximum annual government contribution increases from $500 to <strong>$810</strong>.
+                    </div>
+                </div>
+            </details>
+
+            <details class="super-accordion">
                 <summary>Fund Specific Thresholds</summary>
                 <div class="super-accordion-content">
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom:12px;">
@@ -1327,10 +1352,15 @@ export default class SuperStrategyUI {
                                 <td style="padding: 10px 16px; text-align: right;">$120,000</td>
                                 <td style="padding: 10px 16px; text-align: right; font-weight: 800; color: var(--color-accent);">$360,000</td>
                             </tr>
-                            <tr>
-                                <td style="padding: 10px 16px; font-weight: 700; color: #fff;">25-26 Target</td>
+                            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                                <td style="padding: 10px 16px; font-weight: 700; color: #fff;">25-26</td>
                                 <td style="padding: 10px 16px; text-align: right;">$120,000</td>
                                 <td style="padding: 10px 16px; text-align: right; font-weight: 800; color: var(--color-accent);">$360,000</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 10px 16px; font-weight: 700; color: #fff;">26-27 Target</td>
+                                <td style="padding: 10px 16px; text-align: right;">$130,000</td>
+                                <td style="padding: 10px 16px; text-align: right; font-weight: 800; color: var(--color-accent);">$390,000</td>
                             </tr>
                         </tbody>
                     </table>
@@ -1363,7 +1393,7 @@ export default class SuperStrategyUI {
                         </tr>
                     </table>
                     <div style="font-size:0.75rem; color:var(--text-muted); line-height:1.5;">
-                        Your TSB as of June 30th in the previous financial year determines your eligibility for almost all high-impact strategies.
+                        Your TSB as of June 30th in the previous financial year determines your eligibility for almost all high-impact strategies. Caps shown are for FY 2026-27.
                     </div>
                 </div>
             </details>
