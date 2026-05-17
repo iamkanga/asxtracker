@@ -590,11 +590,25 @@ export default class SuperStrategyUI {
             case SUPER_STATES.FUND_ACKNOWLEDGEMENT:
                 fieldsHtml = `
                     ${this._renderOrangeWarning('Validation Gate', 'Confirm fund NOI acknowledgement before proceeding.')}
-                    <label style="display: flex; align-items: center; gap: 12px; cursor: pointer; padding: 16px; background: rgba(255,255,255,0.03); border-radius: 0; border: 1px solid rgba(255,255,255,0.05); transition: all 0.2s;">
-                        <input type="checkbox" id="${IDS.SUPER_ACK_CHECKBOX}" ${stateData.acknowledged ? 'checked' : ''}
-                               style="width: 20px; height: 20px; accent-color: var(--color-accent); cursor: pointer;">
-                        <span style="font-size: 0.85rem; font-weight: 800; color: #fff; letter-spacing: 0.2px;">Fund acknowledgement received</span>
-                    </label>
+                    <div style="display: flex; flex-direction: column; gap: 16px;">
+                        <label style="display: flex; align-items: center; gap: 12px; cursor: pointer; padding: 16px; background: rgba(255,255,255,0.03); border-radius: 0; border: 1px solid rgba(255,255,255,0.05); transition: all 0.2s; margin-bottom: 0;">
+                            <input type="checkbox" id="${IDS.SUPER_ACK_CHECKBOX}" ${stateData.acknowledged ? 'checked' : ''}
+                                   style="width: 20px; height: 20px; accent-color: var(--color-accent); cursor: pointer;">
+                            <span style="font-size: 0.85rem; font-weight: 800; color: #fff; letter-spacing: 0.2px;">Fund acknowledgement received</span>
+                        </label>
+                        
+                        <div class="${CSS_CLASSES.FORM_GROUP}" style="margin-bottom: 0;" onclick="const inp = this.querySelector('input'); if(inp && document.activeElement !== inp) { try { inp.showPicker(); } catch (e) { inp.click(); } }">
+                            <label style="font-size:0.62rem;color:var(--text-muted);font-weight:800;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;display:block;opacity:0.55;">Acknowledgement Date (Optional)</label>
+                            <input type="${stateData.acknowledgedDate ? 'date' : 'text'}" 
+                                   id="${IDS.SUPER_ACK_DATE}" 
+                                   class="${CSS_CLASSES.FORM_CONTROL}"
+                                   value="${stateData.acknowledgedDate ? stateData.acknowledgedDate.split('T')[0] : ''}"
+                                   placeholder="Date"
+                                   onfocus="this.type='date';"
+                                   onblur="if(!this.value) this.type='text';"
+                                   style="border-radius:0;padding:12px;cursor:pointer;font-weight:700;outline:none;width:100%;">
+                        </div>
+                    </div>
                 `;
                 break;
 
@@ -2058,10 +2072,18 @@ export default class SuperStrategyUI {
 
             case SUPER_STATES.FUND_ACKNOWLEDGEMENT: {
                 const checkEl = this.container.querySelector(`#${IDS.SUPER_ACK_CHECKBOX}`);
+                const dateEl = this.container.querySelector(`#${IDS.SUPER_ACK_DATE}`);
                 if (checkEl) checkEl.addEventListener('change', (e) => {
+                    const enteredDate = dateEl?.value;
                     superStrategyStore.updateStateData(current, {
                         acknowledged: e.target.checked,
-                        acknowledgedDate: e.target.checked ? new Date().toISOString() : null
+                        acknowledgedDate: e.target.checked ? (enteredDate || new Date().toISOString()) : null
+                    });
+                    this.render(); // Re-render to update the Date input if it auto-fills
+                });
+                if (dateEl) dateEl.addEventListener('change', (e) => {
+                    superStrategyStore.updateStateData(current, {
+                        acknowledgedDate: e.target.value || null
                     });
                 });
                 break;

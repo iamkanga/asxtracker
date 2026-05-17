@@ -1792,6 +1792,7 @@ export const IDS = {
     SUPER_NOI_DATE: 'super-noi-date',
     SUPER_NOI_AMOUNT: 'super-noi-amount',
     SUPER_ACK_CHECKBOX: 'super-ack-checkbox',
+    SUPER_ACK_DATE: 'super-ack-date',
     SUPER_CLOSURE_DATE: 'super-closure-date',
     SUPER_RECONTRIBUTION_AMOUNT: 'super-recontribution-amount',
     SUPER_RECONTRIBUTION_DATE: 'super-recontribution-date',
