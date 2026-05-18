@@ -248,9 +248,10 @@ export class WidgetPanel {
                                 </div>
                             </div>
 
-                            <div style="display: flex; flex-direction: column; align-items: flex-start; text-align: left; padding: 5px 0 0 0;">
-                                <div style="font-size: 0.75rem; color: rgba(255,255,255,0.6); font-weight: 700; text-transform: uppercase;">
-                                    ${module.id === 'portfolio_summary' ? 'Wealth Summary' : 'My Portfolio'}
+                            <div style="display: flex; flex-direction: column; align-items: flex-start; text-align: left; padding: 5px 0 0 0; width: 100%;">
+                                <div style="display: flex; align-items: center; gap: 6px; font-size: 0.75rem; color: rgba(255,255,255,0.6); font-weight: 700; text-transform: uppercase; margin-bottom: 4px;">
+                                    <i class="fas ${module.icon}" style="font-size: 0.75rem; opacity: 0.8;"></i>
+                                    <span>${module.label}</span>
                                 </div>
                                 <div style="font-size: 2.1rem; font-weight: 800; color: #fff; line-height: 1.1; margin-bottom: ${module.id === 'portfolio_summary' ? '15px' : '12px'};">
                                     ${module.id === 'portfolio_summary' ? formatCurrency(stats.totalValue) : (stats.dayChange >= 0 ? '+' : '') + formatCurrency(stats.dayChange)}
@@ -375,7 +376,7 @@ export class WidgetPanel {
             const val = parseFloat(c.balance) || 0;
             const category = (c.category || '').toLowerCase();
             if (category === 'super') superValue += val;
-            else if (category === 'cash_in_bank') cashInBankValue += val;
+            else if (category === 'cash_in_bank' || category === 'cash' || category === 'term_deposit') cashInBankValue += val;
             else otherValue += val;
         });
 
@@ -484,7 +485,13 @@ export class WidgetPanel {
         
         // 1. Check User Overrides in AppState
         const userPrefs = AppState.preferences?.userCategories || [];
-        const userPref = userPrefs.find(c => c.id === categoryId);
+        let userPref = userPrefs.find(c => c.id === categoryId);
+        
+        // Special case: if we want cash/cash_in_bank color, check both
+        if ((!userPref || !userPref.color) && (categoryId === 'cash_in_bank' || categoryId === 'cash')) {
+            userPref = userPrefs.find(c => c.id === 'cash') || userPrefs.find(c => c.id === 'cash_in_bank');
+        }
+
         if (userPref && userPref.color) return userPref.color;
 
         // 2. Standard Category Fallbacks (Mirroring App variables)
@@ -572,13 +579,13 @@ export class WidgetPanel {
                         <span class="value" style="color: ${shareColor}; font-size: 1.25rem; font-weight: 800;">${formatCurrency(stats.shareValue)}</span>
                     </div>
                     <div class="${CSS_CLASSES.WIDGET_STAT_ITEM} ${CSS_CLASSES.WIDGET_STAT_SMALL}" style="align-items: flex-end; text-align: right;">
-                        <label>Superannuation</label>
+                        <label>Super</label>
                         <span class="value" style="color: ${superColor}; font-size: 1.25rem; font-weight: 800;">${formatCurrency(stats.superValue)}</span>
                     </div>
                 </div>
                 <div class="${CSS_CLASSES.WIDGET_STAT_ROW}" style="margin-top: 10px; justify-content: space-between;">
                     <div class="${CSS_CLASSES.WIDGET_STAT_ITEM} ${CSS_CLASSES.WIDGET_STAT_SMALL}">
-                        <label>Cash in Bank</label>
+                        <label>Cash</label>
                         <span class="value" style="color: ${bankColor}; font-size: 1.25rem; font-weight: 800;">${formatCurrency(stats.cashInBankValue)}</span>
                     </div>
                     <div class="${CSS_CLASSES.WIDGET_STAT_ITEM} ${CSS_CLASSES.WIDGET_STAT_SMALL}" style="align-items: flex-end; text-align: right;">
@@ -821,7 +828,7 @@ export class WidgetPanel {
         return `
             <div class="${CSS_CLASSES.WIDGET_ROW}" style="padding: 10px 18px;">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <span style="font-weight: 800; font-size: 0.85rem; color: #fff; flex: 1; text-align: left;">Total Assets</span>
+                    <span style="font-weight: 800; font-size: 0.85rem; color: #fff; flex: 1; text-align: left;">Total Cash & Assets</span>
                     <span style="font-weight: 700; font-size: 0.9rem; color: var(--color-accent); flex: 1; text-align: right;">${formatCurrency(totalCash)}</span>
                 </div>
             </div>
