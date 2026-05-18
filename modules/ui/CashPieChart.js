@@ -477,18 +477,18 @@ export class CashPieChart {
 
         // Fallback to standard colors
         const standardColors = {
-            'cash': '#4db8ff',
-            'cash_in_bank': '#3399ff',
-            'term_deposit': '#0066cc',
-            'property': '#ff9933',
-            'crypto': '#ffcc00',
-            'shares': '#a49393',
-            'super': '#9933ff',
-            'personal': '#ff3399',
-            'other': '#808080'
+            'cash': 'var(--asset-cash)',
+            'cash_in_bank': 'var(--asset-cash-in-bank)',
+            'term_deposit': 'var(--asset-term-deposit)',
+            'property': 'var(--asset-property)',
+            'crypto': 'var(--asset-crypto)',
+            'shares': 'var(--asset-shares)',
+            'super': 'var(--asset-super)',
+            'personal': 'var(--asset-personal)',
+            'other': 'var(--asset-other)'
         };
 
-        return standardColors[catId] || '#a49393';
+        return standardColors[catId] || 'var(--asset-shares)';
     }
 
     /**

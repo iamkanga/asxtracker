@@ -256,12 +256,12 @@ export class WidgetPanel {
                                     ${module.id === 'portfolio_summary' ? formatCurrency(stats.totalValue) : (stats.dayChange >= 0 ? '+' : '') + formatCurrency(stats.dayChange)}
                                 </div>
                                 
-                                ${module.id === 'portfolio_summary' ? `
+                                 ${module.id === 'portfolio_summary' ? `
                                     <!-- Asset Breakout in Hero -->
                                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; width: 100%; margin-bottom: 18px; margin-top: 5px;">
                                         <div style="display: flex; flex-direction: column; gap: 2px;">
                                             <span style="font-size: 0.65rem; color: rgba(255,255,255,0.5); font-weight: 700; text-transform: uppercase;">Shares</span>
-                                            <span style="font-size: 1.45rem; font-weight: 800; color: var(--asset-shares);">${formatCurrency(stats.shareValue)}</span>
+                                            <span style="font-size: 1.45rem; font-weight: 800; color: ${this._getCategoryColor('shares')};">${formatCurrency(stats.shareValue)}</span>
                                         </div>
                                         <div style="display: flex; flex-direction: column; gap: 2px; align-items: flex-end; text-align: right;">
                                             <span style="font-size: 0.65rem; color: rgba(255,255,255,0.5); font-weight: 700; text-transform: uppercase;">Super</span>
@@ -273,7 +273,7 @@ export class WidgetPanel {
                                         </div>
                                         <div style="display: flex; flex-direction: column; gap: 2px; align-items: flex-end; text-align: right;">
                                             <span style="font-size: 0.65rem; color: rgba(255,255,255,0.5); font-weight: 700; text-transform: uppercase;">Other Assets</span>
-                                            <span style="font-size: 1.45rem; font-weight: 800; color: var(--app-coffee);">${formatCurrency(stats.otherValue)}</span>
+                                            <span style="font-size: 1.45rem; font-weight: 800; color: ${this._getCategoryColor('other')};">${formatCurrency(stats.otherValue)}</span>
                                         </div>
                                     </div>
                                 ` : `
@@ -489,9 +489,11 @@ export class WidgetPanel {
 
         // 2. Standard Category Fallbacks (Mirroring App variables)
         const standardColors = {
-            'super': '#9C27B0',       // Purple
-            'cash_in_bank': '#1A237E', // Deep Indigo
-            'other': 'var(--app-coffee)' // Coffee color
+            'shares': 'var(--asset-shares)',
+            'super': 'var(--asset-super)',
+            'cash_in_bank': 'var(--asset-cash-in-bank)',
+            'cash': 'var(--asset-cash)',
+            'other': 'var(--asset-other)'
         };
 
         return standardColors[categoryId] || 'var(--color-accent)';
@@ -553,10 +555,10 @@ export class WidgetPanel {
         const daySign = stats.dayChange >= 0 ? '+' : '';
 
         // Resolve colors
-        const shareColor = 'var(--asset-shares)';
+        const shareColor = this._getCategoryColor('shares');
         const superColor = this._getCategoryColor('super');
         const bankColor = this._getCategoryColor('cash_in_bank');
-        const otherColor = 'var(--app-coffee)'; // Explicit request: other assets = coffee color
+        const otherColor = this._getCategoryColor('other');
 
         return `
             <div class="${CSS_CLASSES.WIDGET_STAT_GRID}" style="padding: 0 18px 12px 18px;">
