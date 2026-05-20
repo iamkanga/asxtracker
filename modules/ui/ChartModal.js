@@ -819,12 +819,7 @@ export class ChartModal {
         const rotator = chartComp.container.querySelector(`#${IDS.CHART_ROTATOR}`);
         const content = modal.querySelector(`.${CSS_CLASSES.CHART_MODAL_CONTENT}`);
 
-        // Update zoom button for modal context (compress = close fullscreen)
-        if (rotator) {
-            rotator.title = 'Close';
-            const icon = rotator.querySelector('i');
-            if (icon) icon.setAttribute('class', 'fas fa-compress');
-        }
+        let isFullscreen = true;
 
         // Helper to resize chart - uses container dimensions to ensure perfect fit
         const resizeChart = () => {
@@ -841,6 +836,17 @@ export class ChartModal {
                         chartComp.chart.timeScale().fitContent();
                     }
                 }
+            }
+        };
+
+        // Apply normal/centered modal styles
+        const applyNormal = () => {
+            modal.style.cssText = 'z-index: 22000 !important;';
+            content.style.cssText = 'width: 95%; height: 85%; max-width: 900px; display:flex; flex-direction:column; overflow:hidden;';
+            if (rotator) {
+                rotator.title = 'Fullscreen';
+                const icon = rotator.querySelector('i');
+                if (icon) icon.setAttribute('class', 'fas fa-expand');
             }
         };
 
@@ -878,6 +884,11 @@ export class ChartModal {
                 gap: 0 !important;
                 overflow: hidden !important;
             `;
+            if (rotator) {
+                rotator.title = 'Exit Fullscreen';
+                const icon = rotator.querySelector('i');
+                if (icon) icon.setAttribute('class', 'fas fa-compress');
+            }
         };
 
         // Apply fullscreen immediately when modal opens
@@ -894,11 +905,24 @@ export class ChartModal {
 
         // Orientation change handler - always resize on any event
         orientationHandler = () => {
-            applyFullscreen();
+            if (isFullscreen) {
+                applyFullscreen();
+            } else {
+                applyNormal();
+            }
             resizeChart();
-            setTimeout(() => { applyFullscreen(); resizeChart(); }, 100);
-            setTimeout(() => { applyFullscreen(); resizeChart(); }, 300);
-            setTimeout(() => { applyFullscreen(); resizeChart(); }, 500);
+            setTimeout(() => { 
+                if (isFullscreen) applyFullscreen(); else applyNormal();
+                resizeChart(); 
+            }, 100);
+            setTimeout(() => { 
+                if (isFullscreen) applyFullscreen(); else applyNormal();
+                resizeChart(); 
+            }, 300);
+            setTimeout(() => { 
+                if (isFullscreen) applyFullscreen(); else applyNormal();
+                resizeChart(); 
+            }, 500);
         };
 
         window.addEventListener('resize', orientationHandler);
@@ -907,8 +931,20 @@ export class ChartModal {
             window.visualViewport.addEventListener('resize', orientationHandler);
         }
 
-        // Zoom button closes the modal
-        rotator.addEventListener('click', close);
+        // Toggle fullscreen state when the rotator button is clicked
+        if (rotator) {
+            rotator.addEventListener('click', () => {
+                isFullscreen = !isFullscreen;
+                if (isFullscreen) {
+                    applyFullscreen();
+                } else {
+                    applyNormal();
+                }
+                resizeChart();
+                setTimeout(resizeChart, 50);
+                setTimeout(resizeChart, 150);
+            });
+        }
 
         // --- Navigation Support ---
         // Register state so back button dismisses the chart
