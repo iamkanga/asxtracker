@@ -107,6 +107,8 @@ export const STORAGE_KEYS = {
 
     // Superannuation Strategy Engine
     SUPER_STRATEGY: 'ASX_NEXT_superStrategy',
+    SUPER_STRATEGY_DISMISS_TOMORROW: 'ASX_NEXT_superStrategyDismissTomorrow',
+    SUPER_STRATEGY_DISMISS_PERMANENT: 'ASX_NEXT_superStrategyDismissPermanent',
 
     // Calculator Preferences
     CALC_PREFS: 'ASX_NEXT_calcPrefs',
@@ -196,6 +198,7 @@ export const EVENTS = {
     SUPER_STATE_CHANGED: 'super-state-changed',
     SUPER_SUSTAINABILITY_ALERT: 'super-sustainability-alert',
     SUPER_READY: 'super-ready',
+    SUPER_DISMISS_CLICKED: 'super-dismiss-clicked',
 
     // Dashboard Preferences
     DASHBOARD_PREFS_CHANGED: 'dashboard-prefs-changed',
@@ -1467,7 +1470,9 @@ export const CSS_CLASSES = {
     SUPER_SIM_RESULT: 'super-sim-result',
     SUPER_ALERT_BANNER: 'super-alert-banner',
     SUPER_QUICK_LINKS: 'super-quick-links',
-    SUPER_REMINDER_ROW: 'super-reminder-row'
+    SUPER_REMINDER_ROW: 'super-reminder-row',
+    SUPER_DISMISS_BTN: 'super-strategy-dismiss-btn',
+    SUPER_DISMISS_MODAL: 'super-dismiss-modal'
 };
 
 export const ANIMATIONS = {
@@ -1477,6 +1482,10 @@ export const ANIMATIONS = {
 };
 
 export const IDS = {
+    SUPER_DISMISS_MODAL: 'super-dismiss-modal',
+    SUPER_DISMISS_TOMORROW: 'super-dismiss-tomorrow',
+    SUPER_DISMISS_PERMANENT: 'super-dismiss-permanent',
+    SUPER_DISMISS_CANCEL: 'super-dismiss-cancel',
     SPLASH_SCREEN: 'splashScreen',
     SPLASH_SIGN_IN_BTN: 'splashSignInBtn',
     SECURITY_UNLOCK_MODAL: 'security-lock-modal',

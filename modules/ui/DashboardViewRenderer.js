@@ -9,10 +9,33 @@ import { AppState } from '../state/AppState.js';
 import { DashboardFilterModal } from './DashboardFilterModal.js';
 import { LinkHelper } from '../utils/LinkHelper.js';
 import { superStrategyStore } from '../state/SuperStrategyStore.js';
+import { SuperStrategyDismissModal } from './SuperStrategyDismissModal.js';
+import { getCurrentFinancialYear } from '../data/SuperLegislation.js';
 
 export class DashboardViewRenderer {
     constructor() {
         this.reorderMode = false;
+        this._initDismissListener();
+    }
+
+    _initDismissListener() {
+        if (this._dismissListenerBound) return;
+        this._dismissListenerBound = true;
+
+        document.addEventListener(EVENTS.SUPER_DISMISS_CLICKED, () => {
+            SuperStrategyDismissModal.show(
+                () => {
+                    const todayStr = new Date().toLocaleDateString('en-CA');
+                    localStorage.setItem(STORAGE_KEYS.SUPER_STRATEGY_DISMISS_TOMORROW, todayStr);
+                    this.render();
+                },
+                () => {
+                    const currentFY = getCurrentFinancialYear();
+                    localStorage.setItem(STORAGE_KEYS.SUPER_STRATEGY_DISMISS_PERMANENT, String(currentFY));
+                    this.render();
+                }
+            );
+        });
     }
 
     /**
@@ -59,22 +82,41 @@ export class DashboardViewRenderer {
 
         let superAlertsHtml = '';
         if (superStrategyStore.isReady) {
-            const activeReminders = superStrategyStore.getActiveReminders().filter(r => r.isTriggered);
-            if (activeReminders.length > 0) {
-                const alertsList = activeReminders.map(r => `<strong>${r.label}</strong>`).join(', ');
-                superAlertsHtml = `
-                    <div style="background: rgba(255,165,0,0.1); border: 1px solid rgba(255,165,0,0.3); border-radius: 0; padding: 14px 16px; margin: 16px; display: flex; align-items: center; gap: 14px; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(255,165,0,0.1);"
-                         onclick="document.dispatchEvent(new CustomEvent('open-super-strategy'))"
-                         onmouseover="this.style.background='rgba(255,165,0,0.15)'"
-                         onmouseout="this.style.background='rgba(255,165,0,0.1)'">
-                        <i class="fas fa-calendar-exclamation" style="color: #ffa500; font-size: 1.6rem; filter: drop-shadow(0 0 8px rgba(255,165,0,0.4));"></i>
-                        <div style="flex: 1;">
-                            <div style="font-size: 0.9rem; font-weight: 800; color: #ffa500; margin-bottom: 2px;">Super Strategy Deadline</div>
-                            <div style="font-size: 0.8rem; color: rgba(255,255,255,0.9); line-height: 1.4;">Active trigger: ${alertsList}</div>
+            const tomorrowDismissal = localStorage.getItem(STORAGE_KEYS.SUPER_STRATEGY_DISMISS_TOMORROW);
+            const permanentDismissal = localStorage.getItem(STORAGE_KEYS.SUPER_STRATEGY_DISMISS_PERMANENT);
+            
+            const todayStr = new Date().toLocaleDateString('en-CA');
+            const currentFY = getCurrentFinancialYear();
+
+            const isDismissedUntilTomorrow = tomorrowDismissal === todayStr;
+            const isDismissedPermanently = permanentDismissal === String(currentFY);
+
+            if (!isDismissedUntilTomorrow && !isDismissedPermanently) {
+                const activeReminders = superStrategyStore.getActiveReminders().filter(r => r.isTriggered);
+                if (activeReminders.length > 0) {
+                    const alertsList = activeReminders.map(r => `<strong>${r.label}</strong>`).join(', ');
+                    superAlertsHtml = `
+                        <div style="background: rgba(255,165,0,0.1); border: 1px solid rgba(255,165,0,0.3); border-radius: 0; padding: 14px 16px; margin: 16px; display: flex; align-items: center; gap: 14px; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(255,165,0,0.1);"
+                             onclick="document.dispatchEvent(new CustomEvent('${EVENTS.OPEN_SUPER_STRATEGY}'))"
+                             onmouseover="this.style.background='rgba(255,165,0,0.15)'"
+                             onmouseout="this.style.background='rgba(255,165,0,0.1)'">
+                            <i class="fas fa-calendar-exclamation" style="color: #ffa500; font-size: 1.6rem; filter: drop-shadow(0 0 8px rgba(255,165,0,0.4));"></i>
+                            <div style="flex: 1;">
+                                <div style="font-size: 0.9rem; font-weight: 800; color: #ffa500; margin-bottom: 2px;">Super Strategy Deadline</div>
+                                <div style="font-size: 0.8rem; color: rgba(255,255,255,0.9); line-height: 1.4;">Active trigger: ${alertsList}</div>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <div style="font-size: 0.75rem; color: #ffa500; font-weight: 700; background: rgba(255,165,0,0.2); padding: 6px 10px; border-radius: 0;">View</div>
+                                <div class="${CSS_CLASSES.SUPER_DISMISS_BTN}" style="color: rgba(255,255,255,0.5); cursor: pointer; padding: 6px; font-size: 1.1rem; line-height: 1; transition: color 0.2s;"
+                                     onclick="event.stopPropagation(); document.dispatchEvent(new CustomEvent('${EVENTS.SUPER_DISMISS_CLICKED}'))"
+                                     onmouseover="this.style.color='#fff'"
+                                     onmouseout="this.style.color='rgba(255,255,255,0.5)'">
+                                    <i class="fas fa-times"></i>
+                                </div>
+                            </div>
                         </div>
-                        <div style="font-size: 0.75rem; color: #ffa500; font-weight: 700; background: rgba(255,165,0,0.2); padding: 6px 10px; border-radius: 0;">View</div>
-                    </div>
-                `;
+                    `;
+                }
             }
         }
 
