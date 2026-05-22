@@ -1706,7 +1706,12 @@ export class AppController {
 
         // HYBRID RENDERING APPROACH
         // If this is a silent update (fetchFresh=false), try patching first to avoid animations/flickering.
-        const structureKey = JSON.stringify(mergedData.map(d => d.code));
+        // Include viewMode and watchlistId in the structureKey to ensure view mode toggles and watchlist switches trigger a full render.
+        const structureKey = JSON.stringify({
+            codes: mergedData.map(d => d.code),
+            viewMode: AppState.viewMode,
+            watchlistId: AppState.watchlist?.id
+        });
         const prevStructureKey = this.viewRenderer._lastRenderedStructureKey;
 
         if (!fetchFresh && structureKey === prevStructureKey) {
@@ -1819,6 +1824,12 @@ export class AppController {
         const effectiveId = (AppState.watchlist?.type === 'cash') ? 'CASH' : currentId;
 
         AppState.saveViewModeForWatchlist(effectiveId, mode);
+
+        // Force full re-render on next updateDataAndRender by invalidating cache key
+        if (this.viewRenderer) {
+            this.viewRenderer._lastRenderedStructureKey = null;
+        }
+
         this.updateDataAndRender(false);
     }
 
