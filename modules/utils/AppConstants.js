@@ -3,6 +3,7 @@
  * Centralized constants for the application.
  */
 
+export const APP_VERSION = 'v1.2.0';
 export const ALL_SHARES_ID = 'ALL';
 export const KANGAROO_ICON_SRC = 'favicon.svg';
 export const CASH_WATCHLIST_ID = 'CASH';

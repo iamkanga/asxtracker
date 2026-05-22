@@ -1,4 +1,4 @@
-import { CSS_CLASSES, EVENTS, UI_ICONS, IDS, CASH_WATCHLIST_ID, KANGAROO_ICON_SVG } from '../utils/AppConstants.js';
+import { CSS_CLASSES, EVENTS, UI_ICONS, IDS, CASH_WATCHLIST_ID, KANGAROO_ICON_SVG, APP_VERSION } from '../utils/AppConstants.js';
 import { AppState } from '../state/AppState.js';
 import { StateAuditor } from '../state/StateAuditor.js';
 import { notificationStore } from '../state/NotificationStore.js'; // FIX: Interact with Global Store
@@ -343,6 +343,11 @@ export class SidebarCommandCenter {
                                 <i class="fab fa-google" style="color: var(--color-accent); width: 20px; text-align: center;"></i> Login
                             </button>
                         `}
+
+                        <!-- App Version -->
+                        <div style="text-align: center; padding: 12px 0 4px 0; font-size: 0.7rem; color: var(--text-muted); opacity: 0.5; letter-spacing: 0.5px;">
+                            ASX Tracker <span style="color: var(--color-accent); font-weight: 600;">${APP_VERSION}</span>
+                        </div>
                     </div>
                 </div>
             </div>
