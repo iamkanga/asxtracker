@@ -11,15 +11,15 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(33, 37, 41, 0.2);
-    /* Double transparency (0.4 -> 0.2) */
-    backdrop-filter: blur(5px);
-    -webkit-backdrop-filter: blur(5px);
+    background-color: #000000 !important;
+    /* Pure professional black theme */
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
     display: flex;
     justify-content: center;
     align-items: center;
     z-index: 10000;
-    transition: opacity 0.5s ease, backdrop-filter 0.5s ease;
+    transition: opacity 0.5s ease;
 }
 
 .splash-content {
@@ -58,7 +58,8 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    background: transparent;
+    background: #000000 !important;
+    /* Pure professional black theme */
 }
 
 .splash-bg-img {
@@ -294,7 +295,8 @@
     box-shadow: none !important;
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
-    color: var(--app-coffee) !important;
+    color: #ffffff !important;
+    /* White text for visibility on pure black background */
     font-size: 1.1rem;
     font-weight: 600;
     padding: 10px 20px;
@@ -340,7 +342,8 @@
 }
 
 .splash-auth-container .auth-btn-lg i {
-    color: var(--app-coffee) !important;
+    color: #ffffff !important;
+    /* White icon for visibility on pure black background */
     margin-right: 12px;
 }
 
