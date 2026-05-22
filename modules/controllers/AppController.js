@@ -89,6 +89,8 @@ export class AppController {
         this._initialRenderComplete = false; // v1137: Track first-run render completion
         this._initialized = false;
         this._localPrefsTimestamp = 0; // Track local preferences modification timestamp
+        this._sortConfigDebounceTimer = null; // Debounce timer for sortConfig writes
+        this._lastSortConfigWriteTime = 0;    // Last write timestamp for sortConfig to avoid dual-write collision
 
         // Binds
         this.init = this.init.bind(this);
@@ -1882,21 +1884,15 @@ export class AppController {
             const isValid = validOptions.some(opt => opt.field === currentGlobal.field);
 
             if (isValid) {
-                if (JSON.stringify(AppState.sortConfig) !== JSON.stringify(currentGlobal)) {
-                    AppState.sortConfig = { ...currentGlobal };
-                }
+                this._updateSortConfig(currentGlobal, watchlistId, isBoot);
             } else {
                 // Fallback Logic
                 if (viewType === 'CASH') {
                     const fallback = { field: 'name', direction: 'asc' };
-                    if (JSON.stringify(AppState.sortConfig) !== JSON.stringify(fallback)) {
-                        AppState.sortConfig = fallback;
-                    }
+                    this._updateSortConfig(fallback, watchlistId, isBoot);
                 } else {
                     const fallback = { field: 'code', direction: 'asc' };
-                    if (JSON.stringify(AppState.sortConfig) !== JSON.stringify(fallback)) {
-                        AppState.sortConfig = fallback;
-                    }
+                    this._updateSortConfig(fallback, watchlistId, isBoot);
                 }
             }
         } else {
@@ -1914,28 +1910,20 @@ export class AppController {
             const validFields = new Set(allOptions.map(opt => opt.field));
 
             if (storedSort && validFields.has(storedSort.field)) {
-                // RACE FIX: Only write if value actually changed
-                const current = AppState.sortConfig;
-                if (!current || current.field !== storedSort.field || current.direction !== storedSort.direction) {
-                    if (JSON.stringify(AppState.sortConfig) !== JSON.stringify(storedSort)) {
-                        AppState.sortConfig = { ...storedSort };
-                    }
-                }
+                this._updateSortConfig(storedSort, watchlistId, isBoot);
             } else {
                 // Fallback to safe defaults
                 const fallback = (AppState.watchlist.type === 'cash')
                     ? { field: 'category', direction: 'asc' }
                     : { field: 'code', direction: 'asc' };
 
-                if (JSON.stringify(AppState.sortConfig) !== JSON.stringify(fallback)) {
-                    AppState.sortConfig = fallback;
-                }
+                this._updateSortConfig(fallback, watchlistId, isBoot);
                 AppState.saveSortConfigForWatchlist(watchlistId);
             }
         }
 
         // === STEP 2.5: SANITIZE HIDDEN SORT ===
-        this._sanitizeActiveSort();
+        // Note: Sanitization is now automatically run inside _updateSortConfig to handle debounced flows.
 
 
         // === STEP 2.6: RESTORE VIEW MODE (NEW) ===
@@ -2415,6 +2403,60 @@ export class AppController {
             this._initialRenderComplete = true; // Ensure splash hides
         }
 
+    }
+
+    /**
+     * DEBOUNCED SORT CONFIG WRITER
+     * Prevents dual-write state audit race collisions during rapid switch/boot phases.
+     *
+     * FIX: Always stamp _lastSortConfigWriteTime when entering the immediate path,
+     * even when the value is unchanged. This ensures any subsequent call within
+     * 55ms is correctly debounced — previously a no-op first call (same value)
+     * left the timer at 0, causing the second call to bypass the debounce guard.
+     * Re-stamp after _sanitizeActiveSort() to account for its own sortConfig write.
+     */
+    _updateSortConfig(newSort, watchlistId, isBoot = false) {
+        this._pendingSortConfig = newSort;
+
+        if (this._sortConfigDebounceTimer) {
+            clearTimeout(this._sortConfigDebounceTimer);
+        }
+
+        const now = Date.now();
+        const lastWrite = this._lastSortConfigWriteTime || 0;
+        const timeDelta = now - lastWrite;
+
+        if (timeDelta < 55) {
+            // Rapid write detected — defer to clear the StateAuditor 50ms window.
+            // Debounce even when value unchanged so we always stamp correctly.
+            this._sortConfigDebounceTimer = setTimeout(() => {
+                const target = this._pendingSortConfig;
+                if (target) {
+                    // Always stamp FIRST so any re-entrant call sees us as fresh.
+                    this._lastSortConfigWriteTime = Date.now();
+                    if (JSON.stringify(AppState.sortConfig) !== JSON.stringify(target)) {
+                        AppState.sortConfig = { ...target };
+                    }
+                    this._sanitizeActiveSort();
+                    // Re-stamp after sanitize — it can write AppState.sortConfig directly.
+                    this._lastSortConfigWriteTime = Date.now();
+                    this.viewRenderer.updateSortButtonUI(AppState.watchlist.id, AppState.sortConfig);
+                    this.updateDataAndRender(false).catch(e => console.warn('Render error:', e));
+                }
+                this._sortConfigDebounceTimer = null;
+            }, 55 - timeDelta + 5);
+        } else {
+            // Safe window — write immediately.
+            // Stamp BEFORE the write so any re-entrant call within _sanitizeActiveSort
+            // sees us as "just wrote" and takes the debounce path.
+            this._lastSortConfigWriteTime = now;
+            if (JSON.stringify(AppState.sortConfig) !== JSON.stringify(newSort)) {
+                AppState.sortConfig = { ...newSort };
+            }
+            this._sanitizeActiveSort();
+            // Re-stamp after sanitize — it can write AppState.sortConfig directly.
+            this._lastSortConfigWriteTime = Date.now();
+        }
     }
 
     /**

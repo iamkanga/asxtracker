@@ -217,7 +217,7 @@
 }
 
 .cash-total-header {
-    background: var(--card-bg);
+    background: #000000 !important;
     padding: 20px;
     border-radius: var(--radius-container) !important;
     margin: 40px auto 20px auto !important;
@@ -233,9 +233,6 @@
     border-left: 6px solid var(--color-accent);
     position: relative;
     overflow: hidden;
-
-    /* Matching Gradient Effect to Cards */
-    background: linear-gradient(135deg, rgba(var(--color-accent-rgb), var(--gradient-strength, 0.6)) 0%, var(--card-bg) 100%) !important;
 }
 
 /* Override the first-child margin reset specifically for cash-total-header */

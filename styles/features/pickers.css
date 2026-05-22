@@ -476,11 +476,8 @@ body.dashboard-active .sidebar {
             color-mix(in srgb, rgb(var(--color-accent-rgb)) var(--gradient-tint, 0%), rgb(20, 20, 20)) 100%) !important;
 }
 
-/* --- Cash Total Header Styling --- */
 .cash-total-header {
-    background: linear-gradient(135deg,
-            rgba(var(--color-accent-rgb), var(--gradient-strength, 0.6)) 0%,
-            color-mix(in srgb, rgb(var(--color-accent-rgb)) var(--gradient-tint, 0%), rgb(20, 20, 20)) 100%) !important;
+    background: #000000 !important;
     --strip-color: var(--color-accent);
     padding: 15px 20px;
     margin-bottom: 20px;
