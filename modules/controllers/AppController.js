@@ -88,6 +88,7 @@ export class AppController {
         this._initialWatchlistRestored = false; // v1137: Track first-run restoration
         this._initialRenderComplete = false; // v1137: Track first-run render completion
         this._initialized = false;
+        this._localPrefsTimestamp = 0; // Track local preferences modification timestamp
 
         // Binds
         this.init = this.init.bind(this);
@@ -251,6 +252,7 @@ export class AppController {
                     this._initialized = false;
                     this._userDataLoaded = false;
                     this._cloudPrefsLoaded = false;
+                    this._localPrefsTimestamp = 0; // Reset local prefs timestamp for new user/session
                     this._syncingPreferences = false; // Re-entrancy guard for Cloud Sync
                     this._isUnlockedThisSession = false;
                     await this.appService.sanitizeCorruptedShares(user.uid);
@@ -706,6 +708,9 @@ export class AppController {
             return;
         }
 
+        // Set the in-memory timestamp immediately on local edit
+        this._localPrefsTimestamp = Date.now();
+
         // Clear existing timer
         if (this._syncTimeout) {
             clearTimeout(this._syncTimeout);
@@ -719,6 +724,7 @@ export class AppController {
                 // for critical fields that might have been hydrated during the debounce window.
                 const freshPrefs = {
                     ...prefs,
+                    modified: this._localPrefsTimestamp,
                     hiddenAssets: [...AppState.hiddenAssets], // Fresh Read
                     sortConfigMap: AppState.sortConfigMap,     // Fresh Read
                     carouselSelections: [...AppState.carouselSelections],
@@ -754,12 +760,7 @@ export class AppController {
             } catch (err) {
                 console.warn('Sync failed:', err);
             } finally {
-                // CLEARANCE DELAY (Directive 024):
-                // Give Firestore time to emit the final 'consistent' snapshot 
-                // before we allow inbound cloud updates to overwrite our state.
-                setTimeout(() => {
-                    this._syncTimeout = null;
-                }, 1000);
+                this._syncTimeout = null;
             }
         }, 250); // 250ms debounce
     }
@@ -948,6 +949,7 @@ export class AppController {
             AppState.unsubscribeStore = null;
             AppState.unsubscribePrefs = null;
             this._cloudPrefsLoaded = false;
+            this._localPrefsTimestamp = 0; // Reset local prefs timestamp on logout
         }
     }
 
@@ -972,9 +974,8 @@ export class AppController {
         }
 
         // SYNC GUARD (Directive 024): 
-        // 1. If we have a local sync timer active, ignore the cloud (our write is pending).
-        // 2. If the snapshot has pending writes (local echo).
-        if (this._syncTimeout || (metadata && metadata.hasPendingWrites)) {
+        // If the snapshot has pending writes (local echo).
+        if (metadata && metadata.hasPendingWrites) {
             return;
         }
 
@@ -985,6 +986,15 @@ export class AppController {
         if (metadata && metadata.fromCache && this._cloudPrefsLoaded) {
             return;
         }
+
+        // TIMESTAMP VALIDATION:
+        // Accept and render immediately if the incoming cloud data has a newer timestamp.
+        // Older or matching updates (e.g. echo of local actions) are safely ignored.
+        const incomingTimestamp = prefs.modified || 0;
+        if (this._cloudPrefsLoaded && incomingTimestamp <= this._localPrefsTimestamp) {
+            return;
+        }
+        this._localPrefsTimestamp = Math.max(this._localPrefsTimestamp, incomingTimestamp);
 
         this._syncingPreferences = true; // LOCK
         try {

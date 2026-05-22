@@ -712,6 +712,7 @@ export class UserStore {
 
             await setDoc(docRef, {
                 ...sanitizedData,
+                modified: data.modified || Date.now(),
                 updatedAt: serverTimestamp()
             }, { merge: true });
 
