@@ -103,7 +103,7 @@ export class DashboardViewRenderer {
                             <i class="fas fa-calendar-exclamation" style="color: #ffa500; font-size: 1.6rem; filter: drop-shadow(0 0 8px rgba(255,165,0,0.4));"></i>
                             <div style="flex: 1;">
                                 <div style="font-size: 0.9rem; font-weight: 800; color: #ffa500; margin-bottom: 2px;">Super Strategy Deadline</div>
-                                <div style="font-size: 0.8rem; color: rgba(255,255,255,0.9); line-height: 1.4;">Active trigger: ${alertsList}</div>
+                                <div style="font-size: 0.8rem; color: rgba(255,255,255,0.9); line-height: 1.4;">${alertsList}</div>
                             </div>
                             <div style="display: flex; align-items: center; gap: 8px;">
                                 <div style="font-size: 0.75rem; color: #ffa500; font-weight: 700; background: rgba(255,165,0,0.2); padding: 6px 10px; border-radius: 0;">View</div>
