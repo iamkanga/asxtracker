@@ -94,7 +94,7 @@ export class DashboardViewRenderer {
             if (!isDismissedUntilTomorrow && !isDismissedPermanently) {
                 const activeReminders = superStrategyStore.getActiveReminders().filter(r => r.isTriggered);
                 if (activeReminders.length > 0) {
-                    const alertsList = activeReminders.map(r => `<strong>${r.label}</strong>`).join(', ');
+                    const alertsList = activeReminders.map(r => r.label).join(', ');
                     superAlertsHtml = `
                         <div style="background: rgba(255,165,0,0.1); border: 1px solid rgba(255,165,0,0.3); border-radius: 0; padding: 14px 16px; margin: 16px; display: flex; align-items: center; gap: 14px; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(255,165,0,0.1);"
                              onclick="document.dispatchEvent(new CustomEvent('${EVENTS.OPEN_SUPER_STRATEGY}'))"

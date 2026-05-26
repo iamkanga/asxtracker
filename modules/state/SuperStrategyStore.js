@@ -542,7 +542,7 @@ class SuperStrategyStore {
 
         return [{
             type: 'countdown',
-            label: `Superannuation is due by the 30th of June`,
+            label: `Due by 30th of June`,
             weeks: weeksLeft,
             isTriggered: true,
             daysUntilEOFY: daysLeft

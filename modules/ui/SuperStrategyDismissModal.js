@@ -44,9 +44,6 @@ export class SuperStrategyDismissModal {
                         <i class="fas fa-calendar-exclamation" style="color: #ffa500; margin-right: 8px;"></i>
                         Dismiss EOFY Countdown
                     </h3>
-                    <button class="${CSS_CLASSES.MODAL_CLOSE_BTN}" title="Close" style="position: absolute; right: 0; top: 0;">
-                        <i class="fas ${UI_ICONS.CLOSE}"></i>
-                    </button>
                 </div>
 
                 <div class="${CSS_CLASSES.MODAL_BODY}" style="padding: 0; margin: 0;">
@@ -55,14 +52,14 @@ export class SuperStrategyDismissModal {
                     </p>
                 </div>
 
-                <div class="${CSS_CLASSES.MODAL_FOOTER}" style="padding: 0; border: none; flex-direction: column; gap: 10px; width: 100%;">
-                    <button id="${IDS.SUPER_DISMISS_TOMORROW}" class="btn-primary" style="width: 100%; border-radius: 4px; padding: 12px; font-weight: 700; background-color: var(--color-accent); color: white; border: none; cursor: pointer;">
+                <div class="${CSS_CLASSES.MODAL_FOOTER}" style="padding: 0; border: none; flex-direction: column; gap: 10px; width: 100%; align-items: center; justify-content: center;">
+                    <button id="${IDS.SUPER_DISMISS_TOMORROW}" style="width: 100%; background: transparent; color: var(--color-accent); border: none; cursor: pointer; padding: 12px; font-weight: 700; text-align: center; font-size: 1rem; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
                         Dismiss until tomorrow
                     </button>
-                    <button id="${IDS.SUPER_DISMISS_PERMANENT}" class="btn-secondary" style="width: 100%; border-radius: 4px; padding: 12px; font-weight: 700; background-color: transparent; color: var(--text-color); border: 1px solid var(--border-color); cursor: pointer;">
+                    <button id="${IDS.SUPER_DISMISS_PERMANENT}" style="width: 100%; background: transparent; color: var(--color-negative); border: none; cursor: pointer; padding: 12px; font-weight: 700; text-align: center; font-size: 1rem; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
                         Dismiss permanently
                     </button>
-                    <button id="${IDS.SUPER_DISMISS_CANCEL}" class="btn-secondary" style="width: 100%; border-radius: 4px; padding: 12px; font-weight: 700; background-color: transparent; color: var(--text-muted); border: none; cursor: pointer;">
+                    <button id="${IDS.SUPER_DISMISS_CANCEL}" style="width: 100%; background: transparent; color: var(--text-muted); border: none; cursor: pointer; padding: 12px; font-weight: 700; text-align: center; font-size: 1rem; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
                         Cancel
                     </button>
                 </div>
@@ -74,7 +71,12 @@ export class SuperStrategyDismissModal {
         navManager.pushState(() => {
             if (modal.parentElement) {
                 modal._navActive = false;
-                modal.querySelector(`.${CSS_CLASSES.MODAL_CLOSE_BTN}`).click();
+                const cancelBtn = modal.querySelector(`#${IDS.SUPER_DISMISS_CANCEL}`);
+                if (cancelBtn) {
+                    cancelBtn.click();
+                } else {
+                    modal.remove();
+                }
             }
         });
 
@@ -101,7 +103,8 @@ export class SuperStrategyDismissModal {
         };
 
         // Close triggers
-        modal.querySelector(`.${CSS_CLASSES.MODAL_CLOSE_BTN}`).onclick = closeModal;
+        const closeBtn = modal.querySelector(`.${CSS_CLASSES.MODAL_CLOSE_BTN}`);
+        if (closeBtn) closeBtn.onclick = closeModal;
         modal.querySelector(`.${CSS_CLASSES.MODAL_OVERLAY}`).onclick = closeModal;
         modal.querySelector(`#${IDS.SUPER_DISMISS_CANCEL}`).onclick = closeModal;
 
