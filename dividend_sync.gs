@@ -332,7 +332,7 @@ function writeDividendsToFirestore_(ticker, history) {
               fields: {
                 exDate: { stringValue: entry.exDate },
                 amount: { doubleValue: entry.amount },
-                franking: { doubleValue: entry.franking }
+                franking: entry.franking === null ? { nullValue: null } : { doubleValue: entry.franking }
               }
             }
           }))

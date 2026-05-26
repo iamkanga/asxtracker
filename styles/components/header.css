@@ -6,6 +6,7 @@
 
 #appHeader {
     background-color: var(--card-bg);
+    background: color-mix(in srgb, var(--card-bg) calc(var(--gradient-strength, 0.25) * 100%), #000000) !important;
     box-shadow: var(--shadow-strong);
     position: relative;
     flex-shrink: 0;
