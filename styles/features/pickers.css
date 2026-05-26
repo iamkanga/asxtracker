@@ -471,13 +471,13 @@ body.dashboard-active #appHeader {
 }
 
 body.dashboard-active .sidebar {
-    background: linear-gradient(to bottom,
-            rgba(var(--color-accent-rgb), var(--gradient-strength, 0.6)) 0%,
-            color-mix(in srgb, rgb(var(--color-accent-rgb)) var(--gradient-tint, 0%), rgb(20, 20, 20)) 100%) !important;
+    background: #000000 !important;
+    background-color: #000000 !important;
 }
 
 .cash-total-header {
     background: #000000 !important;
+    background-color: #000000 !important;
     --strip-color: var(--color-accent);
     padding: 15px 20px;
     margin-bottom: 20px;
@@ -489,6 +489,11 @@ body.dashboard-active .sidebar {
     display: flex;
     flex-direction: column;
     gap: 8px;
+}
+
+.cash-total-header > div:not(.cash-dna-container) {
+    background: #000000 !important;
+    background-color: #000000 !important;
 }
 
 .cash-total-label {

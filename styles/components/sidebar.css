@@ -4,8 +4,8 @@
    ========================================================================== */
 /* --- Sidebar --- */
 .sidebar {
-    /* Coffee Gradient for Sidebar */
-    background: linear-gradient(to bottom, #121212 0%, #1e1b18 100%) !important;
+    background: #000000 !important;
+    background-color: #000000 !important;
     position: fixed;
     top: 0;
     left: 0;

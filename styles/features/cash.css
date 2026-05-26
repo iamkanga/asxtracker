@@ -235,6 +235,11 @@
     overflow: hidden;
 }
 
+.cash-total-header > div:not(.cash-dna-container) {
+    background: #000000 !important;
+    background-color: #000000 !important;
+}
+
 /* Override the first-child margin reset specifically for cash-total-header */
 #content-container>.cash-total-header:first-child {
     margin-top: 20px !important;
