@@ -2426,62 +2426,18 @@ export class AppController {
      * left the timer at 0, causing the second call to bypass the debounce guard.
      * Re-stamp after _sanitizeActiveSort() to account for its own sortConfig write.
      */
-    _updateSortConfig(newSort, watchlistId, isBoot = false) {
-        this._pendingSortConfig = newSort;
-
-        if (this._sortConfigDebounceTimer) {
-            clearTimeout(this._sortConfigDebounceTimer);
-        }
-
-        const now = Date.now();
-        const lastWrite = this._lastSortConfigWriteTime || 0;
-        const timeDelta = now - lastWrite;
-
-        if (timeDelta < 55) {
-            // Rapid write detected — defer to clear the StateAuditor 50ms window.
-            // Debounce even when value unchanged so we always stamp correctly.
-            this._sortConfigDebounceTimer = setTimeout(() => {
-                const target = this._pendingSortConfig;
-                if (target) {
-                    // Always stamp FIRST so any re-entrant call sees us as fresh.
-                    this._lastSortConfigWriteTime = Date.now();
-                    if (JSON.stringify(AppState.sortConfig) !== JSON.stringify(target)) {
-                        AppState.sortConfig = { ...target };
-                    }
-                    this._sanitizeActiveSort();
-                    // Re-stamp after sanitize — it can write AppState.sortConfig directly.
-                    this._lastSortConfigWriteTime = Date.now();
-                    this.viewRenderer.updateSortButtonUI(AppState.watchlist.id, AppState.sortConfig);
-                    this.updateDataAndRender(false).catch(e => console.warn('Render error:', e));
-                }
-                this._sortConfigDebounceTimer = null;
-            }, 55 - timeDelta + 5);
-        } else {
-            // Safe window — write immediately.
-            // Stamp BEFORE the write so any re-entrant call within _sanitizeActiveSort
-            // sees us as "just wrote" and takes the debounce path.
-            this._lastSortConfigWriteTime = now;
-            if (JSON.stringify(AppState.sortConfig) !== JSON.stringify(newSort)) {
-                AppState.sortConfig = { ...newSort };
-            }
-            this._sanitizeActiveSort();
-            // Re-stamp after sanitize — it can write AppState.sortConfig directly.
-            this._lastSortConfigWriteTime = Date.now();
-        }
-    }
-
     /**
-     * SORT SANITIZATION PROTOCOL
-     * Ensures that if the current sort is hidden, we fall back to a visible default.
+     * PURE SORT SANITIZATION HELPER
+     * Returns a sanitized sort config if the given one is hidden.
      */
-    _sanitizeActiveSort() {
-        const currentSort = AppState.sortConfig;
-        const type = this._getSortType(AppState.watchlist.id);
-        const hiddenSet = AppState.hiddenSortOptions[type];
+    _getSanitizedSort(sortConfig, watchlistId) {
+        if (!sortConfig) return sortConfig;
+        const type = this._getSortType(watchlistId);
+        const hiddenSet = AppState.hiddenSortOptions?.[type];
 
-        if (!hiddenSet || hiddenSet.size === 0) return;
+        if (!hiddenSet || hiddenSet.size === 0) return sortConfig;
 
-        const sortKey = `${currentSort.field}-${currentSort.direction}`;
+        const sortKey = `${sortConfig.field}-${sortConfig.direction}`;
         if (hiddenSet.has(sortKey)) {
             // Fallback Defaults
             let fallback = { field: 'code', direction: 'asc' };
@@ -2496,9 +2452,63 @@ export class AppController {
                     fallback = { field: firstVisible.field, direction: firstVisible.direction };
                 }
             }
+            return fallback;
+        }
+        return sortConfig;
+    }
 
-            AppState.sortConfig = fallback;
-            // Persist the correction for this specific watchlist
+    /**
+     * DEBOUNCED SORT CONFIG WRITER
+     * Prevents dual-write state audit race collisions during rapid switch/boot phases.
+     *
+     * FIX: Sanitize the target configuration before writing to AppState.sortConfig
+     * to eliminate double-write race conditions when a hidden option is selected.
+     */
+    _updateSortConfig(newSort, watchlistId, isBoot = false) {
+        const sanitizedSort = this._getSanitizedSort(newSort, watchlistId);
+        this._pendingSortConfig = sanitizedSort;
+
+        if (this._sortConfigDebounceTimer) {
+            clearTimeout(this._sortConfigDebounceTimer);
+        }
+
+        const now = Date.now();
+        const lastWrite = this._lastSortConfigWriteTime || 0;
+        const timeDelta = now - lastWrite;
+
+        if (timeDelta < 55) {
+            // Rapid write detected — defer to clear the StateAuditor 50ms window.
+            this._sortConfigDebounceTimer = setTimeout(() => {
+                const target = this._pendingSortConfig;
+                if (target) {
+                    this._lastSortConfigWriteTime = Date.now();
+                    if (JSON.stringify(AppState.sortConfig) !== JSON.stringify(target)) {
+                        AppState.sortConfig = { ...target };
+                    }
+                    this._lastSortConfigWriteTime = Date.now();
+                    this.viewRenderer.updateSortButtonUI(AppState.watchlist.id, AppState.sortConfig);
+                    this.updateDataAndRender(false).catch(e => console.warn('Render error:', e));
+                }
+                this._sortConfigDebounceTimer = null;
+            }, 55 - timeDelta + 5);
+        } else {
+            // Safe window — write immediately.
+            this._lastSortConfigWriteTime = now;
+            if (JSON.stringify(AppState.sortConfig) !== JSON.stringify(sanitizedSort)) {
+                AppState.sortConfig = { ...sanitizedSort };
+            }
+            this._lastSortConfigWriteTime = Date.now();
+        }
+    }
+
+    /**
+     * SORT SANITIZATION PROTOCOL
+     * Ensures that if the current sort is hidden, we fall back to a visible default.
+     */
+    _sanitizeActiveSort() {
+        const sanitized = this._getSanitizedSort(AppState.sortConfig, AppState.watchlist.id);
+        if (JSON.stringify(AppState.sortConfig) !== JSON.stringify(sanitized)) {
+            AppState.sortConfig = sanitized;
             AppState.saveSortConfigForWatchlist(AppState.watchlist.id);
         }
     }

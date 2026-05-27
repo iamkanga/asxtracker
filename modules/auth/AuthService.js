@@ -15,7 +15,8 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { 
     initializeFirestore,
-    enableMultiTabIndexedDbPersistence
+    persistentLocalCache,
+    persistentMultipleTabManager
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Firebase Configuration
@@ -39,23 +40,14 @@ try {
     app = initializeApp(firebaseConfig);
     auth = getAuth(app);
     // V70: Switch to Long Polling to resolve Channel 400/404 errors in flaky environments
-    dbInstance = initializeFirestore(app, {
-        experimentalForceLongPolling: true
-    });
-
-    // V73: Enable Multi-Tab Offline Persistence
+    // V73: Enable Multi-Tab Offline Persistence using modern Settings.cache API.
     // This allows the app to load data from local cache first (0 cloud reads).
     // It makes the mobile experience feel "native" and significantly saves on daily quota.
-    enableMultiTabIndexedDbPersistence(dbInstance).catch((err) => {
-        if (err.code == 'failed-precondition') {
-            // Multiple tabs open, persistence can only be enabled in one tab at a time.
-            console.warn('[AuthService] Persistence failed: Multiple tabs open.');
-        } else if (err.code == 'unimplemented') {
-            // The current browser doesn't support all of the features needed to enable persistence
-            console.warn('[AuthService] Persistence failed: Browser not supported.');
-        } else {
-            console.error('[AuthService] Persistence error:', err);
-        }
+    dbInstance = initializeFirestore(app, {
+        experimentalForceLongPolling: true,
+        cache: persistentLocalCache({
+            tabManager: persistentMultipleTabManager()
+        })
     });
 
     // Set persistence to LOCAL (users stay logged in across restarts)
