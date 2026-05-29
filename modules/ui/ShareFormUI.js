@@ -11,6 +11,16 @@ import { KeyboardModalHandler } from '../utils/KeyboardModalHandler.js';
  * View Layer: Handles DOM generation, Event Binding, and Data Extraction.
  */
 
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 export class ShareFormUI {
     /**
      * Opens the Share Modal and handles all internal UI interactions.
@@ -531,7 +541,7 @@ export class ShareFormUI {
             const checkState = isChecked ? 'checked' : '';
             return `
                 <div class="${rowClass}">
-                    <span class="${CSS_CLASSES.WATCHLIST_NAME}">${wl.name}</span>
+                    <span class="${CSS_CLASSES.WATCHLIST_NAME}">${escapeHtml(wl.name)}</span>
                     <div class="radio-check"></div>
                     <input type="checkbox" name="watchlist" value="${wl.id}" ${checkState}>
                 </div>
@@ -575,7 +585,7 @@ export class ShareFormUI {
                 <div class="${CSS_CLASSES.MODAL_HEADER}" style="flex-shrink: 0;">
                     <div style="width: 100%;">
                         <h2 class="${CSS_CLASSES.MODAL_TITLE}">${headerTitleText}</h2>
-                        <div id="${IDS.MODAL_SUBTITLE}" class="${CSS_CLASSES.MODAL_SUBTITLE}">${initialSubtitle}</div>
+                        <div id="${IDS.MODAL_SUBTITLE}" class="${CSS_CLASSES.MODAL_SUBTITLE}">${escapeHtml(initialSubtitle)}</div>
                     </div>
                     <div class="${CSS_CLASSES.MODAL_ACTIONS}" style="align-self: flex-start;">
                         <button id="${IDS.DELETE_BTN}" class="${CSS_CLASSES.MODAL_ACTION_BTN} ${CSS_CLASSES.DELETE_BTN} ${CSS_CLASSES.HIDDEN}" title="Delete">
@@ -1120,8 +1130,8 @@ export class ShareFormUI {
                 const displayName = item.name || '';
 
                 li.innerHTML = `
-                    <div style="font-weight: bold;">${code}</div>
-                    <div style="font-size: 0.9rem; color: var(--text-muted);">${displayName}</div>
+                    <div style="font-weight: bold;">${escapeHtml(code)}</div>
+                    <div style="font-size: 0.9rem; color: var(--text-muted);">${escapeHtml(displayName)}</div>
                 `;
 
                 li.addEventListener('click', () => {

@@ -35,16 +35,26 @@ export class ViewRenderer {
         // Track current stock for live updates
         this._currentDetailsStock = null;
 
+        this._handlers = {
+            researchLinksUpdated: () => {
+                const modal = document.getElementById(IDS.STOCK_DETAILS_MODAL);
+                if (modal && !modal.classList.contains(CSS_CLASSES.HIDDEN) && this._currentDetailsStock) {
+                    this._refreshResearchLinks(modal, this._currentDetailsStock);
+                }
+            }
+        };
+
         this._setupGlobalListeners();
     }
 
     _setupGlobalListeners() {
-        window.addEventListener(EVENTS.RESEARCH_LINKS_UPDATED, () => {
-            const modal = document.getElementById(IDS.STOCK_DETAILS_MODAL);
-            if (modal && !modal.classList.contains(CSS_CLASSES.HIDDEN) && this._currentDetailsStock) {
-                this._refreshResearchLinks(modal, this._currentDetailsStock);
-            }
-        });
+        document.addEventListener(EVENTS.RESEARCH_LINKS_UPDATED, this._handlers.researchLinksUpdated);
+    }
+
+    destroy() {
+        if (this._handlers?.researchLinksUpdated) {
+            document.removeEventListener(EVENTS.RESEARCH_LINKS_UPDATED, this._handlers.researchLinksUpdated);
+        }
     }
 
     _refreshResearchLinks(modal, stock) {
@@ -140,7 +150,6 @@ export class ViewRenderer {
                 this.renderGrid(data, 'snapshot');
                 break;
             default:
-                console.warn(`Unknown view mode: ${mode}, defaulting to TABLE`);
                 this.container.classList.add(CSS_CLASSES.VIEW_TABLE);
                 this.renderTable(data);
         }
@@ -401,7 +410,6 @@ export class ViewRenderer {
 
 
     createRowHTML(item, isGenericWatchlist = false) {
-        if (!item.code) console.warn('[ViewRenderer] createRowHTML: item has no code!', item);
         const price = item.currentPrice || 0;
         const changePercent = item.dayChangePercent || 0;
 
@@ -492,7 +500,6 @@ export class ViewRenderer {
     }
 
     createCardHTML(item, type = PORTFOLIO_ID) {
-        if (!item.code) console.warn('[ViewRenderer] createCardHTML: item has no code!', item);
         const price = item.currentPrice || 0;
         const changePercent = item.dayChangePercent || 0;
 
@@ -571,7 +578,7 @@ export class ViewRenderer {
 
                     <!-- Visibility Toggle (Portfolio Corner) -->
                     <button class="${CSS_CLASSES.ICON_BTN_GHOST} ${CSS_CLASSES.VISIBILITY_TOGGLE_BTN} portfolio-visibility-btn" 
-                            onclick="event.stopPropagation(); document.dispatchEvent(new CustomEvent('${EVENTS.SHARE_TOGGLE_VISIBILITY}', { detail: { id: '${item.id}' } }))"
+                            data-id="${item.id}"
                             title="${item.isHidden ? 'Show Share' : 'Hide Share'}">
                         <i class="fas ${eyeIcon}"></i>
                     </button>
@@ -1259,7 +1266,7 @@ export class ViewRenderer {
                 try {
                     hostname = new URL(link.url).hostname;
                 } catch (e) {
-                    // console.warn('Invalid URL for favicon:', link.url);
+                    // Ignored
                 }
 
                 // Fix for SelfWealth: Use DuckDuckGo icons
@@ -1328,7 +1335,7 @@ export class ViewRenderer {
             }
 
             // CLEANUP: Always remove specialized listeners
-            window.removeEventListener(EVENTS.RESEARCH_LINKS_UPDATED, researchUpdateHandler);
+            document.removeEventListener(EVENTS.RESEARCH_LINKS_UPDATED, researchUpdateHandler);
 
             // Remove from history stack if closed manually
             if (modal._navActive) {
@@ -1444,10 +1451,10 @@ export class ViewRenderer {
                     }).join('');
                 }
             } else {
-                window.removeEventListener(EVENTS.RESEARCH_LINKS_UPDATED, researchUpdateHandler);
+                document.removeEventListener(EVENTS.RESEARCH_LINKS_UPDATED, researchUpdateHandler);
             }
         };
-        window.addEventListener(EVENTS.RESEARCH_LINKS_UPDATED, researchUpdateHandler);
+        document.addEventListener(EVENTS.RESEARCH_LINKS_UPDATED, researchUpdateHandler);
 
 
         // Mini Chart Preview - instantiate and wire click to expand
@@ -1521,7 +1528,6 @@ export class ViewRenderer {
             const ticker = stock.code || stock.shareName;
             const avgCost = parseFloat(stock.portfolioAvgPrice || stock.purchasePrice) || 0;
             const analysis = await DividendService.analyze(ticker, currentPrice, avgCost);
-            console.log(`[ViewRenderer] Dividend Analysis for ${ticker}:`, analysis);
 
             // If no data and status is PENDING, show a "not yet synced" message
             if (analysis.status === 'PENDING' || analysis.status === 'NO_DB') {
@@ -1675,7 +1681,6 @@ export class ViewRenderer {
             `;
 
         } catch (err) {
-            console.warn('[ViewRenderer] Dividend hydration failed:', err);
             container.innerHTML = `
                 <div class="${CSS_CLASSES.DIV_HERO_HEADER}">
                     <h3><i class="fas ${UI_ICONS.DIVIDENDS}"></i> Dividends</h3>
@@ -1822,7 +1827,7 @@ export class ViewRenderer {
             try {
                 hostname = new URL(finalLink.url).hostname;
             } catch (e) {
-                console.warn('Invalid URL for favicon:', finalLink.url);
+                // Ignored
             }
             const faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
 
@@ -1959,10 +1964,10 @@ export class ViewRenderer {
                     }).join('');
                 }
             } else {
-                window.removeEventListener(EVENTS.RESEARCH_LINKS_UPDATED, researchUpdateHandler);
+                document.removeEventListener(EVENTS.RESEARCH_LINKS_UPDATED, researchUpdateHandler);
             }
         };
-        window.addEventListener(EVENTS.RESEARCH_LINKS_UPDATED, researchUpdateHandler);
+        document.addEventListener(EVENTS.RESEARCH_LINKS_UPDATED, researchUpdateHandler);
 
         // Bind Events
         modal.querySelector('#research-discovery-tools-title').addEventListener('click', () => {
@@ -1985,7 +1990,7 @@ export class ViewRenderer {
             }, 450);
 
             // CLEANUP: Specialized handle
-            window.removeEventListener(EVENTS.RESEARCH_LINKS_UPDATED, researchUpdateHandler);
+            document.removeEventListener(EVENTS.RESEARCH_LINKS_UPDATED, researchUpdateHandler);
 
             // Remove from history stack if closed manually
             if (modal._navActive) {
@@ -2270,7 +2275,6 @@ export class ViewRenderer {
                 // --- DRAG COOLDOWN GUARD (TOP LEVEL) ---
                 // If we are dragging or just finished, BLOCK ALL CLICKS immediately.
                 if (this._isDraggingOrCoolingDown) {
-                    console.warn('[ViewRenderer] Click BLOCKED by Drag Cooldown');
                     e.preventDefault();
                     e.stopPropagation();
                     e.stopImmediatePropagation();
@@ -2385,8 +2389,6 @@ export class ViewRenderer {
                             title.innerHTML = `<i class="fas ${UI_ICONS.GLOBE}"></i> Global Sort Active ${chevronHtml}`;
                         }
 
-                    } else {
-                        console.error('[ViewRenderer] onGlobalToggle callback missing!');
                     }
                     return;
                 }

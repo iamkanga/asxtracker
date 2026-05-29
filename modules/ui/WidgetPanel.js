@@ -91,7 +91,6 @@ export class WidgetPanel {
             visibility: hidden;
         `;
         this.overlay.addEventListener('click', () => {
-            console.log('[WidgetPanel] Overlay clicked - closing panel');
             this.toggle();
         });
         document.body.appendChild(this.overlay);
@@ -112,7 +111,6 @@ export class WidgetPanel {
 
     toggle() {
         if (!this.container) {
-            console.error('[WidgetPanel] No container found during toggle');
             return;
         }
 

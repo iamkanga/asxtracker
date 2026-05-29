@@ -9,36 +9,50 @@ import { navManager } from '../utils/NavigationManager.js';
 export class FavoriteLinksUI {
     static _currentMode = 'open'; // Default to grid view
 
+    static _openFavoriteLinksHandler = () => {
+        this._currentMode = 'open';
+        this.showModal();
+    };
+
+    static _delegatedClickHandler = (e) => {
+        const target = e.target.closest('[data-action]');
+        if (!target || !target.closest(`#${IDS.MODAL_FAVORITE_LINKS}`)) return;
+
+        const action = target.dataset.action;
+        const index = parseInt(target.dataset.index, 10);
+
+        if (action === 'edit' && !isNaN(index)) {
+            this._editLinkDetails(index);
+        } else if (action === 'delete' && !isNaN(index)) {
+            this._deleteLink(index);
+        }
+    };
+
+    static _linksUpdatedHandler = () => {
+        const modal = document.getElementById(IDS.MODAL_FAVORITE_LINKS);
+        if (modal && !modal.classList.contains(CSS_CLASSES.HIDDEN)) {
+            this._renderContent(modal);
+        }
+    };
+
     static init() {
-        document.addEventListener(EVENTS.OPEN_FAVORITE_LINKS, () => {
-            this._currentMode = 'open';
-            this.showModal();
-        });
+        this.destroy();
+
+        document.addEventListener(EVENTS.OPEN_FAVORITE_LINKS, this._openFavoriteLinksHandler);
         this._setupGlobalListeners();
 
         // Delegation for actions within the modal
-        document.addEventListener('click', (e) => {
-            const target = e.target.closest('[data-action]');
-            if (!target || !target.closest(`#${IDS.MODAL_FAVORITE_LINKS}`)) return;
-
-            const action = target.dataset.action;
-            const index = parseInt(target.dataset.index, 10);
-
-            if (action === 'edit' && !isNaN(index)) {
-                this._editLinkDetails(index);
-            } else if (action === 'delete' && !isNaN(index)) {
-                this._deleteLink(index);
-            }
-        });
+        document.addEventListener('click', this._delegatedClickHandler);
     }
 
     static _setupGlobalListeners() {
-        window.addEventListener(EVENTS.FAVORITE_LINKS_UPDATED, () => {
-            const modal = document.getElementById(IDS.MODAL_FAVORITE_LINKS);
-            if (modal && !modal.classList.contains(CSS_CLASSES.HIDDEN)) {
-                this._renderContent(modal);
-            }
-        });
+        document.addEventListener(EVENTS.FAVORITE_LINKS_UPDATED, this._linksUpdatedHandler);
+    }
+
+    static destroy() {
+        document.removeEventListener(EVENTS.OPEN_FAVORITE_LINKS, this._openFavoriteLinksHandler);
+        document.removeEventListener('click', this._delegatedClickHandler);
+        document.removeEventListener(EVENTS.FAVORITE_LINKS_UPDATED, this._linksUpdatedHandler);
     }
 
     static showModal() {

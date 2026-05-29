@@ -789,23 +789,17 @@
 
 /* Dashboard Row/Card Gradients (Background Only) - CORRECTED SELECTORS */
 /* Portfolio Cards use .share-card, Dashboard uses .dashboard-row */
-tr.dashboard-grade-up,
-.share-card.dashboard-grade-up,
 .dashboard-row.dashboard-grade-up {
     /* Gradient: Green (top-left) fading to dark (bottom-right) */
     background: linear-gradient(135deg, rgba(20, 160, 20, var(--gradient-strength, 0.6)) 0%, rgba(20, 20, 20, 1) 100%) !important;
 }
 
-tr.dashboard-grade-down,
-.share-card.dashboard-grade-down,
 .dashboard-row.dashboard-grade-down {
     /* Gradient: Red (top-left) fading to dark (bottom-right) */
     background: linear-gradient(135deg, rgba(180, 0, 0, var(--gradient-strength, 0.6)) 0%, rgba(20, 20, 20, 1) 100%) !important;
 }
 
 /* Neutral/Coffee gradient for zero-change items - uses --color-accent */
-tr.dashboard-grade-neutral,
-.share-card.dashboard-grade-neutral,
 .dashboard-row.dashboard-grade-neutral {
     /* Gradient: Coffee (top-left) fading to dark (bottom-right) */
     background: linear-gradient(135deg,
@@ -814,12 +808,12 @@ tr.dashboard-grade-neutral,
 }
 
 /* NUCLEAR OPTION: Clear Child Backgrounds */
-tr.dashboard-grade-up td,
-tr.dashboard-grade-down td,
-tr.dashboard-grade-neutral td,
-.share-card.dashboard-grade-up *,
-.share-card.dashboard-grade-down *,
-.share-card.dashboard-grade-neutral *,
+tr.trend-up td,
+tr.trend-down td,
+tr.trend-neutral td,
+.share-card.trend-up *,
+.share-card.trend-down *,
+.share-card.trend-neutral *,
 .dashboard-row.dashboard-grade-up *,
 .dashboard-row.dashboard-grade-down *,
 .dashboard-row.dashboard-grade-neutral * {

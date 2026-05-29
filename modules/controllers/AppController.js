@@ -1207,7 +1207,7 @@ export class AppController {
                 if (!document.getElementById(IDS.MODAL_FAVORITE_LINKS).classList.contains(CSS_CLASSES.HIDDEN)) {
                     import('../ui/FavoriteLinksUI.js').then(module => {
                         const event = new CustomEvent(EVENTS.FAVORITE_LINKS_UPDATED);
-                        window.dispatchEvent(event);
+                        document.dispatchEvent(event);
                     });
                 }
             }
@@ -1221,7 +1221,7 @@ export class AppController {
                 localStorage.setItem(STORAGE_KEYS.RESEARCH_LINKS, JSON.stringify(cloudLinks));
 
                 // LIVE UPDATE: Trigger refresh
-                window.dispatchEvent(new CustomEvent(EVENTS.RESEARCH_LINKS_UPDATED));
+                document.dispatchEvent(new CustomEvent(EVENTS.RESEARCH_LINKS_UPDATED));
             }
 
             // 6. Sync Watchlist Mode
@@ -2572,6 +2572,19 @@ export class AppController {
                         this.modalController.openAddShareModal(null);
                     }
                 }, 0);
+            }
+        });
+
+        // Portfolio Visibility Toggle Button Delegation
+        document.body.addEventListener('click', (e) => {
+            const visBtn = e.target.closest('.portfolio-visibility-btn');
+            if (visBtn) {
+                e.preventDefault();
+                e.stopPropagation();
+                const id = visBtn.dataset.id;
+                if (id) {
+                    document.dispatchEvent(new CustomEvent(EVENTS.SHARE_TOGGLE_VISIBILITY, { detail: { id } }));
+                }
             }
         });
 

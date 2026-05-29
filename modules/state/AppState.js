@@ -676,14 +676,14 @@ export const AppState = {
         this.preferences.favoriteLinks = links;
         localStorage.setItem(STORAGE_KEYS.FAVORITE_LINKS, JSON.stringify(links));
         this._triggerSync();
-        window.dispatchEvent(new CustomEvent(EVENTS.FAVORITE_LINKS_UPDATED));
+        document.dispatchEvent(new CustomEvent(EVENTS.FAVORITE_LINKS_UPDATED));
     },
 
     saveResearchLinks(links) {
         this.preferences.researchLinks = links;
         localStorage.setItem(STORAGE_KEYS.RESEARCH_LINKS, JSON.stringify(links));
         this._triggerSync();
-        window.dispatchEvent(new CustomEvent(EVENTS.RESEARCH_LINKS_UPDATED));
+        document.dispatchEvent(new CustomEvent(EVENTS.RESEARCH_LINKS_UPDATED));
     },
 
     saveQuickNav(config) {

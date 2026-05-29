@@ -109,7 +109,6 @@ export const CsvParserService = {
         }
 
         if (headerIndex === -1 || !delimiter) {
-            console.warn('[CsvParserService] No valid header row found with flexible matching.');
             return { headers: [], rows: [], type: null };
         }
 

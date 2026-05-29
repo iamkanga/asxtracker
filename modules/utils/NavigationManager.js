@@ -78,7 +78,6 @@ class NavigationManager {
         // Safety: Auto-unlock if popstate is swallowed by the browser (rare but happens)
         setTimeout(() => {
             if (this._isLocked && this.ignoreCount > 0) {
-                console.warn('NavigationManager: Pop State Safety Unlock.');
                 this._isLocked = false;
                 this.ignoreCount = 0;
                 // Force sync current ID based on current browser state if possible
@@ -119,7 +118,7 @@ class NavigationManager {
                     for (let i = 0; i < popsRequired; i++) {
                         const callback = this.popStack.pop();
                         if (callback) {
-                            try { callback(); } catch (err) { console.error('Callback error:', err); }
+                            try { callback(); } catch (err) { /* Ignored */ }
                         }
                     }
                 }
@@ -127,7 +126,6 @@ class NavigationManager {
 
             // 3. EXIT PREVENTION: Trap browser going past the Hub (Anchor 1)
             if (stateId < this.baseStateId) {
-                console.warn('NavigationManager: Hub Exit Trap triggered.');
                 window.history.go(this.baseStateId - stateId);
                 this.currentStateId = this.baseStateId;
                 this._showExitToast();
@@ -138,7 +136,7 @@ class NavigationManager {
             this.currentStateId = stateId;
 
         } catch (err) {
-            console.error('NavigationManager Critical Failure:', err);
+            // Ignored
         } finally {
             this._isHandlingPop = false;
         }

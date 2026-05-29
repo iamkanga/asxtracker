@@ -393,24 +393,21 @@
 /* Trend Backgrounds (Subtle) & View-Specific Borders */
 
 /* Defaults (Base rules) */
-tr.trend-up,
-.share-card.trend-up {
+tr.trend-up {
     border-right: none;
     background: linear-gradient(145deg,
             rgba(20, 160, 20, calc(var(--gradient-strength, 0.6) * 0.15)),
             color-mix(in srgb, rgb(20, 160, 20) var(--gradient-tint, 0%), rgba(20, 20, 20, 0.95)));
 }
 
-tr.trend-down,
-.share-card.trend-down {
+tr.trend-down {
     border-right: none;
     background: linear-gradient(145deg,
             rgba(180, 20, 20, calc(var(--gradient-strength, 0.6) * 0.15)),
             color-mix(in srgb, rgb(180, 20, 20) var(--gradient-tint, 0%), rgba(20, 20, 20, 0.95)));
 }
 
-tr.trend-neutral,
-.share-card.trend-neutral {
+tr.trend-neutral {
     border-right: none;
     background: linear-gradient(145deg,
             rgba(var(--color-accent-rgb), calc(var(--gradient-strength, 0.6) * 0.15)),

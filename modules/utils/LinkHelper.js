@@ -230,7 +230,7 @@ export class LinkHelper {
                         this._openExternal(result, targetUrl);
                     }
                 } catch (err) {
-                    console.warn('[LinkHelper] Tap Failed:', err);
+                    // Ignored
                 }
             }
         });
@@ -246,7 +246,7 @@ export class LinkHelper {
             document.body.removeChild(textArea);
             ToastManager.info('COPIED: Paste into Gemini');
         } catch (err) {
-            console.warn('[LinkHelper] Clipboard fail:', err);
+            // Ignored
         }
 
         const ua = navigator.userAgent;

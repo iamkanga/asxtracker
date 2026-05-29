@@ -9,8 +9,57 @@ import { getSingleShareData } from '../data/DataProcessor.js';
  * Handles the custom research links management UI.
  */
 export default class ResearchLinksUI {
+    static _linksUpdatedHandler = () => {
+        const modal = document.getElementById(IDS.MODAL_RESEARCH_LINKS);
+        if (modal && !modal.classList.contains(CSS_CLASSES.HIDDEN)) {
+            this.render();
+        }
+    };
+
+    static _clickHandler = (e) => {
+        const modalId = IDS.MODAL_RESEARCH_LINKS;
+        const modal = document.getElementById(modalId);
+        if (!modal) return;
+
+        // Close button
+        const closeBtn = e.target.closest(`#${modalId} .modal-close-btn`);
+        if (closeBtn) {
+            this.hide();
+            return;
+        }
+
+        // Add Link button
+        const addBtn = e.target.closest(`#${IDS.ADD_RESEARCH_LINK_BTN}`);
+        if (addBtn) {
+            this.showAddLinkDialog();
+            return;
+        }
+
+        // Title click
+        const title = e.target.closest(`#${IDS.RESEARCH_LINKS_TITLE}`);
+        if (title) {
+            this.hide();
+            return;
+        }
+
+        // Global delegate for actions
+        const actionBtn = e.target.closest('[data-action]');
+        if (actionBtn && actionBtn.closest(`#${modalId}`)) {
+            const action = actionBtn.dataset.action;
+            const index = parseInt(actionBtn.dataset.index, 10);
+            const links = this.getResearchLinks();
+
+            if (action === 'edit' && !isNaN(index)) {
+                this.showAddLinkDialog(links[index], index);
+            } else if (action === 'delete' && !isNaN(index)) {
+                this.deleteLink(index);
+            }
+        }
+    };
+
     static init() {
         this.isEditMode = true; // Always in management mode for this modal
+        this.destroy();
         this._setupEventListeners();
         this._setupGlobalListeners();
     }
@@ -18,55 +67,16 @@ export default class ResearchLinksUI {
     static _setupGlobalListeners() {
         // Listen for updates from other parts of the app (or this modal itself)
         // to ensure we refresh if we're showing a management list
-        window.addEventListener(EVENTS.RESEARCH_LINKS_UPDATED, () => {
-            const modal = document.getElementById(IDS.MODAL_RESEARCH_LINKS);
-            if (modal && !modal.classList.contains(CSS_CLASSES.HIDDEN)) {
-                this.render();
-            }
-        });
+        document.addEventListener(EVENTS.RESEARCH_LINKS_UPDATED, this._linksUpdatedHandler);
     }
 
     static _setupEventListeners() {
-        document.addEventListener('click', (e) => {
-            const modalId = IDS.MODAL_RESEARCH_LINKS;
-            const modal = document.getElementById(modalId);
-            if (!modal) return;
+        document.addEventListener('click', this._clickHandler);
+    }
 
-            // Close button
-            const closeBtn = e.target.closest(`#${modalId} .modal-close-btn`);
-            if (closeBtn) {
-                this.hide();
-                return;
-            }
-
-            // Add Link button
-            const addBtn = e.target.closest(`#${IDS.ADD_RESEARCH_LINK_BTN}`);
-            if (addBtn) {
-                this.showAddLinkDialog();
-                return;
-            }
-
-            // Title click
-            const title = e.target.closest(`#${IDS.RESEARCH_LINKS_TITLE}`);
-            if (title) {
-                this.hide();
-                return;
-            }
-
-            // Global delegate for actions
-            const actionBtn = e.target.closest('[data-action]');
-            if (actionBtn && actionBtn.closest(`#${modalId}`)) {
-                const action = actionBtn.dataset.action;
-                const index = parseInt(actionBtn.dataset.index, 10);
-                const links = this.getResearchLinks();
-
-                if (action === 'edit' && !isNaN(index)) {
-                    this.showAddLinkDialog(links[index], index);
-                } else if (action === 'delete' && !isNaN(index)) {
-                    this.deleteLink(index);
-                }
-            }
-        });
+    static destroy() {
+        document.removeEventListener(EVENTS.RESEARCH_LINKS_UPDATED, this._linksUpdatedHandler);
+        document.removeEventListener('click', this._clickHandler);
     }
 
     static getResearchLinks() {

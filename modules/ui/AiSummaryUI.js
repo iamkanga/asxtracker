@@ -5,6 +5,16 @@ import { DataService } from '../data/DataService.js';
 import { ToastManager } from './ToastManager.js';
 import { navManager } from '../utils/NavigationManager.js';
 
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 /**
  * AiSummaryUI.js
  * Handles the Universal In-App AI Research Bottom Sheet.
@@ -112,8 +122,8 @@ export class AiSummaryUI {
                 <div class="ai-summary-body">
                     <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
                         <div style="flex: 1;">
-                            <h2 style="margin: 0; font-size: 1.25rem; color: #fff;"><i class="fas fa-brain" style="color: var(--color-accent); margin-right: 8px;"></i>${title}</h2>
-                            <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;">Analysis for ${symbol}</div>
+                            <h2 style="margin: 0; font-size: 1.25rem; color: #fff;"><i class="fas fa-brain" style="color: var(--color-accent); margin-right: 8px;"></i>${escapeHtml(title)}</h2>
+                            <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;">Analysis for ${escapeHtml(symbol)}</div>
                         </div>
                         <button class="${CSS_CLASSES.MODAL_CLOSE_BTN}" style="background: rgba(255,255,255,0.05); border: none; color: var(--color-accent); width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer;">
                             <i class="fas fa-times"></i>
@@ -186,13 +196,13 @@ export class AiSummaryUI {
                 contentEl.innerHTML = `
                     <div style="text-align: center; padding: 20px; color: var(--color-negative);">
                         <i class="fas fa-exclamation-triangle" style="font-size: 2rem; margin-bottom: 10px;"></i>
-                        <p>${errorMsg}</p>
+                        <p>${escapeHtml(errorMsg)}</p>
                         <button class="standard-btn" style="margin-top: 15px; background: #333;" onclick="AiSummaryUI.close()">Close</button>
                     </div>
                 `;
             }
         } catch (err) {
-            contentEl.innerHTML = `<p style="color: red;">Error: ${err.message}</p>`;
+            contentEl.innerHTML = `<p style="color: red;">Error: ${escapeHtml(err.message)}</p>`;
         }
     }
 
@@ -208,7 +218,7 @@ export class AiSummaryUI {
                     ${formattedHtml}
                 </div>
                 <div style="margin-top: 30px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; opacity: 0.5; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;">
-                    <span><i class="fas fa-microchip"></i> Powered by ${modelName.split('/').pop()}</span>
+                    <span><i class="fas fa-microchip"></i> Powered by ${escapeHtml(modelName.split('/').pop())}</span>
                     <span><i class="fas fa-history"></i> Daily Snapshot</span>
                 </div>
             </div>
@@ -221,7 +231,11 @@ export class AiSummaryUI {
     static _formatMarkdown(text, symbol = '') {
         if (!text) return '';
 
-        let html = text;
+        // Escape raw input HTML characters to prevent XSS/DOM breaks
+        let html = String(text)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
 
         // 1. Branding & Identity Cleanup (User: Remove "AU ASX")
         html = html.replace(/AU\s*ASX/gi, 'ASX');

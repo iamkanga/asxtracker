@@ -12,6 +12,9 @@ import { LinkHelper } from '../utils/LinkHelper.js';
  * Allows users to search, research, and then initiate the "Add Share" workflow.
  */
 export class SearchDiscoveryUI {
+    static _resultsHandler = null;
+    static _previewHandler = null;
+    static _researchLinksHandler = null;
 
     static showModal(initialQuery = null) {
         const existing = document.getElementById(IDS.DISCOVERY_MODAL);
@@ -92,6 +95,8 @@ export class SearchDiscoveryUI {
         const closeBtn = modal.querySelector(`.${CSS_CLASSES.MODAL_CLOSE_BTN}`);
         const overlay = modal.querySelector(`.${CSS_CLASSES.MODAL_OVERLAY}`);
 
+        this.destroy();
+
         const close = () => {
             if (modal._isClosing) return;
             modal._isClosing = true;
@@ -112,6 +117,8 @@ export class SearchDiscoveryUI {
                 modal._navActive = false;
                 navManager.popStateSilently();
             }
+
+            this.destroy();
         };
         modal._close = close; // Store for external access
 
@@ -150,11 +157,7 @@ export class SearchDiscoveryUI {
 
         // Search Results Handler (Internal to Modal logic)
         // We need to listen to the specific event triggered by AppController
-        const resultsHandler = (e) => {
-            if (!document.contains(modal) || modal._isClosing) {
-                document.removeEventListener(EVENTS.UPDATE_DISCOVERY_RESULTS, resultsHandler);
-                return;
-            }
+        this._resultsHandler = (e) => {
             const { results } = e.detail;
 
             // AUTO-SELECT LOGIC (For Initial Query)
@@ -209,12 +212,7 @@ export class SearchDiscoveryUI {
             }
         };
 
-        const previewHandler = (e) => {
-            if (!document.contains(modal)) {
-                document.removeEventListener(EVENTS.UPDATE_MODAL_PREVIEW, previewHandler);
-                return;
-            }
-
+        this._previewHandler = (e) => {
             const { data } = e.detail;
             if (data && data.code === modal.dataset.viewingCode) {
                 // Update detail with fresh values
@@ -222,11 +220,8 @@ export class SearchDiscoveryUI {
             }
         };
 
-        document.addEventListener(EVENTS.UPDATE_DISCOVERY_RESULTS, resultsHandler);
-        document.addEventListener(EVENTS.UPDATE_MODAL_PREVIEW, previewHandler);
-
         // RESEARCH LINKS AUTO-REFRESH
-        window.addEventListener(EVENTS.RESEARCH_LINKS_UPDATED, () => {
+        this._researchLinksHandler = () => {
             const currentModal = document.getElementById(IDS.DISCOVERY_MODAL);
             if (currentModal && currentModal.dataset.viewingCode) {
                 // If we have a viewing code, it means we're in detail view
@@ -240,7 +235,26 @@ export class SearchDiscoveryUI {
                     document.dispatchEvent(new CustomEvent(EVENTS.REQUEST_LIVE_PRICE, { detail: { code: currentModal.dataset.viewingCode } }));
                 }
             }
-        });
+        };
+
+        document.addEventListener(EVENTS.UPDATE_DISCOVERY_RESULTS, this._resultsHandler);
+        document.addEventListener(EVENTS.UPDATE_MODAL_PREVIEW, this._previewHandler);
+        document.addEventListener(EVENTS.RESEARCH_LINKS_UPDATED, this._researchLinksHandler);
+    }
+
+    static destroy() {
+        if (this._resultsHandler) {
+            document.removeEventListener(EVENTS.UPDATE_DISCOVERY_RESULTS, this._resultsHandler);
+            this._resultsHandler = null;
+        }
+        if (this._previewHandler) {
+            document.removeEventListener(EVENTS.UPDATE_MODAL_PREVIEW, this._previewHandler);
+            this._previewHandler = null;
+        }
+        if (this._researchLinksHandler) {
+            document.removeEventListener(EVENTS.RESEARCH_LINKS_UPDATED, this._researchLinksHandler);
+            this._researchLinksHandler = null;
+        }
     }
 
     static _renderResults(listContainer, results, onSelect) {
