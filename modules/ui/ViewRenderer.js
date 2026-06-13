@@ -1235,7 +1235,7 @@ export class ViewRenderer {
 
 
                             <!-- Card 5: Entry Details (Decoupled & Decentered) -->
-                            <div class="${CSS_CLASSES.DETAIL_CARD} ${trendBgClass} ${CSS_CLASSES.CURSOR_POINTER}" data-action="deep-link" data-id="${stock.id}" data-section="holdings">
+                            <div class="${CSS_CLASSES.DETAIL_CARD} ${trendBgClass} ${CSS_CLASSES.CURSOR_POINTER}" id="${IDS.ENTRY_DETAILS_CARD}">
                                 <div class="${CSS_CLASSES.DETAIL_CARD_HEADER}">
                                     <h3 class="${CSS_CLASSES.DETAIL_LABEL}">
                                         <i class="fas ${UI_ICONS.HISTORY}"></i> Entry Details
@@ -1398,6 +1398,33 @@ export class ViewRenderer {
 
                 setTimeout(() => {
                     const event = new CustomEvent(EVENTS.REQUEST_EDIT_SHARE, { detail: { code: stock.code, id: stock.id } });
+                    document.dispatchEvent(event);
+                }, 150);
+            });
+        }
+
+        // Entry Details Card Click Handler
+        const entryCard = modal.querySelector(`#${IDS.ENTRY_DETAILS_CARD}`);
+        if (entryCard) {
+            entryCard.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+
+                const ticker = stock.code;
+                const shareId = stock.id;
+
+                // Close current View Modal using app's existing close function
+                close();
+
+                // Launch the Main Edit Container for this stock
+                setTimeout(() => {
+                    const event = new CustomEvent(EVENTS.REQUEST_EDIT_SHARE, {
+                        detail: {
+                            code: ticker,
+                            id: shareId,
+                            section: 'entry-details'
+                        }
+                    });
                     document.dispatchEvent(event);
                 }, 150);
             });

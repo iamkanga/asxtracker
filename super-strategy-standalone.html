@@ -1,0 +1,2137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Super Strategy Phone Simulator</title>
+    <!-- Google Fonts & FontAwesome -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --bg-deep: #000000;
+            --bg-color: #0c0c0c;
+            --card-bg: rgba(255, 255, 255, 0.03);
+            --card-border: rgba(255, 255, 255, 0.06);
+            --color-accent: #a49393; /* Default ASX Tracker warm accent */
+            --color-accent-rgb: 164, 147, 147;
+            --color-positive: #00e676;
+            --color-negative: #ff3d00;
+            --color-warning: #ffb300;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0a0;
+            --text-muted: #666666;
+            --radius-container: 0px; /* ASX Tracker standard borders are square */
+            --radius-pill: 0px;
+            --shadow-small: 0 2px 8px rgba(0,0,0,0.5);
+            --shadow-medium: 0 8px 24px rgba(0,0,0,0.8);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: #121212;
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            padding: 20px;
+        }
+
+        /* Simulator Frame */
+        .simulator-wrapper {
+            display: flex;
+            gap: 40px;
+            align-items: center;
+            max-width: 1200px;
+            width: 100%;
+            justify-content: center;
+        }
+
+        .instructions-panel {
+            flex: 1;
+            max-width: 450px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--card-border);
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            box-shadow: var(--shadow-medium);
+        }
+
+        .instructions-panel h1 {
+            font-size: 1.5rem;
+            font-weight: 900;
+            color: var(--color-accent);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-bottom: 2px solid var(--card-border);
+            padding-bottom: 12px;
+        }
+
+        .instructions-panel p {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        .feature-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin: 10px 0;
+        }
+
+        .feature-item {
+            display: flex;
+            gap: 12px;
+            font-size: 0.85rem;
+            align-items: flex-start;
+        }
+
+        .feature-item i {
+            color: var(--color-accent);
+            margin-top: 3px;
+        }
+
+        .phone-frame {
+            width: 390px;
+            height: 844px; /* Standard iPhone 12/13/14 Pro Ratio */
+            background: #000;
+            border: 12px solid #222;
+            border-radius: 40px;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.8), inset 0 0 10px rgba(255,255,255,0.1);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+
+        /* Screen Bezel Notch */
+        .phone-notch {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 120px;
+            height: 25px;
+            background: #222;
+            border-bottom-left-radius: 18px;
+            border-bottom-right-radius: 18px;
+            z-index: 1000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .phone-notch-camera {
+            width: 10px;
+            height: 10px;
+            background: #111;
+            border-radius: 50%;
+        }
+
+        /* Phone Status Bar */
+        .phone-status-bar {
+            height: 38px;
+            background: #000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 24px 0 24px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: #fff;
+            z-index: 999;
+            user-select: none;
+        }
+
+        .status-right {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        /* Phone Home Indicator Bar */
+        .phone-home-bar {
+            position: absolute;
+            bottom: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 130px;
+            height: 5px;
+            background: rgba(255, 255, 255, 0.4);
+            border-radius: 3px;
+            z-index: 1000;
+        }
+
+        /* Standalone App Inner Container */
+        .app-container {
+            flex: 1;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* App Header */
+        .app-header {
+            height: 50px;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 10;
+        }
+
+        .app-header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: #fff;
+        }
+
+        .app-header-left i {
+            color: var(--color-accent);
+            font-size: 1.2rem;
+            cursor: pointer;
+        }
+
+        .app-logo {
+            font-size: 0.8rem;
+            font-weight: 900;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .app-connection-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--color-positive);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--color-positive);
+        }
+
+        /* App Body Area */
+        .app-body {
+            flex: 1;
+            overflow-y: auto;
+            padding-bottom: 30px;
+            padding-top: 10px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Mock ASX Dashboard widgets */
+        .mock-indices {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            padding: 0 16px;
+            margin-bottom: 12px;
+        }
+
+        .mock-index-card {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.06);
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .index-name {
+            font-size: 0.65rem;
+            color: var(--text-secondary);
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .index-value {
+            font-size: 1rem;
+            font-weight: 850;
+        }
+
+        .index-change {
+            font-size: 0.68rem;
+            color: var(--color-positive);
+            font-weight: 700;
+        }
+
+        .index-change.neg {
+            color: var(--color-negative);
+        }
+
+        /* Trigger Deadline alert banner */
+        .super-alert-banner-dashboard {
+            background: rgba(255, 165, 0, 0.08);
+            border: 1px solid rgba(255, 165, 0, 0.25);
+            padding: 14px 16px;
+            margin: 8px 16px 16px 16px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            cursor: pointer;
+            transition: background 0.2s;
+            box-shadow: 0 4px 12px rgba(255, 165, 0, 0.08);
+        }
+
+        .super-alert-banner-dashboard:hover {
+            background: rgba(255, 165, 0, 0.12);
+        }
+
+        .super-alert-banner-dashboard i {
+            color: #ffa500;
+            font-size: 1.4rem;
+            filter: drop-shadow(0 0 8px rgba(255, 165, 0, 0.3));
+        }
+
+        .alert-text-group {
+            flex: 1;
+        }
+
+        .alert-title {
+            font-size: 0.78rem;
+            font-weight: 800;
+            color: #ffa500;
+            margin-bottom: 2px;
+        }
+
+        .alert-desc {
+            font-size: 0.68rem;
+            color: rgba(255,255,255,0.9);
+            line-height: 1.3;
+        }
+
+        .alert-btn-view {
+            font-size: 0.65rem;
+            color: #ffa500;
+            font-weight: 700;
+            background: rgba(255, 165, 0, 0.15);
+            padding: 4px 8px;
+        }
+
+        /* Simulated drawer panel */
+        .drawer-panel {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            transform: translateX(100%);
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .drawer-panel.open {
+            transform: translateX(0);
+        }
+
+        .drawer-header {
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255,255,255,0.02);
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            height: 52px;
+        }
+
+        .drawer-title {
+            font-size: 0.85rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--color-accent);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .drawer-close-btn {
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.5);
+            cursor: pointer;
+            font-size: 1.1rem;
+            padding: 6px;
+        }
+
+        .drawer-body {
+            flex: 1;
+            overflow-y: auto;
+            padding-bottom: 30px;
+        }
+
+        /* ─────────────────────────────────────────────
+           ORIGINAL STYLES FROM styles/features/super-strategy.css
+           ───────────────────────────────────────────── */
+        
+        .super-pipeline-layout {
+            display: block;
+            gap: 12px;
+            margin-top: 0px;
+        }
+
+        .super-pipeline-sidebar {
+            width: 100%;
+            margin-bottom: 24px;
+        }
+
+        .super-pipeline-content {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.04);
+            border-radius: var(--radius-container);
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            min-height: 320px;
+        }
+
+        .super-vertical-stepper {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 0;
+            margin-bottom: 0px;
+            position: relative;
+            padding: 0 10px;
+        }
+
+        .super-step-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            padding: 0;
+            border-radius: 0;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            z-index: 2;
+            position: relative;
+        }
+
+        .super-step-unit {
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .super-step-unit:hover .super-step-ball {
+            transform: scale(1.1);
+            box-shadow: 0 0 15px rgba(var(--color-accent-rgb), 0.4);
+            border-color: var(--color-accent) !important;
+        }
+
+        .super-step-item.active {
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .super-step-ball {
+            width: 32px;
+            height: 32px;
+            border-radius: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-weight: 800;
+            transition: all 0.2s ease;
+        }
+
+        .super-step-label {
+            font-size: 0.68rem;
+            font-weight: 800;
+            line-height: 1.1;
+            text-transform: uppercase;
+            margin: 4px 0;
+        }
+
+        .super-step-connector {
+            position: absolute;
+            height: 2px;
+            background: rgba(255, 255, 255, 0.08);
+            top: 50%;
+            left: 50%;
+            transform: translateY(-50%);
+            width: 100%;
+            z-index: 1;
+            transition: background 0.3s ease;
+        }
+
+        /* Connect dots between columns */
+        .super-step-unit {
+            position: relative;
+        }
+
+        .super-step-unit:not(:last-child)::after {
+            content: '';
+            position: absolute;
+            height: 2px;
+            background: rgba(255, 255, 255, 0.1);
+            top: 50%;
+            left: calc(50% + 16px);
+            width: calc(100% - 32px);
+            z-index: 1;
+        }
+
+        .super-step-unit.completed:not(:last-child)::after {
+            background: var(--color-accent);
+            opacity: 0.4;
+        }
+
+        .super-step-wrapper {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .super-ledger {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .super-ledger-card {
+            background: rgba(255, 255, 255, 0.04);
+            border-radius: var(--radius-container);
+            padding: 14px;
+            transition: background 0.2s ease;
+        }
+
+        .super-ledger-card:focus-within {
+            background: rgba(255, 255, 255, 0.06);
+            outline: 1px solid rgba(var(--color-accent-rgb), 0.3);
+        }
+
+        .super-detail-panel {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: var(--radius-container);
+            padding: 18px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .super-sim-panel {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: var(--radius-container);
+            padding: 18px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .super-sim-result {
+            animation: fadeSlideIn 0.3s ease;
+        }
+
+        @keyframes fadeSlideIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .super-alert-banner {
+            animation: alertFlash 0.4s ease;
+        }
+
+        @keyframes alertFlash {
+            0% { opacity: 0; transform: scale(0.97); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+
+        .super-quick-links a:hover {
+            background: rgba(255, 255, 255, 0.08) !important;
+        }
+
+        .super-quick-links a:active {
+            transform: scale(0.97);
+        }
+
+        .super-tab-btn {
+            transition: all 0.2s ease !important;
+        }
+
+        .super-tab-btn:hover {
+            background: rgba(255, 255, 255, 0.06) !important;
+        }
+
+        .super-tab-btn.active {
+            background: rgba(255, 255, 255, 0.1) !important;
+            color: #fff !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        #super-strategy-modal table tr:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        /* ─────────────────────────────────────────────
+           MOBILE VIEWPORTS SPECIFIC CSS (Staggered Stepper)
+           This mirrors the exact responsive layout on the phone container
+           ───────────────────────────────────────────── */
+        
+        .super-pipeline-sidebar {
+            width: 100% !important;
+            margin: 0 !important;
+            margin-top: 10px !important;
+            margin-bottom: 30px !important;
+            padding: 40px 0 !important; /* Space for staggered labels */
+            background: transparent !important;
+            border: none !important;
+            overflow: visible;
+        }
+
+        .super-pipeline-content {
+            width: 100% !important;
+            margin: 0 !important;
+            border-radius: 0;
+            border-left: none;
+            border-right: none;
+        }
+
+        .super-vertical-stepper {
+            display: grid !important;
+            grid-template-columns: repeat(7, 1fr) !important;
+            width: 100% !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            gap: 0 !important;
+            min-height: 80px;
+            align-items: center;
+        }
+
+        .super-progress-line-container {
+            position: absolute;
+            top: 50%;
+            left: calc(100% / 14);
+            width: calc(100% - (100% / 7));
+            height: 2px;
+            background: rgba(255, 255, 255, 0.08);
+            z-index: 1;
+            transform: translateY(-50%);
+        }
+
+        .super-progress-line-fill {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            background: var(--color-accent) !important;
+            transition: width 0.5s ease;
+        }
+
+        .super-step-unit {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            z-index: 2;
+            width: 100%;
+        }
+
+        .super-step-slot {
+            height: 22px;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .super-step-item-container {
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .super-step-ball {
+            width: 26px;
+            height: 26px;
+            font-size: 0.7rem;
+            border-radius: 0;
+            background: #1a1a1a !important;
+            border: 2px solid rgba(255, 255, 255, 0.12);
+            color: rgba(255, 255, 255, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 3;
+            transition: all 0.3s ease;
+        }
+
+        .super-step-unit.completed .super-step-ball {
+            background: var(--color-accent) !important;
+            border-color: var(--color-accent) !important;
+            color: #121212 !important;
+            box-shadow: 0 0 8px rgba(var(--color-accent-rgb), 0.2);
+        }
+
+        .super-step-unit.active .super-step-ball {
+            background: #1a1a1a !important;
+            border-color: var(--color-accent) !important;
+            color: var(--color-accent) !important;
+            border-width: 2px !important;
+            font-weight: 950 !important;
+            box-shadow: 0 0 12px rgba(var(--color-accent-rgb), 0.4);
+        }
+
+        .super-step-label {
+            font-size: 0.42rem !important;
+            font-weight: 950 !important;
+            text-transform: uppercase;
+            line-height: 1;
+            text-align: center;
+            opacity: 0.55;
+            color: var(--text-muted);
+            width: auto;
+            min-width: 80px;
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .super-step-unit:nth-child(odd) .super-step-label {
+            bottom: 34px;
+        }
+
+        .super-step-unit:nth-child(even) .super-step-label {
+            top: 34px;
+        }
+
+        .super-step-label.completed {
+            opacity: 0.8;
+            color: #fff;
+        }
+
+        .super-step-label.active {
+            opacity: 1;
+            color: #ffffff !important;
+        }
+
+        .super-step-label-spacer {
+            height: 1px;
+        }
+
+        /* Forms inside drawer */
+        .super-form-group {
+            margin-bottom: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .super-form-control {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--card-border);
+            padding: 12px;
+            color: #fff;
+            font-size: 0.9rem;
+            font-weight: 700;
+            width: 100%;
+            outline: none;
+        }
+
+        .super-form-control:focus {
+            border-color: var(--color-accent);
+        }
+
+        .super-form-label {
+            font-size: 0.62rem;
+            color: var(--text-secondary);
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            opacity: 0.55;
+        }
+
+        .pill-btn {
+            background: var(--color-accent);
+            color: #000;
+            border: none;
+            padding: 14px;
+            font-weight: 950;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+            transition: opacity 0.2s;
+        }
+
+        .pill-btn:hover {
+            opacity: 0.9;
+        }
+
+        .flat-btn-outline {
+            background: transparent;
+            border: 1px solid var(--card-border);
+            color: #fff;
+            padding: 12px;
+            font-weight: 700;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            width: 100%;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: background 0.2s;
+        }
+
+        .flat-btn-outline:hover {
+            background: rgba(255,255,255,0.02);
+        }
+
+        /* Accordions */
+        .super-accordion {
+            margin-bottom: 12px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .super-accordion summary {
+            padding: 14px 16px;
+            font-size: 0.72rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            color: var(--text-muted);
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .super-accordion summary::after {
+            content: '\f078';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            font-size: 0.65rem;
+            transition: transform 0.3s ease;
+        }
+
+        .super-accordion[open] summary {
+            background: rgba(255, 255, 255, 0.04);
+            color: #fff;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .super-accordion[open] summary::after {
+            transform: rotate(180deg);
+            color: var(--color-accent);
+        }
+
+        .super-accordion-content {
+            padding: 16px;
+        }
+
+        /* Segmented Control Inside Drawer */
+        .super-tab-container {
+            display: flex;
+            background: rgba(255, 255, 255, 0.04);
+            padding: 4px;
+            margin: 12px 16px;
+            border: 1px solid var(--card-border);
+        }
+
+        .super-tab-btn-item {
+            flex: 1;
+            padding: 10px 8px;
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            font-weight: 600;
+            font-size: 0.82rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+
+        .super-tab-btn-item.active {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+        }
+
+        .super-summary-bar {
+            background: rgba(255, 255, 255, 0.03);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            padding: 8px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.72rem;
+        }
+
+        .summary-bar-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .summary-bar-label {
+            color: var(--text-muted);
+            font-weight: 800;
+            text-transform: uppercase;
+            font-size: 0.52rem;
+        }
+
+        .summary-bar-val {
+            font-weight: 850;
+            color: #fff;
+        }
+
+        .summary-bar-val.accent {
+            color: var(--color-accent);
+        }
+
+        .orange-warning {
+            background: rgba(255, 179, 0, 0.08);
+            border: 1px solid rgba(255, 179, 0, 0.25);
+            padding: 12px;
+            margin-bottom: 16px;
+            font-size: 0.72rem;
+            line-height: 1.4;
+            display: flex;
+            gap: 10px;
+        }
+
+        .orange-warning i {
+            color: var(--color-warning);
+            font-size: 1.1rem;
+            margin-top: 1px;
+        }
+
+        /* Toggle Slider Widget inside Drawer */
+        .drawer-toggle-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--card-border);
+            padding: 14px 16px;
+            margin-bottom: 14px;
+        }
+
+        .drawer-toggle-switch {
+            width: 48px;
+            height: 24px;
+            background: rgba(255, 255, 255, 0.1);
+            position: relative;
+            transition: background 0.2s;
+            cursor: pointer;
+        }
+
+        .drawer-toggle-switch::after {
+            content: '';
+            width: 18px;
+            height: 18px;
+            background: #fff;
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            transition: left 0.2s;
+        }
+
+        .drawer-toggle-row.active .drawer-toggle-switch {
+            background: var(--color-accent);
+        }
+
+        .drawer-toggle-row.active .drawer-toggle-switch::after {
+            left: 27px;
+        }
+
+        /* Strategy Audit logs visual panel */
+        .audit-card-visual {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--card-border);
+            padding: 20px;
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .audit-card-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+        }
+
+        .audit-card-row span:first-child {
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-weight: 800;
+            font-size: 0.58rem;
+            letter-spacing: 0.5px;
+        }
+
+        .audit-card-row span:last-child {
+            color: #fff;
+            font-weight: 700;
+        }
+
+        .audit-card-divider {
+            height: 1px;
+            background: rgba(255, 255, 255, 0.06);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="simulator-wrapper">
+        
+        <!-- Left Side: Controls & Info -->
+        <div class="instructions-panel">
+            <h1>App Simulator</h1>
+            <p>This workspace simulates the exact mobile application layout. It runs the identical code, vertical/horizontal steppers, tabs, warnings, and localized calculations as they render inside the phone drawer container.</p>
+            
+            <div class="feature-list">
+                <div class="feature-item">
+                    <i class="fas fa-hand-pointer"></i>
+                    <span><strong>Click the Deadline Banner</strong> on the dashboard to slide-in the Super Strategy drawer.</span>
+                </div>
+                <div class="feature-item">
+                    <i class="fas fa-sliders"></i>
+                    <span><strong>Adjust Member Position</strong> inside the drawer to live-recalculate TSB and Cap Eligibility.</span>
+                </div>
+                <div class="feature-item">
+                    <i class="fas fa-code-fork"></i>
+                    <span><strong>Staggered Stepper Rail</strong> updates visually as you advance through the strategy phase.</span>
+                </div>
+                <div class="feature-item">
+                    <i class="fas fa-save"></i>
+                    <span><strong>Persistent State:</strong> Refreshes retain your settings via local storage.</span>
+                </div>
+            </div>
+
+            <p style="font-size: 0.8rem; color: var(--text-muted); border-top: 1px solid var(--card-border); padding-top: 12px;">This simulator demonstrates that the Super Strategy code can function perfectly as a standalone application, maintaining 100% of its visual design.</p>
+        </div>
+
+        <!-- Right Side: Phone frame Mockup -->
+        <div class="phone-frame">
+            <div class="phone-notch">
+                <div class="phone-notch-camera"></div>
+            </div>
+            
+            <!-- Simulated Phone status bar -->
+            <div class="phone-status-bar">
+                <span>9:41 AM</span>
+                <div class="status-right">
+                    <i class="fas fa-signal"></i>
+                    <i class="fas fa-wifi"></i>
+                    <i class="fas fa-battery-three-quarters"></i>
+                </div>
+            </div>
+
+            <!-- Standalone App Container -->
+            <div class="app-container">
+                
+                <!-- Mock App Header -->
+                <div class="app-header">
+                    <div class="app-header-left">
+                        <i class="fas fa-bars" id="mock-menu-btn"></i>
+                        <span class="app-logo">ASX Tracker</span>
+                    </div>
+                    <div class="app-connection-dot"></div>
+                </div>
+
+                <!-- Mock Dashboard Body -->
+                <div class="app-body">
+                    
+                    <!-- Title -->
+                    <div style="padding: 16px 16px 8px 16px;">
+                        <h3 style="font-size: 1.1rem; font-weight: 850;">Dashboard View</h3>
+                        <p style="font-size: 0.72rem; color: var(--text-secondary); margin-top: 2px;">Market Pulse & Watchlists</p>
+                    </div>
+
+                    <!-- Mock Indexes Grid -->
+                    <div class="mock-indices">
+                        <div class="mock-index-card">
+                            <span class="index-name">ASX 200</span>
+                            <span class="index-value">8,154.20</span>
+                            <span class="index-change">+0.48%</span>
+                        </div>
+                        <div class="mock-index-card">
+                            <span class="index-name">All Ords</span>
+                            <span class="index-value">8,421.10</span>
+                            <span class="index-change">+0.42%</span>
+                        </div>
+                        <div class="mock-index-card">
+                            <span class="index-name">AUD/USD</span>
+                            <span class="index-value">0.6582</span>
+                            <span class="index-change neg">-0.12%</span>
+                        </div>
+                        <div class="mock-index-card">
+                            <span class="index-name">S&P 500</span>
+                            <span class="index-value">5,432.80</span>
+                            <span class="index-change">+0.85%</span>
+                        </div>
+                    </div>
+
+                    <!-- Simulated deadline banner (Triggers Super Strategy) -->
+                    <div class="super-alert-banner-dashboard" id="trigger-alert-banner">
+                        <i class="fas fa-calendar-exclamation"></i>
+                        <div class="alert-text-group">
+                            <div class="alert-title">Super Strategy Deadline</div>
+                            <div class="alert-desc">Stage 1 - Age & TSB Eligibility: Complete within financial year.</div>
+                        </div>
+                        <div class="alert-btn-view">View</div>
+                    </div>
+
+                    <!-- Mock Portfolio Cards Placeholder -->
+                    <div style="padding: 0 16px; margin-top: 10px;">
+                        <div style="font-size: 0.65rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">My Portfolio</div>
+                        <div style="background: rgba(255,255,255,0.01); border: 1px dashed var(--card-border); padding: 30px; text-align: center; font-size: 0.78rem; color: var(--text-muted);">
+                            No stock holdings mapped. Add assets to see transaction ledgers.
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- ─────────────────────────────────────────────
+                   SUPER STRATEGY SLIDE-IN DRAWER
+                   ───────────────────────────────────────────── -->
+                <div class="drawer-panel" id="super-strategy-drawer">
+                    
+                    <!-- Drawer Header -->
+                    <div class="drawer-header">
+                        <div class="drawer-title">
+                            <i class="fas fa-piggy-bank"></i>
+                            <span>Super Strategy</span>
+                        </div>
+                        <button class="drawer-close-btn" id="drawer-close-trigger">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+
+                    <!-- Drawer Content Scroll Area -->
+                    <div class="drawer-body" id="drawer-scroll-body">
+                        
+                        <!-- Financial Year Tag -->
+                        <div style="text-align: center; margin-top: 12px; color: var(--color-accent); font-size: 0.72rem; font-weight: 800; letter-spacing: 2px; text-transform: uppercase;">
+                            <i class="fas fa-calendar-day" style="margin-right: 6px;"></i>FY 2025/26
+                        </div>
+
+                        <!-- Segmented Tab Navigation -->
+                        <div class="super-tab-container">
+                            <button class="super-tab-btn-item active" data-super-tab="pipeline"><i class="fas fa-tasks"></i>Strategy</button>
+                            <button class="super-tab-btn-item" data-super-tab="sim"><i class="fas fa-flask"></i>What-If</button>
+                            <button class="super-tab-btn-item" data-super-tab="ref"><i class="fas fa-piggy-bank"></i>Reference</button>
+                        </div>
+
+                        <!-- Tab Content 1: Pipeline Stepper -->
+                        <div id="super-tab-pipeline" class="super-tab-content-panel">
+                            
+                            <!-- Compact Member Summary (Sleek line below tabs) -->
+                            <div class="super-summary-bar" id="compact-summary-bar">
+                                <!-- Rendered dynamically -->
+                            </div>
+
+                            <!-- Detail / Workspace Panel -->
+                            <div style="padding: 16px;" id="pipeline-workspace">
+                                <!-- Stepper work workspace updates dynamically -->
+                            </div>
+
+                        </div>
+
+                        <!-- Tab Content 2: What-If Simulation -->
+                        <div id="super-tab-sim" class="super-tab-content-panel hidden" style="padding: 16px;">
+                            
+                            <div style="font-size: 0.65rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 12px; margin-left: 2px;">Simulator Parameters</div>
+                            
+                            <div class="super-form-group">
+                                <label class="super-form-label">Proposed Restart Date</label>
+                                <input type="date" id="sim-date" class="super-form-control">
+                            </div>
+                            
+                            <div class="super-form-group">
+                                <label class="super-form-label">Gross Contribution Amount ($)</label>
+                                <input type="number" id="sim-amount" class="super-form-control" value="120000">
+                            </div>
+
+                            <div class="drawer-toggle-row" id="sim-deduct-row">
+                                <div class="toggle-text">
+                                    <div class="toggle-text-title" style="font-size: 0.72rem;">Claim Tax Deduction</div>
+                                    <div class="toggle-text-desc" style="font-size: 0.62rem;">Subject to 15% contributions tax</div>
+                                </div>
+                                <div class="drawer-toggle-switch"></div>
+                            </div>
+
+                            <button class="pill-btn" id="run-simulation-btn"><i class="fas fa-play" style="margin-right: 6px;"></i>Run Simulation</button>
+
+                            <!-- Simulation Outputs -->
+                            <div id="sim-results-output" class="hidden" style="margin-top: 20px;">
+                                <div style="font-size: 0.65rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 10px; margin-left: 2px;">Simulation Projections</div>
+                                
+                                <div class="audit-card-visual">
+                                    <div class="audit-card-row">
+                                        <span>Pro-rata Closure Payout</span>
+                                        <span id="out-sim-prorata">$0.00</span>
+                                    </div>
+                                    <div class="audit-card-row">
+                                        <span>Net Recontribution</span>
+                                        <span id="out-sim-net">$0.00</span>
+                                    </div>
+                                    <div class="audit-card-row">
+                                        <span>Contribution Tax Paid (15%)</span>
+                                        <span id="out-sim-tax" style="color: var(--color-negative);">$0.00</span>
+                                    </div>
+                                    <div class="audit-card-divider"></div>
+                                    <div class="audit-card-row">
+                                        <span style="color: var(--color-accent);">New Consolidated Pension</span>
+                                        <span id="out-sim-consolidated" class="accent" style="font-weight: 850;">$0.00</span>
+                                    </div>
+                                    <div class="audit-card-divider"></div>
+                                    <div class="audit-card-row">
+                                        <span>Restart Pro-rata Minimum</span>
+                                        <span id="out-sim-min">$0.00</span>
+                                    </div>
+                                    <div class="audit-card-row">
+                                        <span>June 1st Rule Applies?</span>
+                                        <span id="out-sim-june1">No</span>
+                                    </div>
+                                </div>
+
+                                <div class="orange-warning" id="sim-outcome-banner" style="background: rgba(0,230,118,0.06); border-color: rgba(0,230,118,0.25);">
+                                    <i class="fas fa-check-circle" id="sim-outcome-icon" style="color: var(--color-positive);"></i>
+                                    <div id="sim-outcome-text">Strategic parameters within compliance envelopes.</div>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <!-- Tab Content 3: Regulatory Rules & Reference -->
+                        <div id="super-tab-ref" class="super-tab-content-panel hidden" style="padding: 16px;">
+                            
+                            <div style="font-size: 0.65rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 12px; margin-left: 2px;">Legislative Cap Schedules</div>
+
+                            <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.72rem; margin-bottom: 20px;">
+                                <thead>
+                                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.1); color: var(--text-secondary);">
+                                        <th style="padding: 8px 4px;">FY End</th>
+                                        <th style="padding: 8px 4px;">CC Cap</th>
+                                        <th style="padding: 8px 4px;">NCC Cap</th>
+                                        <th style="padding: 8px 4px;">TBC Limit</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.04);">
+                                        <td style="padding: 8px 4px; font-weight: 700;">2024</td>
+                                        <td style="padding: 8px 4px;">$27,500</td>
+                                        <td style="padding: 8px 4px;">$110,000</td>
+                                        <td style="padding: 8px 4px;">$1,900,000</td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.04); background: rgba(255,255,255,0.01);">
+                                        <td style="padding: 8px 4px; font-weight: 700; color: var(--color-accent);">2025</td>
+                                        <td style="padding: 8px 4px; color: var(--color-accent); font-weight: 700;">$30,000</td>
+                                        <td style="padding: 8px 4px; color: var(--color-accent); font-weight: 700;">$120,000</td>
+                                        <td style="padding: 8px 4px; color: var(--color-accent); font-weight: 700;">$1,900,000</td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.04);">
+                                        <td style="padding: 8px 4px; font-weight: 700;">2026</td>
+                                        <td style="padding: 8px 4px;">$30,000</td>
+                                        <td style="padding: 8px 4px;">$120,000</td>
+                                        <td style="padding: 8px 4px;">$2,000,000</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+
+                            <div style="font-size: 0.65rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 12px; margin-left: 2px;">Legislative Rules</div>
+
+                            <details class="super-accordion">
+                                <summary>June 1st Exemption</summary>
+                                <div class="super-accordion-content" style="font-size: 0.72rem; color: var(--text-secondary); line-height: 1.4;">
+                                    If a pension account is commenced on or after June 1st in any financial year, the mandatory minimum drawdown requirement for that pension account is $0 for the remainder of that financial year.
+                                </div>
+                            </details>
+
+                            <details class="super-accordion">
+                                <summary>Bring-Forward rules</summary>
+                                <div class="super-accordion-content" style="font-size: 0.72rem; color: var(--text-secondary); line-height: 1.4;">
+                                    Enables making non-concessional contributions (NCC) of up to 3 times the annual cap in a single financial year, depending on your Total Super Balance (TSB) on the prior 30 June.
+                                </div>
+                            </details>
+
+                            <details class="super-accordion">
+                                <summary>Notice of Intent (NOI)</summary>
+                                <div class="super-accordion-content" style="font-size: 0.72rem; color: var(--text-secondary); line-height: 1.4;">
+                                    A form submitted to your fund to claim a tax deduction for personal contributions. The claimed portion is taxed at 15% inside the fund, converting it to Concessional Contribution (CC).
+                                </div>
+                            </details>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- Simulated phone home bar -->
+            <div class="phone-home-bar"></div>
+        </div>
+
+    </div>
+
+    <!-- Logic Engine -->
+    <script>
+        // ─────────────────────────────────────────────
+        // 1. Regulatory Mathematics
+        // ─────────────────────────────────────────────
+        const DRAWDOWN_TABLE = [
+            { minAge: 0,   maxAge: 64,  rate: 0.04 },
+            { minAge: 65,  maxAge: 74,  rate: 0.05 },
+            { minAge: 75,  maxAge: 79,  rate: 0.06 },
+            { minAge: 80,  maxAge: 84,  rate: 0.07 },
+            { minAge: 85,  maxAge: 89,  rate: 0.09 },
+            { minAge: 90,  maxAge: 94,  rate: 0.11 },
+            { minAge: 95,  maxAge: 199, rate: 0.14 }
+        ];
+
+        const CONTRIBUTION_CAPS = {
+            2024: { concessional: 27500, nonConcessional: 110000, tbc: 1900000 },
+            2025: { concessional: 30000, nonConcessional: 120000, tbc: 1900000 },
+            2026: { concessional: 30000, nonConcessional: 120000, tbc: 2000000 },
+            2027: { concessional: 32500, nonConcessional: 130000, tbc: 2100000 }
+        };
+
+        function getCapData(fy) {
+            return CONTRIBUTION_CAPS[fy] || CONTRIBUTION_CAPS[2026];
+        }
+
+        function getDrawdownRate(age) {
+            const bracket = DRAWDOWN_TABLE.find(b => age >= b.minAge && age <= b.maxAge);
+            return bracket ? bracket.rate : 0.14;
+        }
+
+        function calculateProRataMinimum(balance, age, startDate, endDate) {
+            const rate = getDrawdownRate(age);
+            const fyStart = new Date(startDate.getFullYear(), 6, 1);
+            if (startDate.getMonth() < 6) fyStart.setFullYear(fyStart.getFullYear() - 1);
+            const fyEnd = new Date(fyStart.getFullYear() + 1, 5, 30);
+
+            const msPerDay = 86400000;
+            const daysElapsed = Math.max(1, Math.ceil((endDate - startDate) / msPerDay) + 1);
+            const totalDaysInFY = Math.ceil((fyEnd - fyStart) / msPerDay) + 1;
+
+            const proRataFactor = daysElapsed / totalDaysInFY;
+            return {
+                amount: Math.round(balance * rate * proRataFactor * 100) / 100,
+                rate,
+                days: daysElapsed,
+                totalDays: totalDaysInFY
+            };
+        }
+
+        function checkRecontributionEligibility(tsb, fy, bfTriggerFY, bfUsedAmount = 0) {
+            const caps = getCapData(fy);
+            const tier1 = caps.tbc;
+            const tier2 = caps.tbc - caps.nonConcessional;
+            const tier3 = caps.tbc - (caps.nonConcessional * 2);
+
+            if (tsb >= tier1) {
+                return { eligible: false, maxAmount: 0, reason: 'TSB threshold limit reached.' };
+            }
+
+            const bfAvailable = !bfTriggerFY || (fy >= bfTriggerFY + 3);
+            let maxAmount = caps.nonConcessional;
+
+            if (bfAvailable) {
+                if (tsb < tier3) {
+                    maxAmount = caps.nonConcessional * 3;
+                } else if (tsb < tier2) {
+                    maxAmount = caps.nonConcessional * 2;
+                }
+            } else {
+                const triggerCaps = getCapData(bfTriggerFY);
+                maxAmount = Math.max(0, (triggerCaps.nonConcessional * 3) - bfUsedAmount);
+            }
+
+            return { eligible: maxAmount > 0, maxAmount };
+        }
+
+        function runSimulation(params) {
+            const fy = 2026;
+            const fyStart = new Date(fy - 1, 6, 1);
+            const fyEnd = new Date(fy, 5, 30);
+
+            const taxRate = 0.15;
+            const taxAmount = params.isDeductible ? (params.contribAmount * taxRate) : 0;
+            const netContrib = params.contribAmount - taxAmount;
+
+            const preClosure = params.pensionBalance > 0
+                ? calculateProRataMinimum(params.pensionBalance, params.age, fyStart, params.proposedDate)
+                : { amount: 0, rate: 0, days: 0 };
+
+            const closedBalance = params.pensionBalance - preClosure.amount;
+            const newPensionStart = closedBalance + params.accumBalance + netContrib;
+
+            const isJune1 = params.proposedDate.getMonth() === 5 && params.proposedDate.getDate() >= 1;
+            let newMinimum = { amount: 0 };
+            if (!isJune1) {
+                newMinimum = calculateProRataMinimum(newPensionStart, params.age, params.proposedDate, fyEnd);
+            }
+
+            return {
+                preClosure,
+                netContrib,
+                taxAmount,
+                newPensionStart,
+                isJune1,
+                newMinimum
+            };
+        }
+
+        // ─────────────────────────────────────────────
+        // 2. Local State Management
+        // ─────────────────────────────────────────────
+        const SUPER_STATES = {
+            CONTRIBUTION_CLEARANCE: 'CONTRIBUTION_CLEARANCE',
+            NOI_SUBMISSION: 'NOI_SUBMISSION',
+            FUND_ACKNOWLEDGEMENT: 'FUND_ACKNOWLEDGEMENT',
+            PENSION_CLOSURE: 'PENSION_CLOSURE',
+            RECONTRIBUTION: 'RECONTRIBUTION',
+            PENSION_COMMENCEMENT: 'PENSION_COMMENCEMENT',
+            FINALISED: 'FINALISED'
+        };
+
+        const STATE_ORDER = [
+            SUPER_STATES.CONTRIBUTION_CLEARANCE,
+            SUPER_STATES.NOI_SUBMISSION,
+            SUPER_STATES.FUND_ACKNOWLEDGEMENT,
+            SUPER_STATES.PENSION_CLOSURE,
+            SUPER_STATES.RECONTRIBUTION,
+            SUPER_STATES.PENSION_COMMENCEMENT,
+            SUPER_STATES.FINALISED
+        ];
+
+        const STATE_LABELS = {
+            [SUPER_STATES.CONTRIBUTION_CLEARANCE]: 'Age & TSB Eligibility',
+            [SUPER_STATES.NOI_SUBMISSION]: 'Tax Strategy Selection',
+            [SUPER_STATES.FUND_ACKNOWLEDGEMENT]: 'NOI Acknowledgement',
+            [SUPER_STATES.PENSION_CLOSURE]: 'File Pension Restart P10',
+            [SUPER_STATES.RECONTRIBUTION]: 'Final Balance Reconciliation',
+            [SUPER_STATES.PENSION_COMMENCEMENT]: 'Pension Commencement',
+            [SUPER_STATES.FINALISED]: 'Strategy Finalised'
+        };
+
+        const STATE_DESCRIPTIONS = {
+            [SUPER_STATES.CONTRIBUTION_CLEARANCE]: 'Verify age and TSB limits before transferring funds into accumulation.',
+            [SUPER_STATES.NOI_SUBMISSION]: 'Select your tax characterization (CC vs NCC) for this contribution.',
+            [SUPER_STATES.FUND_ACKNOWLEDGEMENT]: 'Waiting for fund acknowledgement of the NOI before closing accounts.',
+            [SUPER_STATES.PENSION_CLOSURE]: 'File the P10 form to close your existing pension and pay out pro-rata minimums.',
+            [SUPER_STATES.RECONTRIBUTION]: 'Align the strategy with your actual fund balances to ensure the final pension restart is mathematically perfect.',
+            [SUPER_STATES.PENSION_COMMENCEMENT]: 'Initiate the new pension account with the consolidated tax-free balance.',
+            [SUPER_STATES.FINALISED]: 'The strategy is complete and the position is audit-ready.'
+        };
+
+        class AppStore {
+            constructor() {
+                this.load();
+            }
+
+            getDefault() {
+                return {
+                    currentState: SUPER_STATES.CONTRIBUTION_CLEARANCE,
+                    stateData: {
+                        [SUPER_STATES.CONTRIBUTION_CLEARANCE]: { amount: 120000, clearedDate: '2026-05-15' },
+                        [SUPER_STATES.NOI_SUBMISSION]: { deductionAmount: 0, submittedDate: '', isNonConcessionalMode: false },
+                        [SUPER_STATES.FUND_ACKNOWLEDGEMENT]: { acknowledged: false, acknowledgedDate: '' },
+                        [SUPER_STATES.PENSION_CLOSURE]: { closureDate: '', proRataPayout: 0 },
+                        [SUPER_STATES.RECONTRIBUTION]: { closingAccumulationBalance: 0, closingPensionBalance: 0 },
+                        [SUPER_STATES.PENSION_COMMENCEMENT]: { commencementDate: '' },
+                        [SUPER_STATES.FINALISED]: { completedAt: '' }
+                    },
+                    accumulationBalance: 250000,
+                    pensionBalance: 850000,
+                    ageAtJuly1: 65,
+                    capitalSafetyFloor: 800000,
+                    accumulationRetentionBuffer: 8000,
+                    bringForwardTriggeredFY: null,
+                    bringForwardUsedAmount: 0,
+                    isPositionConfirmed: false
+                };
+            }
+
+            load() {
+                const saved = localStorage.getItem('SUPER_STRATEGY_SIMULATOR_STATE');
+                if (saved) {
+                    try {
+                        this.data = JSON.parse(saved);
+                    } catch (e) {
+                        this.data = this.getDefault();
+                    }
+                } else {
+                    this.data = this.getDefault();
+                }
+            }
+
+            save() {
+                localStorage.setItem('SUPER_STRATEGY_SIMULATOR_STATE', JSON.stringify(this.data));
+            }
+        }
+
+        const store = new AppStore();
+
+        // ─────────────────────────────────────────────
+        // 3. UI Controller Binds
+        // ─────────────────────────────────────────────
+        const AppUI = {
+            init() {
+                this.bindSimulatorControls();
+                this.bindDrawerNavigation();
+                this.renderCompactSummary();
+                this.renderWorkspace();
+            },
+
+            bindSimulatorControls() {
+                // Clicking Dashboard alert slides in Drawer
+                document.getElementById('trigger-alert-banner').onclick = () => {
+                    document.getElementById('super-strategy-drawer').classList.add('open');
+                };
+
+                // Close Drawer Button
+                document.getElementById('drawer-close-trigger').onclick = () => {
+                    document.getElementById('super-strategy-drawer').classList.remove('open');
+                };
+
+                // Mock menu button triggers alert for fun
+                document.getElementById('mock-menu-btn').onclick = () => {
+                    alert('Menu button clicked. In the original app this opens the Sidebar Command Center.');
+                };
+
+                // Drawer tab navigation switcher
+                document.querySelectorAll('.super-tab-btn-item').forEach(btn => {
+                    btn.onclick = () => {
+                        document.querySelectorAll('.super-tab-btn-item').forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+
+                        document.querySelectorAll('.super-tab-content-panel').forEach(p => p.classList.add('hidden'));
+                        document.getElementById(`super-tab-${btn.dataset.superTab}`).classList.remove('hidden');
+                    };
+                });
+
+                // What-if simulator deducation toggle
+                document.getElementById('sim-deduct-row').onclick = () => {
+                    document.getElementById('sim-deduct-row').classList.toggle('active');
+                };
+
+                // Simulation Trigger inside drawer
+                document.getElementById('run-simulation-btn').onclick = () => {
+                    const dateVal = document.getElementById('sim-date').value;
+                    if (!dateVal) {
+                        alert('Please set a proposed restart date.');
+                        return;
+                    }
+                    const amount = parseFloat(document.getElementById('sim-amount').value) || 0;
+                    const isDeductible = document.getElementById('sim-deduct-row').classList.contains('active');
+
+                    const sim = runSimulation({
+                        accumBalance: store.data.accumulationBalance,
+                        pensionBalance: store.data.pensionBalance,
+                        age: store.data.ageAtJuly1,
+                        proposedDate: new Date(dateVal),
+                        contribAmount: amount,
+                        isDeductible
+                    });
+
+                    // Render output numbers
+                    document.getElementById('out-sim-prorata').textContent = sim.preClosure.amount.toLocaleString('en-AU', { style: 'currency', currency: 'AUD' });
+                    document.getElementById('out-sim-net').textContent = sim.netContrib.toLocaleString('en-AU', { style: 'currency', currency: 'AUD' });
+                    document.getElementById('out-sim-tax').textContent = sim.taxAmount.toLocaleString('en-AU', { style: 'currency', currency: 'AUD' });
+                    document.getElementById('out-sim-consolidated').textContent = sim.newPensionStart.toLocaleString('en-AU', { style: 'currency', currency: 'AUD' });
+                    document.getElementById('out-sim-min').textContent = sim.newMinimum.amount.toLocaleString('en-AU', { style: 'currency', currency: 'AUD' });
+                    document.getElementById('out-sim-june1').textContent = sim.isJune1 ? 'YES (Exempt!)' : 'No';
+
+                    // Cap limit warning checking
+                    const totalTSB = store.data.accumulationBalance + store.data.pensionBalance;
+                    const check = checkRecontributionEligibility(totalTSB, 2026, store.data.bringForwardTriggeredFY, store.data.bringForwardUsedAmount);
+                    
+                    const banner = document.getElementById('sim-outcome-banner');
+                    const icon = document.getElementById('sim-outcome-icon');
+                    const text = document.getElementById('sim-outcome-text');
+
+                    if (!isDeductible && amount > check.maxAmount) {
+                        banner.style.background = 'rgba(255, 61, 0, 0.08)';
+                        banner.style.borderColor = 'rgba(255, 61, 0, 0.25)';
+                        icon.className = 'fas fa-exclamation-triangle';
+                        icon.style.color = 'var(--color-negative)';
+                        text.textContent = `Cap Overflow: Proposed contribution of $${amount.toLocaleString()} exceeds your remaining NCC cap limit ($${check.maxAmount.toLocaleString()}).`;
+                    } else {
+                        banner.style.background = 'rgba(0, 230, 118, 0.06)';
+                        banner.style.borderColor = 'rgba(0, 230, 118, 0.25)';
+                        icon.className = 'fas fa-check-circle';
+                        icon.style.color = 'var(--color-positive)';
+                        text.textContent = 'Strategic fit: Contribution falls within regulatory limits.';
+                    }
+
+                    document.getElementById('sim-results-output').classList.remove('hidden');
+                };
+
+                // Initialize proposed sim date to today
+                document.getElementById('sim-date').value = new Date().toISOString().split('T')[0];
+            },
+
+            bindDrawerNavigation() {
+                // Stepper click handlers
+                document.body.addEventListener('click', (e) => {
+                    const stepUnit = e.target.closest('.super-step-unit');
+                    if (stepUnit) {
+                        if (!store.data.isPositionConfirmed) {
+                            alert('Please confirm your member position details first in Step 1.');
+                            return;
+                        }
+                        const newState = stepUnit.dataset.state;
+                        store.data.currentState = newState;
+                        store.save();
+                        this.renderWorkspace();
+                    }
+                });
+            },
+
+            renderCompactSummary() {
+                const total = store.data.accumulationBalance + store.data.pensionBalance;
+                const check = checkRecontributionEligibility(total, 2026, store.data.bringForwardTriggeredFY, store.data.bringForwardUsedAmount);
+                const isEligible = check.eligible;
+
+                document.getElementById('compact-summary-bar').innerHTML = `
+                    <div class="summary-bar-item">
+                        <span class="summary-bar-label">Acc:</span>
+                        <span class="summary-bar-val">$${store.data.accumulationBalance.toLocaleString()}</span>
+                    </div>
+                    <div class="summary-bar-item">
+                        <span class="summary-bar-label">Pen:</span>
+                        <span class="summary-bar-val">$${store.data.pensionBalance.toLocaleString()}</span>
+                    </div>
+                    <div class="summary-bar-item">
+                        <span class="summary-bar-label">Total:</span>
+                        <span class="summary-bar-val accent">$${total.toLocaleString()}</span>
+                    </div>
+                    <div class="summary-bar-item">
+                        <span class="summary-bar-val" style="color: ${isEligible ? 'var(--color-positive)' : 'var(--color-warning)'}">
+                            ${isEligible ? 'Cap Ok' : 'Cap Used'}
+                        </span>
+                    </div>
+                `;
+            },
+
+            validateActivePhase(state) {
+                const data = store.data.stateData[state];
+                const total = store.data.accumulationBalance + store.data.pensionBalance;
+                
+                switch (state) {
+                    case SUPER_STATES.CONTRIBUTION_CLEARANCE:
+                        if (!data.amount || data.amount <= 0) return { valid: false, message: 'Contribution amount must be greater than $0.' };
+                        if (!data.clearedDate) return { valid: false, message: 'Please select the date funds cleared.' };
+                        return { valid: true };
+
+                    case SUPER_STATES.NOI_SUBMISSION:
+                        if (data.isNonConcessionalMode) {
+                            const check = checkRecontributionEligibility(total, 2026, store.data.bringForwardTriggeredFY, store.data.bringForwardUsedAmount);
+                            const current = store.data.stateData[SUPER_STATES.CONTRIBUTION_CLEARANCE].amount || 0;
+                            if (current > check.maxAmount) return { valid: false, message: 'Contribution exceeds your NCC limits.' };
+                            return { valid: true };
+                        }
+                        if (!data.submittedDate) return { valid: false, message: 'Notice of Intent filing date is required.' };
+                        if (!data.deductionAmount || data.deductionAmount <= 0) return { valid: false, message: 'Deduction amount is required.' };
+                        return { valid: true };
+
+                    case SUPER_STATES.FUND_ACKNOWLEDGEMENT:
+                        if (store.data.stateData[SUPER_STATES.NOI_SUBMISSION].isNonConcessionalMode) return { valid: true };
+                        if (!data.acknowledged) return { valid: false, message: 'Acknowledgement checkbox must be checked.' };
+                        return { valid: true };
+
+                    case SUPER_STATES.PENSION_CLOSURE:
+                        if (!data.closureDate) return { valid: false, message: 'Closure date must be selected.' };
+                        return { valid: true };
+
+                    case SUPER_STATES.RECONTRIBUTION:
+                        if (!data.closingAccumulationBalance || data.closingAccumulationBalance <= 0) return { valid: false, message: 'Accumulation balance reconciliation is required.' };
+                        return { valid: true };
+
+                    case SUPER_STATES.PENSION_COMMENCEMENT:
+                        if (!data.commencementDate) return { valid: false, message: 'Restart commencement date is required.' };
+                        return { valid: true };
+
+                    default:
+                        return { valid: true };
+                }
+            },
+
+            renderWorkspace() {
+                const state = store.data.currentState;
+                const stateIdx = STATE_ORDER.indexOf(state);
+                const data = store.data.stateData[state];
+                const workspace = document.getElementById('pipeline-workspace');
+                const tsbVal = store.data.accumulationBalance + store.data.pensionBalance;
+
+                // Stepper HTML builder (exact replica of mobile)
+                let stepperHtml = `
+                    <div class="super-pipeline-sidebar">
+                        <div class="super-vertical-stepper">
+                            <div class="super-progress-line-container">
+                                <div class="super-progress-line-fill" style="width: ${(stateIdx / (STATE_ORDER.length - 1)) * 100}%;"></div>
+                            </div>
+                            
+                            ${STATE_ORDER.map((s, idx) => {
+                                const active = (s === state);
+                                const completed = (idx < stateIdx);
+                                const isEven = (idx + 1) % 2 === 0;
+
+                                const labelMap = {
+                                    [SUPER_STATES.CONTRIBUTION_CLEARANCE]: 'Eligibility',
+                                    [SUPER_STATES.NOI_SUBMISSION]: 'Tax Strategy',
+                                    [SUPER_STATES.FUND_ACKNOWLEDGEMENT]: 'Approval',
+                                    [SUPER_STATES.PENSION_CLOSURE]: 'P10 Restart',
+                                    [SUPER_STATES.RECONTRIBUTION]: 'Reconciliation',
+                                    [SUPER_STATES.PENSION_COMMENCEMENT]: 'Restart',
+                                    [SUPER_STATES.FINALISED]: 'Final'
+                                };
+                                const label = labelMap[s];
+                                const labelHtml = `<div class="super-step-label ${active ? 'active' : ''} ${completed ? 'completed' : ''}">${label}</div>`;
+                                const spacer = `<div class="super-step-label-spacer"></div>`;
+
+                                return `
+                                    <div class="super-step-unit" data-state="${s}">
+                                        <div class="super-step-slot above">${isEven ? labelHtml : spacer}</div>
+                                        <div class="super-step-item-container">
+                                            <div class="super-step-item ${active ? 'active' : ''} ${completed ? 'completed' : ''}">
+                                                <div class="super-step-ball">
+                                                    ${completed ? '<i class="fas fa-check"></i>' : (idx + 1)}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="super-step-slot below">${!isEven ? labelHtml : spacer}</div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                `;
+
+                // Workspace inner renderer
+                let workHtml = `
+                    <div style="font-size: 0.9rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; color: #fff; margin-bottom: 4px;">${STATE_LABELS[state]}</div>
+                    <div style="font-size: 0.72rem; color: var(--text-secondary); line-height: 1.4; margin-bottom: 20px;">${STATE_DESCRIPTIONS[state]}</div>
+                    <div style="display: flex; flex-direction: column; gap: 14px;">
+                `;
+
+                // Render dynamic inputs based on phase
+                if (!store.data.isPositionConfirmed) {
+                    // Stage 0 / Unconfirmed member position setup screen
+                    workHtml += `
+                        <div class="orange-warning">
+                            <i class="fas fa-info-circle"></i>
+                            <div><strong>Step 1: Set Baseline Balance</strong><br>Adjust and confirm your super balances as of 1st July to initiate calculations.</div>
+                        </div>
+
+                        <div class="super-form-group">
+                            <label class="super-form-label">Accumulation Balance ($)</label>
+                            <input type="number" id="w-accum" class="super-form-control" value="${store.data.accumulationBalance}">
+                        </div>
+                        <div class="super-form-group">
+                            <label class="super-form-label">Pension Balance ($)</label>
+                            <input type="number" id="w-pension" class="super-form-control" value="${store.data.pensionBalance}">
+                        </div>
+                        
+                        <div class="form-grid">
+                            <div class="super-form-group">
+                                <label class="super-form-label">Age</label>
+                                <input type="number" id="w-age" class="super-form-control" value="${store.data.ageAtJuly1}">
+                            </div>
+                            <div class="super-form-group">
+                                <label class="super-form-label">Safety Floor</label>
+                                <input type="number" id="w-floor" class="super-form-control" value="${store.data.capitalSafetyFloor}">
+                            </div>
+                        </div>
+
+                        <button class="pill-btn" id="w-confirm-btn">Confirm Position & Start Strategy</button>
+                    `;
+                } else {
+                    // Normal state layouts
+                    switch (state) {
+                        case SUPER_STATES.CONTRIBUTION_CLEARANCE:
+                            workHtml += `
+                                <div class="super-form-group">
+                                    <label class="super-form-label">Contribution Amount ($)</label>
+                                    <input type="number" id="w-clearance-amount" class="super-form-control" value="${data.amount || ''}" placeholder="0.00">
+                                </div>
+                                <div class="super-form-group">
+                                    <label class="super-form-label">Cleared Date</label>
+                                    <input type="date" id="w-clearance-date" class="super-form-control" value="${data.clearedDate || ''}">
+                                </div>
+                            `;
+                            break;
+
+                        case SUPER_STATES.NOI_SUBMISSION:
+                            const maxVal = store.data.stateData[SUPER_STATES.CONTRIBUTION_CLEARANCE].amount || 0;
+                            workHtml += `
+                                <div class="drawer-toggle-row ${data.isNonConcessionalMode ? 'active' : ''}" id="w-skip-noi">
+                                    <div class="toggle-text">
+                                        <div class="toggle-text-title" style="font-size: 0.72rem;">Non-Concessional Mode</div>
+                                        <div class="toggle-text-desc" style="font-size: 0.62rem;">Bypass tax deduction (Notice of Intent)</div>
+                                    </div>
+                                    <div class="drawer-toggle-switch"></div>
+                                </div>
+
+                                <div id="w-noi-fields" class="${data.isNonConcessionalMode ? 'hidden' : ''}">
+                                    <div class="super-form-group">
+                                        <label class="super-form-label">Deduction Amount ($)</label>
+                                        <input type="number" id="w-noi-amount" class="super-form-control" value="${data.deductionAmount || ''}" max="${maxVal}">
+                                        <span style="font-size: 0.65rem; color: var(--text-muted); margin-top: 4px; display: block;">Max claimable: $${maxVal.toLocaleString()}</span>
+                                    </div>
+                                    <div class="super-form-group">
+                                        <label class="super-form-label">NOI Submission Date</label>
+                                        <input type="date" id="w-noi-date" class="super-form-control" value="${data.submittedDate || ''}">
+                                    </div>
+                                </div>
+                            `;
+                            break;
+
+                        case SUPER_STATES.FUND_ACKNOWLEDGEMENT:
+                            if (store.data.stateData[SUPER_STATES.NOI_SUBMISSION].isNonConcessionalMode) {
+                                workHtml += `
+                                    <div class="orange-warning" style="background: rgba(0,230,118,0.06); border-color: rgba(0,230,118,0.25); color: #fff;">
+                                        <i class="fas fa-check-circle" style="color: var(--color-positive);"></i>
+                                        <div><strong>Step Skipped:</strong> Notice of intent bypassed in Step 2. Fund acknowledgement is not required for after-tax NCC contributions. Advance directly.</div>
+                                    </div>
+                                `;
+                            } else {
+                                workHtml += `
+                                    <div class="check-box-list">
+                                        <label class="check-item">
+                                            <input type="checkbox" id="w-ack-check" ${data.acknowledged ? 'checked' : ''}>
+                                            <span>Notice of Intent acknowledged by fund.</span>
+                                        </label>
+                                    </div>
+                                    <div class="super-form-group" style="margin-top: 10px;">
+                                        <label class="super-form-label">Acknowledgement Date</label>
+                                        <input type="date" id="w-ack-date" class="super-form-control" value="${data.acknowledgedDate || ''}">
+                                    </div>
+                                `;
+                            }
+                            break;
+
+                        case SUPER_STATES.PENSION_CLOSURE:
+                            const pr = data.closureDate && store.data.pensionBalance > 0
+                                ? calculateProRataMinimum(store.data.pensionBalance, store.data.ageAtJuly1, new Date(2025, 6, 1), new Date(data.closureDate))
+                                : null;
+
+                            workHtml += `
+                                <div class="super-form-group">
+                                    <label class="super-form-label">Pension P10 Closure Date</label>
+                                    <input type="date" id="w-closure-date" class="super-form-control" value="${data.closureDate || ''}">
+                                </div>
+                            `;
+
+                            if (pr) {
+                                workHtml += `
+                                    <div class="audit-card-visual">
+                                        <div class="audit-card-row">
+                                            <span>Pro-rata Days Elapsed</span>
+                                            <span>${pr.days} days / ${pr.totalDays}</span>
+                                        </div>
+                                        <div class="audit-card-row">
+                                            <span>Drawdown rate</span>
+                                            <span>${(pr.rate * 100).toFixed(0)}%</span>
+                                        </div>
+                                        <div class="audit-card-divider"></div>
+                                        <div class="audit-card-row" style="font-size: 0.85rem; font-weight: 850;">
+                                            <span style="color: var(--color-accent);">Required Pro-rata Drawdown</span>
+                                            <span>$${pr.amount.toLocaleString()}</span>
+                                        </div>
+                                    </div>
+                                `;
+                            }
+                            break;
+
+                        case SUPER_STATES.RECONTRIBUTION:
+                            workHtml += `
+                                <div class="super-ledger">
+                                    <div class="super-ledger-card">
+                                        <label class="super-form-label" style="margin-bottom: 4px;">Closing Accumulation</label>
+                                        <input type="number" id="w-recon-accum" class="super-form-control" style="background: transparent; border: none; padding: 0;" value="${data.closingAccumulationBalance || ''}" placeholder="0.00">
+                                    </div>
+                                    <div class="super-ledger-card">
+                                        <label class="super-form-label" style="margin-bottom: 4px;">Closing Pension</label>
+                                        <input type="number" id="w-recon-pension" class="super-form-control" style="background: transparent; border: none; padding: 0;" value="${data.closingPensionBalance || ''}" placeholder="0.00">
+                                    </div>
+                                </div>
+                            `;
+                            break;
+
+                        case SUPER_STATES.PENSION_COMMENCEMENT:
+                            const prDate = data.commencementDate ? new Date(data.commencementDate) : null;
+                            const isExempt = prDate ? (prDate.getMonth() === 5 && prDate.getDate() >= 1) : false;
+
+                            workHtml += `
+                                <div class="super-form-group">
+                                    <label class="super-form-label">Commencement Date</label>
+                                    <input type="date" id="w-commence-date" class="super-form-control" value="${data.commencementDate || ''}">
+                                </div>
+                            `;
+
+                            if (prDate) {
+                                workHtml += `
+                                    <div class="orange-warning" style="${isExempt ? 'background: rgba(0,230,118,0.06); border-color: rgba(0,230,118,0.25);' : ''}">
+                                        <i class="fas ${isExempt ? 'fa-check-circle' : 'fa-info-circle'}" style="${isExempt ? 'color: var(--color-positive);' : 'color: var(--color-warning);'}"></i>
+                                        <div>
+                                            ${isExempt 
+                                                ? '<strong>June 1st Rule Triggered:</strong> Commencement on or after 1 June. Drawdown requirement is $0!'
+                                                : 'Prorated minimum drawdown rates apply for remainder of FY.'}
+                                        </div>
+                                    </div>
+                                `;
+                            }
+                            break;
+
+                        case SUPER_STATES.FINALISED:
+                            const cl = store.data.stateData[SUPER_STATES.CONTRIBUTION_CLEARANCE].amount || 0;
+                            const ded = store.data.stateData[SUPER_STATES.NOI_SUBMISSION].deductionAmount || 0;
+                            const skipped = store.data.stateData[SUPER_STATES.NOI_SUBMISSION].isNonConcessionalMode;
+                            const tax = skipped ? 0 : (ded * 0.15);
+                            const netVal = cl - tax;
+
+                            workHtml += `
+                                <div class="orange-warning" style="background: rgba(0,230,118,0.06); border-color: rgba(0,230,118,0.25); color: #fff;">
+                                    <i class="fas fa-check-circle" style="color: var(--color-positive)"></i>
+                                    <div><strong>Strategy complete!</strong> Consolidated balances restart execution audit records. Download the log file below.</div>
+                                </div>
+
+                                <div class="audit-card-visual">
+                                    <div class="audit-card-row">
+                                        <span>Contribution</span>
+                                        <span>$${cl.toLocaleString()}</span>
+                                    </div>
+                                    <div class="audit-card-row">
+                                        <span>NOI deduction Claim</span>
+                                        <span>$${ded.toLocaleString()}</span>
+                                    </div>
+                                    <div class="audit-card-row">
+                                        <span>Contributions tax (15%)</span>
+                                        <span style="color: var(--color-negative)">-$${tax.toLocaleString()}</span>
+                                    </div>
+                                    <div class="audit-card-divider"></div>
+                                    <div class="audit-card-row" style="font-weight: 850;">
+                                        <span style="color: var(--color-accent);">Net Asset Additions</span>
+                                        <span>$${netVal.toLocaleString()}</span>
+                                    </div>
+                                </div>
+
+                                <button class="flat-btn-outline" id="w-download-logs"><i class="fas fa-download"></i> Export Audit Log JSON</button>
+                            `;
+                            break;
+                    }
+
+                    // Bottom Navigation Buttons
+                    workHtml += `
+                        <div style="display: flex; gap: 10px; justify-content: space-between; border-top: 1px solid var(--card-border); padding-top: 16px; margin-top: 20px;">
+                            <button class="flat-btn-outline" id="w-prev-btn" style="margin-top:0; width: 100px;" ${stateIdx === 0 ? 'disabled' : ''}>Back</button>
+                            <button class="pill-btn" id="w-next-btn" style="margin-top:0; flex: 1;" ${stateIdx === STATE_ORDER.length - 1 ? 'disabled' : ''}>Next Phase <i class="fas fa-chevron-right"></i></button>
+                        </div>
+                    `;
+                }
+
+                workHtml += `</div>`;
+                
+                // Set HTML
+                workspace.innerHTML = stepperHtml + workHtml;
+
+                // Bind Live Event Listeners on newly rendered fields
+                this.bindWorkspaceElements(state);
+            },
+
+            bindWorkspaceElements(state) {
+                // Confirm Position (Step 0)
+                const confirmBtn = document.getElementById('w-confirm-btn');
+                if (confirmBtn) {
+                    confirmBtn.onclick = () => {
+                        store.data.accumulationBalance = parseFloat(document.getElementById('w-accum').value) || 0;
+                        store.data.pensionBalance = parseFloat(document.getElementById('w-pension').value) || 0;
+                        store.data.ageAtJuly1 = parseInt(document.getElementById('w-age').value) || 65;
+                        store.data.capitalSafetyFloor = parseFloat(document.getElementById('w-floor').value) || 0;
+                        
+                        store.data.isPositionConfirmed = true;
+                        store.save();
+
+                        this.renderCompactSummary();
+                        this.renderWorkspace();
+                    };
+                }
+
+                // Edit Member Position button click (Top header inside drawer)
+                const editBtn = document.getElementById('edit-position-btn');
+                if (editBtn) {
+                    editBtn.onclick = () => {
+                        store.data.isPositionConfirmed = false;
+                        store.save();
+                        this.renderWorkspace();
+                    };
+                }
+
+                // Workspace inputs triggers
+                if (store.data.isPositionConfirmed) {
+                    // Back / Next buttons bindings
+                    const prevBtn = document.getElementById('w-prev-btn');
+                    if (prevBtn) {
+                        prevBtn.onclick = () => {
+                            const idx = STATE_ORDER.indexOf(store.data.currentState);
+                            if (idx > 0) {
+                                store.data.currentState = STATE_ORDER[idx - 1];
+                                store.save();
+                                this.renderWorkspace();
+                            }
+                        };
+                    }
+
+                    const nextBtn = document.getElementById('w-next-btn');
+                    if (nextBtn) {
+                        nextBtn.onclick = () => {
+                            const idx = STATE_ORDER.indexOf(store.data.currentState);
+                            if (idx < STATE_ORDER.length - 1) {
+                                // Validation checking
+                                const validation = this.validateActivePhase(store.data.currentState);
+                                if (!validation.valid) {
+                                    alert('Validation Warning:\n' + validation.message);
+                                    return;
+                                }
+
+                                store.data.currentState = STATE_ORDER[idx + 1];
+                                store.save();
+                                this.renderWorkspace();
+                            }
+                        };
+                    }
+
+                    // Live Event input saves based on state
+                    if (state === SUPER_STATES.CONTRIBUTION_CLEARANCE) {
+                        const amt = document.getElementById('w-clearance-amount');
+                        const date = document.getElementById('w-clearance-date');
+                        const saveC = () => {
+                            store.data.stateData[SUPER_STATES.CONTRIBUTION_CLEARANCE].amount = parseFloat(amt.value) || 0;
+                            store.data.stateData[SUPER_STATES.CONTRIBUTION_CLEARANCE].clearedDate = date.value;
+                            store.save();
+                        };
+                        amt.oninput = saveC;
+                        date.onchange = saveC;
+                    }
+
+                    if (state === SUPER_STATES.NOI_SUBMISSION) {
+                        const skipBtn = document.getElementById('w-skip-noi');
+                        const amt = document.getElementById('w-noi-amount');
+                        const date = document.getElementById('w-noi-date');
+
+                        skipBtn.onclick = () => {
+                            const toggleVal = !store.data.stateData[SUPER_STATES.NOI_SUBMISSION].isNonConcessionalMode;
+                            store.data.stateData[SUPER_STATES.NOI_SUBMISSION].isNonConcessionalMode = toggleVal;
+                            
+                            if (toggleVal) {
+                                document.getElementById('w-noi-fields').classList.add('hidden');
+                                skipBtn.classList.add('active');
+                            } else {
+                                document.getElementById('w-noi-fields').classList.remove('hidden');
+                                skipBtn.classList.remove('active');
+                            }
+                            store.save();
+                        };
+
+                        const saveN = () => {
+                            store.data.stateData[SUPER_STATES.NOI_SUBMISSION].deductionAmount = parseFloat(amt.value) || 0;
+                            store.data.stateData[SUPER_STATES.NOI_SUBMISSION].submittedDate = date.value;
+                            store.save();
+                        };
+                        amt.oninput = saveN;
+                        date.onchange = saveN;
+                    }
+
+                    if (state === SUPER_STATES.FUND_ACKNOWLEDGEMENT) {
+                        if (!store.data.stateData[SUPER_STATES.NOI_SUBMISSION].isNonConcessionalMode) {
+                            const check = document.getElementById('w-ack-check');
+                            const date = document.getElementById('w-ack-date');
+                            const saveA = () => {
+                                store.data.stateData[SUPER_STATES.FUND_ACKNOWLEDGEMENT].acknowledged = check.checked;
+                                store.data.stateData[SUPER_STATES.FUND_ACKNOWLEDGEMENT].acknowledgedDate = date.value;
+                                store.save();
+                            };
+                            check.onchange = saveA;
+                            date.onchange = saveA;
+                        }
+                    }
+
+                    if (state === SUPER_STATES.PENSION_CLOSURE) {
+                        const date = document.getElementById('w-closure-date');
+                        date.onchange = () => {
+                            store.data.stateData[SUPER_STATES.PENSION_CLOSURE].closureDate = date.value;
+                            
+                            // Live calculate closure
+                            if (date.value && store.data.pensionBalance > 0) {
+                                const result = calculateProRataMinimum(
+                                    store.data.pensionBalance,
+                                    store.data.ageAtJuly1,
+                                    new Date(2025, 6, 1),
+                                    new Date(date.value)
+                                );
+                                store.data.stateData[SUPER_STATES.PENSION_CLOSURE].proRataPayout = result.amount;
+                            }
+                            store.save();
+                            this.renderWorkspace();
+                        };
+                    }
+
+                    if (state === SUPER_STATES.RECONTRIBUTION) {
+                        const acc = document.getElementById('w-recon-accum');
+                        const pen = document.getElementById('w-recon-pension');
+                        const saveR = () => {
+                            store.data.stateData[SUPER_STATES.RECONTRIBUTION].closingAccumulationBalance = parseFloat(acc.value) || 0;
+                            store.data.stateData[SUPER_STATES.RECONTRIBUTION].closingPensionBalance = parseFloat(pen.value) || 0;
+                            store.save();
+                        };
+                        acc.oninput = saveR;
+                        pen.oninput = saveR;
+                    }
+
+                    if (state === SUPER_STATES.PENSION_COMMENCEMENT) {
+                        const date = document.getElementById('w-commence-date');
+                        date.onchange = () => {
+                            store.data.stateData[SUPER_STATES.PENSION_COMMENCEMENT].commencementDate = date.value;
+                            store.save();
+                            this.renderWorkspace();
+                        };
+                    }
+
+                    if (state === SUPER_STATES.FINALISED) {
+                        document.getElementById('w-download-logs').onclick = () => {
+                            const dataBlob = new Blob([JSON.stringify(store.data, null, 2)], { type: 'application/json' });
+                            const link = document.createElement('a');
+                            link.href = URL.createObjectURL(dataBlob);
+                            link.download = `Super-Strategy-Audit-${new Date().toISOString().split('T')[0]}.json`;
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                        };
+                    }
+                }
+            }
+        };
+
+        // Bootstrap on DOMContentLoaded
+        window.addEventListener('DOMContentLoaded', () => AppUI.init());
+    </script>
+</body>
+</html>

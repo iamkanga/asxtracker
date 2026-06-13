@@ -1496,6 +1496,7 @@ export const IDS = {
     STOCK_DETAILS_MODAL: 'stock-details-modal',
     ADD_SHARE_MODAL: 'add-share-modal',
     NOTIFICATION_MODAL: 'notification-modal',
+    ENTRY_DETAILS_CARD: 'entry-details-card',
 
     SETTINGS_MODAL: 'settings-modal',
     CHART_MODAL: 'chart-modal',
@@ -1531,6 +1532,8 @@ export const IDS = {
     DYNAMIC_COMMENTS_AREA: 'dynamicCommentsArea',
     BTN_ADD_COMMENT: 'btnAddComment',
     PURCHASE_DATE: 'purchaseDate',
+    ENTERED_PRICE: 'enteredPrice',
+    ENTRY_DATE: 'entryDate',
     SAVE_BTN: 'addShareSaveBtn',
     DELETE_BTN: 'addShareDeleteBtn',
     BTN_EDIT_SHARE: 'btn-edit-share',

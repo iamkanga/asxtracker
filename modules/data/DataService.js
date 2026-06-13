@@ -21,6 +21,21 @@ const APP_ID = "asx-watchlist-app";
 export const userStore = new UserStore();
 export { AuthService };
 
+/**
+ * Helper to detect network/connectivity failures from fetch requests.
+ * Standard fetch failures reject with a TypeError containing these signature messages.
+ */
+function isNetworkError(error) {
+    if (error instanceof TypeError) {
+        const msg = error.message.toLowerCase();
+        return msg.includes('failed to fetch') || 
+               msg.includes('networkerror') || 
+               msg.includes('fetch failed') || 
+               msg.includes('load failed');
+    }
+    return false;
+}
+
 export class DataService {
     constructor() {
         this.API_ENDPOINT = API_ENDPOINT;
@@ -65,7 +80,9 @@ export class DataService {
 
             } catch (error) {
                 if (error.name === 'AbortError') {
-                    console.error("DataService: Fetch timed out (20s limit).");
+                    console.warn("DataService: Fetch timed out (20s limit).");
+                } else if (isNetworkError(error)) {
+                    console.warn("DataService: Live prices fetch network failure (Failed to fetch).");
                 } else {
                     console.error("DataService Exception:", error);
                 }
@@ -98,7 +115,11 @@ export class DataService {
                 console.warn(`DataService: Sync request failed with status ${response.status}`);
             }
         } catch (err) {
-            console.error('DataService: Sync Exception:', err);
+            if (isNetworkError(err)) {
+                console.warn('DataService: Sync network failure (Failed to fetch).');
+            } else {
+                console.error('DataService: Sync Exception:', err);
+            }
         }
     }
 
@@ -129,7 +150,11 @@ export class DataService {
             if (!response.ok) return { ok: false, error: `HTTP ${response.status}` };
             return await response.json();
         } catch (err) {
-            console.error('[DataService] Snapshot Trigger Fail:', err);
+            if (isNetworkError(err)) {
+                console.warn('[DataService] Snapshot Trigger network failure (Failed to fetch).');
+            } else {
+                console.error('[DataService] Snapshot Trigger Fail:', err);
+            }
             return { ok: false, error: err.message };
         }
     }
@@ -195,7 +220,11 @@ export class DataService {
             return json;
 
         } catch (err) {
-            console.error('DataService: Gemini Query Exception:', err);
+            if (isNetworkError(err)) {
+                console.warn('DataService: Gemini Query network failure (Failed to fetch).');
+            } else {
+                console.error('DataService: Gemini Query Exception:', err);
+            }
             return { ok: false, error: err.message };
         }
     }
@@ -244,7 +273,11 @@ export class DataService {
             return json;
 
         } catch (err) {
-            console.error('DataService: AI Research Exception:', err);
+            if (isNetworkError(err)) {
+                console.warn('DataService: AI Research network failure (Failed to fetch).');
+            } else {
+                console.error('DataService: AI Research Exception:', err);
+            }
             return { ok: false, error: err.message };
         }
     }
@@ -434,7 +467,9 @@ export class DataService {
         } catch (err) {
             clearTimeout(timeoutId);
             if (err.name === 'AbortError') {
-                console.error("DataService: fetchHistory timed out (20s limit).");
+                console.warn("DataService: fetchHistory timed out (20s limit).");
+            } else if (isNetworkError(err)) {
+                console.warn('DataService: History Fetch network failure (Failed to fetch).');
             } else {
                 console.error('DataService: History Fetch Exception:', err);
             }

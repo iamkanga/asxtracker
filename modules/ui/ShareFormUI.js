@@ -367,6 +367,15 @@ export class ShareFormUI {
         const avgPriceInput = modal.querySelector(`#${IDS.PORTFOLIO_AVG_PRICE}`);
         if (avgPriceInput) avgPriceInput.value = existingShare.portfolioAvgPrice || '';
 
+        const enteredPriceInput = modal.querySelector(`#${IDS.ENTERED_PRICE}`);
+        if (enteredPriceInput) enteredPriceInput.value = existingShare.enteredPrice || existingShare.entryPrice || '';
+
+        const entryDateInput = modal.querySelector(`#${IDS.ENTRY_DATE}`);
+        if (entryDateInput && (existingShare.entryDate || existingShare.purchaseDate)) {
+            entryDateInput.type = 'date';
+            entryDateInput.value = this._normalizeDateForInput(existingShare.entryDate || existingShare.purchaseDate);
+        }
+
         const shareSightCodeInput = modal.querySelector(`#${IDS.SHARE_SIGHT_CODE}`);
         if (shareSightCodeInput) shareSightCodeInput.value = existingShare.shareSightCode || '';
 
@@ -670,6 +679,30 @@ export class ShareFormUI {
                                            style="pointer-events: auto !important; position: relative; z-index: 10;"
                                            placeholder="e.g. 24/12/2025"
                                            value="${this._normalizeDateForInput(shareData?.purchaseDate || shareData?.entryDate)}"
+                                           onfocus="(this.type='date')"
+                                           onblur="if(!this.value)this.type='text'">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="${CSS_CLASSES.ACCORDION_ITEM}" data-section="entry-details">
+                            <div class="${CSS_CLASSES.ACCORDION_HEADER}">
+                                <span>Entry Details</span>
+                                <i class="fas ${UI_ICONS.CHEVRON_DOWN}"></i>
+                            </div>
+                            <div class="${CSS_CLASSES.ACCORDION_CONTENT}">
+                                <div class="${CSS_CLASSES.FORM_GROUP}">
+                                    <label for="${IDS.ENTERED_PRICE}">Entry Price ($)</label>
+                                    <input type="number" id="${IDS.ENTERED_PRICE}" step="0.01" class="${CSS_CLASSES.FORM_CONTROL}" placeholder="0.00" value="${shareData?.enteredPrice || shareData?.entryPrice || ''}">
+                                </div>
+                                <div class="${CSS_CLASSES.FORM_GROUP}">
+                                    <label for="${IDS.ENTRY_DATE}">Entry Date</label>
+                                    <input type="${shareData?.entryDate || shareData?.purchaseDate ? 'date' : 'text'}" 
+                                           id="${IDS.ENTRY_DATE}" 
+                                           class="${CSS_CLASSES.FORM_CONTROL}" 
+                                           style="pointer-events: auto !important; position: relative; z-index: 10;"
+                                           placeholder="e.g. 24/12/2025"
+                                           value="${this._normalizeDateForInput(shareData?.entryDate || shareData?.purchaseDate)}"
                                            onfocus="(this.type='date')"
                                            onblur="if(!this.value)this.type='text'">
                                 </div>
@@ -1315,7 +1348,9 @@ export class ShareFormUI {
             shareSightCode: getVal(IDS.SHARE_SIGHT_CODE) || '',
             shareRegistry: getVal(IDS.SHARE_REGISTRY) || '',
             purchaseDate: getVal(IDS.PURCHASE_DATE) || '',
-            entryDate: getVal(IDS.PURCHASE_DATE) || '', // Keep for legacy compatibility
+            enteredPrice: getNum(IDS.ENTERED_PRICE),
+            entryPrice: getNum(IDS.ENTERED_PRICE),
+            entryDate: getVal(IDS.ENTRY_DATE) || '',
             dividendAmount: getNum(IDS.DIVIDEND_AMOUNT),
             frankingCredits: getNum(IDS.FRANKING_CREDITS),
             unfrankedYield: getNum(IDS.UNFRANKED_YIELD),
