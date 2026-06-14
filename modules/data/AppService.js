@@ -7,7 +7,7 @@
 import { userStore } from './DataService.js';
 // CashAssetUI import removed to decouple Service from UI layers
 import { AppState } from '../state/AppState.js';
-import { USER_MESSAGES } from '../utils/AppConstants.js';
+import { USER_MESSAGES, ALL_SHARES_ID, CASH_WATCHLIST_ID, DASHBOARD_WATCHLIST_ID, PORTFOLIO_ID, SEARCH_WATCHLIST_ID, SIMULATIONS_WATCHLIST_ID } from '../utils/AppConstants.js';
 import { ToastManager } from '../ui/ToastManager.js';
 
 export class AppService {
@@ -128,7 +128,7 @@ export class AppService {
 
         // Check if System Watchlist (ID is 'ALL', 'CASH', 'DASHBOARD', 'portfolio')
         // OR any non-backend ID we decide to support.
-        const systemIds = ['ALL', 'CASH', 'DASHBOARD', 'portfolio', 'search'];
+        const systemIds = [ALL_SHARES_ID, CASH_WATCHLIST_ID, DASHBOARD_WATCHLIST_ID, PORTFOLIO_ID, SEARCH_WATCHLIST_ID, SIMULATIONS_WATCHLIST_ID];
         if (systemIds.includes(id)) {
             // Persist as Custom Name Preference
             const currentMap = AppState.preferences.customWatchlistNames || {};

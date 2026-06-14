@@ -24,7 +24,7 @@ import {
     arrayRemove,
     setDoc
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { ALL_SHARES_ID, PORTFOLIO_ID } from '../utils/AppConstants.js';
+import { ALL_SHARES_ID, PORTFOLIO_ID, SIMULATIONS_WATCHLIST_ID } from '../utils/AppConstants.js';
 
 const APP_ID = "asx-watchlist-app";
 
@@ -357,7 +357,7 @@ export class UserStore {
         if (!userId || !watchlistId || !sortConfig) return;
 
         // SYSTEM GUARD: Never attempt to save sort to virtual system watchlists (No doc exists)
-        const systemIds = [ALL_SHARES_ID, PORTFOLIO_ID, 'search', 'ALL', 'portfolio'];
+        const systemIds = [ALL_SHARES_ID, PORTFOLIO_ID, 'search', 'ALL', 'portfolio', SIMULATIONS_WATCHLIST_ID];
         if (systemIds.includes(watchlistId)) return;
 
         try {
@@ -502,6 +502,11 @@ export class UserStore {
         // 1. ALL SHARES: Return everything (Admin/Debug view)
         if (!watchlistId || watchlistId === ALL_SHARES_ID) {
             return shares;
+        }
+
+        // 1.5. SIMULATIONS WATCHLIST: Return shares marked as simulated
+        if (watchlistId === SIMULATIONS_WATCHLIST_ID) {
+            return shares.filter(s => s.isSimulated === true || s.simulatedActive === true);
         }
 
         // 2. FILTER LOGIC (Portfolio + Custom)

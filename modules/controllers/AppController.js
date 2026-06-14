@@ -34,7 +34,7 @@ import CalculatorUI from '../ui/CalculatorUI.js';
 import { AnalogClock } from '../ui/AnalogClock.js';
 import { AiSummaryUI } from '../ui/AiSummaryUI.js';
 import { ScrollManager } from '../ui/ScrollManager.js';
-import { IDS, CSS_CLASSES, EVENTS, WATCHLIST_ICON_POOL, ALL_SHARES_ID, CASH_WATCHLIST_ID, DASHBOARD_WATCHLIST_ID, PORTFOLIO_ID, UI_ICONS, USER_MESSAGES, STORAGE_KEYS, WATCHLIST_MODES, SORT_OPTIONS, WATCHLIST_NAMES, DASHBOARD_SYMBOLS, DASHBOARD_LINKS, SUMMARY_TYPES, BRIEFING_BLACKLIST } from '../utils/AppConstants.js';
+import { IDS, CSS_CLASSES, EVENTS, WATCHLIST_ICON_POOL, ALL_SHARES_ID, CASH_WATCHLIST_ID, DASHBOARD_WATCHLIST_ID, PORTFOLIO_ID, SIMULATIONS_WATCHLIST_ID, UI_ICONS, USER_MESSAGES, STORAGE_KEYS, WATCHLIST_MODES, SORT_OPTIONS, WATCHLIST_NAMES, DASHBOARD_SYMBOLS, DASHBOARD_LINKS, SUMMARY_TYPES, BRIEFING_BLACKLIST } from '../utils/AppConstants.js';
 import { ToastManager } from '../ui/ToastManager.js';
 import { navManager } from '../utils/NavigationManager.js';
 import { PullToRefresh } from '../ui/PullToRefresh.js';
@@ -609,7 +609,7 @@ export class AppController {
         this.watchlistUI = new WatchlistUI({
             onWatchlistChange: (watchlistId) => this.handleSwitchWatchlist(watchlistId),
             onRenameWatchlist: async (id, name) => {
-                const systemIds = [ALL_SHARES_ID, PORTFOLIO_ID, CASH_WATCHLIST_ID, DASHBOARD_WATCHLIST_ID, 'portfolio'];
+                const systemIds = [ALL_SHARES_ID, PORTFOLIO_ID, CASH_WATCHLIST_ID, DASHBOARD_WATCHLIST_ID, SIMULATIONS_WATCHLIST_ID, 'portfolio'];
                 if (systemIds.includes(id)) {
                     AppState.saveCustomWatchlistName(id, name);
                     return;
@@ -1869,6 +1869,11 @@ export class AppController {
                 const newName = customNames[DASHBOARD_WATCHLIST_ID] || 'Dashboard';
                 if (AppState.watchlist.name !== newName) AppState.watchlist.name = newName;
                 if (AppState.isPortfolioVisible !== false) AppState.isPortfolioVisible = false;
+            } else if (watchlistId === SIMULATIONS_WATCHLIST_ID) {
+                if (AppState.watchlist.id !== SIMULATIONS_WATCHLIST_ID) AppState.watchlist.id = SIMULATIONS_WATCHLIST_ID;
+                const newName = customNames[SIMULATIONS_WATCHLIST_ID] || 'Simulations';
+                if (AppState.watchlist.name !== newName) AppState.watchlist.name = newName;
+                if (AppState.isPortfolioVisible !== false) AppState.isPortfolioVisible = false;
             } else if (watchlistId === ALL_SHARES_ID) {
                 const newName = customNames[ALL_SHARES_ID] || 'All Shares';
                 if (AppState.watchlist.name !== newName) AppState.watchlist.name = newName;
@@ -1889,7 +1894,7 @@ export class AppController {
             // Determine current view type for validation
             let viewType = 'STOCK';
             if (AppState.watchlist.type === 'cash') viewType = 'CASH';
-            else if (AppState.watchlist.id === 'portfolio') viewType = 'PORTFOLIO';
+            else if (AppState.watchlist.id === 'portfolio' || AppState.watchlist.id === SIMULATIONS_WATCHLIST_ID) viewType = 'PORTFOLIO';
 
             // Check if current global sort is valid for this view
             const validOptions = SORT_OPTIONS[viewType] || SORT_OPTIONS.STOCK;
@@ -2046,6 +2051,14 @@ export class AppController {
             { id: DASHBOARD_WATCHLIST_ID, name: 'Dashboard' },
             { id: CASH_WATCHLIST_ID, name: 'Cash & Assets' }
         ];
+
+        const hasSimulated = (AppState.data.shares || []).some(s => s.isSimulated === true || s.simulatedActive === true);
+        if (hasSimulated) {
+            systemWatchlists.push({
+                id: SIMULATIONS_WATCHLIST_ID,
+                name: WATCHLIST_NAMES.SIMULATIONS || 'Simulations'
+            });
+        }
 
         const userWatchlists = AppState.data.watchlists || [];
         let fullList = [...systemWatchlists, ...userWatchlists];
@@ -2931,7 +2944,7 @@ export class AppController {
             }
 
             // Handle system vs custom watchlist renaming
-            const systemIds = [ALL_SHARES_ID, PORTFOLIO_ID, CASH_WATCHLIST_ID, DASHBOARD_WATCHLIST_ID, 'portfolio'];
+            const systemIds = [ALL_SHARES_ID, PORTFOLIO_ID, CASH_WATCHLIST_ID, DASHBOARD_WATCHLIST_ID, SIMULATIONS_WATCHLIST_ID, 'portfolio'];
             const isSystem = systemIds.includes(id);
 
             try {

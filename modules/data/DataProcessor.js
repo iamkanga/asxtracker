@@ -6,6 +6,7 @@
 
 import { UserStore } from './UserStore.js';
 import { AppState } from '../state/AppState.js';
+import { SIMULATIONS_WATCHLIST_ID } from '../utils/AppConstants.js';
 
 // Instantiate strictly for helper methods (stateless usage of getWatchlistData)
 const userStore = new UserStore();
@@ -133,25 +134,31 @@ export function processShares(allShares, watchlistId, livePrices, sortConfig, hi
 
         const currentPrice = priceData ? (parseFloat(priceData.live) || 0) : (parseFloat(share.enteredPrice) || 0);
         const dayChangePercent = priceData ? (parseFloat(priceData.pctChange) || 0) : 0;
-        const units = parseFloat(share.portfolioShares) || 0;
+
+        const isSimulationsView = watchlistId === SIMULATIONS_WATCHLIST_ID;
+        const units = isSimulationsView ? (parseFloat(share.simulatedQty) || 0) : (parseFloat(share.portfolioShares) || 0);
 
         // Cost Basis Logic: Expanded fallbacks for rewrite compatibility
-        const costPrice = parseFloat(share.buyPrice) ||
-            parseFloat(share.portfolioAvgPrice) ||
-            parseFloat(share.averageCost) ||
-            parseFloat(share.avgCost) ||
-            parseFloat(share.avgPrice) ||
-            parseFloat(share.purchasePrice) ||
-            parseFloat(share.entryPrice) ||
-            parseFloat(share.enteredPrice) || 0;
+        const costPrice = isSimulationsView
+            ? (parseFloat(share.enteredPrice) || parseFloat(share.entryPrice) || (units > 0 ? (parseFloat(share.simulatedValue) / units) : 0))
+            : (parseFloat(share.buyPrice) ||
+               parseFloat(share.portfolioAvgPrice) ||
+               parseFloat(share.averageCost) ||
+               parseFloat(share.avgCost) ||
+               parseFloat(share.avgPrice) ||
+               parseFloat(share.purchasePrice) ||
+               parseFloat(share.entryPrice) ||
+               parseFloat(share.enteredPrice) || 0);
 
-        const enteredPrice = parseFloat(share.entryPrice) ||
-            parseFloat(share.enteredPrice) ||
-            parseFloat(share.buyPrice) ||
-            costPrice || 0;
+        const enteredPrice = isSimulationsView
+            ? (parseFloat(share.entryPrice) || parseFloat(share.enteredPrice) || costPrice)
+            : (parseFloat(share.entryPrice) ||
+               parseFloat(share.enteredPrice) ||
+               parseFloat(share.buyPrice) ||
+               costPrice || 0);
 
         const value = units * currentPrice;
-        const cost = units * costPrice;
+        const cost = isSimulationsView ? (parseFloat(share.simulatedValue) || 0) : (units * costPrice);
 
         // Day Change Logic
         const previousValue = value / (1 + (dayChangePercent / 100));

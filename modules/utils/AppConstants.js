@@ -37,6 +37,7 @@ export const DASHBOARD_LINKS = Object.freeze({
 });
 export const PORTFOLIO_ID = 'portfolio';
 export const SEARCH_WATCHLIST_ID = 'search';
+export const SIMULATIONS_WATCHLIST_ID = 'SIMULATIONS';
 
 export const ASSET_CUSTOM_COLORS = [
     '#FF0000', '#FF6347', '#800000', '#E67E22', '#F4A460', '#FFD700', '#808000',
@@ -61,7 +62,8 @@ export const WATCHLIST_NAMES = {
     ALL_SHARES: 'All Shares',
     PORTFOLIO: 'Portfolio',
     DASHBOARD: 'Dashboard',
-    CASH: 'Cash & Assets'
+    CASH: 'Cash & Assets',
+    SIMULATIONS: 'Simulations'
 };
 
 export const STORAGE_KEYS = {
@@ -1474,7 +1476,12 @@ export const CSS_CLASSES = {
     SUPER_QUICK_LINKS: 'super-quick-links',
     SUPER_REMINDER_ROW: 'super-reminder-row',
     SUPER_DISMISS_BTN: 'super-strategy-dismiss-btn',
-    SUPER_DISMISS_MODAL: 'super-dismiss-modal'
+    SUPER_DISMISS_MODAL: 'super-dismiss-modal',
+
+    // Simulated Cards
+    SIMULATED_CARD: 'simulated-card',
+    SIM_VALUATION_VAL: 'sim-valuation-val',
+    SIM_PNL_VAL: 'sim-pnl-val'
 };
 
 export const ANIMATIONS = {

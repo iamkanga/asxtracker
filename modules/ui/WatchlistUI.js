@@ -3,7 +3,7 @@
  * Handles the Watchlist Dropdown, Title updating, and Watchlist management UI interactions.
  */
 import { AppState } from '../state/AppState.js';
-import { IDS, CSS_CLASSES, EVENTS, WATCHLIST_ICON_POOL, ALL_SHARES_ID, CASH_WATCHLIST_ID, DASHBOARD_WATCHLIST_ID, PORTFOLIO_ID, UI_ICONS, USER_MESSAGES, STORAGE_KEYS, WATCHLIST_MODES, SORT_OPTIONS, WATCHLIST_NAMES, UI_LABELS } from '../utils/AppConstants.js';
+import { IDS, CSS_CLASSES, EVENTS, WATCHLIST_ICON_POOL, ALL_SHARES_ID, CASH_WATCHLIST_ID, DASHBOARD_WATCHLIST_ID, PORTFOLIO_ID, SIMULATIONS_WATCHLIST_ID, UI_ICONS, USER_MESSAGES, STORAGE_KEYS, WATCHLIST_MODES, SORT_OPTIONS, WATCHLIST_NAMES, UI_LABELS } from '../utils/AppConstants.js';
 import { WatchlistPickerModal } from './WatchlistPickerModal.js';
 import { ToastManager } from './ToastManager.js';
 import { SnapshotUI } from './SnapshotUI.js';
@@ -279,6 +279,8 @@ export class WatchlistUI {
                 baseTitle = WATCHLIST_NAMES.CASH;
             } else if (currentId === DASHBOARD_WATCHLIST_ID) {
                 baseTitle = WATCHLIST_NAMES.DASHBOARD;
+            } else if (currentId === SIMULATIONS_WATCHLIST_ID) {
+                baseTitle = WATCHLIST_NAMES.SIMULATIONS || 'Simulations';
             } else {
                 if (currentId === ALL_SHARES_ID) {
                     baseTitle = WATCHLIST_NAMES.ALL_SHARES;
@@ -332,6 +334,8 @@ export class WatchlistUI {
                     targetItems = allShares;
                 } else if (currentId === DASHBOARD_WATCHLIST_ID) {
                     targetItems = (AppState.data.dashboard || []).map(d => (typeof d === 'string' ? { code: d } : d));
+                } else if (currentId === SIMULATIONS_WATCHLIST_ID) {
+                    targetItems = allShares.filter(s => s.isSimulated === true || s.simulatedActive === true);
                 } else {
                     // Custom Watchlist: Resolve shares linked to this ID via share documents.
                     // This matches the UserStore.getWatchlistData logic for consistency.
@@ -581,6 +585,16 @@ export class WatchlistUI {
             { id: DASHBOARD_WATCHLIST_ID, name: WATCHLIST_NAMES.DASHBOARD, icon: 'fa-chart-pie', isSystem: true },
             { id: CASH_WATCHLIST_ID, name: WATCHLIST_NAMES.CASH, icon: UI_ICONS.WALLET, isSystem: true },
         ];
+
+        const hasSimulated = (AppState.data.shares || []).some(s => s.isSimulated === true || s.simulatedActive === true);
+        if (hasSimulated) {
+            watchlistItems.push({
+                id: SIMULATIONS_WATCHLIST_ID,
+                name: WATCHLIST_NAMES.SIMULATIONS || 'Simulations',
+                icon: UI_ICONS.SIMULATED || 'fa-flask',
+                isSystem: true
+            });
+        }
 
         const userWatchlists = AppState.data.watchlists || [];
         const userItems = userWatchlists.map(wl => ({

@@ -7,7 +7,7 @@
 
 import { formatCurrency, formatPercent, formatFriendlyDate } from '../utils/formatters.js';
 import { AppState } from '../state/AppState.js';
-import { SORT_OPTIONS, UI_ICONS, UI_LABELS, USER_MESSAGES, RESEARCH_LINKS_TEMPLATE, CSS_CLASSES, IDS, EVENTS, SUMMARY_TYPES, STORAGE_KEYS, PORTFOLIO_ID, KANGAROO_ICON_SRC, KANGAROO_ICON_SVG, VIEW_MODES, FALLBACK_SECTOR_MAP, GEMINI_PROMPTS, REGISTRY_LINKS } from '../utils/AppConstants.js';
+import { SORT_OPTIONS, UI_ICONS, UI_LABELS, USER_MESSAGES, RESEARCH_LINKS_TEMPLATE, CSS_CLASSES, IDS, EVENTS, SUMMARY_TYPES, STORAGE_KEYS, PORTFOLIO_ID, SIMULATIONS_WATCHLIST_ID, KANGAROO_ICON_SRC, KANGAROO_ICON_SVG, VIEW_MODES, FALLBACK_SECTOR_MAP, GEMINI_PROMPTS, REGISTRY_LINKS } from '../utils/AppConstants.js';
 import { WidgetPanel } from './WidgetPanel.js';
 import { LinkHelper } from '../utils/LinkHelper.js';
 import { ToastManager } from './ToastManager.js';
@@ -126,7 +126,7 @@ export class ViewRenderer {
         // User Logic: if (currentWatchlistName === 'Portfolio') { renderSummary(); }
         // Refinement V3: ALWAYS show summary if in Portfolio Context, regardless of mode.
         // Portfolio forces its own Grid layout, so strict mode checks (TABLE/COMPACT) are counter-productive here.
-        if (summaryMetrics && (AppState.watchlist.id === PORTFOLIO_ID || AppState.isPortfolioVisible) && mode === VIEW_MODES.TABLE) {
+        if (summaryMetrics && (AppState.watchlist.id === PORTFOLIO_ID || AppState.isPortfolioVisible || AppState.watchlist.id === SIMULATIONS_WATCHLIST_ID) && mode === VIEW_MODES.TABLE) {
             this.renderSummary(summaryMetrics, data);
         }
 
@@ -135,6 +135,23 @@ export class ViewRenderer {
         // We render it here. For desktop table views, we might need to hide it via CSS if it's "Single Column Only"
         // But for now, we'll render it and let layout handle it.
 
+
+        if (AppState.watchlist.id === SIMULATIONS_WATCHLIST_ID) {
+            const gridContainer = document.createElement('div');
+            gridContainer.classList.add(this.cardsContainerClass);
+            gridContainer.classList.add(CSS_CLASSES.PORTFOLIO_GRID);
+
+            const html = data.map(item => this.createSimulatedCardHTML(item)).join('');
+            gridContainer.innerHTML = html;
+            this.container.appendChild(gridContainer);
+
+            setTimeout(() => {
+                requestAnimationFrame(() => {
+                    this._initPortfolioCharts(data);
+                });
+            }, 150);
+            return;
+        }
 
         switch (mode) {
             case VIEW_MODES.TABLE:
@@ -186,7 +203,7 @@ export class ViewRenderer {
         }
 
         // 2. Patch individual shares
-        const isPortfolioView = AppState.watchlist.id === PORTFOLIO_ID || AppState.isPortfolioVisible;
+        const isPortfolioView = AppState.watchlist.id === PORTFOLIO_ID || AppState.isPortfolioVisible || AppState.watchlist.id === SIMULATIONS_WATCHLIST_ID;
 
         let patchedCount = 0;
 
@@ -231,6 +248,21 @@ export class ViewRenderer {
                     const text = pctNode.textContent.includes('(') ? `(${formatPercent(changePercent)})` : formatPercent(changePercent);
                     pctNode.textContent = text;
                     pctNode.className = `${CSS_CLASSES.CHANGE_PERCENT} ${CSS_CLASSES.TEXT_SM} ${changePercent >= 0 ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}`;
+                }
+
+                // Update Valuation & Net P&L for Simulated Cards
+                if (AppState.watchlist.id === SIMULATIONS_WATCHLIST_ID) {
+                    const value = item.value || 0;
+                    const capitalGain = item.capitalGain || 0;
+
+                    const valuationNode = targetNode.querySelector(`.${CSS_CLASSES.SIM_VALUATION_VAL}`);
+                    if (valuationNode) valuationNode.textContent = formatCurrency(value);
+
+                    const pnlNode = targetNode.querySelector(`.${CSS_CLASSES.SIM_PNL_VAL}`);
+                    if (pnlNode) {
+                        pnlNode.textContent = formatCurrency(Math.abs(capitalGain));
+                        pnlNode.className = `${CSS_CLASSES.SIM_PNL_VAL} ${CSS_CLASSES.DETAIL_VALUE} ${CSS_CLASSES.FONT_BOLD} ${capitalGain >= 0 ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}`;
+                    }
                 }
 
                 // Table View Special Handling
@@ -295,7 +327,7 @@ export class ViewRenderer {
             return;
         }
 
-        const isPortfolioView = AppState.watchlist.id === PORTFOLIO_ID || AppState.isPortfolioVisible;
+        const isPortfolioView = AppState.watchlist.id === PORTFOLIO_ID || AppState.isPortfolioVisible || AppState.watchlist.id === SIMULATIONS_WATCHLIST_ID;
 
         if (isPortfolioView) {
             // 1. Portfolio Grid (Now for both Desktop and Mobile)
@@ -414,7 +446,7 @@ export class ViewRenderer {
         const changePercent = item.dayChangePercent || 0;
 
         // Consistent check for Portfolio view content
-        const isPortfolioView = AppState.watchlist.id === PORTFOLIO_ID || AppState.isPortfolioVisible;
+        const isPortfolioView = AppState.watchlist.id === PORTFOLIO_ID || AppState.isPortfolioVisible || AppState.watchlist.id === SIMULATIONS_WATCHLIST_ID;
 
         const changeValue = isPortfolioView ? (item.dayChangeValue || 0) : (item.dayChangePerShare || 0);
 
@@ -503,7 +535,7 @@ export class ViewRenderer {
         const price = item.currentPrice || 0;
         const changePercent = item.dayChangePercent || 0;
 
-        const isPortfolioView = AppState.watchlist.id === PORTFOLIO_ID || AppState.isPortfolioVisible;
+        const isPortfolioView = AppState.watchlist.id === PORTFOLIO_ID || AppState.isPortfolioVisible || AppState.watchlist.id === SIMULATIONS_WATCHLIST_ID;
 
         // In NON-portfolio views, we always use per-share change
         const changeValue = isPortfolioView ? (item.dayChangeValue || 0) : (item.dayChangePerShare || 0);
@@ -711,6 +743,77 @@ export class ViewRenderer {
                 </div>
             `;
         }
+    }
+
+    createSimulatedCardHTML(item) {
+        const price = item.currentPrice || 0;
+        const changePercent = item.dayChangePercent || 0;
+        const value = item.value || 0;
+        const capitalGain = item.capitalGain || 0;
+        const ghostClass = (item.isGhost || item.isHidden) ? CSS_CLASSES.GHOSTED : '';
+        const eyeIcon = item.isHidden ? UI_ICONS.EYE_SLASH : UI_ICONS.EYE;
+
+        let trendClass = CSS_CLASSES.TREND_UP;
+        if (changePercent < 0) trendClass = CSS_CLASSES.TREND_DOWN;
+        else if (changePercent === 0) trendClass = CSS_CLASSES.TREND_NEUTRAL;
+
+        let gradeClass = CSS_CLASSES.DASHBOARD_GRADE_NEUTRAL;
+        if (changePercent > 0) gradeClass = CSS_CLASSES.DASHBOARD_GRADE_UP;
+        else if (changePercent < 0) gradeClass = CSS_CLASSES.DASHBOARD_GRADE_DOWN;
+
+        const borderStyle = this._getBorderStyles(changePercent);
+
+        // For Simulations View, we always use TOTAL holding change
+        const displayChangeValue = item.dayChangeValue || 0;
+
+        // Background Chart Container (Hydrated post-render)
+        const showCharts = !AppState.preferences.containerBorders || AppState.preferences.containerBorders.showCardCharts !== false;
+        const chartBgHtml = showCharts ? `
+            <div class="portfolio-card-chart-bg" id="bg-chart-${item.id}" data-code="${item.code}" data-change="${item.dayChangeValue || 0}"></div>
+        ` : '';
+
+        return `
+            <div class="${CSS_CLASSES.CARD} ${CSS_CLASSES.SIMULATED_CARD} ${trendClass} ${gradeClass} ${ghostClass}" data-id="${item.id}" data-code="${item.code}" style="${borderStyle}">
+                ${chartBgHtml}
+                <div class="${CSS_CLASSES.CARD_HEADER_ROW} ${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.JUSTIFY_BETWEEN} ${CSS_CLASSES.ALIGN_START} ${CSS_CLASSES.W_FULL} ${CSS_CLASSES.MB_2PX} ${CSS_CLASSES.BORDER_NONE}" style="position:relative; z-index:1;">
+                    <div class="${CSS_CLASSES.CARD_HEADER_LEFT} ${CSS_CLASSES.FLEX_COLUMN} ${CSS_CLASSES.ALIGN_START}">
+                        <div class="card-code-pill" style="background: none; border: none; padding: 0; gap: 6px;">
+                            <img src="https://files.marketindex.com.au/xasx/96x96-png/${item.code.toLowerCase()}.png" class="favicon-icon" onerror="this.src='${KANGAROO_ICON_SRC}'" alt="">
+                            <span class="${CSS_CLASSES.CARD_CODE}" data-code="${item.code}">${item.code}</span>
+                        </div>
+                    </div>
+                    <span class="${CSS_CLASSES.CARD_PRICE} ${CSS_CLASSES.TEXT_CENTER} ${CSS_CLASSES.FLEX_2}">${formatCurrency(price)}</span>
+                    <div class="${CSS_CLASSES.CARD_CHANGE_COL} ${CSS_CLASSES.FLEX_COLUMN} ${CSS_CLASSES.ALIGN_END}">
+                        <span class="${CSS_CLASSES.CHANGE_VALUE} ${displayChangeValue >= 0 ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}">
+                            ${formatCurrency(Math.abs(displayChangeValue))}
+                        </span>
+                        <span class="${CSS_CLASSES.CHANGE_PERCENT} ${CSS_CLASSES.TEXT_SM} ${changePercent >= 0 ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}">
+                            ${formatPercent(changePercent)}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="${CSS_CLASSES.CARD_BODY_SECTION} ${CSS_CLASSES.W_FULL} ${CSS_CLASSES.MT_TINY} ${CSS_CLASSES.PT_SMALL} ${CSS_CLASSES.BORDER_TOP_NONE}" style="position:relative; z-index:1;">
+                    <div class="${CSS_CLASSES.DETAIL_ROW} ${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.JUSTIFY_BETWEEN} ${CSS_CLASSES.PY_TINY}">
+                        <span class="${CSS_CLASSES.DETAIL_LABEL}">Current Value</span>
+                        <span class="${CSS_CLASSES.SIM_VALUATION_VAL} ${CSS_CLASSES.DETAIL_VALUE} ${CSS_CLASSES.FONT_BOLD}">${formatCurrency(value)}</span>
+                    </div>
+                    <div class="${CSS_CLASSES.DETAIL_ROW} ${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.JUSTIFY_BETWEEN} ${CSS_CLASSES.PY_TINY}">
+                        <span class="${CSS_CLASSES.DETAIL_LABEL}">Capital Gain</span>
+                        <span class="${CSS_CLASSES.SIM_PNL_VAL} ${CSS_CLASSES.DETAIL_VALUE} ${CSS_CLASSES.FONT_BOLD} ${capitalGain >= 0 ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}">
+                            ${formatCurrency(Math.abs(capitalGain))}
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Visibility Toggle (Portfolio Corner) -->
+                <button class="${CSS_CLASSES.ICON_BTN_GHOST} ${CSS_CLASSES.VISIBILITY_TOGGLE_BTN} portfolio-visibility-btn" 
+                        data-id="${item.id}"
+                        title="${item.isHidden ? 'Show Share' : 'Hide Share'}">
+                    <i class="fas ${eyeIcon}"></i>
+                </button>
+            </div>
+        `;
     }
 
     renderSummary(metrics, shares = []) {

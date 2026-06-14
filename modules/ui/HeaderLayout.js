@@ -8,7 +8,7 @@ import { ToastManager } from './ToastManager.js';
 import { StateAuditor } from '../state/StateAuditor.js';
 
 // Custom Event Names removed (Registry Rule)
-import { EVENTS, UI_ICONS, IDS, WATCHLIST_NAMES, ALL_SHARES_ID, PORTFOLIO_ID, CASH_WATCHLIST_ID, DASHBOARD_WATCHLIST_ID, STORAGE_KEYS } from '../utils/AppConstants.js';
+import { EVENTS, UI_ICONS, IDS, WATCHLIST_NAMES, ALL_SHARES_ID, PORTFOLIO_ID, CASH_WATCHLIST_ID, DASHBOARD_WATCHLIST_ID, STORAGE_KEYS, SIMULATIONS_WATCHLIST_ID } from '../utils/AppConstants.js';
 import { navManager } from '../utils/NavigationManager.js';
 import { GeneralSettingsUI } from './GeneralSettingsUI.js';
 import { SidebarCommandCenter } from './SidebarCommandCenter.js';
@@ -621,6 +621,7 @@ export class HeaderLayout {
             else if (currentId === PORTFOLIO_ID || currentId === 'portfolio') currentName = WATCHLIST_NAMES.PORTFOLIO;
             else if (currentId === DASHBOARD_WATCHLIST_ID) currentName = WATCHLIST_NAMES.DASHBOARD;
             else if (currentId === CASH_WATCHLIST_ID) currentName = WATCHLIST_NAMES.CASH;
+            else if (currentId === SIMULATIONS_WATCHLIST_ID) currentName = WATCHLIST_NAMES.SIMULATIONS || 'Simulations';
             else {
                 const w = (AppState.data.watchlists || []).find(it => it.id === currentId);
                 currentName = w ? w.name : 'Watchlist';
@@ -628,7 +629,7 @@ export class HeaderLayout {
         }
 
         // Handle system vs custom UI (Hide delete for system views)
-        const systemIds = [ALL_SHARES_ID, PORTFOLIO_ID, 'portfolio', CASH_WATCHLIST_ID, DASHBOARD_WATCHLIST_ID];
+        const systemIds = [ALL_SHARES_ID, PORTFOLIO_ID, 'portfolio', CASH_WATCHLIST_ID, DASHBOARD_WATCHLIST_ID, SIMULATIONS_WATCHLIST_ID];
         const isSystem = systemIds.includes(currentId);
 
         if (this.editWatchlistDelete) {
