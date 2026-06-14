@@ -376,6 +376,18 @@ export class ShareFormUI {
             entryDateInput.value = this._normalizeDateForInput(existingShare.entryDate || existingShare.purchaseDate);
         }
 
+        const simulatedToggle = modal.querySelector(`#${IDS.SIMULATED_ACTIVE}`);
+        const simulatedContainer = modal.querySelector('#simulatedInputsContainer');
+        const qtyInput = modal.querySelector(`#${IDS.SIMULATED_QTY}`);
+        const valInput = modal.querySelector(`#${IDS.SIMULATED_VALUE}`);
+
+        if (simulatedToggle && simulatedContainer && qtyInput && valInput) {
+            simulatedToggle.checked = !!existingShare.simulatedActive;
+            simulatedContainer.classList.toggle(CSS_CLASSES.HIDDEN, !existingShare.simulatedActive);
+            qtyInput.value = existingShare.simulatedQty || '';
+            valInput.value = existingShare.simulatedValue || '';
+        }
+
         const shareSightCodeInput = modal.querySelector(`#${IDS.SHARE_SIGHT_CODE}`);
         if (shareSightCodeInput) shareSightCodeInput.value = existingShare.shareSightCode || '';
 
@@ -706,6 +718,27 @@ export class ShareFormUI {
                                            onfocus="(this.type='date')"
                                            onblur="if(!this.value)this.type='text'">
                                 </div>
+                                
+                                <!-- Track as Simulated Position Switch -->
+                                <div class="${CSS_CLASSES.FORM_GROUP}" style="display: flex; align-items: center; justify-content: space-between; margin-top: 20px; border-top: 1px solid var(--border-color); padding-top: 15px;">
+                                    <label for="${IDS.SIMULATED_ACTIVE}" style="margin-bottom: 0; cursor: pointer;">Track as Simulated Position</label>
+                                    <label class="switch-small">
+                                        <input type="checkbox" id="${IDS.SIMULATED_ACTIVE}" ${shareData?.simulatedActive ? 'checked' : ''}>
+                                        <span class="slider-small round"></span>
+                                    </label>
+                                </div>
+                                
+                                <!-- Customizable Variables (Hidden by default unless checked) -->
+                                <div id="simulatedInputsContainer" class="${shareData?.simulatedActive ? '' : CSS_CLASSES.HIDDEN}" style="margin-top: 15px; display: flex; flex-direction: column; gap: 12px;">
+                                    <div class="${CSS_CLASSES.FORM_GROUP}" style="margin-bottom: 0;">
+                                        <label for="${IDS.SIMULATED_QTY}">Simulated Quantity</label>
+                                        <input type="number" id="${IDS.SIMULATED_QTY}" step="1" class="${CSS_CLASSES.FORM_CONTROL}" placeholder="1,000" value="${shareData?.simulatedQty ?? ''}">
+                                    </div>
+                                    <div class="${CSS_CLASSES.FORM_GROUP}" style="margin-bottom: 0;">
+                                        <label for="${IDS.SIMULATED_VALUE}">Simulated Investment Value ($)</label>
+                                        <input type="number" id="${IDS.SIMULATED_VALUE}" step="0.01" class="${CSS_CLASSES.FORM_CONTROL}" placeholder="10,000.00" value="${shareData?.simulatedValue ?? ''}">
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -1018,6 +1051,62 @@ export class ShareFormUI {
                     ShareFormUI._validateForm(modal); // TRIGGER DIRTY CHECK
                 });
             });
+        }
+
+        // Simulated Position Bindings
+        const simulatedToggle = modal.querySelector(`#${IDS.SIMULATED_ACTIVE}`);
+        const simulatedContainer = modal.querySelector('#simulatedInputsContainer');
+        const qtyInput = modal.querySelector(`#${IDS.SIMULATED_QTY}`);
+        const valInput = modal.querySelector(`#${IDS.SIMULATED_VALUE}`);
+        const entryPriceInput = modal.querySelector(`#${IDS.ENTERED_PRICE}`);
+
+        if (simulatedToggle && simulatedContainer && qtyInput && valInput) {
+            simulatedToggle.addEventListener('change', () => {
+                const isActive = simulatedToggle.checked;
+                simulatedContainer.classList.toggle(CSS_CLASSES.HIDDEN, !isActive);
+                
+                if (isActive) {
+                    const price = parseFloat(entryPriceInput?.value) || 0;
+                    if (!qtyInput.value) {
+                        qtyInput.value = 1000;
+                    }
+                    if (!valInput.value) {
+                        valInput.value = price > 0 ? (1000 * price).toFixed(2) : '10000.00';
+                    }
+                }
+                
+                ShareFormUI._validateForm(modal);
+            });
+
+            qtyInput.addEventListener('input', () => {
+                const price = parseFloat(entryPriceInput?.value) || 0;
+                const qty = parseFloat(qtyInput.value) || 0;
+                if (price > 0 && qty > 0) {
+                    valInput.value = (qty * price).toFixed(2);
+                }
+                ShareFormUI._validateForm(modal);
+            });
+
+            valInput.addEventListener('input', () => {
+                const price = parseFloat(entryPriceInput?.value) || 0;
+                const val = parseFloat(valInput.value) || 0;
+                if (price > 0 && val > 0) {
+                    qtyInput.value = Math.round(val / price);
+                }
+                ShareFormUI._validateForm(modal);
+            });
+
+            if (entryPriceInput) {
+                entryPriceInput.addEventListener('input', () => {
+                    if (simulatedToggle.checked) {
+                        const price = parseFloat(entryPriceInput.value) || 0;
+                        const qty = parseFloat(qtyInput.value) || 0;
+                        if (price > 0 && qty > 0) {
+                            valInput.value = (qty * price).toFixed(2);
+                        }
+                    }
+                });
+            }
         }
 
         // 3. GENERIC INPUT BINDINGS (Date, Shares, Price, Dividends, etc)
@@ -1356,7 +1445,10 @@ export class ShareFormUI {
             unfrankedYield: getNum(IDS.UNFRANKED_YIELD),
             frankedYield: getNum(IDS.FRANKED_YIELD),
             comments: comments,
-            watchlists: selectedWatchlists
+            watchlists: selectedWatchlists,
+            simulatedActive: modal.querySelector(`#${IDS.SIMULATED_ACTIVE}`)?.checked || false,
+            simulatedQty: parseFloat(modal.querySelector(`#${IDS.SIMULATED_QTY}`)?.value) || 0,
+            simulatedValue: parseFloat(modal.querySelector(`#${IDS.SIMULATED_VALUE}`)?.value) || 0
         };
         return payload;
     }

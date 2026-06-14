@@ -216,12 +216,15 @@ export class ModalController {
             onDelete: async (id) => {
                 if (confirm(USER_MESSAGES.CONFIRM_DELETE)) {
                     try {
-                        await appService.deleteShareRecord(null, id);
-                        if (this.updateCallback) await this.updateCallback();
-
-                        // Try to find code from data or default
+                        // Try to find code from data or default before removing
                         const deletedShare = AppState.data.shares.find(s => s.id === id);
                         const code = deletedShare ? deletedShare.shareName : 'Share';
+
+                        // Optimistically remove from state
+                        AppState.data.shares = AppState.data.shares.filter(s => String(s.id) !== String(id));
+                        if (this.updateCallback) await this.updateCallback();
+
+                        await appService.deleteShareRecord(null, id);
 
                         ToastManager.success(`${code} deleted.`);
                         document.querySelector('#add-share-modal .modal-close-btn')?.click();
@@ -271,6 +274,12 @@ export class ModalController {
                             try {
                                 const dataToUpdate = { ...formData, watchlistId: persistenceId, watchlistIds: newWatchlists };
                                 delete dataToUpdate.watchlists;
+
+                                // Optimistic local update
+                                const shareToUpdate = AppState.data.shares.find(s => String(s.id) === String(targetDocId));
+                                if (shareToUpdate) {
+                                    Object.assign(shareToUpdate, dataToUpdate);
+                                }
 
                                 await appService.updateShareRecord(targetDocId, dataToUpdate);
                                 successCount++;
@@ -404,6 +413,12 @@ export class ModalController {
                             delete dataToUpdate.watchlists;
 
                             try {
+                                // Optimistic local update
+                                const shareToUpdate = AppState.data.shares.find(s => String(s.id) === String(docId));
+                                if (shareToUpdate) {
+                                    Object.assign(shareToUpdate, dataToUpdate);
+                                }
+
                                 await appService.updateShareRecord(docId, dataToUpdate);
                                 successCount++;
                             } catch (err) {
@@ -440,6 +455,13 @@ export class ModalController {
                                     try {
                                         const dataToUpdate = { ...formData, watchlistId: newPersistenceId, watchlistIds: newWatchlists };
                                         delete dataToUpdate.watchlists;
+
+                                        // Optimistic local update
+                                        const shareToUpdate = AppState.data.shares.find(s => String(s.id) === String(docId));
+                                        if (shareToUpdate) {
+                                            Object.assign(shareToUpdate, dataToUpdate);
+                                        }
+
                                         await appService.updateShareRecord(docId, dataToUpdate);
                                     } catch (err) {
                                         console.error(`Failed to migrate share ${docId}:`, err);
@@ -448,6 +470,9 @@ export class ModalController {
                                 } else {
                                     // DELETION: The user removed it from ALL watchlists.
                                     try {
+                                        // Optimistic local update
+                                        AppState.data.shares = AppState.data.shares.filter(s => String(s.id) !== String(docId));
+
                                         await appService.deleteShareRecord(null, docId);
                                     } catch (err) {
                                         console.error(`Failed to delete share ${docId}:`, err);

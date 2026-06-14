@@ -239,7 +239,7 @@ export class ViewRenderer {
                     targetNode.cells[2].innerHTML = `${formatCurrency(Math.abs(changeValue))} (${formatPercent(changePercent)})`;
                     targetNode.cells[2].className = `${CSS_CLASSES.DESKTOP_ONLY} ${changeValue >= 0 ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE} ${CSS_CLASSES.CHANGE_VALUE}`;
                 }
-                
+
                 patchedCount++;
             });
         });
@@ -613,6 +613,13 @@ export class ViewRenderer {
                 activeSlots.push(`
                     <div class="utility-slot has-content" data-action="deep-link" data-id="${item.id}" data-section="notes">
                         <i class="fas ${UI_ICONS.COMMENTS} utility-icon" style="margin-right: 0;"></i>
+                    </div>`);
+            }
+
+            if (item.simulatedActive) {
+                activeSlots.push(`
+                    <div class="utility-slot has-content" data-action="deep-link" data-id="${item.id}" data-section="entry-details" title="Simulation Active">
+                        <i class="fas ${UI_ICONS.SIMULATED} utility-icon" style="margin-right: 0;"></i>
                     </div>`);
             }
 
@@ -1174,7 +1181,55 @@ export class ViewRenderer {
                                     </a>
                                 </div>
                             </div>
-                            ` : ''}
+                            ` : (stock.simulatedActive ? `
+                            <div class="${CSS_CLASSES.DETAIL_CARD} ${trendBgClass} ${CSS_CLASSES.CURSOR_POINTER}" data-action="deep-link" data-id="${stock.id}" data-section="entry-details">
+                                <div class="${CSS_CLASSES.DETAIL_CARD_HEADER}">
+                                    <h3 class="${CSS_CLASSES.DETAIL_LABEL}">
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                            <i class="fas ${UI_ICONS.WALLET}"></i> Holdings Simulated
+                                        </div>
+                                    </h3>
+                                </div>
+                                
+                                <div class="${CSS_CLASSES.DETAIL_ROW}">
+                                    <span class="${CSS_CLASSES.DETAIL_LABEL}">Total Units</span>
+                                    <span class="${CSS_CLASSES.DETAIL_VALUE}">${new Intl.NumberFormat('en-AU').format(stock.simulatedQty || 1000)}</span>
+                                </div>
+
+                                <div class="${CSS_CLASSES.DETAIL_ROW}">
+                                    <span class="${CSS_CLASSES.DETAIL_LABEL}">Unit Cost</span>
+                                    <span class="${CSS_CLASSES.DETAIL_VALUE}">${formatCurrency(stock.enteredPrice || 0)}</span>
+                                </div>
+
+                                <div class="${CSS_CLASSES.DETAIL_ROW}">
+                                    <span class="${CSS_CLASSES.DETAIL_LABEL}">Unit Margin</span>
+                                    <span class="${CSS_CLASSES.DETAIL_VALUE} ${((stock.live || currentPrice) - (stock.enteredPrice || 0)) > 0 ? CSS_CLASSES.POSITIVE : (((stock.live || currentPrice) - (stock.enteredPrice || 0)) < 0 ? CSS_CLASSES.NEGATIVE : CSS_CLASSES.NEUTRAL)}">
+                                        ${formatCurrency(Math.abs((stock.live || currentPrice) - (stock.enteredPrice || 0)))} 
+                                        (${formatPercent((((stock.live || currentPrice) - (stock.enteredPrice || 0)) / ((stock.enteredPrice || 0) || 1)) * 100)})
+                                    </span>
+                                </div>
+
+                                <div class="${CSS_CLASSES.DETAIL_ROW}">
+                                    <span class="${CSS_CLASSES.DETAIL_LABEL}">Net Return</span>
+                                    <span class="${CSS_CLASSES.DETAIL_VALUE} ${((stock.simulatedQty || 1000) * (currentPrice - (stock.enteredPrice || 0))) >= 0 ? CSS_CLASSES.POSITIVE : CSS_CLASSES.NEGATIVE}">
+                                        ${((stock.simulatedQty || 1000) * (currentPrice - (stock.enteredPrice || 0))) >= 0 ? '+' : ''}${formatCurrency((stock.simulatedQty || 1000) * (currentPrice - (stock.enteredPrice || 0)))} 
+                                        (${((stock.simulatedQty || 1000) * (currentPrice - (stock.enteredPrice || 0))) >= 0 ? '+' : ''}${formatPercent(stock.enteredPrice > 0 ? ((currentPrice - stock.enteredPrice) / stock.enteredPrice) * 100 : 0)})
+                                    </span>
+                                </div>
+
+                                <div class="${CSS_CLASSES.DETAIL_ROW}">
+                                    <span class="${CSS_CLASSES.DETAIL_LABEL}">Net Cost</span>
+                                    <span class="${CSS_CLASSES.DETAIL_VALUE}">${formatCurrency((stock.simulatedQty || 1000) * (stock.enteredPrice || 0))}</span>
+                                </div>
+
+                                <div class="${CSS_CLASSES.DETAIL_ROW}">
+                                    <span class="${CSS_CLASSES.DETAIL_LABEL}">Net Value</span>
+                                    <span class="${CSS_CLASSES.DETAIL_VALUE} ${CSS_CLASSES.FONT_BOLD_700} ${((stock.simulatedQty || 1000) * (currentPrice - (stock.enteredPrice || 0))) >= 0 ? CSS_CLASSES.POSITIVE : CSS_CLASSES.NEGATIVE}">
+                                        ${formatCurrency((stock.simulatedQty || 1000) * currentPrice)}
+                                    </span>
+                                </div>
+                            </div>
+                            ` : '')}
 
                             <!-- Card: 52W Chart Preview -->
                             <div class="${CSS_CLASSES.DETAIL_CARD} ${trendBgClass} ${CSS_CLASSES.CURSOR_POINTER}" id="miniChartCard_${stock.code}">

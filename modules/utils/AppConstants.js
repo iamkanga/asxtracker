@@ -453,7 +453,8 @@ export const UI_ICONS = {
     SYNC: 'fa-sync-alt',
     ANNOUNCEMENTS: 'fa-satellite-dish',
     CALCULATOR: 'fa-calculator',
-    SUPER_STRATEGY: 'fa-piggy-bank'
+    SUPER_STRATEGY: 'fa-piggy-bank',
+    SIMULATED: 'fa-flask'
 };
 
 export const HTML_TEMPLATES = {
@@ -1534,6 +1535,9 @@ export const IDS = {
     PURCHASE_DATE: 'purchaseDate',
     ENTERED_PRICE: 'enteredPrice',
     ENTRY_DATE: 'entryDate',
+    SIMULATED_ACTIVE: 'simulatedActive',
+    SIMULATED_QTY: 'simulatedQty',
+    SIMULATED_VALUE: 'simulatedValue',
     SAVE_BTN: 'addShareSaveBtn',
     DELETE_BTN: 'addShareDeleteBtn',
     BTN_EDIT_SHARE: 'btn-edit-share',
