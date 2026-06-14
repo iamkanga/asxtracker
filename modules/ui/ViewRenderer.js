@@ -1289,7 +1289,7 @@ export class ViewRenderer {
                                 <div class="${CSS_CLASSES.DETAIL_CARD_HEADER}">
                                     <h3 class="${CSS_CLASSES.DETAIL_LABEL}">
                                         <div style="display: flex; align-items: center; gap: 8px;">
-                                            <i class="fas ${UI_ICONS.WALLET}"></i> Holdings Simulated
+                                            <i class="fas ${UI_ICONS.WALLET}"></i> Simulated Holding
                                         </div>
                                     </h3>
                                 </div>
