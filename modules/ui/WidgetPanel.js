@@ -418,6 +418,7 @@ export class WidgetPanel {
         const dedupMap = new Map();
 
         shares.forEach(s => {
+            if (AppState.hiddenAssets && AppState.hiddenAssets.has(String(s.id))) return;
             const units = parseFloat(s.portfolioShares) || 0;
             if (units <= 0) return;
             const code = (s.shareName || s.code || '').trim().toUpperCase();
@@ -452,7 +453,7 @@ export class WidgetPanel {
     }
 
     _getCashItems() {
-        return (AppState.data.cash || []).filter(c => c.category !== 'shares');
+        return (AppState.data.cash || []).filter(c => c.category !== 'shares' && (!AppState.hiddenAssets || !AppState.hiddenAssets.has(String(c.id))));
     }
 
     /**
