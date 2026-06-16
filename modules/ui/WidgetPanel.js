@@ -912,6 +912,18 @@ export class WidgetPanel {
         const sydDay = getPart('weekday');
         const isSydWeekend = (sydDay === 'Sat' || sydDay === 'Sun');
 
+        // New York time for US markets
+        const nyParts = new Intl.DateTimeFormat('en-GB', {
+            timeZone: 'America/New_York',
+            hour: 'numeric', minute: 'numeric', weekday: 'short', hour12: false
+        }).formatToParts(now);
+        const getNyPart = (type) => nyParts.find(p => p.type === type).value;
+        const nyHour = parseInt(getNyPart('hour'));
+        const nyMin = parseInt(getNyPart('minute'));
+        const nyTotal = nyHour * 60 + nyMin;
+        const nyDay = getNyPart('weekday');
+        const isNyWeekend = (nyDay === 'Sat' || nyDay === 'Sun');
+
         // Market Logic
         if (code.includes('BTC') || code.includes('ETH')) return true;
         const isASX = code.includes('.AX') || ['^AXJO', '^AXKO', '^AORD', 'XJO', 'XKO', 'XAO', 'YAP=F'].includes(code);
@@ -927,25 +939,29 @@ export class WidgetPanel {
             if (utcDay === 0 || utcDay === 6) return false;
             return utcTotal >= (0 * 60 + 30) && utcTotal < (8 * 60);
         }
+        // US INDICES (NY 09:30-16:00 EST/EDT) - Resolves DST Bug
         if (['INX', '.DJI', '.IXIC', '^GSPC', '^DJI', '^IXIC', '^VIX'].includes(code)) {
-            if (utcDay === 0 || utcDay === 6) return false;
-            return utcTotal >= (14 * 60 + 30) && utcTotal < (21 * 60);
+            if (isNyWeekend) return false;
+            return nyTotal >= (9 * 60 + 30) && nyTotal < (16 * 60);
         }
         const FOREX_CODES = ['AUDUSD', 'AUDTHB', 'AUDGBP', 'AUDEUR', 'AUDJPY', 'AUDNZD', 'USDTHB'];
         const isForex = code.includes('=X') || FOREX_CODES.includes(code);
         if (isForex) {
-            if (utcDay === 6) return false;
-            if (utcDay === 0 && utcTotal < (22 * 60)) return false;
-            if (utcDay === 5 && utcTotal > (22 * 60)) return false;
+            if (isNyWeekend) {
+                if (nyDay === 'Sat') return false;
+                if (nyDay === 'Sun' && nyTotal < (17 * 60)) return false;
+                if (nyDay === 'Fri' && nyTotal > (17 * 60)) return false;
+            }
             return true;
         }
         const COMMODITY_CODES = ['GCW00', 'SIW00', 'BZW00', 'NICKEL'];
         const isFutures = code.includes('=F') || code.includes('-F') || COMMODITY_CODES.includes(code);
         if (isFutures) {
-            if (utcDay === 6) return false;
-            if (utcDay === 0 && utcTotal < (23 * 60)) return false;
-            if (utcDay === 5 && utcTotal > (21 * 60)) return false;
-            if (utcTotal >= (21 * 60) && utcTotal < (22 * 60)) return false;
+            if (nyDay === 'Sat') return false;
+            if (nyDay === 'Sun' && nyTotal < (18 * 60)) return false;
+            if (nyDay === 'Fri' && nyTotal > (17 * 60)) return false;
+            // Daily maintenance break (NY 17:00-18:00)
+            if (nyTotal >= (17 * 60) && nyTotal < (18 * 60)) return false;
             return true;
         }
         if (isSydWeekend) return false;

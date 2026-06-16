@@ -408,7 +408,6 @@ export class DashboardViewRenderer {
      */
     _isMarketOpen(code) {
         const now = new Date();
-        // Use UTC to ensure it works regardless of User's local timezone
         const utcDay = now.getUTCDay(); // 0-6 (Sun-Sat)
         const utcHours = now.getUTCHours();
         const utcMins = now.getUTCMinutes();
@@ -425,6 +424,18 @@ export class DashboardViewRenderer {
         const sydTotal = sydHour * 60 + sydMin;
         const sydDay = getPart('weekday'); // Mon-Sun
         const isSydWeekend = (sydDay === 'Sat' || sydDay === 'Sun');
+
+        // New York time for US markets
+        const nyParts = new Intl.DateTimeFormat('en-GB', {
+            timeZone: 'America/New_York',
+            hour: 'numeric', minute: 'numeric', weekday: 'short', hour12: false
+        }).formatToParts(now);
+        const getNyPart = (type) => nyParts.find(p => p.type === type).value;
+        const nyHour = parseInt(getNyPart('hour'));
+        const nyMin = parseInt(getNyPart('minute'));
+        const nyTotal = nyHour * 60 + nyMin;
+        const nyDay = getNyPart('weekday');
+        const isNyWeekend = (nyDay === 'Sat' || nyDay === 'Sun');
 
         // 1. CRYPTO (Always Open)
         if (code.includes('BTC') || code.includes('ETH')) return true;
@@ -450,33 +461,35 @@ export class DashboardViewRenderer {
             return utcTotal >= (0 * 60 + 30) && utcTotal < (8 * 60);
         }
 
-        // 5. US INDICES (NY 09:30-16:00 EST -> UTC 14:30-21:00)
+        // 5. US INDICES (NY 09:30-16:00 EST/EDT) - Resolves DST Bug
         if (['INX', '.DJI', '.IXIC', '^GSPC', '^DJI', '^IXIC', '^VIX'].includes(code)) {
-            if (utcDay === 0 || utcDay === 6) return false;
-            return utcTotal >= (14 * 60 + 30) && utcTotal < (21 * 60);
+            if (isNyWeekend) return false;
+            return nyTotal >= (9 * 60 + 30) && nyTotal < (16 * 60);
         }
 
-        // 6. FOREX (24/5 -> Sunday 22:00 to Friday 22:00 UTC)
+        // 6. FOREX (24/5 -> Sunday 17:00 to Friday 17:00 NY Time)
         // Covers: codes with =X suffix AND normalized codes like AUDUSD, AUDTHB, USDTHB
         const FOREX_CODES = ['AUDUSD', 'AUDTHB', 'AUDGBP', 'AUDEUR', 'AUDJPY', 'AUDNZD', 'USDTHB'];
         const isForex = code.includes('=X') || FOREX_CODES.includes(code);
         if (isForex) {
-            if (utcDay === 6) return false; // Saturday (Closed)
-            if (utcDay === 0 && utcTotal < (22 * 60)) return false; // Sunday before open
-            if (utcDay === 5 && utcTotal > (22 * 60)) return false; // Friday after close
+            if (isNyWeekend) {
+                if (nyDay === 'Sat') return false;
+                if (nyDay === 'Sun' && nyTotal < (17 * 60)) return false;
+                if (nyDay === 'Fri' && nyTotal > (17 * 60)) return false;
+            }
             return true;
         }
 
-        // 7. FUTURES & COMMODITIES (23/5 Markets -> 23:00 Sun to 21:00 Fri UTC)
+        // 7. FUTURES & COMMODITIES (23/5 Markets -> Sunday 18:00 to Friday 17:00 NY Time)
         // Covers: codes with =F suffix, legacy commodity codes (GCW00, SIW00, BZW00), NICKEL
         const COMMODITY_CODES = ['GCW00', 'SIW00', 'BZW00', 'NICKEL'];
         const isFutures = code.includes('=F') || code.includes('-F') || COMMODITY_CODES.includes(code);
         if (isFutures) {
-            if (utcDay === 6) return false; // Saturday (Closed)
-            if (utcDay === 0 && utcTotal < (23 * 60)) return false; // Sun before open
-            if (utcDay === 5 && utcTotal > (21 * 60)) return false; // Fri after close
-            // Daily maintenance break (NY 16:00-17:00 -> UTC 21:00-22:00)
-            if (utcTotal >= (21 * 60) && utcTotal < (22 * 60)) return false;
+            if (nyDay === 'Sat') return false;
+            if (nyDay === 'Sun' && nyTotal < (18 * 60)) return false;
+            if (nyDay === 'Fri' && nyTotal > (17 * 60)) return false;
+            // Daily maintenance break (NY 17:00-18:00)
+            if (nyTotal >= (17 * 60) && nyTotal < (18 * 60)) return false;
             return true;
         }
 
