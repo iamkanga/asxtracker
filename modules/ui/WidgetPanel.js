@@ -259,16 +259,16 @@ export class WidgetPanel {
                                     <!-- Asset Breakout in Hero -->
                                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; width: 100%; margin-bottom: 18px; margin-top: 5px;">
                                         <div style="display: flex; flex-direction: column; gap: 2px;">
-                                            <span style="font-size: 0.65rem; color: rgba(255,255,255,0.5); font-weight: 700; text-transform: uppercase;">Shares</span>
-                                            <span style="font-size: 1.45rem; font-weight: 800; color: ${this._getCategoryColor('shares')};">${formatCurrency(stats.shareValue)}</span>
-                                        </div>
-                                        <div style="display: flex; flex-direction: column; gap: 2px; align-items: flex-end; text-align: right;">
                                             <span style="font-size: 0.65rem; color: rgba(255,255,255,0.5); font-weight: 700; text-transform: uppercase;">Super</span>
                                             <span style="font-size: 1.45rem; font-weight: 800; color: ${this._getCategoryColor('super')};">${formatCurrency(stats.superValue)}</span>
                                         </div>
-                                        <div style="display: flex; flex-direction: column; gap: 2px;">
+                                        <div style="display: flex; flex-direction: column; gap: 2px; align-items: flex-end; text-align: right;">
                                             <span style="font-size: 0.65rem; color: rgba(255,255,255,0.5); font-weight: 700; text-transform: uppercase;">Cash</span>
                                             <span style="font-size: 1.45rem; font-weight: 800; color: ${this._getCategoryColor('cash_in_bank')};">${formatCurrency(stats.cashInBankValue)}</span>
+                                        </div>
+                                        <div style="display: flex; flex-direction: column; gap: 2px;">
+                                            <span style="font-size: 0.65rem; color: rgba(255,255,255,0.5); font-weight: 700; text-transform: uppercase;">Shares</span>
+                                            <span style="font-size: 1.45rem; font-weight: 800; color: ${this._getCategoryColor('shares')};">${formatCurrency(stats.shareValue)}</span>
                                         </div>
                                         <div style="display: flex; flex-direction: column; gap: 2px; align-items: flex-end; text-align: right;">
                                             <span style="font-size: 0.65rem; color: rgba(255,255,255,0.5); font-weight: 700; text-transform: uppercase;">Other Assets</span>
@@ -574,18 +574,18 @@ export class WidgetPanel {
                 </div>
                 <div class="${CSS_CLASSES.WIDGET_STAT_ROW}" style="margin-top: 10px; justify-content: space-between;">
                     <div class="${CSS_CLASSES.WIDGET_STAT_ITEM} ${CSS_CLASSES.WIDGET_STAT_SMALL}">
-                        <label>Shares</label>
-                        <span class="value" style="color: ${shareColor}; font-size: 1.25rem; font-weight: 800;">${formatCurrency(stats.shareValue)}</span>
-                    </div>
-                    <div class="${CSS_CLASSES.WIDGET_STAT_ITEM} ${CSS_CLASSES.WIDGET_STAT_SMALL}" style="align-items: flex-end; text-align: right;">
                         <label>Super</label>
                         <span class="value" style="color: ${superColor}; font-size: 1.25rem; font-weight: 800;">${formatCurrency(stats.superValue)}</span>
+                    </div>
+                    <div class="${CSS_CLASSES.WIDGET_STAT_ITEM} ${CSS_CLASSES.WIDGET_STAT_SMALL}" style="align-items: flex-end; text-align: right;">
+                        <label>Cash</label>
+                        <span class="value" style="color: ${bankColor}; font-size: 1.25rem; font-weight: 800;">${formatCurrency(stats.cashInBankValue)}</span>
                     </div>
                 </div>
                 <div class="${CSS_CLASSES.WIDGET_STAT_ROW}" style="margin-top: 10px; justify-content: space-between;">
                     <div class="${CSS_CLASSES.WIDGET_STAT_ITEM} ${CSS_CLASSES.WIDGET_STAT_SMALL}">
-                        <label>Cash</label>
-                        <span class="value" style="color: ${bankColor}; font-size: 1.25rem; font-weight: 800;">${formatCurrency(stats.cashInBankValue)}</span>
+                        <label>Shares</label>
+                        <span class="value" style="color: ${shareColor}; font-size: 1.25rem; font-weight: 800;">${formatCurrency(stats.shareValue)}</span>
                     </div>
                     <div class="${CSS_CLASSES.WIDGET_STAT_ITEM} ${CSS_CLASSES.WIDGET_STAT_SMALL}" style="align-items: flex-end; text-align: right;">
                         <label>Other Assets</label>
