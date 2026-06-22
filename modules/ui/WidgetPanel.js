@@ -38,7 +38,8 @@ const DASHBOARD_NAMES = {
     'AUDUSD=X': 'AUD/USD', 'AUDGBP=X': 'AUD/GBP', 'AUDEUR=X': 'AUD/EUR',
     'AUDJPY=X': 'AUD/JPY', 'AUDTHB=X': 'AUD/THB', 'AUDNZD=X': 'AUD/NZD',
     'USDTHB=X': 'USD/THB', 'YAP=F': 'SPI 200', 'NICKEL': 'Nickel',
-    'XAUUSD=X': 'Gold Spot', 'XAGUSD=X': 'Silver Spot'
+    'XAUUSD=X': 'Gold Spot', 'XAGUSD=X': 'Silver Spot',
+    'COMMODITIES': 'Commodities'
 };
 
 // Categorize dashboard symbols for smart formatting
@@ -626,6 +627,7 @@ export class WidgetPanel {
         const displayItems = selectedCodes
             .map(c => c.toUpperCase())
             .filter(c => {
+                if (c === 'COMMODITIES') return true;
                 const ld = livePrices.get(c);
                 return ld && ld.live;
             });
@@ -636,22 +638,33 @@ export class WidgetPanel {
             const liveData = livePrices.get(code) || {};
             const price = parseFloat(liveData.live) || 0;
             const pct = parseFloat(liveData.pctChange) || 0;
-            const pctClass = pct >= 0 ? CSS_CLASSES.TEXT_UP : CSS_CLASSES.TEXT_DOWN;
+            const isCommodityBypass = code === 'COMMODITIES';
+            const pctClass = isCommodityBypass
+                ? CSS_CLASSES.TEXT_NEUTRAL
+                : (pct >= 0 ? CSS_CLASSES.TEXT_UP : CSS_CLASSES.TEXT_DOWN);
             const pctSign = pct >= 0 ? '+' : '';
-            const priceStr = this._formatDashboardPrice(code, price);
-            const url = DASHBOARD_LINKS[code] || LinkHelper.getFinanceUrl(code);
+            const priceStr = isCommodityBypass ? '--' : this._formatDashboardPrice(code, price);
+            const pctStr = isCommodityBypass ? '--' : `${pctSign}${pct.toFixed(2)}%`;
             const displayName = DASHBOARD_NAMES[code] || code;
+
+            const clickHandlerStr = isCommodityBypass
+                ? `window.open('https://www.marketindex.com.au/commodities', '_blank', 'noopener,noreferrer')`
+                : `document.dispatchEvent(new CustomEvent('${EVENTS.ASX_CODE_CLICK}', { detail: { code: '${code}' } }))`;
+
+            const clockStyle = isCommodityBypass
+                ? `display: none !important;`
+                : `width: 14px; height: 14px; flex-shrink: 0;`;
 
             return `
                 <div class="${CSS_CLASSES.WIDGET_ROW}" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 18px; cursor: pointer;" 
-                     onclick="document.dispatchEvent(new CustomEvent('${EVENTS.ASX_CODE_CLICK}', { detail: { code: '${code}' } }))">
+                     onclick="${clickHandlerStr}">
                     <div style="display: flex; align-items: center; flex: 1; text-align: left; gap: 8px;">
-                        <div class="analog-clock-hook" data-code="${code}" style="width: 14px; height: 14px; flex-shrink: 0;"></div>
+                        <div class="analog-clock-hook" data-code="${code}" style="${clockStyle}"></div>
                         <span class="code" style="font-weight: 800; font-size: 1.05rem; color: #fff;">${displayName}</span>
                     </div>
                     <div style="flex: 2; display: flex; justify-content: flex-end; align-items: center; gap: 8px;">
                         <span class="value" style="font-weight: 700; font-size: 1.1rem; color: #fff;">${priceStr}</span>
-                        <span class="change ${pctClass}" style="font-weight: 700; font-size: 0.9rem; min-width: 65px; text-align: right;">${pctSign}${pct.toFixed(2)}%</span>
+                        <span class="change ${pctClass}" style="font-weight: 700; font-size: 0.9rem; min-width: 65px; text-align: right;">${pctStr}</span>
                     </div>
                 </div>
             `;

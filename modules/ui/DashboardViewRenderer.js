@@ -253,7 +253,8 @@ export class DashboardViewRenderer {
             'INX': 'S&P 500', '.DJI': 'Dow Jones', '.IXIC': 'Nasdaq',
             'AUDUSD': 'AUD/USD', 'AUDTHB': 'AUD/THB', 'USDTHB': 'USD/THB',
             'BTCUSD': 'Bitcoin', 'GCW00': 'Gold', 'SIW00': 'Silver', 'BZW00': 'Brent Oil',
-            'NICKEL': 'Nickel', 'TIO=F': 'Iron Ore (62%)', 'YAP=F': 'ASX SPI 200'
+            'NICKEL': 'Nickel', 'TIO=F': 'Iron Ore (62%)', 'YAP=F': 'ASX SPI 200',
+            'COMMODITIES': 'Commodities'
         };
 
         const code = lookupCode;
@@ -325,9 +326,14 @@ export class DashboardViewRenderer {
         const formattedPct = (liveValue === 0) ? '--' : formatPercent(pctChange);
 
         // Layout Selection
-        const url = DASHBOARD_LINKS[code] || LinkHelper.getFinanceUrl(code);
+        const isCommodityBypass = code === 'COMMODITIES';
+        const url = isCommodityBypass ? 'https://www.marketindex.com.au/commodities' : (DASHBOARD_LINKS[code] || LinkHelper.getFinanceUrl(code));
         const clickableClass = url ? 'clickable' : '';
         const dataUrlAttr = url ? `data-url="${url}"` : '';
+
+        const changeColorClass = isCommodityBypass
+            ? CSS_CLASSES.TEXT_NEUTRAL
+            : (pctChange >= 0 ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE);
 
         // BORDER LOGIC
         const borderStyle = this._getBorderStyles(pctChange);
@@ -344,10 +350,10 @@ export class DashboardViewRenderer {
                     <div class="${CSS_CLASSES.DASHBOARD_CELL_LEFT} vertical-stack">
                         <div class="${CSS_CLASSES.DASHBOARD_ITEM_NAME}" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
                             <span>${name}</span>
-                            ${viewMode !== 'SNAPSHOT' ? `<div class="analog-clock-hook" data-open="${isOpen}" style="width:14px; height:14px; opacity:0.8;"></div>` : ''}
+                            ${viewMode !== 'SNAPSHOT' ? `<div class="analog-clock-hook" data-open="${isOpen}" style="${isCommodityBypass ? 'display: none !important;' : 'width:14px; height:14px; opacity:0.8;'}"></div>` : ''}
                         </div>
                         <div class="${CSS_CLASSES.DASHBOARD_ITEM_PRICE}">${formattedValue}</div>
-                        <div class="${CSS_CLASSES.DASHBOARD_ITEM_CHANGE} ${pctChange >= 0 ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}">
+                        <div class="${CSS_CLASSES.DASHBOARD_ITEM_CHANGE} ${changeColorClass}">
                             <span class="change-value">${formattedChange}</span>
                             <span class="change-percent">${formattedPct}</span>
                         </div>
@@ -371,13 +377,13 @@ export class DashboardViewRenderer {
                             ${name}
                         </div>
                         <div class="${CSS_CLASSES.DASHBOARD_ITEM_SUB}">
-                            <div class="analog-clock-hook" data-open="${isOpen}" style="width:16px; height:16px; display:inline-block; vertical-align:middle; margin-right:4px;"></div>
+                            <div class="analog-clock-hook" data-open="${isOpen}" style="${isCommodityBypass ? 'display: none !important;' : 'width:16px; height:16px; display:inline-block; vertical-align:middle; margin-right:4px;'}"></div>
                             ${code}
                         </div>
                     </div>
                     <div class="${CSS_CLASSES.DASHBOARD_CELL_RIGHT}">
                         <div class="${CSS_CLASSES.DASHBOARD_ITEM_PRICE}">${formattedValue}</div>
-                        <div class="${CSS_CLASSES.DASHBOARD_ITEM_CHANGE} ${pctChange >= 0 ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}">
+                        <div class="${CSS_CLASSES.DASHBOARD_ITEM_CHANGE} ${changeColorClass}">
                             ${formattedChange} (${formattedPct})
                         </div>
                     </div>
@@ -569,7 +575,8 @@ export class DashboardViewRenderer {
             // Futures
             'YAP=F': 'ASX SPI 200', 'TIO=F': 'Iron Ore (62%)', '^VIX': 'Volatility Index',
             'XAUUSD=X': 'Gold Spot (USD)', 'XAGUSD=X': 'Silver Spot (USD)',
-            'NICKEL': 'Nickel'
+            'NICKEL': 'Nickel',
+            'COMMODITIES': 'Commodities'
         };
 
         activeSymbols.forEach(code => {
