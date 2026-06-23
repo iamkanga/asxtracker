@@ -147,15 +147,16 @@ export function processShares(allShares, watchlistId, livePrices, sortConfig, hi
                parseFloat(share.avgCost) ||
                parseFloat(share.avgPrice) ||
                parseFloat(share.purchasePrice) ||
-               parseFloat(share.entryPrice) ||
-               parseFloat(share.enteredPrice) || 0);
+               (share.simulatedActive ? 0 : (parseFloat(share.entryPrice) || parseFloat(share.enteredPrice) || 0)));
 
         const enteredPrice = isSimulationsView
             ? (parseFloat(share.entryPrice) || parseFloat(share.enteredPrice) || costPrice)
-            : (parseFloat(share.entryPrice) ||
-               parseFloat(share.enteredPrice) ||
-               parseFloat(share.buyPrice) ||
-               costPrice || 0);
+            : (share.simulatedActive
+                ? (parseFloat(share.entryPrice) || parseFloat(share.enteredPrice) || 0)
+                : (parseFloat(share.entryPrice) ||
+                   parseFloat(share.enteredPrice) ||
+                   parseFloat(share.buyPrice) ||
+                   costPrice || 0));
 
         const value = units * currentPrice;
         const cost = isSimulationsView ? (parseFloat(share.simulatedValue) || 0) : (units * costPrice);
@@ -478,13 +479,14 @@ export function getSingleShareData(code, allShares, livePrices, userWatchlists =
         parseFloat(primaryShare.avgCost) ||
         parseFloat(primaryShare.avgPrice) ||
         parseFloat(primaryShare.purchasePrice) ||
-        parseFloat(primaryShare.entryPrice) ||
-        parseFloat(primaryShare.enteredPrice) || 0;
+        (primaryShare.simulatedActive ? 0 : (parseFloat(primaryShare.entryPrice) || parseFloat(primaryShare.enteredPrice) || 0));
 
-    const enteredPrice = parseFloat(primaryShare.entryPrice) ||
-        parseFloat(primaryShare.enteredPrice) ||
-        parseFloat(primaryShare.buyPrice) ||
-        costPrice || 0;
+    const enteredPrice = primaryShare.simulatedActive
+        ? (parseFloat(primaryShare.entryPrice) || parseFloat(primaryShare.enteredPrice) || 0)
+        : (parseFloat(primaryShare.entryPrice) ||
+           parseFloat(primaryShare.enteredPrice) ||
+           parseFloat(primaryShare.buyPrice) ||
+           costPrice || 0);
     const costBasis = matchingShares.reduce((acc, s) => {
         const u = parseInt(s.portfolioShares) || 0;
         const cp = parseFloat(s.buyPrice) ||

@@ -1401,12 +1401,24 @@ export class ViewRenderer {
                                 </div>
                                 <div class="${CSS_CLASSES.DETAIL_ROW}">
                                     <span class="${CSS_CLASSES.DETAIL_LABEL}">Entry Price</span>
-                                    <span class="${CSS_CLASSES.DETAIL_VALUE}">${formatCurrency(stock.enteredPrice || 0)}</span>
+                                    <span class="${CSS_CLASSES.DETAIL_VALUE}">
+                                        ${formatCurrency(stock.simulatedActive ? (stock.entryPrice || stock.enteredPrice || 0) : (stock.enteredPrice || 0))}
+                                    </span>
                                 </div>
                                 <div class="${CSS_CLASSES.DETAIL_ROW}">
                                     <span class="${CSS_CLASSES.DETAIL_LABEL}">Entry Date</span>
-                                    <span class="${CSS_CLASSES.DETAIL_VALUE}">${formatFriendlyDate(stock.entryDate || stock.purchaseDate)}</span>
+                                    <span class="${CSS_CLASSES.DETAIL_VALUE}">
+                                        ${formatFriendlyDate(stock.simulatedActive ? (stock.entryDate || '') : (stock.entryDate || stock.purchaseDate))}
+                                    </span>
                                 </div>
+                                ${stock.simulatedActive ? `
+                                <div class="${CSS_CLASSES.DETAIL_ROW}">
+                                    <span class="${CSS_CLASSES.DETAIL_LABEL}">Simulated Quantity</span>
+                                    <span class="${CSS_CLASSES.DETAIL_VALUE}">
+                                        ${new Intl.NumberFormat('en-AU').format(stock.simulatedQty || 0)}
+                                    </span>
+                                </div>
+                                ` : ''}
                             </div>
 
                             <!-- Card 6: Research -->
