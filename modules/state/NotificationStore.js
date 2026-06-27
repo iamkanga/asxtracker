@@ -262,14 +262,7 @@ export class NotificationStore {
                     this._notifyCountChange();
 
                     // --- SYNC DISMISSAL STATE (From Cloud to Device) ---
-                    // 1. Alert Dismissal (Last Viewed Timestamp)
-                    if (prefs.lastViewedAlerts) {
-                        const cloudTime = Number(prefs.lastViewedAlerts);
-                        if (cloudTime > this.lastViewed.total) {
-                            this.lastViewed.total = cloudTime;
-                            localStorage.setItem(`${STORAGE_KEYS.NOTIFICATIONS_VIEWED}_total`, cloudTime);
-                        }
-                    }
+                    // 1. Alert Dismissal (Session-Only: Cloud sync disabled to prevent mid-session overrides)
 
                     // 2. Announcement Dismissal (Dismissed IDs)
                     if (Array.isArray(prefs.dismissedMarketAlerts)) {
@@ -346,19 +339,7 @@ export class NotificationStore {
 
         this._notifyCountChange();
 
-        // SYNC: Persist to Firestore if User is logged in
-        // Only sync 'total' (Sidebar) dismissal as that is the primary "Read All" action
-        if (this.userId && source === 'total') {
-            try {
-                const prefRef = doc(db, `artifacts/${APP_ID}/users/${this.userId}/preferences/config`);
-                await setDoc(prefRef, {
-                    lastViewedAlerts: now,
-                    updatedAt: new Date()
-                }, { merge: true });
-            } catch (e) {
-                console.error('[NotificationStore] Failed to sync read status:', e);
-            }
-        }
+        // SYNC: Cloud sync disabled for Session-Only alerts
     }
 
     // ...

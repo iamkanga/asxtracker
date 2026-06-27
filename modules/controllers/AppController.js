@@ -1706,11 +1706,14 @@ export class AppController {
 
         // HYBRID RENDERING APPROACH
         // If this is a silent update (fetchFresh=false), try patching first to avoid animations/flickering.
-        // Include viewMode, watchlistId, and key visual attributes in the structureKey to ensure any edits trigger a full render immediately.
+        // Include viewMode, watchlistId, borders, and key visual attributes in the structureKey to ensure any edits trigger a full render immediately.
         const structureKey = JSON.stringify({
             codes: mergedData.map(d => d.code),
             viewMode: AppState.viewMode,
             watchlistId: AppState.watchlist?.id,
+            borders: AppState.preferences.containerBorders,
+            gradientStrength: AppState.preferences.gradientStrength,
+            cardChartOpacity: AppState.preferences.cardChartOpacity,
             visuals: mergedData.map(d => `${d.code}:${d.targetPrice || 0}:${d.starRating || 0}:${d.comments?.length || 0}:${d.simulatedActive ? 1 : 0}`)
         });
         const prevStructureKey = this.viewRenderer._lastRenderedStructureKey;

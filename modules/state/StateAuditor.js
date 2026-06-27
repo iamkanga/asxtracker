@@ -183,6 +183,9 @@ class _StateAuditor {
                 message: `⚡ RACE: "${key}" written twice within ${now - lastWrite}ms`
             };
             this._raceConditions.push(race);
+            if (this._raceConditions.length > MAX_LOG_ENTRIES) {
+                this._raceConditions.shift();
+            }
             console.warn(
                 `%c${race.message}`,
                 'background: #ff4444; color: white; padding: 2px 6px; border-radius: 3px;',

@@ -571,6 +571,7 @@ export class GeneralSettingsUI {
                 edge.style.background = currentSides[s] ? 'var(--color-accent)' : 'transparent';
 
                 AppState.saveBorderPreferences({ sides: currentSides, thickness: parseInt(slider.value) });
+                document.dispatchEvent(new CustomEvent(EVENTS.REFRESH_WATCHLIST));
             });
         });
 
@@ -578,6 +579,7 @@ export class GeneralSettingsUI {
             slider.addEventListener('input', (e) => {
                 if (val) val.textContent = e.target.value + 'px';
                 AppState.saveBorderPreferences({ sides: currentSides, thickness: parseInt(e.target.value) });
+                document.dispatchEvent(new CustomEvent(EVENTS.REFRESH_WATCHLIST));
             });
         }
 

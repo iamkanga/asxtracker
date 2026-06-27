@@ -580,8 +580,11 @@ export class PortfolioChartUI {
             const rawCash = AppState.data.cash || [];
             if (!AppState.user?.uid) return;
 
-            // 1. Fetch Recorded History Snapshots (The "Real" Way)
-            const snapshots = await userStore.getHistorySnapshots(AppState.user.uid);
+            // 1. Fetch and Cache Recorded History Snapshots (Instance Cache to save reads)
+            if (!this._cachedSnapshots) {
+                this._cachedSnapshots = await userStore.getHistorySnapshots(AppState.user.uid);
+            }
+            const snapshots = this._cachedSnapshots;
             const startTs = this._getRangeStartTs();
 
             // 2. Prepare Data Series

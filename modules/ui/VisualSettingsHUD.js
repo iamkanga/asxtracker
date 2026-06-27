@@ -428,6 +428,9 @@ export class VisualSettingsHUD {
                 // Visual Update
                 e.target.classList.toggle('active');
 
+                // Clear preset button highlights since user customized an individual edge
+                container.querySelectorAll('.style-btn').forEach(b => b.classList.remove('active'));
+
                 // State Update
                 const newPrefs = { ...prefs, sides: sides };
                 AppState.saveBorderPreferences(newPrefs);
