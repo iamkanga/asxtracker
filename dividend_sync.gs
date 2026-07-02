@@ -47,7 +47,10 @@ const DIV_CONFIG = {
   /** Firebase project configuration */
   FIREBASE: {
     PROJECT_ID: 'asx-watchlist-app',
-    USER_ID: 'sh3zcZGXSceviejDNJQsjRJjVgJ3',
+    USER_ID: [
+      'sh3zcZGXSceviejDNJQsjRJjVgJ3', // Your UID
+      'KOiWqYmLdZgcJ5WHtwXvVgoU0L92'  // Friend's UID
+    ],
     BASE_URL: 'https://firestore.googleapis.com/v1'
   }
 };
@@ -198,38 +201,37 @@ function fetchYahooDividends_(ticker) {
  */
 function getPortfolioTickers_() {
   const cfg = DIV_CONFIG.FIREBASE;
-  const url = `${cfg.BASE_URL}/projects/${cfg.PROJECT_ID}/databases/(default)/documents/artifacts/${cfg.PROJECT_ID}/users/${cfg.USER_ID}/shares?pageSize=200`;
+  const userIds = Array.isArray(cfg.USER_ID) ? cfg.USER_ID : [cfg.USER_ID];
   const token = ScriptApp.getOAuthToken();
+  const tickers = new Set();
 
-  try {
-    const resp = UrlFetchApp.fetch(url, {
-      headers: { Authorization: `Bearer ${token}` },
-      muteHttpExceptions: true
-    });
+  for (const userId of userIds) {
+    const url = `${cfg.BASE_URL}/projects/${cfg.PROJECT_ID}/databases/(default)/documents/artifacts/${cfg.PROJECT_ID}/users/${userId}/shares?pageSize=200`;
+    try {
+      const resp = UrlFetchApp.fetch(url, {
+        headers: { Authorization: `Bearer ${token}` },
+        muteHttpExceptions: true
+      });
 
-    if (resp.getResponseCode() !== 200) {
-      console.error(`[DivSync] Failed to read portfolio: HTTP ${resp.getResponseCode()}`);
-      return [];
-    }
-
-    const data = JSON.parse(resp.getContentText());
-    const docs = data.documents || [];
-
-    // Deduplicate: a ticker may appear in multiple watchlists
-    const tickers = new Set();
-    docs.forEach(d => {
-      const fields = d.fields || {};
-      const code = (fields.code?.stringValue || fields.shareName?.stringValue || '').trim().toUpperCase();
-      if (code && code.length >= 2 && code.length <= 5) {
-        tickers.add(code);
+      if (resp.getResponseCode() === 200) {
+        const data = JSON.parse(resp.getContentText());
+        const docs = data.documents || [];
+        docs.forEach(d => {
+          const fields = d.fields || {};
+          const code = (fields.code?.stringValue || fields.shareName?.stringValue || '').trim().toUpperCase();
+          if (code && code.length >= 2 && code.length <= 5) {
+            tickers.add(code);
+          }
+        });
+      } else {
+        console.error(`[DivSync] Failed to read portfolio for user ${userId}: HTTP ${resp.getResponseCode()}`);
       }
-    });
-
-    return [...tickers].sort(); // Alphabetical for predictable logging
-  } catch (e) {
-    console.error('[DivSync] Exception reading portfolio:', e);
-    return [];
+    } catch (e) {
+      console.error(`[DivSync] Exception reading portfolio for user ${userId}:`, e);
+    }
   }
+
+  return [...tickers].sort(); // Alphabetical for predictable logging
 }
 
 /**

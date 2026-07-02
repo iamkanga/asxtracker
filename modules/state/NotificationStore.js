@@ -559,7 +559,7 @@ export class NotificationStore {
             const isAllSectors = (activeFilters === null || activeFilters === undefined);
             const isLocal = hit._isLocal === true;
             const overrideOn = rules.excludePortfolio !== false;
-            const isTarget = (hit.intent === 'target' || hit.intent === 'TARGET');
+            const isTarget = hit.intent && (hit.intent === 'target' || hit.intent === 'target-hit' || hit.intent === 'TARGET');
             const shouldBypass = isTarget || hit._bypassFilters === true || (isLocal && overrideOn);
 
             // 1. Zombie Check
@@ -872,6 +872,8 @@ export class NotificationStore {
         const filtered = rawHits.filter(hit => {
             const match = String(hit.userId) === String(this.userId);
             if (!match) return false;
+
+            const isTarget = hit.intent && (hit.intent === 'target' || hit.intent === 'target-hit' || hit.intent === 'TARGET');
             // const isDebug = (hit.code === 'BHP' || hit.code === 'CBA' || (hit.code && hit.code.includes('YOUR_STOCK_CODE_HERE'))); // Replace if known
 
 
@@ -924,7 +926,7 @@ export class NotificationStore {
 
                 // If practically zero movement, BLOCK IT.
                 // FIX: EXEMPT Personal Targets from this check. Users want to know if their target is hit, even if price is static.
-                const isTarget = (hit.intent === 'target' || hit.intent === 'target-hit');
+                // isTarget is already defined at the filter scope level
 
                 if (!isTarget && Math.abs(checkPct) === 0 && Math.abs(checkAmt) === 0) {
                     return false;
@@ -954,7 +956,7 @@ export class NotificationStore {
             // HARDENED: null = "All Sectors" - do NOT convert to empty array
             const activeFilters = rules.activeFilters; // Can be null (All), [] (None), or [...industries]
             const isAllSectors = (activeFilters === null || activeFilters === undefined);
-            const isTarget = (hit.intent === 'target' || hit.intent === 'TARGET');
+            // isTarget is already defined at the filter scope level
             const shouldBypass = isTarget || overrideOn; // In localAlerts, it's always "local"
 
             // Consolidate Industry Lookup
