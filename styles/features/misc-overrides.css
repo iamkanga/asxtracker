@@ -21,8 +21,20 @@
     border-left: none !important;
 }
 
-/* ICON ONLY GRID UPDATE (V1081) - RESTORED TO 3-WIDE */
-.command-grid.icon-only-grid {
+/* ICON ONLY GRID UPDATE (V1081) - CENTERING FLEX LAYOUT FOR UTILITIES ONLY */
+.command-grid.icon-only-grid.utilities-grid {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 30px 15px;
+    margin-top: 20px;
+    margin-bottom: 20px;
+}
+
+/* Management Grid - Strict 3-column CSS Grid to keep alignment perfectly neat */
+.command-grid.icon-only-grid.management-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
     row-gap: 30px !important;
     column-gap: 15px;
     margin-top: 20px;
@@ -49,7 +61,12 @@
     /* Click press effect */
 }
 
-.command-grid.icon-only-grid .command-grid-item {
+.command-grid.icon-only-grid.utilities-grid .command-grid-item {
+    flex: 0 0 calc(33.333% - 10px);
+}
+
+.command-grid.icon-only-grid.management-grid .command-grid-item,
+.command-grid.icon-only-grid.utilities-grid .command-grid-item {
     justify-content: center;
     /* Center horizontally */
     align-items: center;

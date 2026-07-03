@@ -741,9 +741,7 @@
     gap: 12px;
 }
 
-.command-grid.icon-only-grid {
-    grid-template-columns: repeat(3, 1fr);
-}
+
 
 .command-grid-item {
     background: rgba(255, 255, 255, 0.03);

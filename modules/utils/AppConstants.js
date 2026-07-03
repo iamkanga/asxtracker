@@ -3,7 +3,7 @@
  * Centralized constants for the application.
  */
 
-export const APP_VERSION = 'v1.2.6 (Build 1191)';
+export const APP_VERSION = 'v1.2.7 (Build 1192)';
 export const ALL_SHARES_ID = 'ALL';
 export const KANGAROO_ICON_SRC = 'favicon.svg';
 export const CASH_WATCHLIST_ID = 'CASH';
@@ -108,10 +108,7 @@ export const STORAGE_KEYS = {
     WIDGET_CONFIG: 'ASX_NEXT_widgetConfig',
     WIDGET_DASHBOARD_ITEMS: 'ASX_NEXT_widgetDashboardItems',
 
-    // Superannuation Strategy Engine
-    SUPER_STRATEGY: 'ASX_NEXT_superStrategy',
-    SUPER_STRATEGY_DISMISS_TOMORROW: 'ASX_NEXT_superStrategyDismissTomorrow',
-    SUPER_STRATEGY_DISMISS_PERMANENT: 'ASX_NEXT_superStrategyDismissPermanent',
+
 
     // Calculator Preferences
     CALC_PREFS: 'ASX_NEXT_calcPrefs',
@@ -196,12 +193,7 @@ export const EVENTS = {
     WIDGET_TOGGLE: 'widget-toggle',
     WIDGET_CONFIG_CHANGED: 'widget-config-changed',
 
-    // Super Strategy Engine
-    OPEN_SUPER_STRATEGY: 'open-super-strategy',
-    SUPER_STATE_CHANGED: 'super-state-changed',
-    SUPER_SUSTAINABILITY_ALERT: 'super-sustainability-alert',
-    SUPER_READY: 'super-ready',
-    SUPER_DISMISS_CLICKED: 'super-dismiss-clicked',
+
 
     // Dashboard Preferences
     DASHBOARD_PREFS_CHANGED: 'dashboard-prefs-changed',
@@ -455,7 +447,7 @@ export const UI_ICONS = {
     SYNC: 'fa-sync-alt',
     ANNOUNCEMENTS: 'fa-satellite-dish',
     CALCULATOR: 'fa-calculator',
-    SUPER_STRATEGY: 'fa-piggy-bank',
+
     SIMULATED: 'fa-flask'
 };
 
@@ -665,11 +657,7 @@ export const CSS_CLASSES = {
     VIEW_SNAPSHOT: 'view-snapshot',
     SNAPSHOT_POSITIVE: 'snapshot-positive',
     SNAPSHOT_NEGATIVE: 'snapshot-negative',
-    SUPER_VERTICAL_STEPPER: 'super-vertical-stepper',
-    SUPER_STEP_ITEM: 'super-v-step',
-    SUPER_STEP_BALL: 'super-step-ball',
-    SUPER_STEP_LABEL: 'super-step-label',
-    SUPER_MOBILE_ACTIVE_PHASE: 'super-mobile-active-phase',
+
 
     // Layout Component Classes
     HAMBURGER_BTN: 'hamburger-btn',
@@ -1459,24 +1447,7 @@ export const CSS_CLASSES = {
     CHART_SELECT: 'chart-select',
     CHART_OVERLAY_LOADER: 'chart-overlay-loader',
 
-    // Super Strategy Engine
-    SUPER_MODAL: 'super-strategy-modal',
-    SUPER_PROGRESS_BAR: 'super-progress-bar',
-    SUPER_STEP: 'super-step',
-    SUPER_STEP_ACTIVE: 'super-step-active',
-    SUPER_STEP_COMPLETE: 'super-step-complete',
-    SUPER_STEP_LOCKED: 'super-step-locked',
-    SUPER_STEP_CONNECTOR: 'super-step-connector',
-    SUPER_LEDGER: 'super-ledger',
-    SUPER_LEDGER_CARD: 'super-ledger-card',
-    SUPER_DETAIL_PANEL: 'super-detail-panel',
-    SUPER_SIM_PANEL: 'super-sim-panel',
-    SUPER_SIM_RESULT: 'super-sim-result',
-    SUPER_ALERT_BANNER: 'super-alert-banner',
-    SUPER_QUICK_LINKS: 'super-quick-links',
-    SUPER_REMINDER_ROW: 'super-reminder-row',
-    SUPER_DISMISS_BTN: 'super-strategy-dismiss-btn',
-    SUPER_DISMISS_MODAL: 'super-dismiss-modal',
+
 
     // Simulated Cards
     SIMULATED_CARD: 'simulated-card',
@@ -1491,10 +1462,7 @@ export const ANIMATIONS = {
 };
 
 export const IDS = {
-    SUPER_DISMISS_MODAL: 'super-dismiss-modal',
-    SUPER_DISMISS_TOMORROW: 'super-dismiss-tomorrow',
-    SUPER_DISMISS_PERMANENT: 'super-dismiss-permanent',
-    SUPER_DISMISS_CANCEL: 'super-dismiss-cancel',
+
     SPLASH_SCREEN: 'splashScreen',
     SPLASH_SIGN_IN_BTN: 'splashSignInBtn',
     SECURITY_UNLOCK_MODAL: 'security-lock-modal',
@@ -1800,30 +1768,7 @@ export const IDS = {
     AI_SUMMARY_MODAL: 'ai-summary-modal',
     AI_PROMPT_EDITOR: 'ai-prompt-editor-container',
 
-    // Super Strategy Engine
-    SUPER_STRATEGY_MODAL: 'super-strategy-modal',
-    SUPER_STATE_PROGRESS: 'super-state-progress',
-    SUPER_ACCUMULATION_INPUT: 'super-accumulation-input',
-    SUPER_PENSION_INPUT: 'super-pension-input',
-    SUPER_SAFETY_FLOOR_INPUT: 'super-safety-floor-input',
-    SUPER_AGE_INPUT: 'super-age-input',
-    SUPER_SIMULATION_DATE: 'super-simulation-date',
-    SUPER_SIM_DEDUCTIBLE: 'super-sim-deductible',
-    SUPER_SIMULATION_RESULTS: 'super-simulation-results',
-    SUPER_STEP_DETAIL: 'super-step-detail',
-    SUPER_CONTRIBUTION_AMOUNT: 'super-contribution-amount',
-    SUPER_CONTRIBUTION_DATE: 'super-contribution-date',
-    SUPER_NOI_DATE: 'super-noi-date',
-    SUPER_NOI_AMOUNT: 'super-noi-amount',
-    SUPER_ACK_CHECKBOX: 'super-ack-checkbox',
-    SUPER_ACK_DATE: 'super-ack-date',
-    SUPER_CLOSURE_DATE: 'super-closure-date',
-    SUPER_RECONTRIBUTION_AMOUNT: 'super-recontribution-amount',
-    SUPER_RECONTRIBUTION_DATE: 'super-recontribution-date',
-    SUPER_BRING_FORWARD_FY: 'super-bring-forward-fy',
-    SUPER_COMMENCE_DATE: 'super-commence-date',
-    SUPER_CUSTOM_REMINDER_DATE: 'super-custom-reminder-date',
-    BTN_SUPER_STRATEGY: 'btn-super-strategy'
+
 };
 
 export const UI_LABELS = {

@@ -205,12 +205,6 @@ export const AppState = {
                 const stored = localStorage.getItem(STORAGE_KEYS.WIDGET_DASHBOARD_ITEMS);
                 return stored ? JSON.parse(stored) : null;
             } catch (e) { return null; }
-        })(),
-        superStrategy: (() => {
-            try {
-                const stored = localStorage.getItem(STORAGE_KEYS.SUPER_STRATEGY);
-                return stored ? JSON.parse(stored) : null;
-            } catch (e) { return null; }
         })()
     },
 
@@ -378,8 +372,7 @@ export const AppState = {
                 oneTapResearch: this.preferences.oneTapResearch || false,
                 aiPromptTemplates: this.preferences.aiPromptTemplates || {},
                 widgetConfig: this.preferences.widgetConfig || null,
-                widgetDashboardItems: this.preferences.widgetDashboardItems || null,
-                superStrategy: this.preferences.superStrategy || null
+                widgetDashboardItems: this.preferences.widgetDashboardItems || null
             };
             this.onPersistenceUpdate(payload);
         } else {

@@ -250,21 +250,12 @@ export class SidebarCommandCenter {
                 <!-- Section: Utilities -->
                 <div class="command-section">
                     <h4 class="command-section-title">UTILITIES</h4>
-                    <div class="command-grid icon-only-grid">
+                    <div class="command-grid icon-only-grid utilities-grid">
                         <button class="command-grid-item" id="nav-announcements" title="Announcements">
                             <div style="position: relative; display: flex;">
                                 <i class="fas ${UI_ICONS.ANNOUNCEMENTS} command-icon"></i>
                                 ${this.annCount > 0 ? `<span class="notification-badge" style="position: absolute; top: -6px; right: -8px; font-size: 0.65rem; color: var(--color-accent); display: flex; align-items: center; justify-content: center; font-weight: 700; z-index: 10; background: var(--bg-color); border: 1px solid rgba(var(--color-accent-rgb), 0.3); border-radius: 50%; padding: 2px; min-width: 14px; height: 14px;">${this.annCount}</span>` : ''}
                             </div>
-                        </button>
-                        <button class="command-grid-item" id="nav-calculator" title="Calculators">
-                            <i class="fas ${UI_ICONS.CALCULATOR} command-icon"></i>
-                        </button>
-                        <button class="command-grid-item" id="nav-super-strategy" title="Super Strategy">
-                            <i class="fas ${UI_ICONS.SUPER_STRATEGY} command-icon"></i>
-                        </button>
-                        <button class="command-grid-item" id="nav-favorites" title="Favorite Links">
-                            <i class="fas fa-link command-icon"></i>
                         </button>
                         <button class="command-grid-item" id="nav-widgets" title="Quick Widget">
                             <i class="fas fa-layer-group command-icon"></i>
@@ -272,17 +263,23 @@ export class SidebarCommandCenter {
                         <button class="command-grid-item" id="nav-market-pulse" title="Market Pulse">
                             <i class="fas fa-heartbeat command-icon"></i>
                         </button>
+                        <button class="command-grid-item" id="nav-calculator" title="Calculators">
+                            <i class="fas ${UI_ICONS.CALCULATOR} command-icon"></i>
+                        </button>
+                        <button class="command-grid-item" id="nav-favorites" title="Favorite Links">
+                            <i class="fas fa-link command-icon"></i>
+                        </button>
                     </div>
                     <!-- Theme Status Text -->
                     <div style="text-align: center; margin-top: 8px; font-size: 0.75rem; color: var(--text-muted); opacity: 0.8;">
                         Theme: <span style="color: var(--color-accent); font-weight:600;">${currentThemeName}</span>
                     </div>
                 </div>
-
+ 
                 <!-- Section: Management -->
                 <div class="command-section">
                     <h4 class="command-section-title">MANAGEMENT</h4>
-                    <div class="command-grid icon-only-grid">
+                    <div class="command-grid icon-only-grid management-grid">
                         <button class="command-grid-item" id="act-add" title="${addLabel}">
                             <div style="position: relative; display: flex;">
                                 <i class="fas fa-plus-circle command-icon"></i>
@@ -440,10 +437,7 @@ export class SidebarCommandCenter {
                 document.dispatchEvent(new CustomEvent(EVENTS.OPEN_MARKET_PULSE));
                 break;
 
-            case 'nav-super-strategy':
-                this._closeSidebar();
-                document.dispatchEvent(new CustomEvent(EVENTS.OPEN_SUPER_STRATEGY));
-                break;
+
 
             case 'nav-reload':
                 // Reloads do not need to strictly close sidebar first, but cleaner UI.
