@@ -3,7 +3,7 @@
  * Centralized constants for the application.
  */
 
-export const APP_VERSION = 'v1.2.7 (Build 1192)';
+export const APP_VERSION = 'v1.2.8 (Build 1193)';
 export const ALL_SHARES_ID = 'ALL';
 export const KANGAROO_ICON_SRC = 'favicon.svg';
 export const CASH_WATCHLIST_ID = 'CASH';
