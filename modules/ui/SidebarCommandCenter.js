@@ -107,14 +107,16 @@ export class SidebarCommandCenter {
 
         const shares = AppState.data.shares || [];
         shares.forEach(share => {
-            if (share.units > 0) {
+            const units = parseFloat(share.portfolioShares) || parseFloat(share.units) || 0;
+            if (units > 0) {
                 hasHoldings = true;
-                const live = AppState.livePrices.get(share.code) || {};
+                const code = (share.shareName || share.code || '').trim().toUpperCase();
+                const live = AppState.livePrices.get(code) || {};
                 const currentPrice = live.live !== undefined ? live.live : (share.lastPrice || 0);
                 const prevClose = live.prevClose !== undefined ? live.prevClose : (share.previousClose || share.lastPrice || 0);
 
-                const val = share.units * currentPrice;
-                const prevVal = share.units * prevClose;
+                const val = units * currentPrice;
+                const prevVal = units * prevClose;
 
                 totalVal += val;
                 totalDayChange += (val - prevVal);
@@ -132,31 +134,57 @@ export class SidebarCommandCenter {
             pctChange = asxData.pctChange || 0;
         }
 
-        const formattedPct = (pctChange >= 0 ? '+' : '') + pctChange.toFixed(2) + '%';
+        const getIndexHtml = (code, fallbackCode) => {
+            const item = AppState.livePrices?.get(code) || AppState.livePrices?.get(fallbackCode) || { pctChange: 0 };
+            const pct = item.pctChange || 0;
+            const isUp = pct >= 0;
+            const colorVar = isUp ? 'var(--color-positive)' : 'var(--color-negative)';
+            return `<span style="color: ${colorVar} !important; font-weight: 700;">${isUp ? '+' : ''}${pct.toFixed(2)}%</span>`;
+        };
 
-        // Sentiment Logic
+        const asxHtml = getIndexHtml('^AXJO', 'XJO');
+        const spxHtml = getIndexHtml('^GSPC', 'INX');
+
+        const portfolioPctVal = hasHoldings && totalVal > 0 ? pctChange : 0;
+        const portIsUp = portfolioPctVal >= 0;
+        const portColorVar = portIsUp ? 'var(--color-positive)' : 'var(--color-negative)';
+        const portHtml = `<span style="color: ${portColorVar} !important; font-weight: 700;">${portIsUp ? '+' : ''}${portfolioPctVal.toFixed(2)}%</span>`;
+
+        const asxDataForTrend = AppState.livePrices?.get('^AXJO') || AppState.livePrices?.get('XJO') || { pctChange: 0 };
+        const asxPct = asxDataForTrend.pctChange || 0;
+        const spxDataForTrend = AppState.livePrices?.get('^GSPC') || AppState.livePrices?.get('INX') || { pctChange: 0 };
+        const spxPct = spxDataForTrend.pctChange || 0;
+
+        // Sentiment Logic based on ASX 200 (primarily)
         let sentimentTrendClass = 'neutral';
-        let sentimentText = 'Portfolio Stable';
         let sentimentIcon = 'fa-chart-line';
 
-        if (pctChange >= 0.5) {
+        if (asxPct >= 0.2) {
             sentimentTrendClass = 'bullish';
-            sentimentText = 'Strong Growth';
-        } else if (pctChange > 0) {
+        } else if (asxPct > 0) {
             sentimentTrendClass = 'bullish';
-            sentimentText = 'Positive Gains';
-        } else if (pctChange <= -0.5) {
+        } else if (asxPct <= -0.2) {
             sentimentTrendClass = 'bearish';
-            sentimentText = 'Heavy Pullback';
             sentimentIcon = 'fa-chart-area';
-        } else if (pctChange < 0) {
+        } else if (asxPct < 0) {
             sentimentTrendClass = 'bearish';
+        }
+
+        // Subtext represents Portfolio Sentiment
+        let sentimentText = 'Portfolio Stable';
+        if (portfolioPctVal >= 0.5) {
+            sentimentText = 'Strong Growth';
+        } else if (portfolioPctVal > 0) {
+            sentimentText = 'Positive Gains';
+        } else if (portfolioPctVal <= -0.5) {
+            sentimentText = 'Heavy Pullback';
+        } else if (portfolioPctVal < 0) {
             sentimentText = 'Slight Dip';
         }
 
         const isCashMode = AppState.watchlist.id === CASH_WATCHLIST_ID;
         const addLabel = isCashMode ? 'Add Asset' : 'Add Share';
-        const metricsLabel = hasHoldings ? 'TOTAL RETURN (DAY)' : 'ASX 200 (NO DATA)';
+        const metricsLabel = 'ASX 200';
 
         // DYNAMIC ICON RETRIEVAL: Get the "Jumping Kangaroo" from the Sidebar Header (as requested)
         // We clone it to inject into the buttons.
@@ -229,21 +257,32 @@ export class SidebarCommandCenter {
             <div class="command-center-inner">
                 <!-- Market Sentiment Tile (Triggers Daily Brief) -->
                 <div class="sentiment-tile glass-effect ${sentimentTrendClass}" id="act-tile-pulse" role="button" title="Open Widget Panel">
-                    <div class="sentiment-header">
-                        <span class="market-label">${metricsLabel.replace(' (NO DATA)', '')}</span>
+                    <div class="sentiment-header" style="margin-bottom: 8px;">
+                        <span class="market-label">${metricsLabel}</span>
                         <!-- Market Status: Text Only (Red/Green), No Background -->
                         <span class="market-status" style="background: transparent !important; color: ${isMarketOpen ? 'var(--color-positive)' : 'var(--color-negative)'} !important; padding: 0;">${marketStatusText}</span>
                     </div>
-                    <div class="sentiment-body">
-                        <div class="sentiment-trend">
+                    <div class="sentiment-body" style="display: flex; flex-direction: column; gap: 6px; align-items: flex-start; margin-bottom: 8px;">
+                        <div class="sentiment-trend" style="display: flex; align-items: center; gap: 8px;">
                             <i class="fas ${sentimentIcon}"></i>
-                            <span class="trend-value">${formattedPct}</span>
+                            <span class="trend-value" style="font-size: 1.35rem; font-weight: 700; white-space: nowrap;">${asxHtml}</span>
                         </div>
-                        <div class="sentiment-subtext" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
-                            <span>${sentimentText}</span>
-                            <!-- Widget Icon -->
-                             <i class="fas fa-layer-group" style="font-size: 0.9rem; opacity: 0.7; color: var(--color-accent);"></i>
+                        
+                        <div style="display: flex; flex-direction: column; gap: 4px; align-items: flex-start; font-size: 0.85rem; padding-left: 4px;">
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                                <span style="color: rgba(255,255,255,0.5); font-weight: 700; text-transform: uppercase; font-size: 0.65rem;">Portfolio:</span>
+                                <span>${portHtml}</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                                <span style="color: rgba(255,255,255,0.5); font-weight: 700; text-transform: uppercase; font-size: 0.65rem;">S&P 500:</span>
+                                <span>${spxHtml}</span>
+                            </div>
                         </div>
+                    </div>
+                    <div class="sentiment-subtext" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                        <span>${sentimentText}</span>
+                        <!-- Widget Icon -->
+                         <i class="fas fa-layer-group" style="font-size: 0.9rem; opacity: 0.7; color: var(--color-accent);"></i>
                     </div>
                 </div>
 
