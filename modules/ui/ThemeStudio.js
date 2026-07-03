@@ -260,21 +260,27 @@ export class ThemeStudio {
         }
 
         // Logic
-        container.querySelector('#studio-close-btn').addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            this.hide();
-            // Global Close: Hide the underlying parent as well
-            document.dispatchEvent(new CustomEvent('hide-visual-hud'));
-        });
+        const closeBtn = container.querySelector('#studio-close-btn');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.hide();
+                // Global Close: Hide the underlying parent as well
+                document.dispatchEvent(new CustomEvent('hide-visual-hud'));
+            });
+        }
 
-        container.querySelector('#studio-back-btn').addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            this.hide();
-            // Just return: Ensure parent is visible (it usually already is, but safety first)
-            document.dispatchEvent(new CustomEvent('show-visual-hud'));
-        });
+        const backBtn = container.querySelector('#studio-back-btn');
+        if (backBtn) {
+            backBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.hide();
+                // Just return: Ensure parent is visible (it usually already is, but safety first)
+                document.dispatchEvent(new CustomEvent('show-visual-hud'));
+            });
+        }
 
         // Color Logic
         container.querySelectorAll('.color-swatch').forEach(btn => {
@@ -290,10 +296,12 @@ export class ThemeStudio {
 
         // Opacity Logic
         const slider = container.querySelector('#vibrancy-slider'); // kept ID same logic
-        slider.addEventListener('input', (e) => {
-            const val = e.target.value;
-            this.applyVibrancy(val, container);
-        });
+        if (slider) {
+            slider.addEventListener('input', (e) => {
+                const val = e.target.value;
+                this.applyVibrancy(val, container);
+            });
+        }
     }
 
     static applyColor(hex, container) {

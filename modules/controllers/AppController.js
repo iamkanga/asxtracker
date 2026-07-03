@@ -165,12 +165,26 @@ export class AppController {
             if (this.headerLayout) {
                 this.headerLayout.updateConnectionStatus(AppState.user !== null, AppState.health.status);
             }
+            ToastManager.info('Connection restored. Updating market prices...');
+            
+            // Re-fetch prices on reconnection to ensure fresh data
+            this._refreshAllPrices(AppState.data.shares || [], true).catch(err => {
+                console.error('[AppController] Failed to refresh prices on reconnect:', err);
+            });
+
+            // Sync user preferences on reconnect
+            if (AppState.user) {
+                this.dataService.syncUserSettings(AppState.user.uid).catch(err => {
+                    console.error('[AppController] Failed to sync user settings on reconnect:', err);
+                });
+            }
         });
 
         window.addEventListener('offline', () => {
             if (this.headerLayout) {
                 this.headerLayout.updateConnectionStatus(AppState.user !== null, 'offline');
             }
+            ToastManager.warn('Connection lost. Running in offline mode.');
         });
 
         // Notification System Bindings (Unified)
