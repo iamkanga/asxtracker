@@ -34,7 +34,7 @@
 }
 
 .sidebar-header {
-    padding: 24px;
+    padding: 20px 20px 0 20px;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -183,7 +183,7 @@
 .sidebar-content {
     flex: 1;
     overflow-y: auto;
-    padding: 10px 0;
+    padding: 0;
     display: flex;
     flex-direction: column;
 }
@@ -303,7 +303,7 @@
 }
 
 .sidebar-content {
-    padding-top: 25px !important;
+    padding-top: 0px !important;
 }
 
 .sidebar-section {
@@ -609,7 +609,7 @@
 
 /* --- Sidebar Command Center --- */
 .command-center {
-    padding: 15px 20px;
+    padding: 20px 20px 0 20px;
     flex: 1;
     display: flex;
     flex-direction: column;
@@ -618,8 +618,8 @@
 .command-center-inner {
     display: flex;
     flex-direction: column;
-    gap: 16px;
-    padding: 10px 0;
+    gap: 20px;
+    padding: 0;
     flex: 1;
 }
 
@@ -716,13 +716,7 @@
     display: flex;
     flex-direction: column;
     gap: 10px;
-    padding: 12px 0;
-}
-
-/* First section doesn't need top border */
-.sentiment-tile+.command-section {
-    border-top: none;
-    padding-top: 0;
+    padding: 0;
 }
 
 .command-section-title {

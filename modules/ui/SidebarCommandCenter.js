@@ -373,17 +373,17 @@ export class SidebarCommandCenter {
                 <div class="command-center-footer" style="margin-top: auto; padding: 24px 0 32px 0;">
 
                     ${AppState.user ? `
-                        <button id="sidebar-logout-btn" class="sidebar-btn" style="color: #ff3131; background: transparent; border: none; padding: 12px 0; font-size: 1rem; font-weight: 600; justify-content: flex-start; gap: 12px; width: 100%;">
+                        <button id="sidebar-logout-btn" class="sidebar-btn" style="color: #ff3131; background: transparent; border: none; padding: 12px 0 0 0; font-size: 1rem; font-weight: 600; justify-content: flex-start; gap: 12px; width: 100%;">
                             <i class="fas fa-sign-out-alt" style="color: #ff3131; width: 20px; text-align: center;"></i> Logout
                         </button>
                     ` : `
-                        <button id="sidebar-login-btn" class="sidebar-btn" style="color: var(--color-accent); background: transparent; border: none; padding: 12px 0; font-size: 1rem; font-weight: 600; justify-content: flex-start; gap: 12px; width: 100%;">
+                        <button id="sidebar-login-btn" class="sidebar-btn" style="color: var(--color-accent); background: transparent; border: none; padding: 12px 0 0 0; font-size: 1rem; font-weight: 600; justify-content: flex-start; gap: 12px; width: 100%;">
                             <i class="fab fa-google" style="color: var(--color-accent); width: 20px; text-align: center;"></i> Login
                         </button>
                     `}
 
                     <!-- App Version -->
-                    <div style="text-align: center; padding: 12px 0 4px 0; font-size: 0.7rem; color: var(--text-muted); opacity: 0.8; letter-spacing: 0.5px;">
+                    <div style="text-align: center; padding: 4px 0 4px 0; font-size: 0.7rem; color: var(--text-muted); opacity: 0.8; letter-spacing: 0.5px;">
                         ASX Tracker <span style="color: var(--color-accent); font-weight: 600;">${APP_VERSION}</span>
                     </div>
                 </div>
