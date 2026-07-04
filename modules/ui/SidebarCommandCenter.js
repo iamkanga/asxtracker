@@ -262,27 +262,26 @@ export class SidebarCommandCenter {
                         <!-- Market Status: Text Only (Red/Green), No Background -->
                         <span class="market-status" style="background: transparent !important; color: ${isMarketOpen ? 'var(--color-positive)' : 'var(--color-negative)'} !important; padding: 0;">${marketStatusText}</span>
                     </div>
-                    <div class="sentiment-body" style="display: flex; flex-direction: column; gap: 6px; align-items: flex-start; margin-bottom: 8px;">
+                    <div class="sentiment-body" style="display: flex; flex-direction: column; gap: 6px; align-items: flex-start; width: 100%;">
                         <div class="sentiment-trend" style="display: flex; align-items: center; gap: 8px;">
                             <i class="fas ${sentimentIcon}"></i>
                             <span class="trend-value" style="font-size: 1.35rem; font-weight: 700; white-space: nowrap;">${asxHtml}</span>
                         </div>
                         
-                        <div style="display: flex; flex-direction: column; gap: 4px; align-items: flex-start; font-size: 0.85rem; padding-left: 4px;">
+                        <div style="display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; width: 100%;">
                             <div style="display: flex; align-items: center; gap: 6px;">
                                 <span style="color: rgba(255,255,255,0.5); font-weight: 700; text-transform: uppercase; font-size: 0.65rem;">Portfolio:</span>
                                 <span>${portHtml}</span>
                             </div>
-                            <div style="display: flex; align-items: center; gap: 6px;">
-                                <span style="color: rgba(255,255,255,0.5); font-weight: 700; text-transform: uppercase; font-size: 0.65rem;">S&P 500:</span>
-                                <span>${spxHtml}</span>
+                            <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                                <div style="display: flex; align-items: center; gap: 6px;">
+                                    <span style="color: rgba(255,255,255,0.5); font-weight: 700; text-transform: uppercase; font-size: 0.65rem;">S&P 500:</span>
+                                    <span>${spxHtml}</span>
+                                </div>
+                                <!-- Widget Icon -->
+                                <i class="fas fa-layer-group" style="font-size: 0.9rem; opacity: 0.7; color: var(--color-accent); margin-right: 4px;"></i>
                             </div>
                         </div>
-                    </div>
-                    <div class="sentiment-subtext" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
-                        <span>${sentimentText}</span>
-                        <!-- Widget Icon -->
-                         <i class="fas fa-layer-group" style="font-size: 0.9rem; opacity: 0.7; color: var(--color-accent);"></i>
                     </div>
                 </div>
 
@@ -308,10 +307,6 @@ export class SidebarCommandCenter {
                         <button class="command-grid-item" id="nav-favorites" title="Favorite Links">
                             <i class="fas fa-link command-icon"></i>
                         </button>
-                    </div>
-                    <!-- Theme Status Text -->
-                    <div style="text-align: center; margin-top: 8px; font-size: 0.75rem; color: var(--text-muted); opacity: 0.8;">
-                        Theme: <span style="color: var(--color-accent); font-weight:600;">${currentThemeName}</span>
                     </div>
                 </div>
  
@@ -340,7 +335,7 @@ export class SidebarCommandCenter {
                                 <i class="fas fa-pen sub-icon" style="font-size: 0.9rem; right: -2px; bottom: -2px;"></i>
                             </div>
                         </button>
-
+ 
                         <button class="command-grid-item" id="nav-notify" title="Notifications">
                             <span class="command-icon" style="position: relative; display: flex; align-items: center; justify-content: center; width: 3.5rem; height: 3.5rem;">
                                 ${kangarooSVG}
@@ -364,7 +359,10 @@ export class SidebarCommandCenter {
                         <button class="command-grid-item" id="nav-visuals" title="Visual Style">
                             <i class="fas fa-palette command-icon"></i>
                         </button>
-
+                    </div>
+                    <!-- Theme Status Text -->
+                    <div style="text-align: center; margin-top: 8px; font-size: 0.75rem; color: var(--text-muted); opacity: 0.8;">
+                        Theme: <span style="color: var(--color-accent); font-weight:600;">${currentThemeName}</span>
                     </div>
 
                     <!-- Layout Footer: Notification Count & Auth -->
