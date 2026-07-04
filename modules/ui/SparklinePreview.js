@@ -80,8 +80,13 @@ export class SparklinePreview {
         if (!svg) return;
 
         // 1. Process Data
-        // Extract close prices/values
-        const prices = data.map(d => d.close !== undefined ? d.close : d.value);
+        // Extract close prices/values and filter out invalid/non-numeric values
+        const prices = data
+            .map(d => d.close !== undefined ? d.close : d.value)
+            .map(v => parseFloat(v))
+            .filter(v => !isNaN(v) && isFinite(v));
+
+        if (prices.length === 0) return;
 
         // Find Range
         let min = Infinity;
@@ -89,6 +94,11 @@ export class SparklinePreview {
         for (let p of prices) {
             if (p < min) min = p;
             if (p > max) max = p;
+        }
+
+        // Verify bounds are valid numbers
+        if (!isFinite(min) || !isFinite(max)) {
+            return;
         }
 
         // Avoid division by zero
@@ -113,12 +123,12 @@ export class SparklinePreview {
         // Map points to 0-100 coordinate space
         // Y is inverted in SVG (0 is top)
         // Matches LightweightCharts scaleMargins: { top: 0.15, bottom: 0.15 }
-        const step = width / (prices.length - 1);
+        const step = prices.length > 1 ? width / (prices.length - 1) : 0;
 
         const pathPoints = prices.map((p, i) => {
             const x = i * step;
             // Normalized 0 to 1
-            const normalized = (p - min) / range;
+            const normalized = range > 0 ? (p - min) / range : 0.5;
             // Invert Y and scale to height (70% usage, 15% padding top)
             const y = height - (normalized * (height * 0.7) + (height * 0.15));
             return `${x.toFixed(1)},${y.toFixed(1)}`;

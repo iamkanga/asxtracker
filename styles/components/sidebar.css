@@ -47,6 +47,7 @@
     width: 3.75rem;
     height: 3.75rem;
     fill: var(--color-accent, #a49393);
+    color: var(--color-accent, #a49393);
     opacity: 1;
     flex-shrink: 0;
     pointer-events: none;
@@ -183,6 +184,8 @@
     flex: 1;
     overflow-y: auto;
     padding: 10px 0;
+    display: flex;
+    flex-direction: column;
 }
 
 .sidebar-section {
@@ -607,22 +610,20 @@
 /* --- Sidebar Command Center --- */
 .command-center {
     padding: 15px 20px;
-}
-
-.command-center-inner {
+    flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 15px;
 }
 
-/* Market Sentiment Tile */
-/* --- Sidebar Command Center --- */
 .command-center-inner {
     display: flex;
     flex-direction: column;
     gap: 16px;
     padding: 10px 0;
+    flex: 1;
 }
+
+/* Market Sentiment Tile */
 
 .sentiment-tile {
     padding: 16px;

@@ -307,6 +307,9 @@ export class SidebarCommandCenter {
                         <button class="command-grid-item" id="nav-favorites" title="Favorite Links">
                             <i class="fas fa-link command-icon"></i>
                         </button>
+                        <button class="command-grid-item" id="nav-portfolio-history" title="Portfolio History">
+                            <i class="fas ${UI_ICONS.CHART} command-icon"></i>
+                        </button>
                     </div>
                 </div>
  
@@ -364,24 +367,24 @@ export class SidebarCommandCenter {
                     <div style="text-align: center; margin-top: 8px; font-size: 0.75rem; color: var(--text-muted); opacity: 0.8;">
                         Theme: <span style="color: var(--color-accent); font-weight:600;">${currentThemeName}</span>
                     </div>
+                </div>
 
-                    <!-- Layout Footer: Notification Count & Auth -->
-                    <div class="command-center-footer" style="margin-top: 24px;">
+                <!-- Layout Footer: Notification Count & Auth -->
+                <div class="command-center-footer" style="margin-top: auto; padding: 24px 0 32px 0;">
 
-                        ${AppState.user ? `
-                            <button id="sidebar-logout-btn" class="sidebar-btn" style="color: #ff3131; background: transparent; border: none; padding: 12px 0; font-size: 1rem; font-weight: 600; justify-content: flex-start; gap: 12px; width: 100%;">
-                                <i class="fas fa-sign-out-alt" style="color: #ff3131; width: 20px; text-align: center;"></i> Logout
-                            </button>
-                        ` : `
-                            <button id="sidebar-login-btn" class="sidebar-btn" style="color: var(--color-accent); background: transparent; border: none; padding: 12px 0; font-size: 1rem; font-weight: 600; justify-content: flex-start; gap: 12px; width: 100%;">
-                                <i class="fab fa-google" style="color: var(--color-accent); width: 20px; text-align: center;"></i> Login
-                            </button>
-                        `}
+                    ${AppState.user ? `
+                        <button id="sidebar-logout-btn" class="sidebar-btn" style="color: #ff3131; background: transparent; border: none; padding: 12px 0; font-size: 1rem; font-weight: 600; justify-content: flex-start; gap: 12px; width: 100%;">
+                            <i class="fas fa-sign-out-alt" style="color: #ff3131; width: 20px; text-align: center;"></i> Logout
+                        </button>
+                    ` : `
+                        <button id="sidebar-login-btn" class="sidebar-btn" style="color: var(--color-accent); background: transparent; border: none; padding: 12px 0; font-size: 1rem; font-weight: 600; justify-content: flex-start; gap: 12px; width: 100%;">
+                            <i class="fab fa-google" style="color: var(--color-accent); width: 20px; text-align: center;"></i> Login
+                        </button>
+                    `}
 
-                        <!-- App Version -->
-                        <div style="text-align: center; padding: 12px 0 4px 0; font-size: 0.7rem; color: var(--text-muted); opacity: 0.5; letter-spacing: 0.5px;">
-                            ASX Tracker <span style="color: var(--color-accent); font-weight: 600;">${APP_VERSION}</span>
-                        </div>
+                    <!-- App Version -->
+                    <div style="text-align: center; padding: 12px 0 4px 0; font-size: 0.7rem; color: var(--text-muted); opacity: 0.8; letter-spacing: 0.5px;">
+                        ASX Tracker <span style="color: var(--color-accent); font-weight: 600;">${APP_VERSION}</span>
                     </div>
                 </div>
             </div>
@@ -460,6 +463,11 @@ export class SidebarCommandCenter {
             case 'nav-favorites':
                 this._closeSidebar();
                 document.dispatchEvent(new CustomEvent(EVENTS.OPEN_FAVORITE_LINKS));
+                break;
+
+            case 'nav-portfolio-history':
+                this._closeSidebar();
+                document.dispatchEvent(new CustomEvent(EVENTS.OPEN_PORTFOLIO_CHART));
                 break;
 
             case 'nav-widgets':
