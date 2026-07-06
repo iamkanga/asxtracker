@@ -331,8 +331,8 @@ export class MarketIndexController {
                             </button>
                         </div>
                         <button class="stream-dismiss-btn" data-id="${id}" title="Dismiss"
-                            style="position: absolute; top: 12px; right: 12px; background: transparent; border: none; color: var(--text-color); cursor: pointer; padding: 5px; z-index: 15; transition: opacity 0.2s, transform 0.2s; ${readStyle2}">
-                            <i class="fas fa-times" style="font-size: 0.8rem;"></i>
+                            style="position: absolute; top: 0; right: 0; background: transparent; border: none; color: var(--text-color); cursor: pointer; z-index: 15; transition: opacity 0.2s, transform 0.2s; ${readStyle2}">
+                            <i class="fas fa-times"></i>
                         </button>
                     </div>
                 </div>
