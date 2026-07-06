@@ -2,26 +2,76 @@
 
 .market-stream-item-wrapper {
     position: relative;
-    transition: transform 0.3s ease, opacity 0.3s ease;
+    overflow: hidden; /* Critical to hide swipe action underlays */
+    background: #050505;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+/* Swipe underlays */
+.swipe-underlay {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #ffffff;
+    z-index: 1;
+    pointer-events: none;
+    box-sizing: border-box;
+    opacity: 0; /* Managed dynamically by swipe gesture logic */
+    transition: opacity 0.15s ease;
+}
+
+.swipe-underlay i {
+    font-size: 1.1rem;
+}
+
+.delete-underlay {
+    left: 0;
+    background: linear-gradient(90deg, #d32f2f 0%, rgba(211, 47, 47, 0.4) 100%);
+    justify-content: flex-start;
+    gap: 8px;
+}
+
+.unread-underlay {
+    right: 0;
+    background: linear-gradient(270deg, #1976d2 0%, rgba(25, 118, 210, 0.4) 100%);
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+/* Swipe content container */
+.swipe-content {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    background: rgba(255, 255, 255, 0.02);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    transition: transform 0.2s ease, opacity 0.2s ease, background-color 0.2s ease;
+    will-change: transform;
+}
+
+.swipe-content:hover {
+    background: rgba(255, 255, 255, 0.04);
 }
 
 .market-stream-item {
     display: block;
-    padding: 12px 16px;
+    padding: 12px 16px 4px 16px; /* Reduced bottom padding since pills sit statically below it */
     text-decoration: none;
-    background: rgba(255, 255, 255, 0.03);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    transition: background 0.2s ease, opacity 0.3s ease, filter 0.3s ease;
+    background: transparent;
+    transition: opacity 0.3s ease, filter 0.3s ease;
     position: relative;
 }
 
-/* Ensure room for the bottom-left code pill if present */
+/* Ensure room for the bottom-left code pill if present (Legacy) */
 .market-stream-item-wrapper.has-code-pill .market-stream-item {
-    padding-bottom: 54px;
-}
-
-.market-stream-item:hover {
-    background: rgba(255, 255, 255, 0.06);
+    padding-bottom: 8px;
 }
 
 /* Dismiss Button Refinement */
@@ -61,7 +111,8 @@
 }
 
 /* Read State Handling */
-.market-stream-item-wrapper.is-read .market-stream-item {
+.market-stream-item-wrapper.is-read .market-stream-item,
+.market-stream-item-wrapper.is-read .market-stream-pills {
     opacity: 0.35;
     filter: grayscale(80%);
 }
@@ -137,10 +188,7 @@
 }
 
 .code-pill {
-    position: absolute;
-    bottom: 14px;
-    left: 16px;
-    z-index: 10;
+    position: relative;
     border: 1px solid rgba(var(--color-accent-rgb), 0.4);
     border-radius: 4px;
     background: rgba(30, 30, 30, 0.9);

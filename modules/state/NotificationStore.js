@@ -1988,6 +1988,29 @@ export class NotificationStore {
     }
 
     /**
+     * Marks an announcement as unread.
+     */
+    async markAnnouncementUnread(alertId) {
+        if (!alertId) return;
+        if (!this.readAnnouncements.has(alertId)) return; // Already unread
+        this.readAnnouncements.delete(alertId);
+        localStorage.setItem('asx_market_stream_read', JSON.stringify([...this.readAnnouncements]));
+        this._notifyCountChange();
+
+        // SYNC: Persist to Firestore
+        if (this.userId) {
+            try {
+                const prefRef = doc(db, `artifacts/${APP_ID}/users/${this.userId}/preferences/config`);
+                await updateDoc(prefRef, {
+                    readMarketAlerts: arrayRemove(alertId)
+                });
+            } catch (e) {
+                // Not fatal
+            }
+        }
+    }
+
+    /**
      * Dismisses all currently visible market index alerts.
      */
     async dismissAllAnnouncements() {

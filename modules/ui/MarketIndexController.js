@@ -3,6 +3,7 @@ import { EVENTS } from '../utils/AppConstants.js';
 import { navManager } from '../utils/NavigationManager.js';
 import { LinkHelper } from '../utils/LinkHelper.js';
 import { ToastManager } from './ToastManager.js';
+import { SwipeGestureHelper } from '../utils/SwipeGestureHelper.js';
 
 export class MarketIndexController {
     constructor() {
@@ -54,14 +55,36 @@ export class MarketIndexController {
 
         // Listen for State Updates (Mark as Read / Sync)
         document.addEventListener(EVENTS.NOTIFICATION_UPDATE, () => {
-            // Update read classes in place instead of full re-render
-            // This prevents destroying the DOM elements while the user is clicking them!
+            // Update read/unread classes in place instead of full re-render
+            // This prevents destroying the DOM elements while the user is interacting with them!
             if (this.modal && !this.modal.classList.contains('hidden') && this.listContainer) {
                 const wrappers = this.listContainer.querySelectorAll('.market-stream-item-wrapper');
                 wrappers.forEach(wrapper => {
                     const id = wrapper.getAttribute('data-alert-id');
-                    if (id && notificationStore.readAnnouncements.has(id)) {
-                        wrapper.classList.add('is-read');
+                    if (id) {
+                        const bodyLink = wrapper.querySelector('.market-stream-item');
+                        const pillsContainer = wrapper.querySelector('.market-stream-pills');
+                        if (notificationStore.readAnnouncements.has(id)) {
+                            wrapper.classList.add('is-read');
+                            if (bodyLink) {
+                                bodyLink.style.opacity = '0.35';
+                                bodyLink.style.filter = 'grayscale(80%)';
+                            }
+                            if (pillsContainer) {
+                                pillsContainer.style.opacity = '0.35';
+                                pillsContainer.style.filter = 'grayscale(80%)';
+                            }
+                        } else {
+                            wrapper.classList.remove('is-read');
+                            if (bodyLink) {
+                                bodyLink.style.opacity = '';
+                                bodyLink.style.filter = '';
+                            }
+                            if (pillsContainer) {
+                                pillsContainer.style.opacity = '';
+                                pillsContainer.style.filter = '';
+                            }
+                        }
                     }
                 });
             }
@@ -86,9 +109,14 @@ export class MarketIndexController {
         if (wrapperElement) {
             wrapperElement.classList.add('is-read');
             const bodyLink = wrapperElement.querySelector('.market-stream-item');
+            const pillsContainer = wrapperElement.querySelector('.market-stream-pills');
             if (bodyLink) {
                 bodyLink.style.opacity = '0.35';
                 bodyLink.style.filter = 'grayscale(80%)';
+            }
+            if (pillsContainer) {
+                pillsContainer.style.opacity = '0.35';
+                pillsContainer.style.filter = 'grayscale(80%)';
             }
             const dismissBtn = wrapperElement.querySelector('.stream-dismiss-btn');
             if (dismissBtn) {
@@ -264,36 +292,49 @@ export class MarketIndexController {
 
             return `
                 <div class="market-stream-item-wrapper ${readClass}" data-alert-id="${id}">
-                    <a href="${href}" target="${target}" class="market-stream-item" style="padding-bottom: 44px; ${readStyle1}">
-                        <div class="stream-meta">
-                            <span class="stream-badge ${badgeClass}">${badgeText}</span>
-                            <span class="stream-time">${dateStr}</span>
-                        </div>
-                        <div class="stream-title" style="color: var(--text-color);">${alert.title || alert.headline}</div>
-                        ${alert.summary ? `<div class="stream-summary" style="margin-top: 5px;">${alert.summary}</div>` : ''}
-                        <!-- Footer removed, replaced by action buttons below -->
-                    </a>
+                    <!-- Underlay revealed on Swipe Right (Delete) -->
+                    <div class="swipe-underlay delete-underlay">
+                        <i class="fas fa-trash-alt"></i>
+                        <span>Delete</span>
+                    </div>
+                    <!-- Underlay revealed on Swipe Left (Mark Unread) -->
+                    <div class="swipe-underlay unread-underlay">
+                        <span>Mark Unread</span>
+                        <i class="fas fa-envelope-open"></i>
+                    </div>
                     
-                    <div style="position: absolute; bottom: 12px; left: 16px; right: 16px; z-index: 10; display: flex; align-items: center; height: 26px; box-sizing: border-box;">
-                        ${isCompany ? `
-                        <button class="code-pill" data-code="${extractedCode}" style="border: 1px solid rgba(var(--color-accent-rgb, 100, 150, 255), 0.4); border-radius: 4px; background: rgba(30, 30, 30, 0.9); color: var(--color-accent, #6496ff); padding: 0 10px; height: 26px; font-size: 0.75rem; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 4px; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.2); box-sizing: border-box; margin-right: 8px; line-height: 1;" title="View ${extractedCode} Details">
-                            <i class="fas fa-search-dollar" style="vertical-align: middle;"></i> View ${extractedCode}
-                        </button>
-                        <button class="analysis-pill" data-url="${href}" style="border: 1px solid rgba(var(--color-accent-rgb, 100, 150, 255), 0.4); border-radius: 4px; background: rgba(30, 30, 30, 0.9); color: var(--color-accent, #6496ff); padding: 0 10px; height: 26px; font-size: 0.75rem; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 4px; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.2); box-sizing: border-box; line-height: 1;" title="Analyze Announcement">
-                            <i class="fas fa-robot" style="vertical-align: middle;"></i> Analyze
-                        </button>
-                        ` : ''}
+                    <!-- Swipe content wrapper containing card content -->
+                    <div class="swipe-content">
+                        <a href="${href}" target="${target}" class="market-stream-item" style="${readStyle1}">
+                            <div class="stream-meta">
+                                <span class="stream-badge ${badgeClass}">${badgeText}</span>
+                                <span class="stream-time">${dateStr}</span>
+                            </div>
+                            <div class="stream-title" style="color: var(--text-color);">${alert.title || alert.headline}</div>
+                            ${alert.summary ? `<div class="stream-summary" style="margin-top: 5px;">${alert.summary}</div>` : ''}
+                        </a>
                         
-                        <div style="flex: 1;"></div>
-                        
-                        <button class="announcement-pill" style="border: 1px solid rgba(var(--color-accent-rgb, 100, 150, 255), 0.4); border-radius: 4px; background: rgba(30, 30, 30, 0.9); color: var(--color-accent, #6496ff); padding: 0 10px; height: 26px; font-size: 0.75rem; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 4px; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.2); box-sizing: border-box; line-height: 1;" title="Source Document">
-                            <i class="fas fa-satellite-dish" style="vertical-align: middle;"></i> Announcement
+                        <div class="market-stream-pills" style="display: flex; align-items: center; height: 38px; padding: 0 16px 10px 16px; box-sizing: border-box; z-index: 10; ${readStyle1}">
+                            ${isCompany ? `
+                            <button class="code-pill" data-code="${extractedCode}" style="border: 1px solid rgba(var(--color-accent-rgb, 100, 150, 255), 0.4); border-radius: 4px; background: rgba(30, 30, 30, 0.9); color: var(--color-accent, #6496ff); padding: 0 10px; height: 26px; font-size: 0.75rem; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 4px; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.2); box-sizing: border-box; margin-right: 8px; line-height: 1;" title="View ${extractedCode} Details">
+                                <i class="fas fa-search-dollar" style="vertical-align: middle;"></i> View ${extractedCode}
+                            </button>
+                            <button class="analysis-pill" data-url="${href}" style="border: 1px solid rgba(var(--color-accent-rgb, 100, 150, 255), 0.4); border-radius: 4px; background: rgba(30, 30, 30, 0.9); color: var(--color-accent, #6496ff); padding: 0 10px; height: 26px; font-size: 0.75rem; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 4px; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.2); box-sizing: border-box; line-height: 1;" title="Analyze Announcement">
+                                <i class="fas fa-robot" style="vertical-align: middle;"></i> Analyze
+                            </button>
+                            ` : ''}
+                            
+                            <div style="flex: 1;"></div>
+                            
+                            <button class="announcement-pill" style="border: 1px solid rgba(var(--color-accent-rgb, 100, 150, 255), 0.4); border-radius: 4px; background: rgba(30, 30, 30, 0.9); color: var(--color-accent, #6496ff); padding: 0 10px; height: 26px; font-size: 0.75rem; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 4px; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.2); box-sizing: border-box; line-height: 1;" title="Source Document">
+                                <i class="fas fa-satellite-dish" style="vertical-align: middle;"></i> Announcement
+                            </button>
+                        </div>
+                        <button class="stream-dismiss-btn" data-id="${id}" title="Dismiss"
+                            style="position: absolute; top: 12px; right: 12px; background: transparent; border: none; color: var(--text-color); cursor: pointer; padding: 5px; z-index: 15; transition: opacity 0.2s, transform 0.2s; ${readStyle2}">
+                            <i class="fas fa-times" style="font-size: 0.8rem;"></i>
                         </button>
                     </div>
-                    <button class="stream-dismiss-btn" data-id="${id}" title="Dismiss"
-                        style="position: absolute; top: 12px; right: 12px; background: transparent; border: none; color: var(--text-color); cursor: pointer; padding: 5px; z-index: 15; transition: opacity 0.2s, transform 0.2s; ${readStyle2}">
-                        <i class="fas fa-times" style="font-size: 0.8rem;"></i>
-                    </button>
                 </div>
             `;
         }).join('');
@@ -311,6 +352,17 @@ export class MarketIndexController {
             const analysisPill = wrapper.querySelector('.analysis-pill');
             const announcementPill = wrapper.querySelector('.announcement-pill');
             const dismissBtn = wrapper.querySelector('.stream-dismiss-btn');
+
+            // Initialize Swipe Gestures
+            new SwipeGestureHelper(wrapper, {
+                threshold: 100,
+                onSwipeRight: () => {
+                    this.dismissAlert(alertId);
+                },
+                onSwipeLeft: () => {
+                    notificationStore.markAnnouncementUnread(alertId);
+                }
+            });
 
             // 1. SMART TAP (Link Ghosting)
             if (link) {
