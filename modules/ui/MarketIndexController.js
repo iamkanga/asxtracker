@@ -64,6 +64,7 @@ export class MarketIndexController {
                     if (id) {
                         const bodyLink = wrapper.querySelector('.market-stream-item');
                         const pillsContainer = wrapper.querySelector('.market-stream-pills');
+                        const leftUnderlay = wrapper.querySelector('.unread-underlay');
                         if (notificationStore.readAnnouncements.has(id)) {
                             wrapper.classList.add('is-read');
                             if (bodyLink) {
@@ -74,6 +75,12 @@ export class MarketIndexController {
                                 pillsContainer.style.opacity = '0.35';
                                 pillsContainer.style.filter = 'grayscale(80%)';
                             }
+                            if (leftUnderlay) {
+                                leftUnderlay.innerHTML = `
+                                    <span>Mark Unread</span>
+                                    <i class="fas fa-envelope-open"></i>
+                                `;
+                            }
                         } else {
                             wrapper.classList.remove('is-read');
                             if (bodyLink) {
@@ -83,6 +90,12 @@ export class MarketIndexController {
                             if (pillsContainer) {
                                 pillsContainer.style.opacity = '';
                                 pillsContainer.style.filter = '';
+                            }
+                            if (leftUnderlay) {
+                                leftUnderlay.innerHTML = `
+                                    <span>Mark Read</span>
+                                    <i class="fas fa-envelope"></i>
+                                `;
                             }
                         }
                     }
@@ -110,6 +123,7 @@ export class MarketIndexController {
             wrapperElement.classList.add('is-read');
             const bodyLink = wrapperElement.querySelector('.market-stream-item');
             const pillsContainer = wrapperElement.querySelector('.market-stream-pills');
+            const leftUnderlay = wrapperElement.querySelector('.unread-underlay');
             if (bodyLink) {
                 bodyLink.style.opacity = '0.35';
                 bodyLink.style.filter = 'grayscale(80%)';
@@ -117,6 +131,12 @@ export class MarketIndexController {
             if (pillsContainer) {
                 pillsContainer.style.opacity = '0.35';
                 pillsContainer.style.filter = 'grayscale(80%)';
+            }
+            if (leftUnderlay) {
+                leftUnderlay.innerHTML = `
+                    <span>Mark Unread</span>
+                    <i class="fas fa-envelope-open"></i>
+                `;
             }
             const dismissBtn = wrapperElement.querySelector('.stream-dismiss-btn');
             if (dismissBtn) {
@@ -289,6 +309,8 @@ export class MarketIndexController {
             const readStyle1 = isRead ? 'opacity: 0.35; filter: grayscale(80%);' : '';
             // User Request: Keep dismiss button at full strength at all times
             const readStyle2 = 'opacity: 1;';
+            const leftUnderlayText = isRead ? 'Mark Unread' : 'Mark Read';
+            const leftUnderlayIcon = isRead ? 'fa-envelope-open' : 'fa-envelope';
 
             return `
                 <div class="market-stream-item-wrapper ${readClass}" data-alert-id="${id}">
@@ -297,10 +319,10 @@ export class MarketIndexController {
                         <i class="fas fa-trash-alt"></i>
                         <span>Delete</span>
                     </div>
-                    <!-- Underlay revealed on Swipe Left (Mark Unread) -->
+                    <!-- Underlay revealed on Swipe Left (Mark Toggle) -->
                     <div class="swipe-underlay unread-underlay">
-                        <span>Mark Unread</span>
-                        <i class="fas fa-envelope-open"></i>
+                        <span>${leftUnderlayText}</span>
+                        <i class="fas ${leftUnderlayIcon}"></i>
                     </div>
                     
                     <!-- Swipe content wrapper containing card content -->
@@ -360,7 +382,11 @@ export class MarketIndexController {
                     this.dismissAlert(alertId);
                 },
                 onSwipeLeft: () => {
-                    notificationStore.markAnnouncementUnread(alertId);
+                    if (notificationStore.readAnnouncements.has(alertId)) {
+                        notificationStore.markAnnouncementUnread(alertId);
+                    } else {
+                        notificationStore.markAnnouncementRead(alertId);
+                    }
                 }
             });
 
