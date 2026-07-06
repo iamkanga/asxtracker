@@ -96,8 +96,8 @@
 }
 
 .stream-dismiss-btn i {
-    /* User Request: Sizable cross to touch on mobile */
-    font-size: 1.25rem; /* Increased from 1rem */
+    /* User Request: Visually small cross, but touch area remains large (52px) */
+    font-size: 0.8rem;
 }
 
 .stream-dismiss-btn:hover {
