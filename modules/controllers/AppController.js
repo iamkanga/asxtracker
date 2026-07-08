@@ -3283,7 +3283,7 @@ export class AppController {
             const allShares = AppState.data.shares || [];
 
             // Re-process data to get fresh merged stats (using currently cached prices)
-            const { mergedData } = processShares(
+            const { mergedData, summaryMetrics } = processShares(
                 allShares,
                 PORTFOLIO_ID,
                 AppState.livePrices,
@@ -3310,7 +3310,12 @@ export class AppController {
                     break;
                 case SUMMARY_TYPES.DAY_CHANGE:
                     title = 'Day Change';
-                    filteredShares = [...shares].sort((a, b) => (b.dayChangeValue || 0) - (a.dayChangeValue || 0));
+                    const isChangeNegative = (summaryMetrics?.dayChangeValue || 0) < 0;
+                    filteredShares = [...shares].sort((a, b) => {
+                        const valA = a.dayChangeValue || 0;
+                        const valB = b.dayChangeValue || 0;
+                        return isChangeNegative ? (valA - valB) : (valB - valA);
+                    });
                     valueField = 'dayChangeValue';
                     // Calculate GAINS vs LOSSES to determine mixed gradient (Match Market Pulse style)
                     const dayGains = shares.reduce((acc, s) => {
