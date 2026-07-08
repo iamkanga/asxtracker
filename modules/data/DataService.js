@@ -20,6 +20,7 @@ const APP_ID = "asx-watchlist-app";
 // Initialize and Export UserStore Instance
 export const userStore = new UserStore();
 export { AuthService };
+import { ToastManager } from '../ui/ToastManager.js';
 
 /**
  * Helper to detect network/connectivity failures from fetch requests.
@@ -62,10 +63,14 @@ export class DataService {
             // TRACE LOGGING
             // TIMEOUT PROTECTION (20 Seconds)
             const controller = new AbortController();
+            const warningId = setTimeout(() => {
+                ToastManager.info("Retrieving stock prices is taking longer than expected. Please wait...", "Slow Connection");
+            }, 12000);
             const timeoutId = setTimeout(() => controller.abort(), 20000);
 
             try {
                 const response = await fetch(url.toString(), { signal: controller.signal });
+                clearTimeout(warningId);
                 clearTimeout(timeoutId);
 
                 if (!response.ok) {
@@ -79,10 +84,13 @@ export class DataService {
                 return this._normalizePriceData(json);
 
             } catch (error) {
+                clearTimeout(warningId);
+                clearTimeout(timeoutId);
                 if (error.name === 'AbortError') {
                     console.warn("DataService: Fetch timed out (20s limit).");
                 } else if (isNetworkError(error)) {
                     console.warn("DataService: Live prices fetch network failure (Failed to fetch).");
+                    ToastManager.error("Network error while connecting to price servers. Retrying...", "Connection Error");
                 } else {
                     console.error("DataService Exception:", error);
                 }
@@ -406,6 +414,9 @@ export class DataService {
 
         // TIMEOUT PROTECTION (20 Seconds)
         const controller = new AbortController();
+        const warningId = setTimeout(() => {
+            ToastManager.info("Loading stock history chart is taking longer than expected...", "Slow Connection");
+        }, 12000);
         const timeoutId = setTimeout(() => controller.abort(), 20000);
 
         try {
@@ -413,6 +424,7 @@ export class DataService {
             const userId = user ? user.uid : null;
 
             if (!userId) {
+                clearTimeout(warningId);
                 clearTimeout(timeoutId);
                 console.warn('DataService: fetchHistory called without logged-in user.');
                 return { ok: false, error: 'User not logged in' };
@@ -433,6 +445,7 @@ export class DataService {
                 signal: controller.signal
             });
 
+            clearTimeout(warningId);
             clearTimeout(timeoutId);
 
             if (!response.ok) {
@@ -465,11 +478,13 @@ export class DataService {
 
             return json;
         } catch (err) {
+            clearTimeout(warningId);
             clearTimeout(timeoutId);
             if (err.name === 'AbortError') {
                 console.warn("DataService: fetchHistory timed out (20s limit).");
             } else if (isNetworkError(err)) {
                 console.warn('DataService: History Fetch network failure (Failed to fetch).');
+                ToastManager.error("Network failure while loading stock history.", "Connection Error");
             } else {
                 console.error('DataService: History Fetch Exception:', err);
             }

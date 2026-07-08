@@ -888,6 +888,7 @@ export class AppController {
         if (codesToFetch.length === 0) return;
 
         AppState._isFetching = true;
+        this._lastFetchAttemptTime = Date.now();
 
         try {
             const result = await this.dataService.fetchLivePrices(codesToFetch);
@@ -1550,6 +1551,19 @@ export class AppController {
             }
         } else if (newStatus === 'stale') {
             document.body.classList.add('is-stale');
+            
+            // Auto-recovery retry loop: if app remains stale, retry background fetch every 60s
+            const timeSinceLastAttempt = Date.now() - (this._lastFetchAttemptTime || 0);
+            if (timeSinceLastAttempt > 60000 && !AppState._isFetching && AppState.user) {
+                this._refreshAllPrices(AppState.data.shares || [], true).then(() => {
+                    const elapsed = Date.now() - (AppState.lastGlobalFetch || 0);
+                    if (elapsed <= 15 * 60 * 1000) {
+                        AppState.health.status = 'healthy';
+                        document.body.classList.remove('is-stale');
+                        if (this.headerLayout) this.headerLayout.updateConnectionStatus(true, 'healthy');
+                    }
+                }).catch(e => console.warn('Background retry failed:', e));
+            }
         } else {
             document.body.classList.remove('is-stale');
         }

@@ -27,6 +27,15 @@ export class ToastManager {
     static show(message, type = 'info', title = '', duration = 3000) {
         const container = this.getContainer();
 
+        // Prevent duplicate toasts from stacking up concurrently
+        const existingToasts = container.querySelectorAll(`.${CSS_CLASSES.TOAST}`);
+        for (const t of existingToasts) {
+            const msgEl = t.querySelector(`.${CSS_CLASSES.TOAST_MESSAGE}`);
+            if (msgEl && msgEl.textContent.trim() === message.trim()) {
+                return; // Skip duplicate toast
+            }
+        }
+
         // Determine classes and icons
         // Determine classes and icons
         let variantClass = CSS_CLASSES.TOAST_INFO;
