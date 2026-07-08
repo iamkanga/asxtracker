@@ -2916,15 +2916,13 @@ export class AppController {
 
         // CREATE WATCHLIST
         document.addEventListener(EVENTS.REQUEST_NEW_WATCHLIST, async (e) => {
-            const { name } = e.detail || {};
+            const { name, excludeFromAll } = e.detail || {};
             if (!name || !AppState.user) {
                 return;
             }
 
-
-
             try {
-                const newId = await this.appService.addWatchlist(name);
+                const newId = await this.appService.addWatchlist(name, excludeFromAll);
                 if (newId) {
                     // Switch to new watchlist - User initiated
                     this.handleSwitchWatchlist(newId, false);

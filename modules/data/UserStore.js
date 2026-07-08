@@ -172,14 +172,16 @@ export class UserStore {
      * Adds a new watchlist for the user.
      * @param {string} userId
      * @param {string} name
+     * @param {boolean} excludeFromAll
      * @returns {Promise<string|null>} The new watchlist ID or null.
      */
-    async addWatchlist(userId, name) {
+    async addWatchlist(userId, name, excludeFromAll = false) {
         if (!userId || !name) return null;
         const watchlistsRef = collection(db, `artifacts/${APP_ID}/users/${userId}/watchlists`);
         try {
             const docRef = await addDoc(watchlistsRef, {
                 name: name,
+                excludeFromAll: !!excludeFromAll,
                 createdAt: serverTimestamp()
             });
             return docRef.id;

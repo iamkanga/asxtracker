@@ -1614,6 +1614,8 @@ export const IDS = {
     MODAL_CREATE_WATCHLIST: 'modal-create-watchlist',
     CREATE_WL_INPUT: 'create-watchlist-input',
     CREATE_WL_SUBMIT: 'create-wl-submit-btn',
+    CREATE_WL_EXCLUDE_ROW: 'create-watchlist-exclude-row',
+    CREATE_WL_EXCLUDE_TOGGLE: 'create-watchlist-exclude-toggle',
 
     // Edit Watchlist Modal
     BTN_EDIT_WATCHLIST: 'btn-edit-watchlist',

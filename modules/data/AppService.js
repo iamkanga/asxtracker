@@ -101,16 +101,17 @@ export class AppService {
     /**
      * Adds a new watchlist.
      * @param {string} name 
+     * @param {boolean} excludeFromAll
      * @returns {Promise<string|null>} The new watchlist ID.
      */
-    async addWatchlist(name) {
+    async addWatchlist(name, excludeFromAll = false) {
         if (!name) return null;
         const user = AppState.user;
         if (!user) {
             alert(USER_MESSAGES.AUTH_REQUIRED_FIRST);
             return null;
         }
-        return await userStore.addWatchlist(user.uid, name);
+        return await userStore.addWatchlist(user.uid, name, excludeFromAll);
     }
 
     /**

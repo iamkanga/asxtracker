@@ -478,9 +478,11 @@ export class HeaderLayout {
         if (this.createWatchlistSubmit) {
             this.createWatchlistSubmit.addEventListener('click', () => {
                 const name = this.createWatchlistInput.value.trim();
+                const toggle = document.getElementById(IDS.CREATE_WL_EXCLUDE_TOGGLE);
+                const excludeFromAll = toggle ? toggle.checked : false;
                 if (name) {
                     document.dispatchEvent(new CustomEvent(EVENTS.REQUEST_NEW_WATCHLIST, {
-                        detail: { name }
+                        detail: { name, excludeFromAll }
                     }));
                     this._closeCreateWatchlistModal();
                 }
@@ -509,10 +511,14 @@ export class HeaderLayout {
                 this._closeCreateWatchlistModal();
             });
 
-            // Reset input
+            // Reset input and toggle
             if (this.createWatchlistInput) {
                 this.createWatchlistInput.value = '';
                 this.createWatchlistInput.focus();
+            }
+            const excludeToggle = document.getElementById(IDS.CREATE_WL_EXCLUDE_TOGGLE);
+            if (excludeToggle) {
+                excludeToggle.checked = false;
             }
             if (this.createWatchlistSubmit) {
                 this.createWatchlistSubmit.disabled = true;
