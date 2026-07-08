@@ -705,6 +705,8 @@ export const CSS_CLASSES = {
     METRIC_ROW: 'metric-row',
     METRIC_VALUE_LARGE: 'metric-value-large',
     METRIC_PERCENT_SMALL: 'metric-percent-small',
+    SUMMARY_DETAIL_LEFT: 'summary-detail-left',
+    SUMMARY_DETAIL_SUBTEXT: 'summary-detail-subtext',
 
     SUMMARY_DETAIL_LIST: 'summary-detail-list',
     SUMMARY_DETAIL_ROW: 'summary-detail-row',

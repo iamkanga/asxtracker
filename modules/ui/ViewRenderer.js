@@ -183,9 +183,11 @@ export class ViewRenderer {
         if (summaryMetrics) {
             const sumContainer = document.getElementById('portfolio-summary');
             if (sumContainer) {
+                // Portfolio Value
                 const valNode = sumContainer.querySelector(`[data-type="${SUMMARY_TYPES.VALUE}"] .${CSS_CLASSES.METRIC_VALUE_LARGE}`);
                 if (valNode) valNode.textContent = formatCurrency(summaryMetrics.totalValue);
 
+                // Day Change
                 const dayNode = sumContainer.querySelector(`[data-type="${SUMMARY_TYPES.DAY_CHANGE}"]`);
                 if (dayNode) {
                     const lNode = dayNode.querySelector(`.${CSS_CLASSES.METRIC_VALUE_LARGE}`);
@@ -197,6 +199,48 @@ export class ViewRenderer {
                     if (pNode) {
                         pNode.textContent = formatPercent(summaryMetrics.dayChangePercent);
                         pNode.className = `${CSS_CLASSES.METRIC_PERCENT_SMALL} ${summaryMetrics.dayChangePercent >= 0 ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}`;
+                    }
+                }
+
+                // Day Gain (WINNERS)
+                const gainNode = sumContainer.querySelector(`[data-type="${SUMMARY_TYPES.WINNERS}"]`);
+                if (gainNode) {
+                    const glNode = gainNode.querySelector(`.${CSS_CLASSES.METRIC_VALUE_LARGE}`);
+                    const gpNode = gainNode.querySelector(`.${CSS_CLASSES.METRIC_PERCENT_SMALL}`);
+                    if (glNode) {
+                        glNode.textContent = formatCurrency(Math.abs(summaryMetrics.dayGain || 0));
+                    }
+                    if (gpNode) {
+                        gpNode.textContent = formatPercent(summaryMetrics.dayGainPercent || 0);
+                    }
+                }
+
+                // Day Loss (LOSERS)
+                const lossNode = sumContainer.querySelector(`[data-type="${SUMMARY_TYPES.LOSERS}"]`);
+                if (lossNode) {
+                    const llNode = lossNode.querySelector(`.${CSS_CLASSES.METRIC_VALUE_LARGE}`);
+                    const lpNode = lossNode.querySelector(`.${CSS_CLASSES.METRIC_PERCENT_SMALL}`);
+                    if (llNode) {
+                        llNode.textContent = formatCurrency(Math.abs(summaryMetrics.dayLoss || 0));
+                    }
+                    if (lpNode) {
+                        lpNode.textContent = formatPercent(summaryMetrics.dayLossPercent || 0);
+                    }
+                }
+
+                // Total Capital Gain
+                const capNode = sumContainer.querySelector(`[data-type="${SUMMARY_TYPES.CAPITAL_GAIN}"]`);
+                if (capNode) {
+                    const clNode = capNode.querySelector(`.${CSS_CLASSES.METRIC_VALUE_LARGE}`);
+                    const cpNode = capNode.querySelector(`.${CSS_CLASSES.METRIC_PERCENT_SMALL}`);
+                    const isTotalPos = summaryMetrics.totalReturn >= 0;
+                    if (clNode) {
+                        clNode.textContent = formatCurrency(Math.abs(summaryMetrics.totalReturn || 0));
+                        clNode.className = `${CSS_CLASSES.METRIC_VALUE_LARGE} ${isTotalPos ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}`;
+                    }
+                    if (cpNode) {
+                        cpNode.textContent = formatPercent(summaryMetrics.totalReturnPercent || 0);
+                        cpNode.className = `${CSS_CLASSES.METRIC_PERCENT_SMALL} ${isTotalPos ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}`;
                     }
                 }
             }
@@ -3208,9 +3252,23 @@ export class ViewRenderer {
             if (valueField === 'dayChangePercent') {
                 formattedVal = formatPercent(val);
             }
+            let leftColHtml = `<span class="${CSS_CLASSES.SUMMARY_DETAIL_CODE}">${share.code}</span>`;
+            if (title === 'Day Change Winners' || title === 'Day Change Losers' || title === 'Day Change') {
+                const perShare = share.dayChangePerShare || 0;
+                const pct = share.dayChangePercent || 0;
+                const subtext = `${formatCurrency(perShare)} (${formatPercent(pct)})`;
+                const subtextClass = perShare >= 0 ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE;
+                leftColHtml = `
+                    <div class="${CSS_CLASSES.SUMMARY_DETAIL_LEFT}">
+                        <span class="${CSS_CLASSES.SUMMARY_DETAIL_CODE}">${share.code}</span>
+                        <span class="${CSS_CLASSES.SUMMARY_DETAIL_SUBTEXT} ${subtextClass}">${subtext}</span>
+                    </div>
+                `;
+            }
+
             return `
                 <div class="${CSS_CLASSES.SUMMARY_DETAIL_ROW}" data-code="${share.code}" data-id="${share.id}">
-                    <span class="${CSS_CLASSES.SUMMARY_DETAIL_CODE}">${share.code}</span>
+                    ${leftColHtml}
                     <span class="${CSS_CLASSES.SUMMARY_DETAIL_VALUE} ${colorClass}">${formattedVal}</span>
                 </div>
             `;

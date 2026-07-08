@@ -745,3 +745,17 @@
     background-color: var(--bg-color);
     border: 1px solid var(--border-light);
 }
+
+/* --- Detail Modal Snapshot Visuals --- */
+.summary-detail-left {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+}
+
+.summary-detail-subtext {
+    font-size: 0.75rem;
+    font-weight: 500;
+    opacity: 0.95;
+}
