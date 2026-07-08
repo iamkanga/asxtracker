@@ -561,6 +561,16 @@ export class HeaderLayout {
             });
         }
 
+        // Enable save button if the exclude toggle is changed
+        const excludeToggle = document.getElementById(IDS.EDIT_WL_EXCLUDE_TOGGLE);
+        if (excludeToggle && this.editWatchlistSubmit) {
+            excludeToggle.addEventListener('change', () => {
+                if (this.editWatchlistInput.value.trim()) {
+                    this.editWatchlistSubmit.disabled = false;
+                }
+            });
+        }
+
         // Close button (X) -> Close modal
         const closeBtn = this.editWatchlistModal.querySelector(`.${CSS_CLASSES.MODAL_CLOSE_BTN}`);
         if (closeBtn) {
@@ -581,9 +591,11 @@ export class HeaderLayout {
         if (this.editWatchlistSubmit) {
             this.editWatchlistSubmit.addEventListener('click', () => {
                 const newName = this.editWatchlistInput.value.trim();
+                const toggle = document.getElementById(IDS.EDIT_WL_EXCLUDE_TOGGLE);
+                const excludeFromAll = toggle ? toggle.checked : false;
                 if (newName && this.currentEditWatchlistId) {
                     document.dispatchEvent(new CustomEvent(EVENTS.REQUEST_UPDATE_WATCHLIST, {
-                        detail: { id: this.currentEditWatchlistId, newName }
+                        detail: { id: this.currentEditWatchlistId, newName, excludeFromAll }
                     }));
                     this._closeEditWatchlistModal();
                 }
@@ -634,6 +646,20 @@ export class HeaderLayout {
 
         if (this.editWatchlistDelete) {
             this.editWatchlistDelete.style.display = isSystem ? 'none' : 'block';
+        }
+
+        // Setup exclude toggle based on whether it is a system watchlist or custom watchlist
+        const excludeRow = document.getElementById(IDS.EDIT_WL_EXCLUDE_ROW);
+        const excludeToggle = document.getElementById(IDS.EDIT_WL_EXCLUDE_TOGGLE);
+        if (excludeRow && excludeToggle) {
+            if (isSystem) {
+                excludeRow.style.display = 'none';
+                excludeToggle.checked = false;
+            } else {
+                excludeRow.style.display = 'flex';
+                const watchlist = (AppState.data.watchlists || []).find(w => w.id === currentId);
+                excludeToggle.checked = watchlist?.excludeFromAll === true;
+            }
         }
 
         // Store the current ID for save/delete operations

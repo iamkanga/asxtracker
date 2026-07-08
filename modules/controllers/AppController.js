@@ -2936,9 +2936,9 @@ export class AppController {
             }
         });
 
-        // UPDATE (RENAME) WATCHLIST
+        // UPDATE (RENAME/CONFIGURE) WATCHLIST
         document.addEventListener(EVENTS.REQUEST_UPDATE_WATCHLIST, async (e) => {
-            const { id, newName } = e.detail || {};
+            const { id, newName, excludeFromAll } = e.detail || {};
             if (!id || !newName || !AppState.user) {
                 return;
             }
@@ -2951,15 +2951,15 @@ export class AppController {
                 if (isSystem) {
                     AppState.saveCustomWatchlistName(id, newName);
                 } else {
-                    await this.appService.renameWatchlist(id, newName);
+                    await this.appService.updateWatchlistSettings(id, newName, excludeFromAll);
                 }
                 // Refresh UI
                 this.watchlistUI.updateHeaderTitle();
                 this.watchlistUI.renderWatchlistDropdown();
-                ToastManager.success(`Watchlist renamed to "${newName}".`);
+                ToastManager.success(`Watchlist updated.`);
             } catch (err) {
-                console.error('Failed to rename watchlist:', err);
-                ToastManager.error('Failed to rename watchlist: ' + err.message);
+                console.error('Failed to update watchlist:', err);
+                ToastManager.error('Failed to update watchlist: ' + err.message);
             }
         });
 

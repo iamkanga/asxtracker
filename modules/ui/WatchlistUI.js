@@ -8,6 +8,7 @@ import { WatchlistPickerModal } from './WatchlistPickerModal.js';
 import { ToastManager } from './ToastManager.js';
 import { SnapshotUI } from './SnapshotUI.js';
 import { navManager } from '../utils/NavigationManager.js';
+import { userStore } from '../data/DataService.js';
 
 export class WatchlistUI {
     /**
@@ -330,8 +331,8 @@ export class WatchlistUI {
                     // Portfolio: Use full share objects where owned/units > 0
                     targetItems = allShares.filter(s => (parseFloat(s.portfolioShares) || parseFloat(s.units) || parseFloat(s.owned) || 0) > 0);
                 } else if (currentId === ALL_SHARES_ID) {
-                    // All Shares: Use all available share objects
-                    targetItems = allShares;
+                    // All Shares: Use all available share objects, filtering out excluded watchlists
+                    targetItems = userStore.getWatchlistData(allShares, ALL_SHARES_ID);
                 } else if (currentId === DASHBOARD_WATCHLIST_ID) {
                     targetItems = (AppState.data.dashboard || []).map(d => (typeof d === 'string' ? { code: d } : d));
                 } else if (currentId === SIMULATIONS_WATCHLIST_ID) {

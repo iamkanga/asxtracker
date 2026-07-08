@@ -150,6 +150,30 @@ export class AppService {
     }
 
     /**
+     * Updates watchlist settings (name and excludeFromAll status).
+     * @param {string} id 
+     * @param {string} name 
+     * @param {boolean} excludeFromAll
+     */
+    async updateWatchlistSettings(id, name, excludeFromAll) {
+        if (!id || !name) return;
+        const user = AppState.user;
+        if (!user) {
+            alert(USER_MESSAGES.AUTH_REQUIRED_FIRST);
+            return;
+        }
+
+        // Get the current excludeFromAll value as fallback if it is undefined
+        let resolvedExclude = excludeFromAll;
+        if (resolvedExclude === undefined) {
+            const currentWl = (AppState.data.watchlists || []).find(w => w.id === id);
+            resolvedExclude = currentWl ? !!currentWl.excludeFromAll : false;
+        }
+
+        await userStore.updateWatchlist(user.uid, id, { name: name, excludeFromAll: !!resolvedExclude });
+    }
+
+    /**
      * Deletes a watchlist.
      * @param {string} id 
      */
@@ -164,7 +188,7 @@ export class AppService {
     }
 
     /**
-     * Saves a dividend override (e.g. Franking %) for a stock.
+     * Updates dividend override for a specific ticker.
      * @param {string} ticker 
      * @param {Object} data 
      */

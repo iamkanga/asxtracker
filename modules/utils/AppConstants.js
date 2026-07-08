@@ -1621,6 +1621,8 @@ export const IDS = {
     EDIT_WL_INPUT: 'edit-watchlist-input',
     EDIT_WL_SUBMIT: 'edit-wl-submit-btn',
     EDIT_WL_DELETE: 'edit-wl-delete-btn',
+    EDIT_WL_EXCLUDE_ROW: 'edit-watchlist-exclude-row',
+    EDIT_WL_EXCLUDE_TOGGLE: 'edit-watchlist-exclude-toggle',
 
     // Security IDS
     SECURITY_UNLOCK_MODAL: 'securityUnlockModal',

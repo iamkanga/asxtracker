@@ -488,6 +488,66 @@ export class UserStore {
     }
 
     /**
+     * Determines if a stock code should be excluded from the global All Shares view.
+     * Excluded if the code exists solely in watchlists that have excludeFromAll === true.
+     * @param {string} code 
+     * @param {Array} allShares 
+     * @param {Array} watchlists 
+     * @returns {boolean}
+     */
+    isShareExcludedFromGlobal(code, allShares, watchlists) {
+        if (!code) return false;
+        const codeUpper = code.trim().toUpperCase();
+
+        // Find all matching share documents in user's shares
+        const matches = allShares.filter(s => 
+            (s.shareName || s.code || '').trim().toUpperCase() === codeUpper
+        );
+
+        if (matches.length === 0) return false;
+
+        // Check if any match is in the portfolio (units > 0)
+        const inPortfolio = matches.some(s => 
+            (parseFloat(s.portfolioShares) || parseFloat(s.units) || parseFloat(s.owned) || 0) > 0
+        );
+        if (inPortfolio) return false;
+
+        // Collect all watchlist IDs where these matches belong
+        const watchlistIds = new Set();
+        matches.forEach(s => {
+            if (Array.isArray(s.watchlistIds)) {
+                s.watchlistIds.forEach(id => watchlistIds.add(String(id)));
+            }
+            if (s.watchlistId) {
+                watchlistIds.add(String(s.watchlistId));
+            }
+        });
+
+        // If it's not in any watchlists, don't exclude it
+        if (watchlistIds.size === 0) return false;
+
+        // Check if ALL watchlists it belongs to are excluded
+        const systemIds = ['ALL', 'PORTFOLIO', 'CASH', 'DASHBOARD', 'SIMULATIONS', 'SEARCH', 'portfolio'];
+        
+        for (const wId of watchlistIds) {
+            // If it's in a system watchlist, it is a non-excluded view
+            if (systemIds.includes(wId.toUpperCase()) || wId.toLowerCase() === 'portfolio') {
+                return false;
+            }
+
+            // Find the custom watchlist
+            const wl = watchlists.find(w => w.id === wId);
+            // If watchlist is not found or is NOT marked as excluded, then the stock is not solely in excluded watchlists
+            if (!wl || wl.excludeFromAll !== true) {
+                return false;
+            }
+        }
+
+        // Exclude since it is only in watchlists marked as excluded
+        return true;
+    }
+
+    /**
      * Retrieves specific shares for a given watchlist.
      * Logic: If ALL_SHARES_ID, return all. If Portfolio, return own.
      * If specific Watchlist ID, filter logic needed (Architecture dependent).
@@ -499,9 +559,13 @@ export class UserStore {
     getWatchlistData(shares, watchlistId) {
         if (!shares || !Array.isArray(shares)) return [];
 
-        // 1. ALL SHARES: Return everything (Admin/Debug view)
+        // 1. ALL SHARES: Return everything except excluded curiosity codes
         if (!watchlistId || watchlistId === ALL_SHARES_ID) {
-            return shares;
+            const watchlists = AppState.data?.watchlists || [];
+            return shares.filter(s => {
+                const code = s.shareName || s.code;
+                return !this.isShareExcludedFromGlobal(code, shares, watchlists);
+            });
         }
 
         // 1.5. SIMULATIONS WATCHLIST: Return shares marked as simulated
