@@ -69,6 +69,22 @@ export const AppState = {
                 return null;
             }
         })(),
+        quickNavLeft: (() => {
+            try {
+                const stored = localStorage.getItem('ASX_NEXT_quickNav_left');
+                return stored ? JSON.parse(stored) : null;
+            } catch (e) {
+                return null;
+            }
+        })(),
+        quickNavRight: (() => {
+            try {
+                const stored = localStorage.getItem('ASX_NEXT_quickNav_right');
+                return stored ? JSON.parse(stored) : null;
+            } catch (e) {
+                return null;
+            }
+        })(),
         scanner: {  // NEW: Global Scanner Settings
             activeFilters: null // null means No Filter (Show All). [] means Filter to None.
         },
@@ -365,6 +381,8 @@ export const AppState = {
                 badgeScope: this.preferences.badgeScope || 'all',
                 showBadges: this.preferences.showBadges !== false,
                 quickNav: this.preferences.quickNav || null,
+                quickNavLeft: this.preferences.quickNavLeft || null,
+                quickNavRight: this.preferences.quickNavRight || null,
                 historicalData: this.preferences.historicalData || {},
                 accentColor: this.preferences.accentColor || '#a49393',
                 accentOpacity: this.preferences.accentOpacity || '1',
@@ -679,12 +697,28 @@ export const AppState = {
         document.dispatchEvent(new CustomEvent(EVENTS.RESEARCH_LINKS_UPDATED));
     },
 
-    saveQuickNav(config) {
-        this.preferences.quickNav = config;
-        if (config) {
-            localStorage.setItem(STORAGE_KEYS.QUICK_NAV, JSON.stringify(config));
+    saveQuickNav(config, targetContext = 'center') {
+        if (targetContext === 'left') {
+            this.preferences.quickNavLeft = config;
+            if (config) {
+                localStorage.setItem('ASX_NEXT_quickNav_left', JSON.stringify(config));
+            } else {
+                localStorage.removeItem('ASX_NEXT_quickNav_left');
+            }
+        } else if (targetContext === 'right') {
+            this.preferences.quickNavRight = config;
+            if (config) {
+                localStorage.setItem('ASX_NEXT_quickNav_right', JSON.stringify(config));
+            } else {
+                localStorage.removeItem('ASX_NEXT_quickNav_right');
+            }
         } else {
-            localStorage.removeItem(STORAGE_KEYS.QUICK_NAV);
+            this.preferences.quickNav = config;
+            if (config) {
+                localStorage.setItem(STORAGE_KEYS.QUICK_NAV, JSON.stringify(config));
+            } else {
+                localStorage.removeItem(STORAGE_KEYS.QUICK_NAV);
+            }
         }
         this._triggerSync();
     },

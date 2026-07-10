@@ -180,7 +180,7 @@ export class QuickNavUI {
                     sortField: this.selectedSortField || 'code', // Default if not selected
                     sortDirection: this.selectedSortDirection
                 };
-                AppState.saveQuickNav(config);
+                AppState.saveQuickNav(config, this.targetContext);
                 ToastManager.success('Shortcut Saved!');
                 this.hide();
             } else {
@@ -191,20 +191,31 @@ export class QuickNavUI {
         // Clear (Delete)
         this.clearBtn.addEventListener('click', () => {
             if (confirm('Remove this shortcut?')) {
-                AppState.saveQuickNav(null);
+                AppState.saveQuickNav(null, this.targetContext);
                 ToastManager.info('Shortcut Removed.');
                 this.hide();
             }
         });
     }
 
-    show() {
+    show(targetContext = 'center') {
+        this.targetContext = targetContext;
+
         // Populate options tailored to current state
         this._populateWatchlistOptions();
 
         // Load current config or defaults
-        const currentConfig = AppState.preferences.quickNav;
+        let currentConfig = null;
+        if (this.targetContext === 'left') {
+            currentConfig = AppState.preferences.quickNavLeft;
+        } else if (this.targetContext === 'right') {
+            currentConfig = AppState.preferences.quickNavRight;
+        } else {
+            currentConfig = AppState.preferences.quickNav;
+        }
+
         const modalTitle = this.modal.querySelector(`.${CSS_CLASSES.MODAL_TITLE}`);
+        const prefix = this.targetContext ? (this.targetContext.charAt(0).toUpperCase() + this.targetContext.slice(1)) : 'Quick';
 
         if (currentConfig) {
             this.selectedWatchlistId = currentConfig.watchlistId;
@@ -212,7 +223,7 @@ export class QuickNavUI {
             this.selectedSortDirection = currentConfig.sortDirection;
             this.clearBtn.classList.remove(CSS_CLASSES.HIDDEN);
 
-            if (modalTitle) modalTitle.innerText = 'Edit Quick Shortcut';
+            if (modalTitle) modalTitle.innerText = `Edit ${prefix} Shortcut`;
         } else {
             // Default to current view if no config
             this.selectedWatchlistId = AppState.watchlist.id || 'portfolio';
@@ -220,7 +231,7 @@ export class QuickNavUI {
             this.selectedSortDirection = AppState.sortConfig.direction;
             this.clearBtn.classList.add(CSS_CLASSES.HIDDEN);
 
-            if (modalTitle) modalTitle.innerText = 'Quick Navigation Shortcut';
+            if (modalTitle) modalTitle.innerText = `${prefix} Watchlist Shortcut`;
         }
 
         // Update UI

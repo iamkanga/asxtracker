@@ -3252,20 +3252,26 @@ export class ViewRenderer {
             if (valueField === 'dayChangePercent') {
                 formattedVal = formatPercent(val);
             }
-            let leftColHtml = `<span class="${CSS_CLASSES.SUMMARY_DETAIL_CODE}">${share.code}</span>`;
+
             if (title === 'Day Change Winners' || title === 'Day Change Losers' || title === 'Day Change') {
-                const perShare = share.dayChangePerShare || 0;
-                const pct = share.dayChangePercent || 0;
-                const subtext = `${formatCurrency(perShare)} (${formatPercent(pct)})`;
-                const subtextClass = perShare >= 0 ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE;
-                leftColHtml = `
-                    <div class="${CSS_CLASSES.SUMMARY_DETAIL_LEFT}">
+                const dailyChangeVal = share.dayChangeValue || 0;
+                const dailyChangePct = share.dayChangePercent || 0;
+                const pctSign = dailyChangePct < 0 ? '-' : '';
+                const subtext = `${formatCurrency(dailyChangeVal)} (${pctSign}${formatPercent(dailyChangePct)})`;
+                const subtextClass = dailyChangeVal >= 0 ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE;
+
+                return `
+                    <div class="${CSS_CLASSES.SUMMARY_DETAIL_ROW}" data-code="${share.code}" data-id="${share.id}">
                         <span class="${CSS_CLASSES.SUMMARY_DETAIL_CODE}">${share.code}</span>
-                        <span class="${CSS_CLASSES.SUMMARY_DETAIL_SUBTEXT} ${subtextClass}">${subtext}</span>
+                        <div class="${CSS_CLASSES.SUMMARY_DETAIL_RIGHT}">
+                            <span class="${CSS_CLASSES.SUMMARY_DETAIL_VALUE}">${formatCurrency(share.value || 0)}</span>
+                            <span class="${CSS_CLASSES.SUMMARY_DETAIL_SUBTEXT} ${subtextClass}">${subtext}</span>
+                        </div>
                     </div>
                 `;
             }
 
+            let leftColHtml = `<span class="${CSS_CLASSES.SUMMARY_DETAIL_CODE}">${share.code}</span>`;
             return `
                 <div class="${CSS_CLASSES.SUMMARY_DETAIL_ROW}" data-code="${share.code}" data-id="${share.id}">
                     ${leftColHtml}

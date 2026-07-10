@@ -3,7 +3,7 @@
  * Centralized constants for the application.
  */
 
-export const APP_VERSION = '1.26';
+export const APP_VERSION = '1.27';
 export const ALL_SHARES_ID = 'ALL';
 export const KANGAROO_ICON_SRC = 'favicon.svg';
 export const CASH_WATCHLIST_ID = 'CASH';
@@ -706,6 +706,7 @@ export const CSS_CLASSES = {
     METRIC_VALUE_LARGE: 'metric-value-large',
     METRIC_PERCENT_SMALL: 'metric-percent-small',
     SUMMARY_DETAIL_LEFT: 'summary-detail-left',
+    SUMMARY_DETAIL_RIGHT: 'summary-detail-right',
     SUMMARY_DETAIL_SUBTEXT: 'summary-detail-subtext',
 
     SUMMARY_DETAIL_LIST: 'summary-detail-list',

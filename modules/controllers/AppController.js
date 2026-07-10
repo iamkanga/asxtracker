@@ -769,16 +769,26 @@ export class AppController {
     }
 
     _handleQuickNav(detail) {
-        // If an explicit config is passed (e.g. from the Widget panel), use it.
-        // Otherwise, fallback to the user's saved quick nav preference.
-        let config = detail;
-        if (!config || !config.watchlistId) {
-            config = AppState.preferences.quickNav;
+        let targetContext = 'center';
+        if (detail && detail.targetContext) {
+            targetContext = detail.targetContext;
+        }
+
+        let config = null;
+        if (detail && detail.watchlistId) {
+            config = detail;
+        } else {
+            if (targetContext === 'left') {
+                config = AppState.preferences.quickNavLeft;
+            } else if (targetContext === 'right') {
+                config = AppState.preferences.quickNavRight;
+            } else {
+                config = AppState.preferences.quickNav;
+            }
         }
 
         if (!config) {
-            // No config set? Open modal to create one
-            this.quickNavUI.show();
+            this.quickNavUI.show(targetContext);
             return;
         }
 
@@ -799,13 +809,13 @@ export class AppController {
         const currentSort = AppState.sortConfig;
         const isSameSort = currentSort.field === sortField && currentSort.direction === sortDirection;
 
-        // Only open the edit modal if we used the user's saved preference and we're already there.
-        // If we clicked from a widget, we just want to navigate.
-        const isUserPreference = (config === AppState.preferences.quickNav);
+        // Determine if this config is a user preference for editing
+        const isUserPreference = (config === AppState.preferences.quickNavLeft ||
+                                  config === AppState.preferences.quickNavRight ||
+                                  config === AppState.preferences.quickNav);
 
         if (isSameWatchlist && isSameSort && isUserPreference) {
-            // Already there -> Open Modal to Edit/Clear
-            this.quickNavUI.show();
+            this.quickNavUI.show(targetContext);
         } else {
             // Execute Navigation
             this.handleSwitchWatchlist(watchlistId);
@@ -1084,6 +1094,14 @@ export class AppController {
                 AppState.preferences.quickNav = prefs.quickNav;
                 localStorage.setItem(STORAGE_KEYS.QUICK_NAV, JSON.stringify(prefs.quickNav));
                 // No render needed, it's Just-In-Time
+            }
+            if (prefs.quickNavLeft !== undefined) {
+                AppState.preferences.quickNavLeft = prefs.quickNavLeft;
+                localStorage.setItem('ASX_NEXT_quickNav_left', JSON.stringify(prefs.quickNavLeft));
+            }
+            if (prefs.quickNavRight !== undefined) {
+                AppState.preferences.quickNavRight = prefs.quickNavRight;
+                localStorage.setItem('ASX_NEXT_quickNav_right', JSON.stringify(prefs.quickNavRight));
             }
             if (prefs.badgeScope !== undefined && AppState.preferences.badgeScope !== (prefs.badgeScope || 'all')) {
                 AppState.preferences.badgeScope = prefs.badgeScope || 'all';

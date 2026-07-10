@@ -296,21 +296,155 @@ export class HeaderLayout {
             console.warn('HeaderLayout: View Toggle Button Not Found', IDS.VIEW_TOGGLE_BTN);
         }
 
-        // DURO-BIND: Delegated Carousel Navigation (Immune to innerHTML wipes)
-        this.container.addEventListener('click', (e) => {
-            const prevBtn = e.target.closest(`#${IDS.CAROUSEL_PREV_BTN}`);
-            const nextBtn = e.target.closest(`#${IDS.CAROUSEL_NEXT_BTN}`);
+        // 1. LEFT CHEVRON (Long-Hold -> Cash & Assets View)
+        if (this.carouselPrevBtn) {
+            let leftPressTimer = null;
+            let leftIsLongPress = false;
+            let leftHasTouch = false;
+            const LEFT_LONG_PRESS_DURATION = 600;
 
-            if (prevBtn) {
+            const leftStartPress = (e) => {
+                if (e.type === 'touchstart') {
+                    leftHasTouch = true;
+                } else if (e.type === 'mousedown') {
+                    if (leftHasTouch) return;
+                }
+
+                if (e.type === 'mousedown' && e.button !== 0) return;
+                leftIsLongPress = false;
+
+                leftPressTimer = setTimeout(() => {
+                    leftIsLongPress = true;
+                    try {
+                        if (navigator.vibrate) navigator.vibrate(50);
+                    } catch (err) {}
+
+                    if (e) {
+                        if (typeof e.preventDefault === 'function') e.preventDefault();
+                        if (typeof e.stopPropagation === 'function') e.stopPropagation();
+                    }
+
+                    // Explicit Left Shortcut Target
+                    document.dispatchEvent(new CustomEvent(EVENTS.REQUEST_QUICK_NAV, {
+                        detail: { targetContext: 'left' }
+                    }));
+                }, LEFT_LONG_PRESS_DURATION);
+            };
+
+            const leftCancelPress = (e) => {
+                if (leftPressTimer) {
+                    clearTimeout(leftPressTimer);
+                    leftPressTimer = null;
+                }
+
+                if (e && e.type === 'touchend') {
+                    setTimeout(() => {
+                        leftHasTouch = false;
+                    }, 500);
+                }
+
+                if (leftIsLongPress && e) {
+                    if (typeof e.preventDefault === 'function') e.preventDefault();
+                    if (typeof e.stopPropagation === 'function') e.stopPropagation();
+                }
+            };
+
+            this.carouselPrevBtn.addEventListener('mousedown', leftStartPress);
+            this.carouselPrevBtn.addEventListener('mouseup', leftCancelPress);
+            this.carouselPrevBtn.addEventListener('mouseleave', leftCancelPress);
+            this.carouselPrevBtn.addEventListener('pointerout', leftCancelPress);
+            this.carouselPrevBtn.addEventListener('touchstart', leftStartPress, { passive: true });
+            this.carouselPrevBtn.addEventListener('touchend', leftCancelPress);
+            this.carouselPrevBtn.addEventListener('touchmove', leftCancelPress);
+            this.carouselPrevBtn.addEventListener('touchcancel', leftCancelPress);
+
+            this.carouselPrevBtn.addEventListener('click', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
+
+                if (leftIsLongPress) {
+                    leftIsLongPress = false;
+                    return;
+                }
+
                 if (this.callbacks.onCarouselPrev) this.callbacks.onCarouselPrev();
-            } else if (nextBtn) {
+            });
+        }
+
+        // 2. RIGHT CHEVRON (Long-Hold -> Main Dashboard View)
+        if (this.carouselNextBtn) {
+            let rightPressTimer = null;
+            let rightIsLongPress = false;
+            let rightHasTouch = false;
+            const RIGHT_LONG_PRESS_DURATION = 600;
+
+            const rightStartPress = (e) => {
+                if (e.type === 'touchstart') {
+                    rightHasTouch = true;
+                } else if (e.type === 'mousedown') {
+                    if (rightHasTouch) return;
+                }
+
+                if (e.type === 'mousedown' && e.button !== 0) return;
+                rightIsLongPress = false;
+
+                rightPressTimer = setTimeout(() => {
+                    rightIsLongPress = true;
+                    try {
+                        if (navigator.vibrate) navigator.vibrate(50);
+                    } catch (err) {}
+
+                    if (e) {
+                        if (typeof e.preventDefault === 'function') e.preventDefault();
+                        if (typeof e.stopPropagation === 'function') e.stopPropagation();
+                    }
+
+                    // Explicit Right Shortcut Target
+                    document.dispatchEvent(new CustomEvent(EVENTS.REQUEST_QUICK_NAV, {
+                        detail: { targetContext: 'right' }
+                    }));
+                }, RIGHT_LONG_PRESS_DURATION);
+            };
+
+            const rightCancelPress = (e) => {
+                if (rightPressTimer) {
+                    clearTimeout(rightPressTimer);
+                    rightPressTimer = null;
+                }
+
+                if (e && e.type === 'touchend') {
+                    setTimeout(() => {
+                        rightHasTouch = false;
+                    }, 500);
+                }
+
+                if (rightIsLongPress && e) {
+                    if (typeof e.preventDefault === 'function') e.preventDefault();
+                    if (typeof e.stopPropagation === 'function') e.stopPropagation();
+                }
+            };
+
+            this.carouselNextBtn.addEventListener('mousedown', rightStartPress);
+            this.carouselNextBtn.addEventListener('mouseup', rightCancelPress);
+            this.carouselNextBtn.addEventListener('mouseleave', rightCancelPress);
+            this.carouselNextBtn.addEventListener('pointerout', rightCancelPress);
+            this.carouselNextBtn.addEventListener('touchstart', rightStartPress, { passive: true });
+            this.carouselNextBtn.addEventListener('touchend', rightCancelPress);
+            this.carouselNextBtn.addEventListener('touchmove', rightCancelPress);
+            this.carouselNextBtn.addEventListener('touchcancel', rightCancelPress);
+
+            this.carouselNextBtn.addEventListener('click', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
+
+                if (rightIsLongPress) {
+                    rightIsLongPress = false;
+                    return;
+                }
+
                 if (this.callbacks.onCarouselNext) this.callbacks.onCarouselNext();
-            }
-        });
+            });
+        }
 
         const sortBtn = document.getElementById(IDS.SORT_PICKER_BTN);
         if (sortBtn && this.callbacks.onSort) {
@@ -374,32 +508,57 @@ export class HeaderLayout {
             return;
         }
 
-        let pressTimer = null;
-        let isLongPress = false;
-        const LONG_PRESS_DURATION = 600;
+        let centerPressTimer = null;
+        let centerIsLongPress = false;
+        let centerHasTouch = false;
+        const CENTER_LONG_PRESS_DURATION = 600;
 
         // Start Press
         const startPress = (e) => {
+            if (e.type === 'touchstart') {
+                centerHasTouch = true;
+            } else if (e.type === 'mousedown') {
+                if (centerHasTouch) return;
+            }
+
             // Only left click or single touch
             if (e.type === 'mousedown' && e.button !== 0) return;
+            centerIsLongPress = false;
 
-            isLongPress = false;
-            pressTimer = setTimeout(() => {
-                isLongPress = true;
-                // Visual feedback (optional) or haptic
+            centerPressTimer = setTimeout(() => {
+                centerIsLongPress = true;
                 try {
                     if (navigator.vibrate) navigator.vibrate(50);
-                } catch (err) { }
+                } catch (err) {}
 
-                document.dispatchEvent(new CustomEvent(EVENTS.REQUEST_QUICK_NAV));
-            }, LONG_PRESS_DURATION);
+                if (e) {
+                    if (typeof e.preventDefault === 'function') e.preventDefault();
+                    if (typeof e.stopPropagation === 'function') e.stopPropagation();
+                }
+
+                // Explicit Center Shortcut Target
+                document.dispatchEvent(new CustomEvent(EVENTS.REQUEST_QUICK_NAV, {
+                    detail: { targetContext: 'center' }
+                }));
+            }, CENTER_LONG_PRESS_DURATION);
         };
 
         // Cancel Press (Move/End)
-        const cancelPress = () => {
-            if (pressTimer) {
-                clearTimeout(pressTimer);
-                pressTimer = null;
+        const cancelPress = (e) => {
+            if (centerPressTimer) {
+                clearTimeout(centerPressTimer);
+                centerPressTimer = null;
+            }
+
+            if (e && e.type === 'touchend') {
+                setTimeout(() => {
+                    centerHasTouch = false;
+                }, 500);
+            }
+
+            if (centerIsLongPress && e) {
+                if (typeof e.preventDefault === 'function') e.preventDefault();
+                if (typeof e.stopPropagation === 'function') e.stopPropagation();
             }
         };
 
@@ -408,9 +567,9 @@ export class HeaderLayout {
             e.stopPropagation();
             e.preventDefault();
 
-            if (isLongPress) {
+            if (centerIsLongPress) {
                 // If it was a long press, we ignore the click (it's essentially consumed)
-                isLongPress = false;
+                centerIsLongPress = false;
                 return;
             }
 
@@ -422,11 +581,13 @@ export class HeaderLayout {
         titleEl.addEventListener('mousedown', startPress);
         titleEl.addEventListener('mouseup', cancelPress);
         titleEl.addEventListener('mouseleave', cancelPress);
+        titleEl.addEventListener('pointerout', cancelPress);
 
         // Touch Events (Passive false for preventDefault if needed, though we rely on click mostly)
         titleEl.addEventListener('touchstart', startPress, { passive: true });
         titleEl.addEventListener('touchend', cancelPress);
         titleEl.addEventListener('touchmove', cancelPress);
+        titleEl.addEventListener('touchcancel', cancelPress);
 
         // Main Action
         titleEl.addEventListener('click', handleClick);

@@ -754,6 +754,14 @@
     gap: 2px;
 }
 
+.summary-detail-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    text-align: right;
+    gap: 2px;
+}
+
 .summary-detail-subtext {
     font-size: 0.75rem;
     font-weight: 500;
