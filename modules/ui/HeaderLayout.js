@@ -357,6 +357,7 @@ export class HeaderLayout {
             this.carouselPrevBtn.addEventListener('touchend', leftCancelPress);
             this.carouselPrevBtn.addEventListener('touchmove', leftCancelPress);
             this.carouselPrevBtn.addEventListener('touchcancel', leftCancelPress);
+            this.carouselPrevBtn.addEventListener('contextmenu', (e) => e.preventDefault());
 
             this.carouselPrevBtn.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -432,6 +433,7 @@ export class HeaderLayout {
             this.carouselNextBtn.addEventListener('touchend', rightCancelPress);
             this.carouselNextBtn.addEventListener('touchmove', rightCancelPress);
             this.carouselNextBtn.addEventListener('touchcancel', rightCancelPress);
+            this.carouselNextBtn.addEventListener('contextmenu', (e) => e.preventDefault());
 
             this.carouselNextBtn.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -588,6 +590,7 @@ export class HeaderLayout {
         titleEl.addEventListener('touchend', cancelPress);
         titleEl.addEventListener('touchmove', cancelPress);
         titleEl.addEventListener('touchcancel', cancelPress);
+        titleEl.addEventListener('contextmenu', (e) => e.preventDefault());
 
         // Main Action
         titleEl.addEventListener('click', handleClick);

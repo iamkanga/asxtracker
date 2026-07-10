@@ -3254,17 +3254,21 @@ export class ViewRenderer {
             }
 
             if (title === 'Day Change Winners' || title === 'Day Change Losers' || title === 'Day Change') {
-                const dailyChangeVal = share.dayChangeValue || 0;
-                const dailyChangePct = share.dayChangePercent || 0;
-                const pctSign = dailyChangePct < 0 ? '-' : '';
-                const subtext = `${formatCurrency(dailyChangeVal)} (${pctSign}${formatPercent(dailyChangePct)})`;
-                const subtextClass = dailyChangeVal >= 0 ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE;
+                // TOP ROW (right): Total day P&L for the position (dayChangeValue = perShareChange × units)
+                // BOTTOM ROW (right): Single share price movement (dayChangePerShare) + daily percentage
+                const positionDayChange = share.dayChangeValue || 0;       // e.g. +$18.75 (total position impact)
+                const perShareChange   = share.dayChangePerShare || 0;     // e.g. +$0.45 (single share delta)
+                const dailyChangePct   = share.dayChangePercent || 0;      // e.g. 1.52%
+
+                // formatCurrency preserves native sign; formatPercent strips sign (color = direction)
+                const subtext = `${formatCurrency(perShareChange)} (${formatPercent(dailyChangePct)})`;
+                const subtextClass = positionDayChange >= 0 ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE;
 
                 return `
                     <div class="${CSS_CLASSES.SUMMARY_DETAIL_ROW}" data-code="${share.code}" data-id="${share.id}">
                         <span class="${CSS_CLASSES.SUMMARY_DETAIL_CODE}">${share.code}</span>
                         <div class="${CSS_CLASSES.SUMMARY_DETAIL_RIGHT}">
-                            <span class="${CSS_CLASSES.SUMMARY_DETAIL_VALUE}">${formatCurrency(share.value || 0)}</span>
+                            <span class="${CSS_CLASSES.SUMMARY_DETAIL_VALUE} ${subtextClass}">${formatCurrency(positionDayChange)}</span>
                             <span class="${CSS_CLASSES.SUMMARY_DETAIL_SUBTEXT} ${subtextClass}">${subtext}</span>
                         </div>
                     </div>

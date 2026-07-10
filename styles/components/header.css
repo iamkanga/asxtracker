@@ -218,6 +218,9 @@ h1#dynamicWatchlistTitle {
     z-index: 500;
     pointer-events: auto;
     transition: color 0.2s;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
 }
 
 h1#dynamicWatchlistTitle:hover {
