@@ -818,7 +818,12 @@ export class AppController {
             this.quickNavUI.show(targetContext);
         } else {
             // Execute Navigation
-            this.handleSwitchWatchlist(watchlistId);
+            AppState._skipSortRestore = true;
+            try {
+                this.handleSwitchWatchlist(watchlistId);
+            } finally {
+                AppState._skipSortRestore = false;
+            }
 
             // Execute Sort
             this._applySort({ field: sortField, direction: sortDirection });
@@ -1919,7 +1924,9 @@ export class AppController {
         }
 
         // === STEP 2: RESTORE SORT CONFIG (BEFORE RENDER) ===
-        if (AppState.preferences.globalSort) {
+        if (AppState._skipSortRestore) {
+            // Skip sort restoration to prevent double-write race condition
+        } else if (AppState.preferences.globalSort) {
             // GLOBAL OVERRIDE with FALLBACK LOGIC
             const currentGlobal = AppState.preferences.globalSort;
 
