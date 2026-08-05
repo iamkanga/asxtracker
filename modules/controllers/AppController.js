@@ -166,7 +166,7 @@ export class AppController {
                 this.headerLayout.updateConnectionStatus(AppState.user !== null, AppState.health.status);
             }
             ToastManager.info('Connection restored. Updating market prices...');
-            
+
             // Re-fetch prices on reconnection to ensure fresh data
             this._refreshAllPrices(AppState.data.shares || [], true).catch(err => {
                 console.error('[AppController] Failed to refresh prices on reconnect:', err);
@@ -540,11 +540,11 @@ export class AppController {
                 return;
             }
 
-            const input = prompt(`Manual Franking Override for ${ticker}\nEnter percentage (0-100):`, 
+            const input = prompt(`Manual Franking Override for ${ticker}\nEnter percentage (0-100):`,
                 current !== null ? Math.round(current * 100) : "100");
-            
+
             if (input === null) return;
-            
+
             const pct = parseFloat(input);
             if (isNaN(pct) || pct < 0 || pct > 100) {
                 ToastManager.error("Please enter a valid percentage between 0 and 100.");
@@ -553,7 +553,7 @@ export class AppController {
 
             const frankingValue = pct / 100;
             await this.appService.saveDividendOverride(ticker, { franking: frankingValue });
-            
+
             // 2. IMMEDIATE UI REFRESH (for the open modal/card)
             // We find the open dividend card by its standard ID pattern
             const cardId = `divHeroCard_${ticker}`;
@@ -564,7 +564,7 @@ export class AppController {
                 const stock = allShares.find(s => (s.shareName || s.code || '').toUpperCase() === ticker.toUpperCase());
                 const priceData = AppState.livePrices?.get(ticker.toUpperCase());
                 const price = priceData ? priceData.live : 0;
-                
+
                 if (stock) {
                     // Re-trigger the async hydration to update the specific card element
                     this.viewRenderer._hydrateDividendCard(container, stock, price);
@@ -811,8 +811,8 @@ export class AppController {
 
         // Determine if this config is a user preference for editing
         const isUserPreference = (config === AppState.preferences.quickNavLeft ||
-                                  config === AppState.preferences.quickNavRight ||
-                                  config === AppState.preferences.quickNav);
+            config === AppState.preferences.quickNavRight ||
+            config === AppState.preferences.quickNav);
 
         if (isSameWatchlist && isSameSort && isUserPreference) {
             this.quickNavUI.show(targetContext);
@@ -880,17 +880,18 @@ export class AppController {
      */
     async _refreshAllPrices(shares, force = false) {
 
-        let codesToFetch = [...new Set((shares || []).map(s => s.shareName))].filter(Boolean);
-
-        // 1. FRESHNESS GUARD: If a full fetch happened in the last 5 minutes, skip.
-        const now = Date.now();
-        const FIVE_MINUTES = 5 * 60 * 1000;
-        if (!force && AppState.lastGlobalFetch && (now - AppState.lastGlobalFetch < FIVE_MINUTES)) {
+        // 1. IMMEDIATE CONCURRENCY GUARD: Kill duplicate call instantly if a fetch is in flight
+        if (AppState._isFetching) {
+            console.warn('[AppController] Price fetch already in progress. Dropping duplicate request.');
             return;
         }
 
-        // 2. CONCURRENCY LOCK: Prevent overlapping fetches
-        if (AppState._isFetching) {
+        let codesToFetch = [...new Set((shares || []).map(s => s.shareName))].filter(Boolean);
+
+        // 2. FRESHNESS GUARD: If a full fetch happened in the last 5 minutes, skip.
+        const now = Date.now();
+        const FIVE_MINUTES = 5 * 60 * 1000;
+        if (!force && AppState.lastGlobalFetch && (now - AppState.lastGlobalFetch < FIVE_MINUTES)) {
             return;
         }
 
@@ -1463,11 +1464,11 @@ export class AppController {
                     // Do not pulse 'loading' visually during background updates.
                     const fetchStartTime = Date.now();
                     const wasStale = (Date.now() - (AppState.lastGlobalFetch || 0) > 15 * 60 * 1000);
-                    
+
                     if (wasStale) {
-                         document.body.classList.add('is-stale');
-                         AppState.health.status = 'stale';
-                         if (this.headerLayout) this.headerLayout.updateConnectionStatus(true, 'stale');
+                        document.body.classList.add('is-stale');
+                        AppState.health.status = 'stale';
+                        if (this.headerLayout) this.headerLayout.updateConnectionStatus(true, 'stale');
                     }
 
                     // Trigger a background refresh silently
@@ -1555,7 +1556,7 @@ export class AppController {
             if (AppState.user && this.headerLayout) {
                 this.headerLayout.updateConnectionStatus(true, newStatus);
             }
-            
+
             if (newStatus === 'stale') {
                 document.body.classList.add('is-stale');
                 // Trigger background refresh silently if we just became stale!
@@ -1574,7 +1575,7 @@ export class AppController {
             }
         } else if (newStatus === 'stale') {
             document.body.classList.add('is-stale');
-            
+
             // Auto-recovery retry loop: if app remains stale, retry background fetch every 60s
             const timeSinceLastAttempt = Date.now() - (this._lastFetchAttemptTime || 0);
             if (timeSinceLastAttempt > 60000 && !AppState._isFetching && AppState.user) {
@@ -3298,10 +3299,10 @@ export class AppController {
                 } else {
                     // Fix: Redirect Dashboard Snapshot / Market Indices to Yahoo (as requested)
                     const upCode = code.toUpperCase();
-                    const isDashboardSymbol = DASHBOARD_SYMBOLS.includes(upCode) || 
-                                           upCode.startsWith('^') || 
-                                           upCode.endsWith('=F') || 
-                                           upCode.endsWith('=X');
+                    const isDashboardSymbol = DASHBOARD_SYMBOLS.includes(upCode) ||
+                        upCode.startsWith('^') ||
+                        upCode.endsWith('=F') ||
+                        upCode.endsWith('=X');
 
                     if (isDashboardSymbol) {
                         const url = DASHBOARD_LINKS[upCode] || LinkHelper.getFinanceUrl(upCode);
