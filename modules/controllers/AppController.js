@@ -208,13 +208,13 @@ export class AppController {
                 this.watchlistUI.updateHeaderTitle();
             }
 
-            // === GLOBAL PRICE SEEDING (DEBOUNCED) ===
-            // v1137: Retain 800ms debounce to avoid rapid fetch on every Firestore chunk
+            // === GLOBAL PRICE SEEDING (DEBOUNCED & STAGGERED) ===
+            // Allow cached DOM to render completely before sending backend fetch
             if (this._bootSeedTimer) clearTimeout(this._bootSeedTimer);
             this._bootSeedTimer = setTimeout(async () => {
                 await this._refreshAllPrices(AppState.data.shares || []);
                 this._checkSnapshotNecessity();
-            }, 800);
+            }, 1800);
 
             // === WATCHLIST RESTORATION (First Run Only) ===
             if (!this._initialWatchlistRestored) {
@@ -877,22 +877,26 @@ export class AppController {
     /**
      * Seeds the Live Price cache with ALL user shares.
      * Ensures Search and other views have data even if not visiting a specific watchlist.
+     * Uses Promise-deduplication to prevent concurrent overlapping requests to Google Apps Script.
+     * @param {Array} shares - List of user shares
+     * @param {boolean} force - If true, bypasses the 5-minute freshness guard
+     * @param {boolean} silent - If true, suppresses slow connection toast notifications (for background syncs)
      */
-    async _refreshAllPrices(shares, force = false) {
+    async _refreshAllPrices(shares, force = false, silent = true) {
+        // 1. IN-FLIGHT PROMISE SHARING (Deduplication)
+        // If a fetch is currently in progress, join and await the active pending promise!
+        if (this._activeFetchPromise) {
+            return this._activeFetchPromise;
+        }
 
-        let codesToFetch = [...new Set((shares || []).map(s => s.shareName))].filter(Boolean);
-
-        // 1. FRESHNESS GUARD: If a full fetch happened in the last 5 minutes, skip.
+        // 2. FRESHNESS GUARD: Skip if full fetch occurred recently
         const now = Date.now();
         const FIVE_MINUTES = 5 * 60 * 1000;
         if (!force && AppState.lastGlobalFetch && (now - AppState.lastGlobalFetch < FIVE_MINUTES)) {
             return;
         }
 
-        // 2. CONCURRENCY LOCK: Prevent overlapping fetches
-        if (AppState._isFetching) {
-            return;
-        }
+        let codesToFetch = [...new Set((shares || []).map(s => s.shareName))].filter(Boolean);
 
         // Include Dashboard Symbols ALWAYS
         DASHBOARD_SYMBOLS.forEach(code => {
@@ -905,32 +909,49 @@ export class AppController {
         AppState._isFetching = true;
         this._lastFetchAttemptTime = Date.now();
 
-        try {
-            const result = await this.dataService.fetchLivePrices(codesToFetch);
-            const freshPrices = result?.prices;
-            const freshDashboard = result?.dashboard;
+        // Create the promise and store it in this._activeFetchPromise
+        this._activeFetchPromise = (async () => {
+            try {
+                const result = await this.dataService.fetchLivePrices(codesToFetch, silent);
+                const freshPrices = result?.prices;
+                const freshDashboard = result?.dashboard;
 
-            if (freshPrices && freshPrices.size > 0) {
-                const prevSize = AppState.livePrices.size;
-                AppState.livePrices = new Map([...AppState.livePrices, ...freshPrices]);
-                AppState.lastGlobalFetch = Date.now();
+                if (freshPrices && freshPrices.size > 0) {
+                    AppState.livePrices = new Map([...AppState.livePrices, ...freshPrices]);
+                    AppState.saveLivePricesToCache();
+                    AppState.lastGlobalFetch = Date.now();
+                    AppState.health.status = 'healthy';
+                    document.body.classList.remove('is-stale');
+                    if (this.headerLayout) {
+                        this.headerLayout.updateConnectionStatus(true, 'healthy');
+                    }
 
-                if (freshDashboard && Array.isArray(freshDashboard)) {
-                    AppState.data.dashboard = freshDashboard;
+                    if (freshDashboard && Array.isArray(freshDashboard)) {
+                        AppState.data.dashboard = freshDashboard;
+                    }
+                    // BROADCAST: Notify all subscribed components that prices have been refreshed.
+                    StateAuditor.emit('PRICES_UPDATED', {
+                        count: freshPrices.size,
+                        totalCached: AppState.livePrices.size,
+                        hasDashboard: !!(freshDashboard && freshDashboard.length > 0),
+                        timestamp: AppState.lastGlobalFetch
+                    });
+                } else if (result && !result.ok) {
+                    AppState.health.status = 'stale';
+                    document.body.classList.add('is-stale');
+                    if (this.headerLayout) {
+                        this.headerLayout.updateConnectionStatus(true, 'stale');
+                    }
                 }
-                // BROADCAST: Notify all subscribed components that prices have been refreshed.
-                StateAuditor.emit('PRICES_UPDATED', {
-                    count: freshPrices.size,
-                    totalCached: AppState.livePrices.size,
-                    hasDashboard: !!(freshDashboard && freshDashboard.length > 0),
-                    timestamp: AppState.lastGlobalFetch
-                });
+            } catch (err) {
+                console.warn('Global Price Seed failed:', err);
+            } finally {
+                AppState._isFetching = false;
+                this._activeFetchPromise = null;
             }
-        } catch (err) {
-            console.warn('Global Price Seed failed:', err);
-        } finally {
-            AppState._isFetching = false;
-        }
+        })();
+
+        return this._activeFetchPromise;
     }
 
     /* ================= Logic Handlers ================= */
@@ -1541,8 +1562,14 @@ export class AppController {
         }
 
         // 4. FETCH AGE CHECK (15 Minutes) - Background Timer Source of Truth
-        const fetchAge = now - (AppState.lastGlobalFetch || 0);
-        if (fetchAge > 15 * 60 * 1000) {
+        const sessionAge = now - health.sessionStartTime;
+        if (AppState.lastGlobalFetch > 0) {
+            const fetchAge = now - AppState.lastGlobalFetch;
+            if (fetchAge > 15 * 60 * 1000) {
+                newStatus = 'stale';
+            }
+        } else if (sessionAge > 60000) {
+            // Only consider stale if boot fetch has not succeeded after 60s
             newStatus = 'stale';
         }
 
@@ -1810,19 +1837,17 @@ export class AppController {
 
                     requestAnimationFrame(async () => {
                         try {
-                            const result = await this.dataService.fetchLivePrices(codes);
+                            const result = await this.dataService.fetchLivePrices(codes, !isManual);
                             const freshPrices = result?.prices;
                             const freshDashboard = result?.dashboard;
 
                             if (freshPrices && freshPrices.size > 0) {
                                 AppState.livePrices = new Map([...AppState.livePrices, ...freshPrices]);
+                                AppState.saveLivePricesToCache();
+                                AppState.lastGlobalFetch = Date.now();
 
                                 if (freshDashboard && Array.isArray(freshDashboard)) {
                                     AppState.data.dashboard = freshDashboard;
-                                }
-
-                                if (codes.length > 50) {
-                                    AppState.lastGlobalFetch = Date.now();
                                 }
 
                                 if (AppState.watchlist.id === originalWatchlistId) {
@@ -1838,7 +1863,7 @@ export class AppController {
                                         count: freshPrices.size,
                                         totalCached: AppState.livePrices.size,
                                         hasDashboard: !!(freshDashboard && freshDashboard.length > 0),
-                                        timestamp: Date.now()
+                                        timestamp: AppState.lastGlobalFetch
                                     });
                                 }
                             }
@@ -1874,13 +1899,6 @@ export class AppController {
     async handleSwitchWatchlist(watchlistId, isBoot = false, skipPersist = false) {
         // QUICK EXIT: If same watchlist and not boot, ignore.
         if (!isBoot && watchlistId === AppState.watchlist.id) return;
-
-        // === CONCURRENCY RESET ===
-        // Break any existing locks from previous cancelled/stale fetches.
-        // This ensures the new view has authority to request data.
-        if (AppState._isFetching) {
-            AppState._isFetching = false;
-        }
 
         // === STEP 1: Update Watchlist Identity ===
         const customNames = AppState.preferences.customWatchlistNames || {};
@@ -2519,6 +2537,17 @@ export class AppController {
      */
     _updateSortConfig(newSort, watchlistId, isBoot = false) {
         const sanitizedSort = this._getSanitizedSort(newSort, watchlistId);
+
+        // DEDUPLICATION GUARD: If new sort matches AppState.sortConfig, return early to prevent double-write race conditions.
+        if (AppState.sortConfig &&
+            AppState.sortConfig.field === sanitizedSort.field &&
+            AppState.sortConfig.direction === sanitizedSort.direction) {
+            if (this.viewRenderer) {
+                this.viewRenderer.updateSortButtonUI(watchlistId, AppState.sortConfig);
+            }
+            return;
+        }
+
         this._pendingSortConfig = sanitizedSort;
 
         if (this._sortConfigDebounceTimer) {
@@ -2533,11 +2562,9 @@ export class AppController {
             // Rapid write detected — defer to clear the StateAuditor 50ms window.
             this._sortConfigDebounceTimer = setTimeout(() => {
                 const target = this._pendingSortConfig;
-                if (target) {
+                if (target && JSON.stringify(AppState.sortConfig) !== JSON.stringify(target)) {
                     this._lastSortConfigWriteTime = Date.now();
-                    if (JSON.stringify(AppState.sortConfig) !== JSON.stringify(target)) {
-                        AppState.sortConfig = { ...target };
-                    }
+                    AppState.sortConfig = { ...target };
                     this._lastSortConfigWriteTime = Date.now();
                     this.viewRenderer.updateSortButtonUI(AppState.watchlist.id, AppState.sortConfig);
                     this.updateDataAndRender(false).catch(e => console.warn('Render error:', e));
@@ -2577,8 +2604,10 @@ export class AppController {
         const wType = AppState.watchlist.type;
         const contextId = wType === 'cash' ? 'CASH' : AppState.watchlist.id;
 
-        // Update AppState
-        AppState.sortConfig = sortConfig;
+        // Update AppState only if changed
+        if (JSON.stringify(AppState.sortConfig) !== JSON.stringify(sortConfig)) {
+            AppState.sortConfig = sortConfig;
+        }
 
         // Persist
         AppState.saveSortConfigForWatchlist(AppState.watchlist.id);

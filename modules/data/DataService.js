@@ -40,13 +40,16 @@ function isNetworkError(error) {
 export class DataService {
     constructor() {
         this.API_ENDPOINT = API_ENDPOINT;
+        this._historyQueue = [];
+        this._isProcessingHistoryQueue = false;
     }
     /**
      * Fetches live prices for specific codes or all stocks if no codes provided.
      * @param {string[]} [codesArray] - Optional array of ASX codes (e.g. ['BHP', 'CBA'])
+     * @param {boolean} [silent=false] - If true, suppresses slow connection toast notifications (for background syncs)
      * @returns {Promise<Map<string, Object>>} - Map of clean price objects keyed by code.
      */
-    async fetchLivePrices(codesArray = null) {
+    async fetchLivePrices(codesArray = null, silent = false) {
         try {
             const url = new URL(API_ENDPOINT);
             url.searchParams.append('_ts', Date.now()); // Prevent caching
@@ -61,40 +64,46 @@ export class DataService {
             }
 
             // TRACE LOGGING
-            // TIMEOUT PROTECTION (20 Seconds)
+            // TIMEOUT PROTECTION (30 Seconds for Google Apps Script cold starts)
             const controller = new AbortController();
-            const warningId = setTimeout(() => {
-                ToastManager.info("Retrieving stock prices is taking longer than expected. Please wait...", "Slow Connection");
-            }, 12000);
-            const timeoutId = setTimeout(() => controller.abort(), 20000);
+            let warningId = null;
+            if (!silent) {
+                warningId = setTimeout(() => {
+                    ToastManager.info("Retrieving stock prices is taking longer than expected. Please wait...", "Slow Connection");
+                }, 18000); // 18s threshold for explicit manual user requests
+            }
+            const timeoutId = setTimeout(() => controller.abort(), 30000);
 
             try {
                 const response = await fetch(url.toString(), { signal: controller.signal });
-                clearTimeout(warningId);
+                if (warningId) clearTimeout(warningId);
                 clearTimeout(timeoutId);
 
                 if (!response.ok) {
                     console.error(`DataService Fetch Error: ${response.status} ${response.statusText}`);
-                    return { prices: new Map(), dashboard: [] };
+                    return { ok: false, prices: new Map(), dashboard: [] };
                 }
 
                 const json = await response.json();
 
                 // Normalize and return both prices and dashboard data
-                return this._normalizePriceData(json);
+                const normalized = this._normalizePriceData(json);
+                return { ok: true, ...normalized };
 
             } catch (error) {
-                clearTimeout(warningId);
+                if (warningId) clearTimeout(warningId);
                 clearTimeout(timeoutId);
                 if (error.name === 'AbortError') {
-                    console.warn("DataService: Fetch timed out (20s limit).");
+                    console.warn("DataService: Fetch timed out (30s limit).");
                 } else if (isNetworkError(error)) {
                     console.warn("DataService: Live prices fetch network failure (Failed to fetch).");
-                    ToastManager.error("Network error while connecting to price servers. Retrying...", "Connection Error");
+                    if (!silent) {
+                        ToastManager.error("Network error while connecting to price servers. Retrying...", "Connection Error");
+                    }
                 } else {
                     console.error("DataService Exception:", error);
                 }
-                return { prices: new Map(), dashboard: [] };
+                return { ok: false, prices: new Map(), dashboard: [] };
             }
         } catch (error) {
             // This outer catch handles errors from URL construction or initial setup
@@ -382,13 +391,13 @@ export class DataService {
 
     /**
      * Fetches historical price data.
+     * Uses in-memory queue to stagger network requests (250ms gap) to avoid choking Google Apps Script.
      * @param {string} code 
      * @param {string} range '1y', '5y', 'max'
+     * @param {boolean} silent - If true, suppresses toast notifications for background sparklines
      */
-    async fetchHistory(code, range) {
+    async fetchHistory(code, range, silent = false) {
         // CACHE IMPLEMENTATION: Check localStorage first to save API quota
-        // Key format: asx_history_{code}_{range}
-        // Expiry: 24 hours
         const cacheKey = `asx_history_v3_${code}_${range}`;
         const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -397,13 +406,43 @@ export class DataService {
             if (cached) {
                 const { timestamp, data } = JSON.parse(cached);
                 if (Date.now() - timestamp < CACHE_DURATION) {
-                    return data; // Return valid cached data
+                    return data; // Return valid cached data instantly without queueing
                 }
             }
         } catch (e) {
             console.warn('[DataService] Cache read error:', e);
         }
 
+        // Queue Network Request with Staggering
+        return new Promise((resolve) => {
+            this._historyQueue.push({ code, range, silent, cacheKey, resolve });
+            this._processHistoryQueue();
+        });
+    }
+
+    async _processHistoryQueue() {
+        if (this._isProcessingHistoryQueue) return;
+        this._isProcessingHistoryQueue = true;
+
+        while (this._historyQueue.length > 0) {
+            const item = this._historyQueue.shift();
+            try {
+                const res = await this._execFetchHistory(item.code, item.range, item.silent, item.cacheKey);
+                item.resolve(res);
+            } catch (err) {
+                item.resolve({ ok: false, error: err?.message || 'History fetch failed' });
+            }
+
+            // Stagger next network request by 250ms if queue remains non-empty
+            if (this._historyQueue.length > 0) {
+                await new Promise(r => setTimeout(r, 250));
+            }
+        }
+
+        this._isProcessingHistoryQueue = false;
+    }
+
+    async _execFetchHistory(code, range, silent, cacheKey) {
         // RANGE HYGIENE: Yahoo Finance API expects 'mo' for months (1mo, 3mo, 6mo)
         const rangeMap = {
             '1m': '1mo',
@@ -412,19 +451,22 @@ export class DataService {
         };
         const mappedRange = rangeMap[range] || range;
 
-        // TIMEOUT PROTECTION (20 Seconds)
+        // TIMEOUT PROTECTION (30 Seconds)
         const controller = new AbortController();
-        const warningId = setTimeout(() => {
-            ToastManager.info("Loading stock history chart is taking longer than expected...", "Slow Connection");
-        }, 12000);
-        const timeoutId = setTimeout(() => controller.abort(), 20000);
+        let warningId = null;
+        if (!silent) {
+            warningId = setTimeout(() => {
+                ToastManager.info("Loading stock history chart is taking longer than expected...", "Slow Connection");
+            }, 18000);
+        }
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
 
         try {
             const user = AuthService.getCurrentUser();
             const userId = user ? user.uid : null;
 
             if (!userId) {
-                clearTimeout(warningId);
+                if (warningId) clearTimeout(warningId);
                 clearTimeout(timeoutId);
                 console.warn('DataService: fetchHistory called without logged-in user.');
                 return { ok: false, error: 'User not logged in' };
@@ -445,7 +487,7 @@ export class DataService {
                 signal: controller.signal
             });
 
-            clearTimeout(warningId);
+            if (warningId) clearTimeout(warningId);
             clearTimeout(timeoutId);
 
             if (!response.ok) {
@@ -464,11 +506,9 @@ export class DataService {
                 } catch (e) {
                     if (e.name === 'QuotaExceededError') {
                         console.warn('[DataService] Cache full. Purging history keys...');
-                        // Strategy: Clear all history keys to make room
                         Object.keys(localStorage).forEach(key => {
                             if (key.startsWith('asx_history_')) localStorage.removeItem(key);
                         });
-                        // Retry once
                         try { localStorage.setItem(cacheKey, JSON.stringify({ timestamp: Date.now(), data: json })); } catch (e2) { }
                     } else {
                         console.warn('[DataService] Cache write error:', e);
@@ -478,13 +518,15 @@ export class DataService {
 
             return json;
         } catch (err) {
-            clearTimeout(warningId);
+            if (warningId) clearTimeout(warningId);
             clearTimeout(timeoutId);
             if (err.name === 'AbortError') {
-                console.warn("DataService: fetchHistory timed out (20s limit).");
+                console.warn("DataService: fetchHistory timed out (30s limit).");
             } else if (isNetworkError(err)) {
                 console.warn('DataService: History Fetch network failure (Failed to fetch).');
-                ToastManager.error("Network failure while loading stock history.", "Connection Error");
+                if (!silent) {
+                    ToastManager.error("Network failure while loading stock history.", "Connection Error");
+                }
             } else {
                 console.error('DataService: History Fetch Exception:', err);
             }

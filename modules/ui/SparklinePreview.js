@@ -64,8 +64,8 @@ export class SparklinePreview {
             if (!api) return;
 
             // Fetch History (Uses localStorage cache automatically from DataService)
-            // We use '1y' as standard for portfolio bg
-            const res = await api.fetchHistory(this.code, '1y');
+            // We use '1y' as standard for portfolio bg, with silent=true to suppress toasts
+            const res = await api.fetchHistory(this.code, '1y', true);
 
             if (res && res.ok && Array.isArray(res.data) && res.data.length > 0) {
                 this.render(res.data);

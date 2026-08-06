@@ -315,7 +315,31 @@ export const AppState = {
     lastGlobalFetch: 0, // Timestamp of last full API fetch
     _isFetching: false, // Concurrency lock
     // Map<StockCode, { live: number, pctChange: number }>
-    livePrices: new Map(), // Initialized immediately
+    livePrices: (() => {
+        try {
+            const stored = localStorage.getItem('asx_live_prices_v2');
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                if (Array.isArray(parsed)) {
+                    return new Map(parsed);
+                }
+            }
+        } catch (e) {
+            console.warn('[AppState] Failed to load livePrices from cache:', e);
+        }
+        return new Map();
+    })(),
+
+    saveLivePricesToCache() {
+        try {
+            if (this.livePrices instanceof Map && this.livePrices.size > 0) {
+                const entries = Array.from(this.livePrices.entries());
+                localStorage.setItem('asx_live_prices_v2', JSON.stringify(entries));
+            }
+        } catch (e) {
+            console.warn('[AppState] Failed to save livePrices to cache:', e);
+        }
+    },
 
     // Subscription Cleanups
     unsubscribeStore: null,
