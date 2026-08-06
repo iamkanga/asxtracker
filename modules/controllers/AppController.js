@@ -880,18 +880,17 @@ export class AppController {
      */
     async _refreshAllPrices(shares, force = false) {
 
-        // 1. IMMEDIATE CONCURRENCY GUARD: Kill duplicate call instantly if a fetch is in flight
-        if (AppState._isFetching) {
-            console.warn('[AppController] Price fetch already in progress. Dropping duplicate request.');
-            return;
-        }
-
         let codesToFetch = [...new Set((shares || []).map(s => s.shareName))].filter(Boolean);
 
-        // 2. FRESHNESS GUARD: If a full fetch happened in the last 5 minutes, skip.
+        // 1. FRESHNESS GUARD: If a full fetch happened in the last 5 minutes, skip.
         const now = Date.now();
         const FIVE_MINUTES = 5 * 60 * 1000;
         if (!force && AppState.lastGlobalFetch && (now - AppState.lastGlobalFetch < FIVE_MINUTES)) {
+            return;
+        }
+
+        // 2. CONCURRENCY LOCK: Prevent overlapping fetches
+        if (AppState._isFetching) {
             return;
         }
 
