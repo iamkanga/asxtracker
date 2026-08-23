@@ -191,7 +191,9 @@ export function processShares(allShares, watchlistId, livePrices, sortConfig, hi
             sector: priceData ? priceData.sector : (share.sector || ''),
             industry: priceData ? priceData.industry : (share.industry || ''),
             high52: priceData ? priceData.high : 0,
-            low52: priceData ? priceData.low : 0
+            low52: priceData ? priceData.low : 0,
+            quoteTime: priceData ? (priceData.quoteTime || null) : null,
+            lastUpdate: priceData ? (priceData.lastUpdate || null) : null
         };
 
         processedMap.set(lookupKey, processedShare);

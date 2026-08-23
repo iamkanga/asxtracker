@@ -1,4 +1,5 @@
 import { CSS_CLASSES, EVENTS, UI_ICONS, IDS, CASH_WATCHLIST_ID, KANGAROO_ICON_SVG, APP_VERSION } from '../utils/AppConstants.js';
+import { MarketSchedule } from '../utils/MarketSchedule.js';
 import { AppState } from '../state/AppState.js';
 import { StateAuditor } from '../state/StateAuditor.js';
 import { notificationStore } from '../state/NotificationStore.js'; // FIX: Interact with Global Store
@@ -542,20 +543,7 @@ export class SidebarCommandCenter {
     }
 
     _checkIfMarketOpen() {
-        const now = new Date();
-        const sydneyParts = new Intl.DateTimeFormat('en-GB', {
-            timeZone: 'Australia/Sydney',
-            hour: 'numeric', minute: 'numeric', weekday: 'short', hour12: false
-        }).formatToParts(now);
-
-        const getPart = (type) => (sydneyParts.find(p => p.type === type) || {}).value;
-        const day = getPart('weekday');
-        const hour = parseInt(getPart('hour'));
-        const minute = parseInt(getPart('minute'));
-        const totalMin = (hour * 60) + minute;
-
-        if (['Sat', 'Sun'].includes(day)) return false;
-        return totalMin >= (10 * 60) && totalMin < (16 * 60 + 15);
+        return MarketSchedule.isASXTrading();
     }
 
     _closeSidebar() {

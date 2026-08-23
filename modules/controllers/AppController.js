@@ -42,6 +42,7 @@ import { StateAuditor } from '../state/StateAuditor.js';
 import { StateHealthPanel } from '../state/StateHealthPanel.js';
 import { runHealthCheck, startRaceRegressionMonitor } from '../state/AppHealthTest.js';
 import { marketIndexController } from '../ui/MarketIndexController.js';
+import { MarketSchedule, ASX_SESSION } from '../utils/MarketSchedule.js';
 // renderSortSelect removed
 
 export class AppController {
@@ -293,8 +294,9 @@ export class AppController {
             }
         });
 
-        // Trigger Health Monitor
+        // Trigger Health Monitor & Adaptive Polling Engine
         this.startHealthMonitor();
+        this.startAdaptivePolling();
 
         // Initialize Global CSS Variables from Prefs (USER REQUEST - Standardized)
         const accentHex = AppState.preferences.accentColor || '#a49393';
@@ -370,11 +372,14 @@ export class AppController {
 
         // 3. LIVE READ-ONLY CHECK (On Resume/Re-Focus)
         // If we have data but no user, remind them they are in Read-Only mode
-        // 3. LIVE READ-ONLY CHECK (On Resume/Re-Focus)
+        // 3. LIVE READ-ONLY & VISIBILITY RESUME (On Resume/Re-Focus)
         // GUARD: Wait 3 seconds before complaining about auth.
         // Android sleeping disconnects WS, needs time to handshake.
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'visible') {
+                // Re-evaluate health and market session immediately
+                this.checkAppHealth();
+
                 if (AppState.data.shares.length > 0) {
                     setTimeout(() => {
                         // Double check: Still no user after 3s grace?
@@ -388,6 +393,18 @@ export class AppController {
                         }
                     }, 3000);
                 }
+
+                // If user returned and market is actively trading, refresh if data is older than 60s
+                if (AppState.user && !AppState._isFetching) {
+                    const isTrading = MarketSchedule.isASXTrading();
+                    const age = Date.now() - (AppState.lastGlobalFetch || 0);
+                    if (isTrading && age > 60 * 1000) {
+                        this._refreshAllPrices(AppState.data.shares || [], false, true);
+                    }
+                }
+
+                // Reschedule adaptive polling cycle
+                this._scheduleNextPoll();
             }
         });
 
@@ -889,10 +906,15 @@ export class AppController {
             return this._activeFetchPromise;
         }
 
-        // 2. FRESHNESS GUARD: Skip if full fetch occurred recently
+        // 2. FRESHNESS GUARD: Adaptive threshold based on market hours
         const now = Date.now();
-        const FIVE_MINUTES = 5 * 60 * 1000;
-        if (!force && AppState.lastGlobalFetch && (now - AppState.lastGlobalFetch < FIVE_MINUTES)) {
+        const isTrading = MarketSchedule.isASXTrading();
+        const asxSession = MarketSchedule.getASXStatus().session;
+        const minInterval = isTrading 
+            ? 55 * 1000 // 55s during active trading
+            : (asxSession === ASX_SESSION.PRE_OPEN ? 4.5 * 60 * 1000 : 14 * 60 * 1000); // 4.5m pre-open, 14m closed
+
+        if (!force && AppState.lastGlobalFetch && (now - AppState.lastGlobalFetch < minInterval)) {
             return;
         }
 
@@ -934,7 +956,8 @@ export class AppController {
                         count: freshPrices.size,
                         totalCached: AppState.livePrices.size,
                         hasDashboard: !!(freshDashboard && freshDashboard.length > 0),
-                        timestamp: AppState.lastGlobalFetch
+                        timestamp: AppState.lastGlobalFetch,
+                        serverTimestamp: result?.serverTimestamp || null
                     });
                 } else if (result && !result.ok) {
                     AppState.health.status = 'stale';
@@ -1534,6 +1557,47 @@ export class AppController {
     }
 
     /**
+     * ADAPTIVE POLLING ENGINE: Aligns background quote fetching with the official ASX schedule.
+     * - Open / Auction (10:00-16:10 Sydney): Every 60s
+     * - Pre-Open (07:00-10:00 Sydney): Every 5 minutes
+     * - Closed / Overnight / Weekends: Every 15 minutes (or on-demand)
+     */
+    startAdaptivePolling() {
+        if (this._adaptivePollTimer) clearTimeout(this._adaptivePollTimer);
+        this._scheduleNextPoll();
+    }
+
+    /**
+     * Calculates next poll interval and schedules background fetch.
+     * @private
+     */
+    _scheduleNextPoll() {
+        if (this._adaptivePollTimer) clearTimeout(this._adaptivePollTimer);
+
+        const status = MarketSchedule.getASXStatus();
+        let intervalMs = 15 * 60 * 1000; // Default closed: 15 mins
+
+        if (status.session === ASX_SESSION.OPEN || status.session === ASX_SESSION.AUCTION) {
+            intervalMs = 60 * 1000; // 60s active trading
+        } else if (status.session === ASX_SESSION.PRE_OPEN) {
+            intervalMs = 5 * 60 * 1000; // 5 mins pre-open
+        }
+
+        this._adaptivePollTimer = setTimeout(async () => {
+            // Only poll if tab is visible, user is logged in, and not currently fetching
+            if (document.visibilityState === 'visible' && AppState.user && !AppState._isFetching) {
+                try {
+                    await this._refreshAllPrices(AppState.data.shares || [], false, true);
+                } catch (err) {
+                    console.warn('[AppController] Adaptive poll background sync failed:', err);
+                }
+            }
+            // Re-evaluate schedule dynamically for next cycle
+            this._scheduleNextPoll();
+        }, intervalMs);
+    }
+
+    /**
      * Checks multiple factors to determine if the running app instance is fresh.
      */
     checkAppHealth() {
@@ -1549,7 +1613,6 @@ export class AppController {
 
         // 2. DRIFT/WAKE DETECTION
         // If the gap since last check is significantly more than 30s, browser was likely sleeping.
-        // We align this with the 15-minute stale threshold to prevent premature orange alerts.
         const tickGap = now - this._lastHealthTick;
         if (tickGap > 15 * 60 * 1000) { // 15 Minutes
             newStatus = 'stale';
@@ -1561,11 +1624,16 @@ export class AppController {
             newStatus = 'stale';
         }
 
-        // 4. FETCH AGE CHECK (15 Minutes) - Background Timer Source of Truth
+        // 4. FETCH AGE CHECK (Market-Aware)
+        const isTrading = MarketSchedule.isASXTrading();
         const sessionAge = now - health.sessionStartTime;
         if (AppState.lastGlobalFetch > 0) {
             const fetchAge = now - AppState.lastGlobalFetch;
-            if (fetchAge > 15 * 60 * 1000) {
+            // During active trading hours, flag stale after 5 minutes.
+            // Outside active trading hours (night/weekends/holidays), data is static EOD closing data,
+            // so we don't flag as stale unless no fetch has succeeded in over 24 hours.
+            const maxPermissibleAge = isTrading ? (5 * 60 * 1000) : (24 * 60 * 60 * 1000);
+            if (fetchAge > maxPermissibleAge) {
                 newStatus = 'stale';
             }
         } else if (sessionAge > 60000) {
@@ -1587,7 +1655,7 @@ export class AppController {
                 document.body.classList.add('is-stale');
                 // Trigger background refresh silently if we just became stale!
                 if (wasHealthy) {
-                    this._refreshAllPrices(AppState.data.shares || [], true).then(() => {
+                    this._refreshAllPrices(AppState.data.shares || [], true, true).then(() => {
                         const elapsed = Date.now() - (AppState.lastGlobalFetch || 0);
                         if (elapsed <= 15 * 60 * 1000) {
                             AppState.health.status = 'healthy';
@@ -1605,7 +1673,7 @@ export class AppController {
             // Auto-recovery retry loop: if app remains stale, retry background fetch every 60s
             const timeSinceLastAttempt = Date.now() - (this._lastFetchAttemptTime || 0);
             if (timeSinceLastAttempt > 60000 && !AppState._isFetching && AppState.user) {
-                this._refreshAllPrices(AppState.data.shares || [], true).then(() => {
+                this._refreshAllPrices(AppState.data.shares || [], true, true).then(() => {
                     const elapsed = Date.now() - (AppState.lastGlobalFetch || 0);
                     if (elapsed <= 15 * 60 * 1000) {
                         AppState.health.status = 'healthy';
@@ -1863,7 +1931,8 @@ export class AppController {
                                         count: freshPrices.size,
                                         totalCached: AppState.livePrices.size,
                                         hasDashboard: !!(freshDashboard && freshDashboard.length > 0),
-                                        timestamp: AppState.lastGlobalFetch
+                                        timestamp: AppState.lastGlobalFetch,
+                                        serverTimestamp: result?.serverTimestamp || null
                                     });
                                 }
                             }

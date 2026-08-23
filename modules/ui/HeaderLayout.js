@@ -9,6 +9,7 @@ import { StateAuditor } from '../state/StateAuditor.js';
 
 // Custom Event Names removed (Registry Rule)
 import { EVENTS, UI_ICONS, IDS, WATCHLIST_NAMES, ALL_SHARES_ID, PORTFOLIO_ID, CASH_WATCHLIST_ID, DASHBOARD_WATCHLIST_ID, STORAGE_KEYS, SIMULATIONS_WATCHLIST_ID } from '../utils/AppConstants.js';
+import { MarketSchedule, ASX_SESSION } from '../utils/MarketSchedule.js';
 import { navManager } from '../utils/NavigationManager.js';
 import { GeneralSettingsUI } from './GeneralSettingsUI.js';
 import { SidebarCommandCenter } from './SidebarCommandCenter.js';
@@ -39,8 +40,9 @@ export class HeaderLayout {
         this.bindEvents();
         this._subscribeToStateEvents();
 
-        // Initial Time Set
+        // Initial Time & Market Status Set
         this._updateRefreshTime();
+        this.updateConnectionStatus(!!AppState.user, AppState.health?.status || 'healthy');
         // Architectural Change: Removed JS-based padding adjustment.
         // We now rely on CSS sticky positioning for proper layout flow.
     }
@@ -50,11 +52,12 @@ export class HeaderLayout {
      * This replaces the need for AppController to manually call update methods.
      */
     _subscribeToStateEvents() {
-        // AUTO-UPDATE: Refresh timestamp when prices arrive
+        // AUTO-UPDATE: Refresh timestamp and market telemetry when prices arrive
         StateAuditor.on('PRICES_UPDATED', (payload) => {
-            this._updateRefreshTime();
+            this._updateRefreshTime(payload?.timestamp);
+            this.updateConnectionStatus(!!AppState.user, AppState.health?.status || 'healthy');
 
-            // Visual feedback: pulse the connection dot green
+            // Visual feedback: pulse the connection dot
             const dot = document.getElementById('connection-dot');
             if (dot) {
                 dot.classList.add('pulse-fresh');
@@ -65,11 +68,13 @@ export class HeaderLayout {
 
     /**
      * Updates the refresh time display in the header.
+     * @param {number|null} [timestamp=null]
      */
-    _updateRefreshTime() {
+    _updateRefreshTime(timestamp = null) {
         const el = document.getElementById(IDS.LIVE_REFRESH_TIME);
         if (el) {
-            el.textContent = new Date().toLocaleTimeString('en-GB', { hour12: false });
+            const date = timestamp ? new Date(timestamp) : new Date();
+            el.textContent = date.toLocaleTimeString('en-GB', { hour12: false });
         }
     }
 
@@ -125,7 +130,11 @@ export class HeaderLayout {
                         <span>Read Only</span>
                     </div>
                     <button id="${IDS.LIVE_REFRESH_BTN}" class="live-refresh-btn" aria-label="Refresh Prices" title="Refresh Live Prices">
-                        <span id="connection-dot" class="connection-dot connected"></span><span id="${IDS.LIVE_REFRESH_TIME}">--:--:--</span>
+                        <span id="connection-dot" class="connection-dot connected"></span>
+                        <div class="${CSS_CLASSES.LIVE_REFRESH_TEXT_STACK}">
+                            <span id="${IDS.LIVE_REFRESH_TIME}">--:--:--</span>
+                            <span id="${IDS.MARKET_STATUS_SUBTEXT}" class="${CSS_CLASSES.MARKET_STATUS_SUBTEXT} ${CSS_CLASSES.STATUS_CLOSED}">Closed</span>
+                        </div>
                     </button>
                  </div>
             </div>
@@ -1064,16 +1073,23 @@ export class HeaderLayout {
     }
 
     /**
-     * Updates the connection status indicator and app health.
+     * Updates the connection status indicator, market status subtext, and app health.
      * @param {boolean} isConnected - True if authenticated
-     * @param {string} healthStatus - 'healthy', 'stale', or 'critical'
+     * @param {string} healthStatus - 'healthy', 'stale', 'critical', 'loading', or 'offline'
      */
     updateConnectionStatus(isConnected, healthStatus = 'healthy') {
         const dot = document.getElementById('connection-dot');
+        const refreshBtn = document.getElementById(IDS.LIVE_REFRESH_BTN);
+        const subtextEl = document.getElementById(IDS.MARKET_STATUS_SUBTEXT);
+
         if (dot) {
             // Remove all health classes first
             dot.classList.remove(
                 CSS_CLASSES.CONNECTED,
+                CSS_CLASSES.HEALTH_MARKET_OPEN,
+                CSS_CLASSES.HEALTH_MARKET_CLOSED,
+                CSS_CLASSES.HEALTH_MARKET_AUCTION,
+                CSS_CLASSES.HEALTH_MARKET_PREOPEN,
                 CSS_CLASSES.HEALTH_STALE,
                 CSS_CLASSES.HEALTH_CRITICAL,
                 CSS_CLASSES.HEALTH_LOADING,
@@ -1083,34 +1099,94 @@ export class HeaderLayout {
             // 1. HIGH PRIORITY: Loading State (Overwrites all visual colors while active)
             if (healthStatus === 'loading') {
                 dot.classList.add(CSS_CLASSES.HEALTH_LOADING);
-                dot.title = 'Refreshing Live Prices...';
+                const title = 'Refreshing Stock Prices...';
+                dot.title = title;
+                if (refreshBtn) refreshBtn.title = title;
                 return;
             }
 
             // 2. HIGH PRIORITY: Network Offline State
             if (healthStatus === 'offline' || !navigator.onLine) {
                 dot.classList.add(CSS_CLASSES.HEALTH_OFFLINE);
-                dot.title = 'Offline - Connect to internet for live updates';
+                if (subtextEl) {
+                    subtextEl.textContent = 'Closed';
+                    subtextEl.className = `${CSS_CLASSES.MARKET_STATUS_SUBTEXT} ${CSS_CLASSES.STATUS_CLOSED}`;
+                }
+                const title = 'Offline - Connect to internet for live updates';
+                dot.title = title;
+                if (refreshBtn) refreshBtn.title = title;
                 return;
             }
 
-            // 3. AUTHENTICATION & HEALTH STATES
-            if (isConnected) {
-                dot.classList.add(CSS_CLASSES.CONNECTED);
+            // 3. Stale or Critical Error State
+            if (healthStatus === 'critical') {
+                dot.classList.add(CSS_CLASSES.HEALTH_CRITICAL);
+                if (subtextEl) {
+                    subtextEl.textContent = 'Closed';
+                    subtextEl.className = `${CSS_CLASSES.MARKET_STATUS_SUBTEXT} ${CSS_CLASSES.STATUS_CLOSED}`;
+                }
+                const title = 'Connection / Sync error detected. Click to retry.';
+                dot.title = title;
+                if (refreshBtn) refreshBtn.title = title;
+                return;
+            }
 
-                if (healthStatus === 'stale') {
-                    dot.classList.add(CSS_CLASSES.HEALTH_STALE);
-                    dot.title = 'Connected - Application is stale (Click Live Refresh to update)';
-                } else if (healthStatus === 'critical') {
-                    dot.classList.add(CSS_CLASSES.HEALTH_CRITICAL);
-                    dot.title = 'Connected - Sync issues detected. Refresh required.';
+            if (healthStatus === 'stale') {
+                dot.classList.add(CSS_CLASSES.HEALTH_STALE);
+                const asxStatus = MarketSchedule.getASXStatus();
+                if (subtextEl) {
+                    subtextEl.textContent = asxStatus.isTrading ? 'Open' : 'Closed';
+                    subtextEl.className = `${CSS_CLASSES.MARKET_STATUS_SUBTEXT} ${asxStatus.isTrading ? CSS_CLASSES.STATUS_OPEN : CSS_CLASSES.STATUS_CLOSED}`;
+                }
+                const title = 'Feed Delayed / Stale (Click Live Refresh to update)';
+                dot.title = title;
+                if (refreshBtn) refreshBtn.title = title;
+                return;
+            }
+
+            // 4. AUTHENTICATED & FRESH DATA: Evaluate Exchange Schedule
+            if (isConnected) {
+                const asxStatus = MarketSchedule.getASXStatus();
+
+                if (asxStatus.session === ASX_SESSION.OPEN || asxStatus.session === ASX_SESSION.AUCTION) {
+                    dot.classList.add(asxStatus.session === ASX_SESSION.OPEN ? CSS_CLASSES.HEALTH_MARKET_OPEN : CSS_CLASSES.HEALTH_MARKET_AUCTION);
+                    if (subtextEl) {
+                        subtextEl.textContent = 'Open';
+                        subtextEl.className = `${CSS_CLASSES.MARKET_STATUS_SUBTEXT} ${CSS_CLASSES.STATUS_OPEN}`;
+                    }
+                    const title = `ASX Open • 15-Min Delayed Live Feed (${asxStatus.sydneyTime} Sydney)`;
+                    dot.title = title;
+                    if (refreshBtn) refreshBtn.title = title;
+                } else if (asxStatus.session === ASX_SESSION.PRE_OPEN) {
+                    dot.classList.add(CSS_CLASSES.HEALTH_MARKET_PREOPEN);
+                    if (subtextEl) {
+                        subtextEl.textContent = 'Closed';
+                        subtextEl.className = `${CSS_CLASSES.MARKET_STATUS_SUBTEXT} ${CSS_CLASSES.STATUS_CLOSED}`;
+                    }
+                    const title = `ASX Pre-Open • Order Entry Only (${asxStatus.sydneyTime} Sydney)`;
+                    dot.title = title;
+                    if (refreshBtn) refreshBtn.title = title;
                 } else {
-                    dot.title = 'Connected - Data is fresh';
+                    // ASX Closed (Overnight / Weekend / Holiday)
+                    dot.classList.add(CSS_CLASSES.HEALTH_MARKET_CLOSED);
+                    if (subtextEl) {
+                        subtextEl.textContent = 'Closed';
+                        subtextEl.className = `${CSS_CLASSES.MARKET_STATUS_SUBTEXT} ${CSS_CLASSES.STATUS_CLOSED}`;
+                    }
+                    const title = `${asxStatus.description} (${asxStatus.sydneyTime} Sydney)`;
+                    dot.title = title;
+                    if (refreshBtn) refreshBtn.title = title;
                 }
             } else {
                 // Not Logged In / Disconnected
+                if (subtextEl) {
+                    subtextEl.textContent = 'Closed';
+                    subtextEl.className = `${CSS_CLASSES.MARKET_STATUS_SUBTEXT} ${CSS_CLASSES.STATUS_CLOSED}`;
+                }
                 dot.classList.add(CSS_CLASSES.HEALTH_OFFLINE);
-                dot.title = 'Disconnected - Click to Reconnect';
+                const title = 'Disconnected - Click to Reconnect';
+                dot.title = title;
+                if (refreshBtn) refreshBtn.title = title;
             }
         }
 

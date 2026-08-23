@@ -21,6 +21,7 @@ const APP_ID = "asx-watchlist-app";
 export const userStore = new UserStore();
 export { AuthService };
 import { ToastManager } from '../ui/ToastManager.js';
+import { MarketSchedule, ASX_SESSION } from '../utils/MarketSchedule.js';
 
 /**
  * Helper to detect network/connectivity failures from fetch requests.
@@ -593,27 +594,10 @@ export class DataService {
         }
 
         // Premarket Zeroing Logic: 
-        // Between 7:00 AM (Reset) and 10:00 AM (Market Open) Sydney time on trading days,
-        // we force the watchlist to show 0.00% by treating Yesterday's Price as the baseline.
-        const nowSydney = new Date(new Date().toLocaleString("en-US", { timeZone: "Australia/Sydney" }));
-        const day = nowSydney.getDay();
-        const hr = nowSydney.getHours();
-
-        // Is it a weekday (Mon-Fri) and in the 7-10am window?
-        const isTradingDay = day >= 1 && day <= 5;
-        const isPremarket = (hr >= 7 && hr < 10);
-
-        // Optional: Add basic Holiday check for consistency with NotificationStore
-        const isHoliday = ((m, d) => {
-            if (m === 1 && d === 1) return true;  // New Year
-            if (m === 1 && d === 26) return true; // Australia Day
-            if (m === 4 && d === 25) return true; // ANZAC Day
-            if (m === 12 && d === 25) return true; // Christmas
-            if (m === 12 && d === 26) return true; // Boxing Day
-            return false;
-        })(nowSydney.getMonth() + 1, nowSydney.getDate());
-
-        const shouldZero = isTradingDay && isPremarket && !isHoliday;
+        // Between 7:00 AM and 10:00 AM (Pre-Open) Sydney time on trading days,
+        // we show 0.00% change by treating Yesterday's Price as the baseline.
+        const shouldZero = MarketSchedule.getASXStatus().session === ASX_SESSION.PRE_OPEN;
+        const overallServerTime = apiResponse.timestamp || apiResponse.serverTime || apiResponse.updatedAt || null;
 
         items.forEach(item => {
             // ROBUST KEY LOOKUP: Support both ASXCode (API Standard) and code (Normalized)
@@ -649,6 +633,9 @@ export class DataService {
                 pctChange = (change / prevClose) * 100;
             }
 
+            // Upstream quote timestamp if supplied
+            const quoteTime = item.timestamp || item.lastTradeTime || item.quoteTime || item.date || overallServerTime || null;
+
             // Set the map key using the strictly normalized code
             normalizedPrices.set(code, {
                 code: code,
@@ -664,10 +651,11 @@ export class DataService {
                 sector: item.Sector || item.sector || '',
                 industry: item.Industry || item.industry || '',
                 type: item.Type || item.type || 'Share',
+                quoteTime: quoteTime,
                 lastUpdate: Date.now()
             });
         });
 
-        return { prices: normalizedPrices, dashboard: dashboardData };
+        return { prices: normalizedPrices, dashboard: dashboardData, serverTimestamp: overallServerTime, fetchTimestamp: Date.now() };
     }
 }

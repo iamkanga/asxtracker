@@ -12,6 +12,7 @@ import { notificationStore } from '../state/NotificationStore.js';
 import { CSS_CLASSES, IDS, EVENTS, UI_ICONS, UI_LABELS, DASHBOARD_SYMBOLS, DASHBOARD_LINKS, CASH_WATCHLIST_ID } from '../utils/AppConstants.js';
 import { formatCurrency, formatPercent } from '../utils/formatters.js';
 import { LinkHelper } from '../utils/LinkHelper.js';
+import { MarketSchedule } from '../utils/MarketSchedule.js';
 
 export const WIDGET_MODULES = [
     { id: 'day_performance', label: 'Day Performance', description: "Today's portfolio gain/loss detail", icon: 'fa-calendar-day', renderer: '_renderDayPerformance', default: true },
@@ -942,8 +943,7 @@ export class WidgetPanel {
         if (code.includes('BTC') || code.includes('ETH')) return true;
         const isASX = code.includes('.AX') || ['^AXJO', '^AXKO', '^AORD', 'XJO', 'XKO', 'XAO', 'YAP=F'].includes(code);
         if (isASX) {
-            if (isSydWeekend) return false;
-            return sydTotal >= (10 * 60) && sydTotal < (16 * 60 + 10);
+            return MarketSchedule.isASXTrading(now);
         }
         if (code.includes('FTSE') || code.includes('STOXX') || code.includes('EU50')) {
             if (utcDay === 0 || utcDay === 6) return false;

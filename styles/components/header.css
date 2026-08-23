@@ -194,6 +194,39 @@
     opacity: 0.8;
 }
 
+.live-refresh-text-stack {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    line-height: 1;
+}
+
+.live-refresh-text-stack #live-refresh-time {
+    font-size: 1.05rem;
+    font-weight: 600;
+    line-height: 1;
+    color: var(--color-accent);
+}
+
+.market-status-subtext {
+    font-size: 0.75em;
+    font-weight: 600;
+    line-height: 1;
+    margin-top: 2px;
+    letter-spacing: 0.3px;
+    text-transform: capitalize;
+    transition: color 0.3s ease, opacity 0.3s ease;
+}
+
+.market-status-subtext.status-open {
+    color: rgba(76, 175, 80, 0.75);
+}
+
+.market-status-subtext.status-closed {
+    color: rgba(244, 67, 54, 0.75);
+}
+
 .header-separator {
     width: 1px;
     height: 24px;
@@ -388,27 +421,36 @@ h1#dynamicWatchlistTitle.active {
     height: 10px;
     border-radius: 0;
     margin-right: 8px;
-    background-color: var(--color-negative);
-    box-shadow: 0 0 5px var(--color-negative);
+    background-color: #4CAF50;
+    box-shadow: 0 0 4px #4CAF50;
     transition: background-color 0.3s ease, box-shadow 0.3s ease;
     vertical-align: middle;
 }
 
-.connection-dot.connected {
+/* Market Open (Live Data): Green with subtle pulse animation */
+.connection-dot.health-market-open,
+.connection-dot.health-market-auction {
     background-color: #4CAF50;
-    box-shadow: 0 0 5px #4CAF50;
+    box-shadow: 0 0 6px #4CAF50;
+    animation: pulse-green-subtle 2s infinite ease-in-out;
+}
+
+/* Market Closed: Green solid, static dot (no pulsing) */
+.connection-dot.connected,
+.connection-dot.health-market-closed,
+.connection-dot.health-market-preopen {
+    background-color: #4CAF50;
+    box-shadow: 0 0 4px #4CAF50;
+    animation: none !important;
 }
 
 .connection-dot.health-stale {
     background-color: #FF9800;
     box-shadow: 0 0 8px #FF9800;
+    animation: none;
 }
 
-.connection-dot.health-critical {
-    background-color: #F44336;
-    box-shadow: 0 0 10px #F44336;
-}
-
+.connection-dot.health-critical,
 .connection-dot.health-offline {
     background-color: #F44336;
     box-shadow: 0 0 12px #F44336, 0 0 20px rgba(244, 67, 54, 0.3);
@@ -419,8 +461,25 @@ h1#dynamicWatchlistTitle.active {
     animation: pulse-loading 0.8s infinite !important;
 }
 
-.connection-dot:not(.connected):not(.health-stale):not(.health-critical):not(.health-offline):not(.health-loading) {
+.connection-dot:not(.connected):not(.health-market-open):not(.health-market-closed):not(.health-market-auction):not(.health-market-preopen):not(.health-stale):not(.health-critical):not(.health-offline):not(.health-loading) {
     animation: pulse-red 2s infinite;
+}
+
+@keyframes pulse-green-subtle {
+    0% {
+        box-shadow: 0 0 3px rgba(76, 175, 80, 0.4);
+        opacity: 0.85;
+    }
+
+    50% {
+        box-shadow: 0 0 10px rgba(76, 175, 80, 0.9), 0 0 16px rgba(76, 175, 80, 0.35);
+        opacity: 1;
+    }
+
+    100% {
+        box-shadow: 0 0 3px rgba(76, 175, 80, 0.4);
+        opacity: 0.85;
+    }
 }
 
 @keyframes pulse-loading {

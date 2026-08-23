@@ -8,6 +8,7 @@ import { IDS, CSS_CLASSES, EVENTS, DASHBOARD_SYMBOLS, STORAGE_KEYS, DASHBOARD_LI
 import { AppState } from '../state/AppState.js';
 import { DashboardFilterModal } from './DashboardFilterModal.js';
 import { LinkHelper } from '../utils/LinkHelper.js';
+import { MarketSchedule } from '../utils/MarketSchedule.js';
 
 
 export class DashboardViewRenderer {
@@ -382,13 +383,12 @@ export class DashboardViewRenderer {
         // 1. CRYPTO (Always Open)
         if (code.includes('BTC') || code.includes('ETH')) return true;
 
-        // 2. ASX INDICES (Sydney 10:00-16:00)
+        // 2. ASX INDICES & EQUITIES
         // Covers: ^AXJO, ^AXKO, ^AORD, XJO, XKO, XAO, YAP=F (ASX SPI Futures follow ASX hours)
         const ASX_CODES = ['^AXJO', '^AXKO', '^AORD', 'XJO', 'XKO', 'XAO'];
         const isASX = code.includes('.AX') || ASX_CODES.includes(code) || code === 'YAP=F';
         if (isASX) {
-            if (isSydWeekend) return false;
-            return sydTotal >= (10 * 60) && sydTotal < (16 * 60 + 10); // 10:00 - 16:10 (inc. closing auction)
+            return MarketSchedule.isASXTrading(now);
         }
 
         // 3. UK & EUROPE (London/EU 08:00-16:30 UTC)

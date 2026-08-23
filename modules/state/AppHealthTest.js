@@ -12,6 +12,8 @@
 
 import { AppState } from './AppState.js';
 import { StateAuditor } from './StateAuditor.js';
+import { MarketSchedule, ASX_SESSION } from '../utils/MarketSchedule.js';
+import { CSS_CLASSES, IDS } from '../utils/AppConstants.js';
 
 const TESTS = [];
 const FAILURES = [];
@@ -255,6 +257,32 @@ export function runHealthCheck() {
             .filter(([name, subs]) => subs.size === 0)
             .map(([name]) => name);
         return dead.length === 0 || `Dead channels: ${dead.join(', ')}`;
+    });
+
+    // ═══════════════════════════════════════
+    // SECTION 15: MARKET SCHEDULE & TELEMETRY
+    // ═══════════════════════════════════════
+    test('MarketSchedule evaluates valid ASX session', () => {
+        const status = MarketSchedule.getASXStatus();
+        if (!status || !status.session) return 'MarketSchedule.getASXStatus returned falsy session';
+        if (![ASX_SESSION.OPEN, ASX_SESSION.PRE_OPEN, ASX_SESSION.AUCTION, ASX_SESSION.CLOSED].includes(status.session)) {
+            return `Invalid session: ${status.session}`;
+        }
+        if (typeof status.isTrading !== 'boolean') return 'isTrading is not boolean';
+        if (!status.sydneyTime || !status.label) return 'Missing sydneyTime or label';
+        return true;
+    });
+    test('Market-aware CSS classes and IDs registered in AppConstants', () => {
+        const requiredClasses = [
+            'HEALTH_MARKET_OPEN', 'HEALTH_MARKET_CLOSED', 'HEALTH_MARKET_AUCTION', 
+            'HEALTH_MARKET_PREOPEN', 'HEALTH_STALE', 'HEALTH_OFFLINE', 'HEALTH_LOADING',
+            'MARKET_STATUS_SUBTEXT', 'STATUS_OPEN', 'STATUS_CLOSED', 'LIVE_REFRESH_TEXT_STACK'
+        ];
+        const missingClasses = requiredClasses.filter(cls => !CSS_CLASSES[cls]);
+        if (missingClasses.length > 0) return `Missing CSS_CLASSES: ${missingClasses.join(', ')}`;
+
+        if (!IDS.MARKET_STATUS_SUBTEXT) return 'Missing IDS.MARKET_STATUS_SUBTEXT';
+        return true;
     });
 
     // ═══════════════════════════════════════
