@@ -68,12 +68,11 @@ export class AnalogClock {
     _start() {
         const update = () => {
             const now = new Date();
-            // Local Time (User's perspective)
             const seconds = now.getSeconds();
             const minutes = now.getMinutes();
             const hours = now.getHours();
 
-            const secDeg = ((seconds / 60) * 360);
+            const secDeg = (seconds / 60) * 360;
             const minDeg = ((minutes / 60) * 360) + ((seconds / 60) * 6);
             const hourDeg = ((hours / 12) * 360) + ((minutes / 60) * 30);
 
@@ -83,13 +82,16 @@ export class AnalogClock {
             if (this.secondHand) this.secondHand.setAttribute('transform', `rotate(${secDeg}, ${center}, ${center})`);
             if (this.minuteHand) this.minuteHand.setAttribute('transform', `rotate(${minDeg}, ${center}, ${center})`);
             if (this.hourHand) this.hourHand.setAttribute('transform', `rotate(${hourDeg}, ${center}, ${center})`);
-
-            this.timer = requestAnimationFrame(update);
         };
-        update();
+
+        update(); // Initial tick
+        this.timer = setInterval(update, 1000);
     }
 
     destroy() {
-        if (this.timer) cancelAnimationFrame(this.timer);
+        if (this.timer) {
+            clearInterval(this.timer);
+            this.timer = null;
+        }
     }
 }

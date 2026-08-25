@@ -3,6 +3,7 @@ import { CSS_CLASSES, UI_ICONS, PORTFOLIO_ID, EVENTS } from '../utils/AppConstan
 import { AppState } from '../state/AppState.js';
 import { navManager } from '../utils/NavigationManager.js';
 import { ColorHelper } from '../utils/ColorHelper.js';
+import { resolveStockPrice } from '../data/DataProcessor.js';
 
 /**
  * SharePieChart
@@ -458,13 +459,15 @@ export class SharePieChart {
      * Aggregates shares by code and calculates current market value.
      */
     async _getBreakdown() {
-        // 1. Calculate values for all shares
+        // 1. Calculate values for all shares with out-of-hours price resolution
         const items = this.shares.map(s => {
-            const price = AppState.livePrices.get(s.shareName)?.live || s.purchasePrice || 0;
+            const lookupKey = (s.shareName || s.code || '').trim().toUpperCase();
+            const priceData = AppState.livePrices ? (AppState.livePrices.get(lookupKey) || AppState.livePrices.get(lookupKey + '.AX')) : null;
+            const price = resolveStockPrice(priceData, s);
             return {
-                id: s.shareName,
-                label: s.companyName || s.shareName,
-                val: (parseFloat(s.units) || 0) * price
+                id: s.shareName || s.code,
+                label: s.companyName || s.shareName || s.code,
+                val: (parseFloat(s.units) || parseFloat(s.portfolioShares) || 0) * price
             };
         })
             .filter(i => i.val > 0)

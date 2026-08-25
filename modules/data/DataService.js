@@ -178,6 +178,21 @@ export class DataService {
     }
 
     /**
+     * One-time database scrub routine: Purges corrupted out-of-hours snapshots from Firestore.
+     */
+    async cleanCorruptedHistorySnapshots() {
+        const user = AuthService.getCurrentUser();
+        const userId = user ? user.uid : null;
+        if (!userId) return { ok: false, error: 'No user authenticated' };
+        try {
+            return await userStore.cleanCorruptedHistorySnapshots(userId);
+        } catch (e) {
+            console.error('[DataService] Error scrubbing snapshots:', e);
+            return { ok: false, error: e.message };
+        }
+    }
+
+    /**
      * Saves a manual dividend override (like Franking %) for a specific stock.
      * @param {string} ticker - ASX code
      * @param {Object} data - { franking: number }
@@ -606,11 +621,21 @@ export class DataService {
             // Skip invalid entries after normalization
             if (!code || code === 'UNDEFINED') return;
 
-            const live = parseFloat(item.LivePrice || item.live || 0);
-            let prevClose = parseFloat(item.PrevClose || item.prevClose || 0);
+            const rawLive = parseFloat(item.LivePrice ?? item.live ?? item.price ?? item.last ?? 0);
+            const rawPrevClose = parseFloat(item.PrevClose ?? item.prevClose ?? item.close ?? item.previousClose ?? 0);
+
+            const isRawLiveValid = !isNaN(rawLive) && rawLive > 0;
+            const isRawPrevValid = !isNaN(rawPrevClose) && rawPrevClose > 0;
+
+            // OUT-OF-MARKET FALLBACK:
+            // If live price is missing or 0 (common when market is closed or no trades yet),
+            // safely fallback to previous close price so portfolio valuation never collapses to $0.
+            let live = isRawLiveValid ? rawLive : (isRawPrevValid ? rawPrevClose : 0);
+            let prevClose = isRawPrevValid ? rawPrevClose : (isRawLiveValid ? rawLive : 0);
 
             // APPLIED PRE-MARKET ZEROING: 
-            // If we are in the clean-slate window, Yesterday's Price becomes the starting point.
+            // Between 7:00 AM and 10:00 AM (Pre-Open) Sydney time on trading days,
+            // we show 0.00% change by treating Yesterday's Price as the baseline.
             // EXEMPTION: Dashboard assets (Indices, Crypto, Currencies, Commodities) should NOT be zeroed,
             // as they often trade 24/7 or have different hours.
             const type = item.Type || item.type || 'Share';
@@ -621,16 +646,22 @@ export class DataService {
             }
 
             // Ensure numbers are valid
-            const isLiveValid = !isNaN(live);
-            const isPrevValid = !isNaN(prevClose);
+            const isLiveValid = !isNaN(live) && live > 0;
+            const isPrevValid = !isNaN(prevClose) && prevClose > 0;
 
             // Calculate change if possible
             let change = 0;
             let pctChange = 0;
 
-            if (isLiveValid && isPrevValid && prevClose !== 0) {
-                change = live - prevClose;
-                pctChange = (change / prevClose) * 100;
+            if (isLiveValid && isPrevValid && prevClose > 0) {
+                // If live was defaulted to prevClose (out-of-hours no trade), change is strictly 0
+                if (!isRawLiveValid && isRawPrevValid) {
+                    change = 0;
+                    pctChange = 0;
+                } else {
+                    change = live - prevClose;
+                    pctChange = (change / prevClose) * 100;
+                }
             }
 
             // Upstream quote timestamp if supplied

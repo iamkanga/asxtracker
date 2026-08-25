@@ -321,7 +321,18 @@ export const AppState = {
             if (stored) {
                 const parsed = JSON.parse(stored);
                 if (Array.isArray(parsed)) {
-                    return new Map(parsed);
+                    const sanitized = parsed.map(([code, data]) => {
+                        if (data && typeof data === 'object') {
+                            const rawLive = parseFloat(data.live);
+                            const rawPrev = parseFloat(data.prevClose);
+                            // Auto-heal zeroed prices loaded from legacy/corrupt cache
+                            if ((isNaN(rawLive) || rawLive <= 0) && (!isNaN(rawPrev) && rawPrev > 0)) {
+                                return [code, { ...data, live: rawPrev, change: 0, pctChange: 0 }];
+                            }
+                        }
+                        return [code, data];
+                    });
+                    return new Map(sanitized);
                 }
             }
         } catch (e) {
@@ -338,6 +349,26 @@ export const AppState = {
             }
         } catch (e) {
             console.warn('[AppState] Failed to save livePrices to cache:', e);
+        }
+    },
+
+    // Ingestion Gatekeeper Baseline
+    lastCleanPortfolioValue: (() => {
+        try {
+            const val = parseFloat(localStorage.getItem('asx_last_clean_val') || '0');
+            return (!isNaN(val) && val > 0) ? val : 0;
+        } catch (e) {
+            return 0;
+        }
+    })(),
+    pendingDownshiftReading: null,
+
+    setLastCleanPortfolioValue(val) {
+        if (Number.isFinite(val) && val > 0) {
+            this.lastCleanPortfolioValue = val;
+            try {
+                localStorage.setItem('asx_last_clean_val', val.toString());
+            } catch (e) {}
         }
     },
 

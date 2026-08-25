@@ -3,6 +3,9 @@ import { UI_ICONS, CSS_CLASSES, IDS, EVENTS, CASH_CATEGORIES, PORTFOLIO_ID } fro
 import { AppState } from '../state/AppState.js';
 import { navManager } from '../utils/NavigationManager.js';
 import { DataService, userStore } from '../data/DataService.js';
+import { resolveStockPrice } from '../data/DataProcessor.js';
+import { ChartDataSanitizer } from '../utils/ChartDataSanitizer.js';
+import { ToastManager } from './ToastManager.js';
 
 /**
  * PortfolioChartUI
@@ -13,11 +16,11 @@ import { DataService, userStore } from '../data/DataService.js';
  */
 export class PortfolioChartUI {
     static async show() {
-        const shares = AppState.data.shares || [];
-        const cash = AppState.data.cash || [];
+        const shares = AppState.data?.shares || [];
+        const cash = AppState.data?.cash || [];
 
         if (shares.length === 0 && cash.length === 0) {
-            alert('Your portfolio is empty. Add some shares or cash assets to see a trend chart.');
+            ToastManager.info('Your portfolio is empty. Add some shares or cash assets to see a trend chart.');
             return;
         }
 
@@ -587,55 +590,8 @@ export class PortfolioChartUI {
             const snapshots = this._cachedSnapshots;
             const startTs = this._getRangeStartTs();
 
-            // 2. Prepare Data Series
-            const totalData = [];
-            const superData = [];
-            const sharesData = [];
-            const cashData = [];
-            const catBuffers = {};
-
-            // 3. Process Snapshots
-            // Snapshots are indexed by timestamp. We sort and filter by visible window.
-            const getSnapTs = (snap) => {
-                if (snap.time) return Number(snap.time);
-                if (snap.date) return Math.floor(new Date(snap.date).getTime() / 1000);
-                if (snap.timestamp) return Math.floor(new Date(snap.timestamp).getTime() / 1000);
-                return 0;
-            };
-
-            const sortedSnapshots = snapshots
-                .filter(s => getSnapTs(s) >= startTs)
-                .sort((a, b) => getSnapTs(a) - getSnapTs(b));
-
-            // --- DATA CLEANING: Remove known April 2nd Transient Blip ---
-            // This ignores the erroneous data point at 8:29 AM on April 2nd to ensure a smooth graph.
-            const glitchTs = new Date('2026-04-02T08:29:25').getTime() / 1000;
-            const cleanedSnapshots = sortedSnapshots.filter(s => {
-                const ts = getSnapTs(s);
-                return Math.abs(ts - glitchTs) > 30; // Ignore point if within 30s of glitch
-            });
-
-            cleanedSnapshots.forEach(s => {
-                const time = getSnapTs(s);
-                totalData.push({ time, value: s.total });
-                sharesData.push({ time, value: s.shares });
-                superData.push({ time, value: s.super });
-                cashData.push({ time, value: s.cash || 0 });
-
-                // Categories
-                if (s.categories) {
-                    Object.keys(s.categories).forEach(cid => {
-                        if (!catBuffers[cid]) catBuffers[cid] = [];
-                        catBuffers[cid].push({ time, value: s.categories[cid] });
-                    });
-                }
-            });
-
-            // 4. Inject "LIVE" Point (Current State)
-            // This ensures the graph always ends on the most recent known values
+            // 2. Calculate Current LIVE Valuation First (Anchor for Sanitization & Chart Endpoint)
             const nowTs = Math.floor(Date.now() / 1000);
-
-            // Calculate Current Totals
             let liveSharesVal = 0;
             let liveSuperVal = 0;
             let liveCashVal = 0;
@@ -683,7 +639,8 @@ export class PortfolioChartUI {
                     priceData = AppState.livePrices.get(lookupKey.replace('.AX', ''));
                 }
 
-                const price = priceData?.live || 0;
+                // Out-of-hours resilient price resolution (live -> prevClose -> entry/buy/purchase price)
+                const price = resolveStockPrice(priceData, s);
                 const val = s.units * price;
                 if (val <= 0) return;
 
@@ -692,19 +649,14 @@ export class PortfolioChartUI {
                 if (isSuper) liveSuperVal += val;
             });
 
-            // Initialize liveCatVals for all known categories (to ensure they exist for the breakdown toggles)
+            // Initialize liveCatVals for all known categories
             Object.keys(this._getCashByCategory()).forEach(cid => {
                 liveCatVals[cid] = 0;
             });
 
             rawCash.forEach(c => {
-                // Filter out hidden cash to match CashController logic
                 if (AppState.hiddenAssets.has(String(c.id))) return;
-
-                // CRITICAL FIX: Exclude 'shares' category from cash summation in the chart.
-                // Reasoning: The chart already calculates 'liveSharesVal' from the actual stock collection (rawShares).
-                // Users often have a 'Shares' asset in their cash list as a placeholder/duplicate.
-                if (c.category === 'shares') return;
+                if (c.category === 'shares') return; // Exclude duplicate shares asset from cash
 
                 const bal = parseFloat(c.balance || 0);
                 const cid = c.category || 'other';
@@ -714,8 +666,60 @@ export class PortfolioChartUI {
             });
 
             const liveTotalVal = liveSharesVal + liveCashVal;
+            const liveSnapshot = {
+                time: nowTs,
+                total: liveTotalVal,
+                shares: liveSharesVal,
+                super: liveSuperVal,
+                cash: liveCashVal,
+                categories: liveCatVals
+            };
 
-            // Only add live point if it's newer than the last snapshot OR if no snapshots exist
+            // 3. Process & Sort Snapshots
+            const getSnapTs = (snap) => {
+                if (snap.time) return Number(snap.time);
+                if (snap.date) return Math.floor(new Date(snap.date).getTime() / 1000);
+                if (snap.timestamp) return Math.floor(new Date(snap.timestamp).getTime() / 1000);
+                return 0;
+            };
+
+            const sortedSnapshots = snapshots
+                .filter(s => getSnapTs(s) >= startTs)
+                .sort((a, b) => getSnapTs(a) - getSnapTs(b));
+
+            // --- MULTI-POINT RETROSPECTIVE SANITIZATION & OUTLIER PREVENTION ---
+            // Automatically cleans multi-point out-of-hours plateaus, V-spikes, transient plunges, and zeroed points
+            const cleanedSnapshots = ChartDataSanitizer.sanitizeSnapshotSeries(sortedSnapshots, {
+                dropThreshold: 0.15,
+                spikeThreshold: 0.20,
+                recoveryTolerance: 0.10,
+                liveSnapshot
+            });
+
+            // 4. Prepare Series Buffers
+            const totalData = [];
+            const superData = [];
+            const sharesData = [];
+            const cashData = [];
+            const catBuffers = {};
+
+            cleanedSnapshots.forEach(s => {
+                const time = getSnapTs(s);
+                totalData.push({ time, value: s.total });
+                sharesData.push({ time, value: s.shares });
+                superData.push({ time, value: s.super });
+                cashData.push({ time, value: s.cash || 0 });
+
+                // Categories
+                if (s.categories) {
+                    Object.keys(s.categories).forEach(cid => {
+                        if (!catBuffers[cid]) catBuffers[cid] = [];
+                        catBuffers[cid].push({ time, value: s.categories[cid] });
+                    });
+                }
+            });
+
+            // 5. Inject LIVE Point to ensure the graph always ends on current real-time state
             const lastSnapUnix = sortedSnapshots.length > 0 ? getSnapTs(sortedSnapshots[sortedSnapshots.length - 1]) : 0;
 
             if (nowTs > lastSnapUnix + 300) { // 5 min grace
@@ -730,13 +734,19 @@ export class PortfolioChartUI {
                 });
             }
 
-            // 5. Push to Series
-            if (this.series.total) this.series.total.setData(totalData);
-            if (this.series.super) this.series.super.setData(superData);
-            if (this.series.shares) this.series.shares.setData(sharesData);
+            // 6. Secondary Line-Level Smoothing Defense
+            const cleanTotalData = ChartDataSanitizer.sanitizeLineSeries(totalData);
+            const cleanSharesData = ChartDataSanitizer.sanitizeLineSeries(sharesData);
+            const cleanSuperData = ChartDataSanitizer.sanitizeLineSeries(superData);
 
-            // 6. Breakdown Series
+            // Push to Series
+            if (this.series.total) this.series.total.setData(cleanTotalData);
+            if (this.series.super) this.series.super.setData(cleanSuperData);
+            if (this.series.shares) this.series.shares.setData(cleanSharesData);
+
+            // Breakdown Series
             Object.keys(catBuffers).forEach((catId, idx) => {
+                const cleanCatData = ChartDataSanitizer.sanitizeLineSeries(catBuffers[catId]);
                 if (!this.categorySeries[catId]) {
                     this.categorySeries[catId] = this.chart.addLineSeries({
                         color: this._getCategoryColor(catId, idx),
@@ -745,18 +755,17 @@ export class PortfolioChartUI {
                         priceFormat: { type: 'price', precision: 0, minMove: 1 }
                     });
                 }
-                this.categorySeries[catId].setData(catBuffers[catId]);
+                this.categorySeries[catId].setData(cleanCatData);
             });
 
             // 7. Markers logic handled in _updateStats -> _updateMarkers
-
             if (this.chart) this.chart.timeScale().fitContent();
             
             // Store for UI updates (like toggles)
-            this.lastData = { total: totalData, shares: sharesData, super: superData };
+            this.lastData = { total: cleanTotalData, shares: cleanSharesData, super: cleanSuperData };
 
             // Pass visible series to stats updater for High/Low calculations
-            this._updateStats(totalData, sharesData, superData);
+            this._updateStats(cleanTotalData, cleanSharesData, cleanSuperData);
 
             if (loading) loading.style.display = 'none';
         } catch (e) {

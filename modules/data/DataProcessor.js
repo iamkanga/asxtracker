@@ -55,6 +55,42 @@ export function normalizeComments(comments) {
 }
 
 /**
+ * Resolves the most accurate and valid market price for a share.
+ * Cascades gracefully through live quotes, closing prices, and cost bases
+ * to ensure out-of-hours feeds or missing prices NEVER collapse a holding to $0.
+ * @param {Object|null} priceData - Price object from livePrices map
+ * @param {Object} share - Share document
+ * @returns {number} Validated price >= 0
+ */
+export function resolveStockPrice(priceData, share = {}) {
+    // 1. Live Price from stream/API
+    const live = parseFloat(priceData?.live);
+    if (!isNaN(live) && live > 0) return live;
+
+    // 2. Previous Close from stream/API (Essential for out-of-hours & weekends)
+    const prevClose = parseFloat(priceData?.prevClose);
+    if (!isNaN(prevClose) && prevClose > 0) return prevClose;
+
+    // 3. User entered/purchase price fallbacks from share record
+    const entered = parseFloat(share?.enteredPrice);
+    if (!isNaN(entered) && entered > 0) return entered;
+
+    const entry = parseFloat(share?.entryPrice);
+    if (!isNaN(entry) && entry > 0) return entry;
+
+    const buy = parseFloat(share?.buyPrice);
+    if (!isNaN(buy) && buy > 0) return buy;
+
+    const avgPrice = parseFloat(share?.portfolioAvgPrice ?? share?.averageCost ?? share?.avgCost ?? share?.avgPrice);
+    if (!isNaN(avgPrice) && avgPrice > 0) return avgPrice;
+
+    const purchase = parseFloat(share?.purchasePrice);
+    if (!isNaN(purchase) && purchase > 0) return purchase;
+
+    return 0;
+}
+
+/**
  * Processes raw share data into a view-ready format.
  * @param {Array} allShares - List of all user shares.
  * @param {string|null} watchlistId - Current watchlist ID (or 'ALL', null).
@@ -96,43 +132,20 @@ export function processShares(allShares, watchlistId, livePrices, sortConfig, hi
             }
         }
 
-        // DE-DUPLICATION LOGIC
-        if (processedMap.has(lookupKey)) {
-            const existing = processedMap.get(lookupKey);
-
-            const score = (s) => {
-                let points = 0;
-                // ID Quality
-                if (s.id && !String(s.id).startsWith('temp_')) points += 100;
-                else if (s.id) points += 50;
-
-                // Target Presence (User said this is critical)
-                if (Number(s.targetPrice || 0) > 0) points += 200;
-
-                // Portfolio Presence
-                if (Number(s.portfolioShares || 0) > 0) points += 10;
-
-                return points;
-            };
-
-            // If the EXISTING one is better or equal, skip this one.
-            if (score(existing) >= score(share)) {
-                return;
-            }
-        }
-
-        let priceData = livePrices.get(lookupKey);
+        let priceData = livePrices ? livePrices.get(lookupKey) : null;
 
         // Fallback: Try appending .AX if not found
-        if (!priceData && !lookupKey.includes('.')) {
+        if (!priceData && !lookupKey.includes('.') && livePrices) {
             priceData = livePrices.get(lookupKey + '.AX');
         }
         // Fallback: Try stripping .AX if not found
-        if (!priceData && lookupKey.endsWith('.AX')) {
+        if (!priceData && lookupKey.endsWith('.AX') && livePrices) {
             priceData = livePrices.get(lookupKey.replace('.AX', ''));
         }
 
-        const currentPrice = priceData ? (parseFloat(priceData.live) || 0) : (parseFloat(share.enteredPrice) || 0);
+        // OUT-OF-HOURS RESILIENT PRICE RESOLUTION:
+        // Always cascades through live -> prevClose -> entry/buy/cost price
+        const currentPrice = resolveStockPrice(priceData, share);
         const dayChangePercent = priceData ? (parseFloat(priceData.pctChange) || 0) : 0;
 
         const isSimulationsView = watchlistId === SIMULATIONS_WATCHLIST_ID;
@@ -162,13 +175,43 @@ export function processShares(allShares, watchlistId, livePrices, sortConfig, hi
         const cost = isSimulationsView ? (parseFloat(share.simulatedValue) || 0) : (units * costPrice);
 
         // Day Change Logic
-        const previousValue = value / (1 + (dayChangePercent / 100));
+        const divisor = 1 + (dayChangePercent / 100);
+        const previousValue = (divisor !== 0 && !isNaN(divisor)) ? (value / divisor) : value;
         const dayChangeValue = value - previousValue; // Total holdings change
-        const previousPrice = currentPrice / (1 + (dayChangePercent / 100)); // Price before change
+        const previousPrice = (divisor !== 0 && !isNaN(divisor)) ? (currentPrice / divisor) : currentPrice; // Price before change
         const dayChangePerShare = currentPrice - previousPrice; // Per-share change
 
         const capitalGain = value - cost;
-        const capitalGainPercent = cost !== 0 ? (capitalGain / cost) * 100 : 0;
+        const capitalGainPercent = cost > 0 ? (capitalGain / cost) * 100 : 0;
+
+        // DE-DUPLICATION LOGIC WITH UNIT PRESERVATION:
+        // If an entry already exists for this code, aggregate holding units and cost basis
+        // while preserving the most complete metadata (targets, comments, IDs).
+        if (processedMap.has(lookupKey)) {
+            const existing = processedMap.get(lookupKey);
+            if (units > 0) {
+                existing.units = (existing.units || 0) + units;
+                existing.costBasis = (existing.costBasis || 0) + cost;
+                existing.value = existing.units * currentPrice;
+                const existingDivisor = 1 + (existing.dayChangePercent / 100);
+                const prevExistingVal = (existingDivisor !== 0 && !isNaN(existingDivisor)) ? (existing.value / existingDivisor) : existing.value;
+                existing.dayChangeValue = existing.value - prevExistingVal;
+                existing.capitalGain = existing.value - existing.costBasis;
+                existing.capitalGainPercent = existing.costBasis > 0 ? (existing.capitalGain / existing.costBasis) * 100 : 0;
+            }
+
+            // Upgrade metadata if new record has better data
+            if ((!existing.targetPrice || Number(existing.targetPrice) === 0) && Number(share.targetPrice) > 0) {
+                existing.targetPrice = share.targetPrice;
+            }
+            if ((!existing.comments || existing.comments.length === 0) && share.comments) {
+                existing.comments = normalizeComments(share.comments);
+            }
+            if ((!existing.id || String(existing.id).startsWith('temp_')) && (share.id && !String(share.id).startsWith('temp_'))) {
+                existing.id = share.id;
+            }
+            return;
+        }
 
         const processedShare = {
             ...share,
@@ -334,13 +377,17 @@ export function calculatePortfolioTotals(processedShares) {
     let neutralCount = 0;
 
     for (const share of processedShares) {
-        totalValue += share.value || 0;
-        totalCost += share.costBasis || 0;
-        const dailyChange = share.dayChangeValue || 0;
+        if (!share) continue;
+        const val = Number.isFinite(share.value) ? share.value : 0;
+        const cost = Number.isFinite(share.costBasis) ? share.costBasis : 0;
+        const dailyChange = Number.isFinite(share.dayChangeValue) ? share.dayChangeValue : 0;
+
+        totalValue += val;
+        totalCost += cost;
         totalDailyPnL += dailyChange;
 
         // Use dayChangePercent for gainer/loser counting (works for all stocks, including watchlist-only)
-        const pctChange = share.dayChangePercent || 0;
+        const pctChange = Number.isFinite(share.dayChangePercent) ? share.dayChangePercent : 0;
         if (pctChange > 0) {
             dayGain += dailyChange;
             gainerCount++;
@@ -354,13 +401,11 @@ export function calculatePortfolioTotals(processedShares) {
         // precise previous value reconstruction for accurate %
         // current = prev * (1 + pct) -> prev = current / (1 + pct)
         // But we already have dayChangeValue = current - prev -> prev = current - change
-        previousTotalValue += (share.value - dailyChange);
+        previousTotalValue += (val - dailyChange);
     }
 
     // Total Daily Percent = (Total Daily PnL / Previous Total Value) * 100
-    // Fix: If previous value is 0 (new portfolio), change is 0% or infinite? 
-    // Usually 0% if no history, but if it grew from 0 it's technically infinite. 
-    // Logic: If previousTotalValue is roughly 0, handle gracefully.
+    // Fix: If previous value is 0 (new portfolio), handle gracefully.
     const totalDailyPercent = Math.abs(previousTotalValue) > 0.01
         ? (totalDailyPnL / previousTotalValue) * 100
         : 0;
@@ -377,16 +422,16 @@ export function calculatePortfolioTotals(processedShares) {
     const totalReturnPercent = totalCost > 0 ? (totalReturn / totalCost) * 100 : 0;
 
     return {
-        totalValue,
-        dayChangeValue: totalDailyPnL,
-        dayGain,
-        dayLoss,
-        dayChangePercent: totalDailyPercent,
-        dayGainPercent,
-        dayLossPercent,
-        totalCost,
-        totalReturn,
-        totalReturnPercent,
+        totalValue: Number.isFinite(totalValue) ? totalValue : 0,
+        dayChangeValue: Number.isFinite(totalDailyPnL) ? totalDailyPnL : 0,
+        dayGain: Number.isFinite(dayGain) ? dayGain : 0,
+        dayLoss: Number.isFinite(dayLoss) ? dayLoss : 0,
+        dayChangePercent: Number.isFinite(totalDailyPercent) ? totalDailyPercent : 0,
+        dayGainPercent: Number.isFinite(dayGainPercent) ? dayGainPercent : 0,
+        dayLossPercent: Number.isFinite(dayLossPercent) ? dayLossPercent : 0,
+        totalCost: Number.isFinite(totalCost) ? totalCost : 0,
+        totalReturn: Number.isFinite(totalReturn) ? totalReturn : 0,
+        totalReturnPercent: Number.isFinite(totalReturnPercent) ? totalReturnPercent : 0,
         gainerCount,
         loserCount,
         neutralCount
@@ -461,17 +506,21 @@ export function getSingleShareData(code, allShares, livePrices, userWatchlists =
 
     // 4. Lookup Price
     const lookupKey = normalizedCode;
-    let priceData = livePrices.get(lookupKey);
+    let priceData = livePrices ? livePrices.get(lookupKey) : null;
 
     // Fallback: Try appending .AX if not found
-    if (!priceData && !lookupKey.includes('.')) {
+    if (!priceData && !lookupKey.includes('.') && livePrices) {
         priceData = livePrices.get(lookupKey + '.AX');
+    }
+    // Fallback: Try stripping .AX if not found
+    if (!priceData && lookupKey.endsWith('.AX') && livePrices) {
+        priceData = livePrices.get(lookupKey.replace('.AX', ''));
     }
 
     // 5. Process Primary Data (using fields from the first share found)
-    const currentPrice = priceData ? priceData.live : (parseFloat(primaryShare.enteredPrice) || 0);
-    const dayChangePercent = priceData ? priceData.pctChange : 0;
-    const units = matchingShares.reduce((acc, s) => acc + (parseInt(s.portfolioShares) || 0), 0);
+    const currentPrice = resolveStockPrice(priceData, primaryShare);
+    const dayChangePercent = priceData ? (parseFloat(priceData.pctChange) || 0) : 0;
+    const units = matchingShares.reduce((acc, s) => acc + (parseFloat(s.portfolioShares) || 0), 0);
     const value = units * currentPrice;
 
     // Derived Calculations using aggregated units

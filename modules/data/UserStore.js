@@ -712,8 +712,45 @@ export class UserStore {
         const q = query(ref); // Newest first is handled by UI sorting if needed
         const snap = await getDocs(q);
         const results = [];
-        snap.forEach(doc => results.push(doc.data()));
+        snap.forEach(doc => results.push({ id: doc.id, ...doc.data() }));
         return results;
+    }
+
+    /**
+     * One-time database scrub routine: Detects and deletes corrupted out-of-hours snapshots from Firestore.
+     * @param {string} userId
+     * @returns {Promise<{ scanned: number, deleted: number, deletedRecords: Array }>}
+     */
+    async cleanCorruptedHistorySnapshots(userId) {
+        if (!userId) return { scanned: 0, deleted: 0, deletedRecords: [] };
+        const ref = collection(db, `artifacts/${APP_ID}/users/${userId}/history`);
+        const snap = await getDocs(query(ref));
+        const docs = [];
+        snap.forEach(docSnap => {
+            docs.push({ id: docSnap.id, docId: docSnap.id, ...docSnap.data() });
+        });
+
+        const { ChartDataSanitizer } = await import('../utils/ChartDataSanitizer.js');
+        const corrupted = ChartDataSanitizer.identifyCorruptedSnapshotDocs(docs);
+
+        const deletedRecords = [];
+        for (const item of corrupted) {
+            if (item.id) {
+                try {
+                    const docRef = doc(db, `artifacts/${APP_ID}/users/${userId}/history`, item.id);
+                    await deleteDoc(docRef);
+                    deletedRecords.push(item);
+                } catch (e) {
+                    console.error('[UserStore] Failed to delete corrupted snapshot:', item.id, e);
+                }
+            }
+        }
+
+        return {
+            scanned: docs.length,
+            deleted: deletedRecords.length,
+            deletedRecords
+        };
     }
 
     /**

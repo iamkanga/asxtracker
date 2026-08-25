@@ -7,7 +7,7 @@
 import { AuthService } from '../auth/AuthService.js';
 import { DataService } from '../data/DataService.js';
 import { AppService } from '../data/AppService.js';
-import { ViewRenderer } from '../ui/ViewRenderer.js?v=1184';
+import { ViewRenderer } from '../ui/ViewRenderer.js';
 import { AppState } from '../state/AppState.js';
 import { HeaderLayout } from '../ui/HeaderLayout.js';
 import { processShares, getSingleShareData, getASXCodesStatus } from '../data/DataProcessor.js';
@@ -31,6 +31,7 @@ import { SecurityController } from './SecurityController.js';
 import { SecurityUI } from '../ui/SecurityUI.js';
 import { GeneralSettingsUI } from '../ui/GeneralSettingsUI.js';
 import CalculatorUI from '../ui/CalculatorUI.js';
+import { PortfolioChartUI } from '../ui/PortfolioChartUI.js';
 import { AnalogClock } from '../ui/AnalogClock.js';
 import { AiSummaryUI } from '../ui/AiSummaryUI.js';
 import { ScrollManager } from '../ui/ScrollManager.js';
@@ -43,6 +44,7 @@ import { StateHealthPanel } from '../state/StateHealthPanel.js';
 import { runHealthCheck, startRaceRegressionMonitor } from '../state/AppHealthTest.js';
 import { marketIndexController } from '../ui/MarketIndexController.js';
 import { MarketSchedule, ASX_SESSION } from '../utils/MarketSchedule.js';
+import { ChartDataSanitizer } from '../utils/ChartDataSanitizer.js';
 // renderSortSelect removed
 
 export class AppController {
@@ -344,12 +346,11 @@ export class AppController {
         });
 
         document.addEventListener('open-calculator', () => {
-            // Dynamically import or just assume global availability if imported in index (it's not).
-            // But we imported CalculatorUI in HeaderLayout? No.
-            // We need to import it here or in AppController imports.
-            import('../ui/CalculatorUI.js').then(module => {
-                module.default.showModal();
-            });
+            try {
+                CalculatorUI.showModal();
+            } catch (err) {
+                console.error('[AppController] Error opening CalculatorUI:', err);
+            }
         });
 
 
@@ -415,10 +416,11 @@ export class AppController {
 
 
         document.addEventListener(EVENTS.OPEN_PORTFOLIO_CHART, () => {
-            // Lazy import to keep boot fast
-            import('../ui/PortfolioChartUI.js').then(module => {
-                module.PortfolioChartUI.show();
-            });
+            try {
+                PortfolioChartUI.show();
+            } catch (err) {
+                console.error('[AppController] Error opening PortfolioChartUI:', err);
+            }
         });
 
         // CUSTOM NAVIGATION EVENTS (Briefing / External)
@@ -434,15 +436,11 @@ export class AppController {
         // OPEN_NOTIFICATIONS listener removed (Handled by NotificationUI.js with debounce)
 
         document.addEventListener(EVENTS.OPEN_MARKET_PULSE, () => {
-            // Open Snapshot / Market Pulse UI
-            // Assuming SnapshotUI is available globally or imported. 
-            // If not, we might fail. But WatchlistUI imported it. 
-            // Let's safe guard or ensure import.
-            // Actually, AppController might not import it. 
-            // Let's dynamically import to be safe if simpler.
-            import('../ui/SnapshotUI.js').then(({ SnapshotUI }) => {
+            try {
                 SnapshotUI.show();
-            });
+            } catch (err) {
+                console.error('[AppController] Error opening SnapshotUI:', err);
+            }
         });
 
         // Mute Toggle Listener
@@ -939,7 +937,34 @@ export class AppController {
                 const freshDashboard = result?.dashboard;
 
                 if (freshPrices && freshPrices.size > 0) {
-                    AppState.livePrices = new Map([...AppState.livePrices, ...freshPrices]);
+                    // Non-destructive merge: Never overwrite a valid cached price with 0/NaN
+                    const mergedPrices = new Map(AppState.livePrices);
+                    freshPrices.forEach((freshVal, code) => {
+                        const existing = mergedPrices.get(code);
+                        const isFreshLiveValid = Number.isFinite(freshVal?.live) && freshVal.live > 0;
+                        const isFreshPrevValid = Number.isFinite(freshVal?.prevClose) && freshVal.prevClose > 0;
+
+                        if (existing && !isFreshLiveValid && !isFreshPrevValid) {
+                            // Fresh quote is completely invalid/zeroed; retain valid existing price
+                            mergedPrices.set(code, {
+                                ...freshVal,
+                                live: existing.live || existing.prevClose || 0,
+                                prevClose: existing.prevClose || existing.live || 0,
+                                lastUpdate: Date.now()
+                            });
+                        } else if (existing && !isFreshLiveValid && isFreshPrevValid) {
+                            // Fresh has prevClose (e.g. out of hours); use prevClose as live baseline
+                            mergedPrices.set(code, {
+                                ...freshVal,
+                                live: freshVal.prevClose,
+                                lastUpdate: Date.now()
+                            });
+                        } else {
+                            mergedPrices.set(code, freshVal);
+                        }
+                    });
+
+                    AppState.livePrices = mergedPrices;
                     AppState.saveLivePricesToCache();
                     AppState.lastGlobalFetch = Date.now();
                     AppState.health.status = 'healthy';
@@ -1270,10 +1295,8 @@ export class AppController {
 
                 // LIVE UPDATE: If modal is open, refresh it
                 if (!document.getElementById(IDS.MODAL_FAVORITE_LINKS).classList.contains(CSS_CLASSES.HIDDEN)) {
-                    import('../ui/FavoriteLinksUI.js').then(module => {
-                        const event = new CustomEvent(EVENTS.FAVORITE_LINKS_UPDATED);
-                        document.dispatchEvent(event);
-                    });
+                    const event = new CustomEvent(EVENTS.FAVORITE_LINKS_UPDATED);
+                    document.dispatchEvent(event);
                 }
             }
 
@@ -1748,6 +1771,9 @@ export class AppController {
             );
 
             const currentPortfolioValue = summaryMetrics ? summaryMetrics.totalValue : 0;
+            if (currentPortfolioValue > 0) {
+                AppState.setLastCleanPortfolioValue(currentPortfolioValue);
+            }
 
             linkedAssets.forEach(asset => {
                 // Only update memory (Display Only) - Prevents DB write thrashing
@@ -2979,9 +3005,11 @@ export class AppController {
         document.addEventListener('REQUEST_RESEARCH_LINKS_MANAGE', (e) => {
             // Delay to ensure the detail modal's historical context is clear
             setTimeout(() => {
-                import('../ui/ResearchLinksUI.js').then(module => {
-                    module.default.show(e.detail?.code);
-                });
+                try {
+                    ResearchLinksUI.show(e.detail?.code);
+                } catch (err) {
+                    console.error('[AppController] Error opening ResearchLinksUI:', err);
+                }
             }, 150);
         });
 
@@ -3752,7 +3780,7 @@ export class AppController {
 
     /**
      * Records a portfolio snapshot if none has been taken recently.
-     * Fulfills User Request: "Keep it recorded on usage" / "Usage recorded".
+     * Protected by the Ingestion Gatekeeper to prevent out-of-hours or corrupted data from polluting history.
      */
     async _checkSnapshotNecessity() {
         if (!AppState.user || !AppState.user.uid) return;
@@ -3763,7 +3791,33 @@ export class AppController {
         const fourHours = 4 * 60 * 60 * 1000;
 
         if (!lastSnap || (now - parseInt(lastSnap)) > fourHours) {
-            console.log('[AppController] User activity detected. Syncing background portfolio snapshot...');
+            // INGESTION GATEKEEPER PRE-COMMIT VALIDATION
+            const validation = ChartDataSanitizer.validateSnapshotProposal({
+                shares: AppState.data.shares || [],
+                cash: AppState.data.cash || [],
+                livePrices: AppState.livePrices,
+                lastCleanValue: AppState.lastCleanPortfolioValue,
+                isMarketOpen: MarketSchedule.isASXTrading(),
+                pendingDownshift: AppState.pendingDownshiftReading
+            });
+
+            if (!validation.isValid) {
+                if (validation.requireConfirmation && validation.pendingReading) {
+                    AppState.pendingDownshiftReading = validation.pendingReading;
+                    console.warn(`[AppController] Snapshot quarantined: ${validation.reason}`);
+                } else {
+                    console.warn(`[AppController] Snapshot rejected by Ingestion Gatekeeper: ${validation.reason}`);
+                }
+                return;
+            }
+
+            // Snapshot validated: clear pending reading & maintain clean baseline
+            AppState.pendingDownshiftReading = null;
+            if (validation.proposedTotal > 0) {
+                AppState.setLastCleanPortfolioValue(validation.proposedTotal);
+            }
+
+            console.log('[AppController] Ingestion gatekeeper validated. Syncing background portfolio snapshot...');
             try {
                 // Triggering async without awaiting to avoid UI blocking
                 this.dataService.recordSnapshot().then(res => {

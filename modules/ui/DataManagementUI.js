@@ -72,6 +72,19 @@ export class DataManagementUI {
                                 </button>
                             </div>
                         </div>
+
+                        <!-- Maintenance Section: History Scrub -->
+                        <div class="${CSS_CLASSES.SETTINGS_SECTION}" style="margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 20px;">
+                            <div style="font-size: 0.9rem; font-weight: 700; color: white; margin-bottom: 6px; display: flex; align-items: center; gap: 8px;">
+                                <i class="fas fa-broom" style="color: var(--color-accent);"></i> History Database Scrub
+                            </div>
+                            <p style="color: var(--text-muted); font-size: 0.8rem; line-height: 1.4; margin-bottom: 12px;">
+                                Automatically scan and permanently purge artificial out-of-hours $0 pricing glitches from your cloud historical snapshots.
+                            </p>
+                            <button id="dm-btn-scrub-history" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 12px; background: rgba(var(--color-accent-rgb), 0.1); border: 1px solid var(--color-accent); border-radius: 8px; color: var(--color-accent); font-weight: 700; cursor: pointer; transition: all 0.2s;">
+                                <i class="fas fa-magic"></i> Purge Corrupted Snapshots
+                            </button>
+                        </div>
                     </div>
 
                     <!-- TAB: IMPORT -->
@@ -197,6 +210,35 @@ export class DataManagementUI {
             this._handlePdfExport();
             close();
         });
+
+        // Scrub Corrupted History
+        const scrubBtn = modal.querySelector('#dm-btn-scrub-history');
+        if (scrubBtn) {
+            scrubBtn.addEventListener('click', async () => {
+                if (!AppState.user?.uid) {
+                    ToastManager.error('User not logged in.');
+                    return;
+                }
+
+                scrubBtn.disabled = true;
+                scrubBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Scanning cloud history...';
+
+                try {
+                    const result = await userStore.cleanCorruptedHistorySnapshots(AppState.user.uid);
+                    if (result.deleted > 0) {
+                        ToastManager.success(`Successfully purged ${result.deleted} corrupted snapshot(s) from cloud history!`);
+                    } else {
+                        ToastManager.info(`Scanned ${result.scanned} snapshot(s). All history records are clean.`);
+                    }
+                } catch (e) {
+                    console.error('[DataManagementUI] Scrub Error:', e);
+                    ToastManager.error('Failed to scrub history: ' + e.message);
+                } finally {
+                    scrubBtn.disabled = false;
+                    scrubBtn.innerHTML = '<i class="fas fa-magic"></i> Purge Corrupted Snapshots';
+                }
+            });
+        }
 
 
         // --- IMPORT HANDLERS ---
