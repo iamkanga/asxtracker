@@ -42,7 +42,8 @@ export class HeaderLayout {
 
         // Initial Time & Market Status Set
         this._updateRefreshTime();
-        this.updateConnectionStatus(!!AppState.user, AppState.health?.status || 'healthy');
+        const initialHealth = !AppState.user ? 'offline' : (AppState.isDataReady ? (AppState.health?.status || 'healthy') : 'loading');
+        this.updateConnectionStatus(!!AppState.user, initialHealth);
         // Architectural Change: Removed JS-based padding adjustment.
         // We now rely on CSS sticky positioning for proper layout flow.
     }
@@ -55,7 +56,8 @@ export class HeaderLayout {
         // AUTO-UPDATE: Refresh timestamp and market telemetry when prices arrive
         StateAuditor.on('PRICES_UPDATED', (payload) => {
             this._updateRefreshTime(payload?.timestamp);
-            this.updateConnectionStatus(!!AppState.user, AppState.health?.status || 'healthy');
+            const currentHealth = !AppState.user ? 'offline' : (AppState.isDataReady ? (AppState.health?.status || 'healthy') : 'loading');
+            this.updateConnectionStatus(!!AppState.user, currentHealth);
 
             // Visual feedback: pulse the connection dot
             const dot = document.getElementById('connection-dot');
@@ -130,7 +132,7 @@ export class HeaderLayout {
                         <span>Read Only</span>
                     </div>
                     <button id="${IDS.LIVE_REFRESH_BTN}" class="live-refresh-btn" aria-label="Refresh Prices" title="Refresh Live Prices">
-                        <span id="connection-dot" class="connection-dot connected"></span>
+                        <span id="connection-dot" class="connection-dot ${CSS_CLASSES.HEALTH_LOADING}" title="Loading Data..."></span>
                         <div class="${CSS_CLASSES.LIVE_REFRESH_TEXT_STACK}">
                             <span id="${IDS.LIVE_REFRESH_TIME}">--:--:--</span>
                             <span id="${IDS.MARKET_STATUS_SUBTEXT}" class="${CSS_CLASSES.MARKET_STATUS_SUBTEXT} ${CSS_CLASSES.STATUS_CLOSED}">Closed</span>
@@ -1096,16 +1098,7 @@ export class HeaderLayout {
                 CSS_CLASSES.HEALTH_OFFLINE
             );
 
-            // 1. HIGH PRIORITY: Loading State (Overwrites all visual colors while active)
-            if (healthStatus === 'loading') {
-                dot.classList.add(CSS_CLASSES.HEALTH_LOADING);
-                const title = 'Refreshing Stock Prices...';
-                dot.title = title;
-                if (refreshBtn) refreshBtn.title = title;
-                return;
-            }
-
-            // 2. HIGH PRIORITY: Network Offline State
+            // 1. HIGH PRIORITY: Network Offline State
             if (healthStatus === 'offline' || !navigator.onLine) {
                 dot.classList.add(CSS_CLASSES.HEALTH_OFFLINE);
                 if (subtextEl) {
@@ -1118,7 +1111,7 @@ export class HeaderLayout {
                 return;
             }
 
-            // 3. Stale or Critical Error State
+            // 2. HIGH PRIORITY: Stale or Critical Error State
             if (healthStatus === 'critical') {
                 dot.classList.add(CSS_CLASSES.HEALTH_CRITICAL);
                 if (subtextEl) {
@@ -1126,6 +1119,16 @@ export class HeaderLayout {
                     subtextEl.className = `${CSS_CLASSES.MARKET_STATUS_SUBTEXT} ${CSS_CLASSES.STATUS_CLOSED}`;
                 }
                 const title = 'Connection / Sync error detected. Click to retry.';
+                dot.title = title;
+                if (refreshBtn) refreshBtn.title = title;
+                return;
+            }
+
+            // 3. HIGH PRIORITY: Loading State or unready Firestore data
+            const isDataReady = AppState.isDataReady;
+            if (healthStatus === 'loading' || (isConnected && !isDataReady)) {
+                dot.classList.add(CSS_CLASSES.HEALTH_LOADING);
+                const title = !isDataReady ? 'Loading Data...' : 'Refreshing Stock Prices...';
                 dot.title = title;
                 if (refreshBtn) refreshBtn.title = title;
                 return;

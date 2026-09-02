@@ -421,8 +421,8 @@ h1#dynamicWatchlistTitle.active {
     height: 10px;
     border-radius: 0;
     margin-right: 8px;
-    background-color: #4CAF50;
-    box-shadow: 0 0 4px #4CAF50;
+    background-color: #FF9800;
+    box-shadow: 0 0 4px #FF9800;
     transition: background-color 0.3s ease, box-shadow 0.3s ease;
     vertical-align: middle;
 }
@@ -458,6 +458,8 @@ h1#dynamicWatchlistTitle.active {
 }
 
 .connection-dot.health-loading {
+    background-color: #FF9800;
+    box-shadow: 0 0 8px #FF9800;
     animation: pulse-loading 0.8s infinite !important;
 }
 
@@ -484,8 +486,8 @@ h1#dynamicWatchlistTitle.active {
 
 @keyframes pulse-loading {
     0% {
-        background-color: #ffffff;
-        box-shadow: 0 0 5px #ffffff;
+        background-color: #FF9800;
+        box-shadow: 0 0 5px #FF9800;
     }
 
     50% {
@@ -494,8 +496,8 @@ h1#dynamicWatchlistTitle.active {
     }
 
     100% {
-        background-color: #ffffff;
-        box-shadow: 0 0 5px #ffffff;
+        background-color: #FF9800;
+        box-shadow: 0 0 5px #FF9800;
     }
 }
 

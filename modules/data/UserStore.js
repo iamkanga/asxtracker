@@ -36,6 +36,7 @@ export class UserStore {
         this.unsubscribeDashboard = null;
         this.unsubscribeOverrides = null;
         this._lastPrefsJson = null; // Cache for deep equality checks
+        this.isReady = false;
     }
 
     /**
@@ -62,6 +63,8 @@ export class UserStore {
             return () => { };
         }
 
+        this.isReady = false;
+
         const sharesRef = collection(db, `artifacts/${APP_ID}/users/${userId}/shares`);
         const cashRef = collection(db, `artifacts/${APP_ID}/users/${userId}/cashCategories`);
         const watchlistsRef = collection(db, `artifacts/${APP_ID}/users/${userId}/watchlists`);
@@ -77,6 +80,9 @@ export class UserStore {
             if (_notifyTimer) clearTimeout(_notifyTimer);
             _notifyTimer = setTimeout(() => {
                 _notifyTimer = null;
+                this.isReady = true;
+                AppState.isDataReady = true;
+
                 // LEGACY: Keep onDataChange for now to prevent breakage during migration
                 if (onDataChange) onDataChange(AppState.data);
 
@@ -132,6 +138,8 @@ export class UserStore {
 
         // Return cleanup function
         return () => {
+            this.isReady = false;
+            AppState.isDataReady = false;
             if (this.unsubscribeShares) this.unsubscribeShares();
             if (this.unsubscribeCash) this.unsubscribeCash();
             if (this.unsubscribeWatchlists) this.unsubscribeWatchlists();

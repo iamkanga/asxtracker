@@ -166,7 +166,8 @@ export class AppController {
         // --- NETWORK MONITORING (Live Response) ---
         window.addEventListener('online', () => {
             if (this.headerLayout) {
-                this.headerLayout.updateConnectionStatus(AppState.user !== null, AppState.health.status);
+                const isReady = this._userDataLoaded && AppState.isDataReady;
+                this.headerLayout.updateConnectionStatus(AppState.user !== null, isReady ? AppState.health.status : 'loading');
             }
             ToastManager.info('Connection restored. Updating market prices...');
 
@@ -201,6 +202,12 @@ export class AppController {
             // Sync to AppState (Local Cache)
             AppState.data = userData;
             this._userDataLoaded = true;
+            AppState.isDataReady = true;
+
+            // Update Connection Indicator now that Firestore data is resolved into local memory
+            if (this.headerLayout && AppState.user) {
+                this.headerLayout.updateConnectionStatus(true, AppState.health.status);
+            }
 
             // ONBOARDING GATE: Handles Race Condition between Data and Prefs
             if (await this._checkAndTriggerOnboarding()) return;
@@ -262,6 +269,7 @@ export class AppController {
                     this.appService.provisionUser(user.uid);
                     this._initialized = false;
                     this._userDataLoaded = false;
+                    AppState.isDataReady = false;
                     this._cloudPrefsLoaded = false;
                     this._localPrefsTimestamp = 0; // Reset local prefs timestamp for new user/session
                     this._syncingPreferences = false; // Re-entrancy guard for Cloud Sync
@@ -276,18 +284,21 @@ export class AppController {
                 // Start Notification Stream
                 notificationStore.init(user.uid);
 
-                // Update Connection Indicator
+                // Update Connection Indicator: Keep loading until Firestore data resolves
                 if (this.headerLayout) {
-                    this.headerLayout.updateConnectionStatus(true, AppState.health.status);
+                    const currentHealth = (this._userDataLoaded && AppState.isDataReady) ? AppState.health.status : 'loading';
+                    this.headerLayout.updateConnectionStatus(true, currentHealth);
                 }
             } else {
                 // UI State Update for Logout
+                this._userDataLoaded = false;
+                AppState.isDataReady = false;
                 if (logoutBtn) logoutBtn.classList.add(CSS_CLASSES.HIDDEN);
                 if (loginBtn) loginBtn.classList.remove(CSS_CLASSES.HIDDEN);
                 document.body.classList.remove(CSS_CLASSES.LOGGED_IN);
 
                 if (this.headerLayout) {
-                    this.headerLayout.updateConnectionStatus(false, AppState.health.status);
+                    this.headerLayout.updateConnectionStatus(false, 'offline');
                 }
 
                 // v1145: CRITICAL: Enable the sign-in button once we confirm user is logged out.
@@ -385,10 +396,11 @@ export class AppController {
                     setTimeout(() => {
                         // Double check: Still no user after 3s grace?
                         if (!AppState.user) {
-                            if (this.headerLayout) this.headerLayout.updateConnectionStatus(false);
+                            if (this.headerLayout) this.headerLayout.updateConnectionStatus(false, 'offline');
                         } else {
-                            // Recovered! Ensure we show connected.
-                            if (this.headerLayout) this.headerLayout.updateConnectionStatus(true, AppState.health.status);
+                            // Recovered! Ensure we show connected if data ready, or loading if pending
+                            const isReady = this._userDataLoaded && AppState.isDataReady;
+                            if (this.headerLayout) this.headerLayout.updateConnectionStatus(true, isReady ? AppState.health.status : 'loading');
                             // Optional: Silent refresh to ensure token is fresh
                             AuthService.refreshSession();
                         }
@@ -1021,6 +1033,7 @@ export class AppController {
 
                 // Reset Data Load (Race Guard)
                 this._userDataLoaded = false;
+                AppState.isDataReady = false;
 
                 // === DATA SUBSCRIPTION ===
                 AppState.unsubscribeStore = this.appService.subscribeToUserData(user.uid);
@@ -1036,6 +1049,8 @@ export class AppController {
             if (AppState.unsubscribePrefs) AppState.unsubscribePrefs();
             AppState.unsubscribeStore = null;
             AppState.unsubscribePrefs = null;
+            AppState.isDataReady = false;
+            this._userDataLoaded = false;
             this._cloudPrefsLoaded = false;
             this._localPrefsTimestamp = 0; // Reset local prefs timestamp on logout
         }

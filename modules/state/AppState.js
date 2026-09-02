@@ -17,6 +17,9 @@ export const AppState = {
     // Current Authenticated User
     user: null,
 
+    // Data Readiness (True once initial Firestore snapshot is loaded into local memory)
+    isDataReady: false,
+
     // Portfolio Visibility
     isPortfolioVisible: false,
 
