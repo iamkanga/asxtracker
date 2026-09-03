@@ -1211,8 +1211,6 @@ export class SettingsUI {
         this._executeSave = (modal, userId) => {
             const newPrefs = this._harvestState(modal);
 
-            userStore.savePreferences(userId, newPrefs);
-
             // UPDATE APP STATE: Ensure global sync payload has fresh data.
             AppState.preferences.dailyEmail = newPrefs.dailyEmail;
             AppState.preferences.alertEmailRecipients = newPrefs.alertEmailRecipients;

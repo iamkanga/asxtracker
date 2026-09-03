@@ -8,6 +8,16 @@ import { formatCurrency } from '../utils/formatters.js';
 import { AppState } from '../state/AppState.js';
 import { CashPieChart } from './CashPieChart.js';
 
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 export class CashViewRenderer {
     constructor(containerId) {
         this.container = document.getElementById(containerId);
@@ -203,11 +213,11 @@ export class CashViewRenderer {
 
         card.innerHTML = `
             <div class="cash-grid-category">
-                ${(catObj ? catObj.label : (asset.category || 'Cash').replace(/^user_/i, '').replace(/_/g, ' ')).toUpperCase()}
+                ${escapeHtml((catObj ? catObj.label : (asset.category || 'Cash').replace(/^user_/i, '').replace(/_/g, ' ')).toUpperCase())}
                 ${hasComments ? `<i class="fas ${UI_ICONS.COMMENTS} cash-comment-indicator" style="font-size: 10px; opacity: 0.4; margin-left: 6px;" title="Comments available"></i>` : ''}
             </div>
             <div class="cash-grid-name">
-                ${asset.name}
+                ${escapeHtml(asset.name)}
             </div>
             <div class="cash-grid-balance ${asset.balance > 0 ? CSS_CLASSES.CASH_VALUE_POSITIVE : asset.balance < 0 ? CSS_CLASSES.CASH_VALUE_NEGATIVE : ''}" 
                  style="${asset.balance === 0 ? 'color: var(--color-accent);' : ''}">

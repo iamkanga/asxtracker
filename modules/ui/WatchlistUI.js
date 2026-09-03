@@ -10,6 +10,16 @@ import { SnapshotUI } from './SnapshotUI.js';
 import { navManager } from '../utils/NavigationManager.js';
 import { userStore } from '../data/DataService.js';
 
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 export class WatchlistUI {
     /**
      * @param {Object} userStore - UserStore instance
@@ -685,7 +695,7 @@ export class WatchlistUI {
                 innerHTML += `
                     <div class="watchlist-col-hide ${titleStyleClass}">
                         <i class="fas ${it.icon}" style="width: 20px; margin-right: 8px;"></i>
-                        <span class="watchlist-name-span">${it.name}</span>
+                        <span class="watchlist-name-span">${escapeHtml(it.name)}</span>
                         ${hiddenTick}
                         ${actionIcon}
                     </div>
@@ -711,7 +721,7 @@ export class WatchlistUI {
                 innerHTML = `
                     <div class="watchlist-col-hide">
                         <i class="fas ${it.icon}" style="width: 20px; margin-right: 8px;"></i>
-                        <span class="watchlist-name-span">${it.name}</span>
+                        <span class="watchlist-name-span">${escapeHtml(it.name)}</span>
                     </div>
                     <div class="watchlist-col-carousel"></div>
                     <div class="watchlist-col-reorder">

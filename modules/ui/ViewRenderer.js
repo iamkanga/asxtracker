@@ -18,6 +18,16 @@ import { SparklinePreview } from './SparklinePreview.js';
 import { SharePieChart } from './SharePieChart.js';
 import { DividendService } from '../data/DividendService.js';
 
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 export class ViewRenderer {
     constructor() {
         this.cardsContainerClass = CSS_CLASSES.MOBILE_CONTAINER;
@@ -1426,7 +1436,7 @@ export class ViewRenderer {
                                     <div class="${CSS_CLASSES.COMMENTS_LIST}">
                                         ${stock.comments.map(c => `
                                             <div class="${CSS_CLASSES.COMMENT_ITEM} ${CSS_CLASSES.MT_SMALL} ${CSS_CLASSES.PY_TINY}">
-                                                <div class="${CSS_CLASSES.PRIMARY_TEXT} ${CSS_CLASSES.TEXT_SM}">${c.body}</div>
+                                                <div class="${CSS_CLASSES.PRIMARY_TEXT} ${CSS_CLASSES.TEXT_SM}">${escapeHtml(c.body)}</div>
                                                 <div class="${CSS_CLASSES.TEXT_MUTED} ${CSS_CLASSES.TEXT_XXS} ${CSS_CLASSES.OPACITY_70} ${CSS_CLASSES.MT_TINY}">${formatFriendlyDate(c.date)}</div>
                                             </div>
                                         `).join('')}

@@ -325,7 +325,8 @@ export class ChartComponent {
             if (!entries[0] || !entries[0].contentRect) return;
             const { width, height } = entries[0].contentRect;
             if (this.chart) this.chart.applyOptions({ width, height });
-        }).observe(div);
+        });
+        this.resizeObserver.observe(div);
 
         // Dynamic "Scrub" Highlight Line
         this.chart.subscribeCrosshairMove(param => {

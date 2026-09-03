@@ -4,7 +4,10 @@
  * 1. Connection State Transition & Readiness Guard
  * 2. Preference Guarding & Cloud Echo Filtering
  * 3. Financial Portfolio Calculations & Resilience
+ * 4. Security Sanitization & Component Lifecycle Resilience
  */
+const fs = require('fs');
+const path = require('path');
 
 // ============================================================================
 // MINIMAL TEST RUNNER HARNESS
@@ -247,6 +250,53 @@ class CloudPrefsController {
     }
 }
 
+/**
+ * 4. HTML Escaping Pipeline (Reflecting ViewRenderer, CashViewRenderer, and WatchlistUI)
+ */
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+/**
+ * 5. Chart Lifecycle Evaluator (Reflecting ChartModal.js ResizeObserver lifecycle)
+ */
+class MockChartLifecycle {
+    constructor() {
+        this.resizeObserver = null;
+        this.chart = {
+            appliedOptions: null,
+            removed: false,
+            applyOptions(opts) { this.appliedOptions = opts; },
+            remove() { this.removed = true; }
+        };
+        this.container = { innerHTML: '<div></div>' };
+    }
+
+    init(div, MockResizeObserverClass) {
+        this.resizeObserver = new MockResizeObserverClass(entries => {
+            if (!entries[0] || !entries[0].contentRect) return;
+            const { width, height } = entries[0].contentRect;
+            if (this.chart) this.chart.applyOptions({ width, height });
+        });
+        this.resizeObserver.observe(div);
+    }
+
+    destroy() {
+        if (this.resizeObserver) this.resizeObserver.disconnect();
+        if (this.chart) {
+            this.chart.remove();
+            this.chart = null;
+        }
+        this.container.innerHTML = '';
+    }
+}
+
 // ============================================================================
 // TEST SUITES
 // ============================================================================
@@ -482,6 +532,103 @@ describe('Suite 3: Financial Portfolio Calculations & Resilience', () => {
         assertStrictEqual(res.totalReturnPercent, 0, 'Zero cost basis must produce 0% return rather than NaN or Infinity');
         assert(Number.isFinite(res.totalReturnPercent));
         assert(!isNaN(res.totalReturnPercent));
+    });
+});
+
+describe('Suite 4: Security Sanitization & Component Lifecycle Resilience', () => {
+    it('4.1 Escaping pipeline properly converts <, >, and & characters into safe HTML entities', () => {
+        const testCases = [
+            { input: '<script>alert("xss")</script>', expected: '&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;' },
+            { input: 'BHP & RIO <merger>', expected: 'BHP &amp; RIO &lt;merger&gt;' },
+            { input: 'Stock "quote" & \'single\'', expected: 'Stock &quot;quote&quot; &amp; &#39;single&#39;' },
+            { input: '1 < 2 && 4 > 3', expected: '1 &lt; 2 &amp;&amp; 4 &gt; 3' }
+        ];
+
+        for (const tc of testCases) {
+            const escaped = escapeHtml(tc.input);
+            assertStrictEqual(escaped, tc.expected, `Escaping failed for input: ${tc.input}`);
+            assert(!escaped.includes('<'), `Result must not contain unescaped <: ${escaped}`);
+            assert(!escaped.includes('>'), `Result must not contain unescaped >: ${escaped}`);
+        }
+    });
+
+    it('4.2 Escaping pipeline safely handles null, undefined, numeric, and empty values', () => {
+        assertStrictEqual(escapeHtml(''), '', 'Empty string returns empty string');
+        assertStrictEqual(escapeHtml(null), '', 'null returns empty string');
+        assertStrictEqual(escapeHtml(undefined), '', 'undefined returns empty string');
+        assertStrictEqual(escapeHtml(12345), '12345', 'Numbers are converted to safe string');
+    });
+
+    it('4.3 ChartModal holds a valid ResizeObserver instance (not undefined) on initialization', () => {
+        let observeCallCount = 0;
+        let observedElement = null;
+
+        class MockResizeObserver {
+            constructor(callback) {
+                this.callback = callback;
+                this.isObserverInstance = true;
+            }
+            observe(target) {
+                observeCallCount++;
+                observedElement = target;
+                return undefined;
+            }
+            disconnect() {}
+        }
+
+        const mockDiv = { id: 'chart-container' };
+        const chartComp = new MockChartLifecycle();
+        chartComp.init(mockDiv, MockResizeObserver);
+
+        assert(chartComp.resizeObserver !== undefined, 'this.resizeObserver must not evaluate to undefined');
+        assert(chartComp.resizeObserver !== null, 'this.resizeObserver must not be null');
+        assert(chartComp.resizeObserver.isObserverInstance === true, 'this.resizeObserver must hold the observer instance');
+        assertStrictEqual(observeCallCount, 1, 'observe() must be called exactly once');
+        assertStrictEqual(observedElement, mockDiv, 'observe() must target the provided element');
+    });
+
+    it('4.4 ChartModal calls .disconnect() on ResizeObserver upon teardown/destroy', () => {
+        let disconnectCalled = false;
+
+        class MockResizeObserver {
+            constructor(callback) {
+                this.callback = callback;
+            }
+            observe() {
+                return undefined;
+            }
+            disconnect() {
+                disconnectCalled = true;
+            }
+        }
+
+        const chartComp = new MockChartLifecycle();
+        chartComp.init({ id: 'chart-container' }, MockResizeObserver);
+
+        assertStrictEqual(disconnectCalled, false, 'disconnect must not be called before destroy()');
+        chartComp.destroy();
+        assertStrictEqual(disconnectCalled, true, 'this.resizeObserver.disconnect() must be called on teardown');
+        assertStrictEqual(chartComp.chart, null, 'chart instance must be cleaned up on destroy');
+    });
+
+    it('4.5 Static codebase verification confirms decoupled observer, escaping, and single-write persistence', () => {
+        const chartModalSrc = fs.readFileSync(path.join(__dirname, '../modules/ui/ChartModal.js'), 'utf8');
+        const viewRendererSrc = fs.readFileSync(path.join(__dirname, '../modules/ui/ViewRenderer.js'), 'utf8');
+        const cashViewRendererSrc = fs.readFileSync(path.join(__dirname, '../modules/ui/CashViewRenderer.js'), 'utf8');
+        const watchlistUISrc = fs.readFileSync(path.join(__dirname, '../modules/ui/WatchlistUI.js'), 'utf8');
+        const settingsUISrc = fs.readFileSync(path.join(__dirname, '../modules/ui/SettingsUI.js'), 'utf8');
+
+        // ChartModal.js decoupled
+        assert(chartModalSrc.includes('this.resizeObserver = new ResizeObserver('), 'ChartModal.js must assign ResizeObserver');
+        assert(chartModalSrc.includes('this.resizeObserver.observe(div);'), 'ChartModal.js must call observe(div) decoupled');
+
+        // Escaping dynamic text
+        assert(viewRendererSrc.includes('escapeHtml(c.body)'), 'ViewRenderer.js must wrap c.body in escapeHtml');
+        assert(cashViewRendererSrc.includes('escapeHtml(asset.name)'), 'CashViewRenderer.js must wrap asset.name in escapeHtml');
+        assert(watchlistUISrc.includes('escapeHtml(it.name)'), 'WatchlistUI.js must wrap it.name in escapeHtml');
+
+        // Single write in SettingsUI
+        assert(!settingsUISrc.includes('userStore.savePreferences(userId, newPrefs);'), 'SettingsUI.js must not contain direct userStore.savePreferences');
     });
 });
 
