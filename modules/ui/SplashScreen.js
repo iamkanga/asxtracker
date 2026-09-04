@@ -124,6 +124,8 @@ export class SplashScreen {
         // Ensure the container has the correct layered structure
         // We expect index.html to have the basic shell, but we ensure classes here.
         this.container.classList.add(CSS_CLASSES.SPLASH_SYSTEM);
+        this.container.style.backgroundColor = '#000000';
+        this.container.style.background = '#000000';
     }
 
     setTheme(themeName) {
