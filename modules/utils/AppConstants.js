@@ -1304,6 +1304,7 @@ export const CSS_CLASSES = {
     HEALTH_CRITICAL: 'health-critical',
     HEALTH_LOADING: 'health-loading',
     HEALTH_OFFLINE: 'health-offline',
+    PULSE_FRESH: 'pulse-fresh',
     TOAST_INFO: 'toast-info',
     TOAST_BODY: 'toast-body',
     TOAST_TITLE: 'toast-title',

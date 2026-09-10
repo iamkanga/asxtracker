@@ -59,11 +59,13 @@ export class HeaderLayout {
             const currentHealth = !AppState.user ? 'offline' : (AppState.isDataReady ? (AppState.health?.status || 'healthy') : 'loading');
             this.updateConnectionStatus(!!AppState.user, currentHealth);
 
-            // Visual feedback: pulse the connection dot
-            const dot = document.getElementById('connection-dot');
-            if (dot) {
-                dot.classList.add('pulse-fresh');
-                setTimeout(() => dot.classList.remove('pulse-fresh'), 2000);
+            // Visual feedback: pulse the connection dot ONLY on manual refresh
+            if (payload?.isManual) {
+                const dot = document.getElementById('connection-dot');
+                if (dot) {
+                    dot.classList.add(CSS_CLASSES.PULSE_FRESH);
+                    setTimeout(() => dot.classList.remove(CSS_CLASSES.PULSE_FRESH), 2000);
+                }
             }
         });
     }
@@ -75,12 +77,21 @@ export class HeaderLayout {
     _updateRefreshTime(timestamp = null) {
         const el = document.getElementById(IDS.LIVE_REFRESH_TIME);
         if (el) {
-            const date = timestamp ? new Date(timestamp) : new Date();
-            el.textContent = date.toLocaleTimeString('en-GB', { hour12: false });
+            const timeToFormat = timestamp || AppState.lastGlobalFetch;
+            if (timeToFormat) {
+                const date = new Date(timeToFormat);
+                el.textContent = date.toLocaleTimeString('en-GB', { hour12: false });
+            } else {
+                el.textContent = '--:--:--';
+            }
         }
     }
 
     render() {
+        const asxStatus = MarketSchedule.getASXStatus();
+        const initialMarketText = asxStatus.isTrading ? 'Open' : 'Closed';
+        const initialMarketClass = asxStatus.isTrading ? CSS_CLASSES.STATUS_OPEN : CSS_CLASSES.STATUS_CLOSED;
+
         this.container.innerHTML = `
         <div class="${CSS_CLASSES.HEADER_INNER}">
             <div class="${CSS_CLASSES.HEADER_TOP_ROW}">
@@ -132,10 +143,10 @@ export class HeaderLayout {
                         <span>Read Only</span>
                     </div>
                     <button id="${IDS.LIVE_REFRESH_BTN}" class="live-refresh-btn" aria-label="Refresh Prices" title="Refresh Live Prices">
-                        <span id="connection-dot" class="connection-dot ${CSS_CLASSES.HEALTH_LOADING}" title="Loading Data..."></span>
+                        <span id="connection-dot" class="connection-dot ${CSS_CLASSES.HEALTH_LOADING}" title="Updating Stock Prices..."></span>
                         <div class="${CSS_CLASSES.LIVE_REFRESH_TEXT_STACK}">
                             <span id="${IDS.LIVE_REFRESH_TIME}">--:--:--</span>
-                            <span id="${IDS.MARKET_STATUS_SUBTEXT}" class="${CSS_CLASSES.MARKET_STATUS_SUBTEXT} ${CSS_CLASSES.STATUS_CLOSED}">Closed</span>
+                            <span id="${IDS.MARKET_STATUS_SUBTEXT}" class="${CSS_CLASSES.MARKET_STATUS_SUBTEXT} ${initialMarketClass}">${initialMarketText}</span>
                         </div>
                     </button>
                  </div>
@@ -1076,6 +1087,7 @@ export class HeaderLayout {
 
     /**
      * Updates the connection status indicator, market status subtext, and app health.
+     * Decouples official market hours from quote freshness and implements 3-strike failure handling.
      * @param {boolean} isConnected - True if authenticated
      * @param {string} healthStatus - 'healthy', 'stale', 'critical', 'loading', or 'offline'
      */
@@ -1083,6 +1095,14 @@ export class HeaderLayout {
         const dot = document.getElementById('connection-dot');
         const refreshBtn = document.getElementById(IDS.LIVE_REFRESH_BTN);
         const subtextEl = document.getElementById(IDS.MARKET_STATUS_SUBTEXT);
+
+        // 1. STRICT SEPARATION: Text label strictly displays "Open" or "Closed" based on official exchange schedule
+        const asxStatus = MarketSchedule.getASXStatus();
+        const isTrading = asxStatus.isTrading;
+        if (subtextEl) {
+            subtextEl.textContent = isTrading ? 'Open' : 'Closed';
+            subtextEl.className = `${CSS_CLASSES.MARKET_STATUS_SUBTEXT} ${isTrading ? CSS_CLASSES.STATUS_OPEN : CSS_CLASSES.STATUS_CLOSED}`;
+        }
 
         if (dot) {
             // Remove all health classes first
@@ -1098,94 +1118,65 @@ export class HeaderLayout {
                 CSS_CLASSES.HEALTH_OFFLINE
             );
 
-            // 1. HIGH PRIORITY: Network Offline State
+            // 2. HIGH PRIORITY: Network Offline State
             if (healthStatus === 'offline' || !navigator.onLine) {
                 dot.classList.add(CSS_CLASSES.HEALTH_OFFLINE);
-                if (subtextEl) {
-                    subtextEl.textContent = 'Closed';
-                    subtextEl.className = `${CSS_CLASSES.MARKET_STATUS_SUBTEXT} ${CSS_CLASSES.STATUS_CLOSED}`;
-                }
                 const title = 'Offline - Connect to internet for live updates';
                 dot.title = title;
                 if (refreshBtn) refreshBtn.title = title;
                 return;
             }
 
-            // 2. HIGH PRIORITY: Stale or Critical Error State
+            // 3. HIGH PRIORITY: Critical Error State
             if (healthStatus === 'critical') {
                 dot.classList.add(CSS_CLASSES.HEALTH_CRITICAL);
-                if (subtextEl) {
-                    subtextEl.textContent = 'Closed';
-                    subtextEl.className = `${CSS_CLASSES.MARKET_STATUS_SUBTEXT} ${CSS_CLASSES.STATUS_CLOSED}`;
-                }
                 const title = 'Connection / Sync error detected. Click to retry.';
                 dot.title = title;
                 if (refreshBtn) refreshBtn.title = title;
                 return;
             }
 
-            // 3. HIGH PRIORITY: Loading State or unready Firestore data
-            const isDataReady = AppState.isDataReady;
-            if (healthStatus === 'loading' || (isConnected && !isDataReady)) {
-                dot.classList.add(CSS_CLASSES.HEALTH_LOADING);
-                const title = !isDataReady ? 'Loading Data...' : 'Refreshing Stock Prices...';
-                dot.title = title;
-                if (refreshBtn) refreshBtn.title = title;
-                return;
-            }
-
-            if (healthStatus === 'stale') {
+            // 4. PERSISTENT FAILURE (3-Strike Policy: 3 consecutive failed fetches)
+            const isPersistentFailure = (AppState.health?.consecutiveFailures >= 3) || (healthStatus === 'stale');
+            if (isPersistentFailure) {
                 dot.classList.add(CSS_CLASSES.HEALTH_STALE);
-                const asxStatus = MarketSchedule.getASXStatus();
-                if (subtextEl) {
-                    subtextEl.textContent = asxStatus.isTrading ? 'Open' : 'Closed';
-                    subtextEl.className = `${CSS_CLASSES.MARKET_STATUS_SUBTEXT} ${asxStatus.isTrading ? CSS_CLASSES.STATUS_OPEN : CSS_CLASSES.STATUS_CLOSED}`;
-                }
                 const title = 'Feed Delayed / Stale (Click Live Refresh to update)';
                 dot.title = title;
                 if (refreshBtn) refreshBtn.title = title;
                 return;
             }
 
-            // 4. AUTHENTICATED & FRESH DATA: Evaluate Exchange Schedule
-            if (isConnected) {
-                const asxStatus = MarketSchedule.getASXStatus();
+            // 5. UNVERIFIED / LOADING / BOOT / WAKE STATE: Grey Dot
+            // Dot must NEVER turn green solely because the market is open or user is connected.
+            // It remains Grey until price data has arrived and is verified.
+            const isDataReady = AppState.isDataReady;
+            const hasVerifiedQuotes = AppState.lastGlobalFetch > 0 && AppState.livePrices && AppState.livePrices.size > 0;
+            const isUnverified = healthStatus === 'loading' || (isConnected && !isDataReady) || !hasVerifiedQuotes;
 
-                if (asxStatus.session === ASX_SESSION.OPEN || asxStatus.session === ASX_SESSION.AUCTION) {
+            if (isUnverified) {
+                dot.classList.add(CSS_CLASSES.HEALTH_LOADING);
+                const title = !isDataReady ? 'Loading Data...' : 'Updating Stock Prices...';
+                dot.title = title;
+                if (refreshBtn) refreshBtn.title = title;
+                return;
+            }
+
+            // 6. AUTHENTICATED & FRESH DATA: Exclusively Green Dot
+            if (isConnected) {
+                if (isTrading) {
                     dot.classList.add(asxStatus.session === ASX_SESSION.OPEN ? CSS_CLASSES.HEALTH_MARKET_OPEN : CSS_CLASSES.HEALTH_MARKET_AUCTION);
-                    if (subtextEl) {
-                        subtextEl.textContent = 'Open';
-                        subtextEl.className = `${CSS_CLASSES.MARKET_STATUS_SUBTEXT} ${CSS_CLASSES.STATUS_OPEN}`;
-                    }
-                    const title = `ASX Open • 15-Min Delayed Live Feed (${asxStatus.sydneyTime} Sydney)`;
-                    dot.title = title;
-                    if (refreshBtn) refreshBtn.title = title;
-                } else if (asxStatus.session === ASX_SESSION.PRE_OPEN) {
-                    dot.classList.add(CSS_CLASSES.HEALTH_MARKET_PREOPEN);
-                    if (subtextEl) {
-                        subtextEl.textContent = 'Closed';
-                        subtextEl.className = `${CSS_CLASSES.MARKET_STATUS_SUBTEXT} ${CSS_CLASSES.STATUS_CLOSED}`;
-                    }
-                    const title = `ASX Pre-Open • Order Entry Only (${asxStatus.sydneyTime} Sydney)`;
+                    const title = `ASX Open • Live Prices Fresh (${asxStatus.sydneyTime} Sydney)`;
                     dot.title = title;
                     if (refreshBtn) refreshBtn.title = title;
                 } else {
-                    // ASX Closed (Overnight / Weekend / Holiday)
+                    // ASX Closed (Overnight / Weekend / Pre-Open) with verified closing/EOD prices
                     dot.classList.add(CSS_CLASSES.HEALTH_MARKET_CLOSED);
-                    if (subtextEl) {
-                        subtextEl.textContent = 'Closed';
-                        subtextEl.className = `${CSS_CLASSES.MARKET_STATUS_SUBTEXT} ${CSS_CLASSES.STATUS_CLOSED}`;
-                    }
-                    const title = `${asxStatus.description} (${asxStatus.sydneyTime} Sydney)`;
+                    const title = `ASX Closed • Valid Closing/EOD Prices (${asxStatus.sydneyTime} Sydney)`;
                     dot.title = title;
                     if (refreshBtn) refreshBtn.title = title;
                 }
             } else {
                 // Not Logged In / Disconnected
-                if (subtextEl) {
-                    subtextEl.textContent = 'Closed';
-                    subtextEl.className = `${CSS_CLASSES.MARKET_STATUS_SUBTEXT} ${CSS_CLASSES.STATUS_CLOSED}`;
-                }
                 dot.classList.add(CSS_CLASSES.HEALTH_OFFLINE);
                 const title = 'Disconnected - Click to Reconnect';
                 dot.title = title;

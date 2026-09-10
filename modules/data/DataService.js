@@ -109,7 +109,7 @@ export class DataService {
         } catch (error) {
             // This outer catch handles errors from URL construction or initial setup
             console.error("DataService: Outer fetchLivePrices error:", error);
-            return { prices: new Map(), dashboard: [] };
+            return { ok: false, prices: new Map(), dashboard: [] };
         }
     }
 
@@ -440,22 +440,24 @@ export class DataService {
         if (this._isProcessingHistoryQueue) return;
         this._isProcessingHistoryQueue = true;
 
-        while (this._historyQueue.length > 0) {
-            const item = this._historyQueue.shift();
-            try {
-                const res = await this._execFetchHistory(item.code, item.range, item.silent, item.cacheKey);
-                item.resolve(res);
-            } catch (err) {
-                item.resolve({ ok: false, error: err?.message || 'History fetch failed' });
-            }
+        try {
+            while (this._historyQueue.length > 0) {
+                const item = this._historyQueue.shift();
+                try {
+                    const res = await this._execFetchHistory(item.code, item.range, item.silent, item.cacheKey);
+                    item.resolve(res);
+                } catch (err) {
+                    item.resolve({ ok: false, error: err?.message || 'History fetch failed' });
+                }
 
-            // Stagger next network request by 250ms if queue remains non-empty
-            if (this._historyQueue.length > 0) {
-                await new Promise(r => setTimeout(r, 250));
+                // Stagger next network request by 250ms if queue remains non-empty
+                if (this._historyQueue.length > 0) {
+                    await new Promise(r => setTimeout(r, 250));
+                }
             }
+        } finally {
+            this._isProcessingHistoryQueue = false;
         }
-
-        this._isProcessingHistoryQueue = false;
     }
 
     async _execFetchHistory(code, range, silent, cacheKey) {

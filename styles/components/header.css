@@ -421,13 +421,13 @@ h1#dynamicWatchlistTitle.active {
     height: 10px;
     border-radius: 0;
     margin-right: 8px;
-    background-color: #FF9800;
-    box-shadow: 0 0 4px #FF9800;
-    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+    background-color: #8e8e93;
+    box-shadow: none;
+    transition: background-color 0.4s ease, box-shadow 0.4s ease, opacity 0.4s ease;
     vertical-align: middle;
 }
 
-/* Market Open (Live Data): Green with subtle pulse animation */
+/* Market Open (Live Data Fresh): Green with subtle pulse animation */
 .connection-dot.health-market-open,
 .connection-dot.health-market-auction {
     background-color: #4CAF50;
@@ -435,7 +435,7 @@ h1#dynamicWatchlistTitle.active {
     animation: pulse-green-subtle 2s infinite ease-in-out;
 }
 
-/* Market Closed: Green solid, static dot (no pulsing) */
+/* Market Closed (Verified Fresh Closing Data): Green solid, static dot */
 .connection-dot.connected,
 .connection-dot.health-market-closed,
 .connection-dot.health-market-preopen {
@@ -444,12 +444,14 @@ h1#dynamicWatchlistTitle.active {
     animation: none !important;
 }
 
+/* Stale / Persistent Failure (3-Strike Threshold Breached): Amber */
 .connection-dot.health-stale {
     background-color: #FF9800;
     box-shadow: 0 0 8px #FF9800;
     animation: none;
 }
 
+/* Critical / Offline Error States */
 .connection-dot.health-critical,
 .connection-dot.health-offline {
     background-color: #F44336;
@@ -457,14 +459,33 @@ h1#dynamicWatchlistTitle.active {
     animation: pulse-red 1s infinite;
 }
 
+/* Boot / Launch / Wake / Unverified: Gentle breathing pulse indicating active background connectivity */
 .connection-dot.health-loading {
-    background-color: #FF9800;
-    box-shadow: 0 0 8px #FF9800;
-    animation: pulse-loading 0.8s infinite !important;
+    background-color: #8e8e93;
+    animation: pulse-pending-subtle 2s infinite ease-in-out;
 }
 
 .connection-dot:not(.connected):not(.health-market-open):not(.health-market-closed):not(.health-market-auction):not(.health-market-preopen):not(.health-stale):not(.health-critical):not(.health-offline):not(.health-loading) {
-    animation: pulse-red 2s infinite;
+    background-color: #8e8e93;
+    box-shadow: none;
+    animation: none;
+}
+
+@keyframes pulse-pending-subtle {
+    0% {
+        opacity: 0.45;
+        box-shadow: 0 0 2px rgba(142, 142, 147, 0.3);
+    }
+
+    50% {
+        opacity: 1;
+        box-shadow: 0 0 6px rgba(142, 142, 147, 0.7), 0 0 10px rgba(76, 175, 80, 0.25);
+    }
+
+    100% {
+        opacity: 0.45;
+        box-shadow: 0 0 2px rgba(142, 142, 147, 0.3);
+    }
 }
 
 @keyframes pulse-green-subtle {

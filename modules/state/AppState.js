@@ -28,7 +28,8 @@ export const AppState = {
         sessionStartTime: Date.now(),
         lastInteractionTime: Date.now(),
         dataUpdateTally: 0,
-        status: 'healthy' // 'healthy' | 'stale' | 'critical'
+        status: 'healthy', // 'healthy' | 'stale' | 'critical'
+        consecutiveFailures: 0 // 3-strike failure counter
     },
 
     // Watchlist Navigation State

@@ -146,13 +146,17 @@ function calculatePortfolioTotals(processedShares) {
 /**
  * 2. Connection Status Evaluator (Reflecting HeaderLayout.updateConnectionStatus logic)
  */
-function evaluateConnectionStatus({ isConnected, isDataReady, healthStatus, isOnline, marketSession }) {
+function evaluateConnectionStatus({ isConnected, isDataReady, healthStatus, isOnline, marketSession, consecutiveFailures = 0, hasVerifiedQuotes = true }) {
+    const isTrading = (marketSession === 'OPEN' || marketSession === 'AUCTION');
+    const marketText = isTrading ? 'Open' : 'Closed';
+
     // 1. Network Offline
     if (healthStatus === 'offline' || !isOnline) {
         return {
             statusClass: 'health-offline',
             title: 'Offline - Connect to internet for live updates',
-            badgeColor: 'red'
+            badgeColor: 'red',
+            marketText
         };
     }
 
@@ -161,41 +165,47 @@ function evaluateConnectionStatus({ isConnected, isDataReady, healthStatus, isOn
         return {
             statusClass: 'health-critical',
             title: 'Connection / Sync error detected. Click to retry.',
-            badgeColor: 'red'
+            badgeColor: 'red',
+            marketText
         };
     }
 
-    // 3. Loading State or Unready Firestore Data
-    if (healthStatus === 'loading' || (isConnected && !isDataReady)) {
-        return {
-            statusClass: 'health-loading',
-            title: !isDataReady ? 'Loading Data...' : 'Refreshing Stock Prices...',
-            badgeColor: 'amber'
-        };
-    }
-
-    // 4. Stale Feed
-    if (healthStatus === 'stale') {
+    // 3. Persistent Failure (3 strikes or stale)
+    const isPersistentFailure = consecutiveFailures >= 3 || healthStatus === 'stale';
+    if (isPersistentFailure) {
         return {
             statusClass: 'health-stale',
             title: 'Feed Delayed / Stale (Click Live Refresh to update)',
-            badgeColor: 'amber'
+            badgeColor: 'amber',
+            marketText
+        };
+    }
+
+    // 4. Loading State or Unverified Quotes
+    if (healthStatus === 'loading' || (isConnected && !isDataReady) || !hasVerifiedQuotes) {
+        return {
+            statusClass: 'health-loading',
+            title: !isDataReady ? 'Loading Data...' : 'Updating Stock Prices...',
+            badgeColor: 'grey',
+            marketText
         };
     }
 
     // 5. Authenticated & Fresh Data (Ready)
     if (isConnected) {
-        if (marketSession === 'OPEN' || marketSession === 'AUCTION') {
+        if (isTrading) {
             return {
                 statusClass: marketSession === 'OPEN' ? 'health-market-open' : 'health-market-auction',
                 title: 'ASX Open • 15-Min Delayed Live Feed',
-                badgeColor: 'green'
+                badgeColor: 'green',
+                marketText: 'Open'
             };
         } else {
             return {
                 statusClass: 'health-market-closed',
                 title: 'Market Closed',
-                badgeColor: 'green'
+                badgeColor: 'green',
+                marketText: 'Closed'
             };
         }
     }
@@ -204,7 +214,8 @@ function evaluateConnectionStatus({ isConnected, isDataReady, healthStatus, isOn
     return {
         statusClass: 'health-offline',
         title: 'Disconnected - Click to Reconnect',
-        badgeColor: 'red'
+        badgeColor: 'red',
+        marketText
     };
 }
 
@@ -307,7 +318,7 @@ describe('Suite 1: Connection State Transition & isDataReady Guard', () => {
         assertStrictEqual(appStateMock.isDataReady, false, 'isDataReady must default to false');
     });
 
-    it('1.2 Auth completed + Online + isDataReady=false stays in loading/amber state', () => {
+    it('1.2 Auth completed + Online + isDataReady=false stays in loading/grey state', () => {
         const result = evaluateConnectionStatus({
             isConnected: true,
             isDataReady: false,
@@ -317,7 +328,7 @@ describe('Suite 1: Connection State Transition & isDataReady Guard', () => {
         });
 
         assertStrictEqual(result.statusClass, 'health-loading');
-        assertStrictEqual(result.badgeColor, 'amber');
+        assertStrictEqual(result.badgeColor, 'grey');
         assertStrictEqual(result.title, 'Loading Data...');
     });
 
@@ -331,6 +342,7 @@ describe('Suite 1: Connection State Transition & isDataReady Guard', () => {
         });
         assertStrictEqual(resultOpen.statusClass, 'health-market-open');
         assertStrictEqual(resultOpen.badgeColor, 'green');
+        assertStrictEqual(resultOpen.marketText, 'Open');
 
         const resultClosed = evaluateConnectionStatus({
             isConnected: true,
@@ -341,6 +353,7 @@ describe('Suite 1: Connection State Transition & isDataReady Guard', () => {
         });
         assertStrictEqual(resultClosed.statusClass, 'health-market-closed');
         assertStrictEqual(resultClosed.badgeColor, 'green');
+        assertStrictEqual(resultClosed.marketText, 'Closed');
     });
 
     it('1.4 Network offline overrides loading and data readiness to health-offline', () => {
@@ -353,6 +366,7 @@ describe('Suite 1: Connection State Transition & isDataReady Guard', () => {
         });
         assertStrictEqual(result.statusClass, 'health-offline');
         assertStrictEqual(result.badgeColor, 'red');
+        assertStrictEqual(result.marketText, 'Open'); // Strict decoupling preserved
     });
 
     it('1.5 Critical health error overrides loading to health-critical', () => {
@@ -365,6 +379,7 @@ describe('Suite 1: Connection State Transition & isDataReady Guard', () => {
         });
         assertStrictEqual(result.statusClass, 'health-critical');
         assertStrictEqual(result.badgeColor, 'red');
+        assertStrictEqual(result.marketText, 'Open'); // Strict decoupling preserved
     });
 
     it('1.6 Disconnected guest user evaluates to health-offline', () => {
@@ -377,6 +392,77 @@ describe('Suite 1: Connection State Transition & isDataReady Guard', () => {
         });
         assertStrictEqual(result.statusClass, 'health-offline');
         assertStrictEqual(result.badgeColor, 'red');
+    });
+
+    it('1.7 Failure strikes 1 and 2 fail quietly without triggering stale state', () => {
+        const resultStrike1 = evaluateConnectionStatus({
+            isConnected: true,
+            isDataReady: true,
+            healthStatus: 'healthy',
+            isOnline: true,
+            marketSession: 'OPEN',
+            consecutiveFailures: 1,
+            hasVerifiedQuotes: true
+        });
+        assertStrictEqual(resultStrike1.statusClass, 'health-market-open');
+        assertStrictEqual(resultStrike1.badgeColor, 'green');
+
+        const resultStrike2 = evaluateConnectionStatus({
+            isConnected: true,
+            isDataReady: true,
+            healthStatus: 'healthy',
+            isOnline: true,
+            marketSession: 'OPEN',
+            consecutiveFailures: 2,
+            hasVerifiedQuotes: true
+        });
+        assertStrictEqual(resultStrike2.statusClass, 'health-market-open');
+        assertStrictEqual(resultStrike2.badgeColor, 'green');
+    });
+
+    it('1.8 Failure strike 3 triggers persistent failure with amber dot', () => {
+        const resultStrike3 = evaluateConnectionStatus({
+            isConnected: true,
+            isDataReady: true,
+            healthStatus: 'healthy',
+            isOnline: true,
+            marketSession: 'OPEN',
+            consecutiveFailures: 3,
+            hasVerifiedQuotes: true
+        });
+        assertStrictEqual(resultStrike3.statusClass, 'health-stale');
+        assertStrictEqual(resultStrike3.badgeColor, 'amber');
+        assertStrictEqual(resultStrike3.marketText, 'Open'); // Schedule remains Open
+    });
+
+    it('1.9 Fresh market closed confirms valid EOD with green dot and "Closed" subtext', () => {
+        const resultClosed = evaluateConnectionStatus({
+            isConnected: true,
+            isDataReady: true,
+            healthStatus: 'healthy',
+            isOnline: true,
+            marketSession: 'CLOSED',
+            consecutiveFailures: 0,
+            hasVerifiedQuotes: true
+        });
+        assertStrictEqual(resultClosed.statusClass, 'health-market-closed');
+        assertStrictEqual(resultClosed.badgeColor, 'green');
+        assertStrictEqual(resultClosed.marketText, 'Closed');
+    });
+
+    it('1.10 Recovery after failure immediately resets to green dot and accurate market text', () => {
+        const resultRecovered = evaluateConnectionStatus({
+            isConnected: true,
+            isDataReady: true,
+            healthStatus: 'healthy',
+            isOnline: true,
+            marketSession: 'OPEN',
+            consecutiveFailures: 0,
+            hasVerifiedQuotes: true
+        });
+        assertStrictEqual(resultRecovered.statusClass, 'health-market-open');
+        assertStrictEqual(resultRecovered.badgeColor, 'green');
+        assertStrictEqual(resultRecovered.marketText, 'Open');
     });
 });
 
@@ -629,6 +715,40 @@ describe('Suite 4: Security Sanitization & Component Lifecycle Resilience', () =
 
         // Single write in SettingsUI
         assert(!settingsUISrc.includes('userStore.savePreferences(userId, newPrefs);'), 'SettingsUI.js must not contain direct userStore.savePreferences');
+    });
+});
+
+describe('Suite 5: Pending Pulse Animation & Startup Retry Logic Verification', () => {
+    it('5.1 header.css binds pulse-pending-subtle animation to .connection-dot.health-loading', () => {
+        const rawCss = fs.readFileSync(path.join(__dirname, '../styles/components/header.css'), 'utf8');
+        const headerCss = rawCss.replace(/\r\n/g, '\n');
+        assert(headerCss.includes('@keyframes pulse-pending-subtle'), 'header.css must define @keyframes pulse-pending-subtle');
+        assert(headerCss.includes('animation: pulse-pending-subtle 2s infinite ease-in-out;'), 'health-loading must have pulse-pending-subtle animation');
+        assert(!headerCss.includes('.connection-dot.health-loading {\n    background-color: #8e8e93;\n    box-shadow: none;\n    animation: none !important;'), 'health-loading must no longer have animation: none !important');
+    });
+
+    it('5.2 header.css transitions opacity smoothly on .connection-dot to prevent abrupt cuts', () => {
+        const headerCss = fs.readFileSync(path.join(__dirname, '../styles/components/header.css'), 'utf8');
+        assert(headerCss.includes('transition: background-color 0.4s ease, box-shadow 0.4s ease, opacity 0.4s ease;'), 'connection-dot must transition opacity and colors smoothly');
+    });
+
+    it('5.3 AppController implements _scheduleFastRetry with 10-15s backoff for strikes 1 and 2', () => {
+        const appControllerSrc = fs.readFileSync(path.join(__dirname, '../modules/controllers/AppController.js'), 'utf8');
+        assert(appControllerSrc.includes('_scheduleFastRetry('), 'AppController must define _scheduleFastRetry');
+        assert(appControllerSrc.includes('_scheduleFastRetry(12000)'), 'AppController must schedule fast retry (~12s) on strike 1 and 2');
+        assert(appControllerSrc.includes('this._retryTimer = null;'), 'AppController must manage and clean up _retryTimer');
+    });
+
+    it('5.4 Initial boot seed triggers _refreshAllPrices with force=true to prevent stale cache lockout', () => {
+        const appControllerSrc = fs.readFileSync(path.join(__dirname, '../modules/controllers/AppController.js'), 'utf8');
+        assert(appControllerSrc.includes('await this._refreshAllPrices(AppState.data.shares || [], true);'), 'Boot seed must pass force=true');
+    });
+
+    it('5.5 DataService guarantees _isProcessingHistoryQueue release via try-finally', () => {
+        const rawSrc = fs.readFileSync(path.join(__dirname, '../modules/data/DataService.js'), 'utf8');
+        const dataServiceSrc = rawSrc.replace(/\r\n/g, '\n');
+        assert(dataServiceSrc.includes('try {\n            while (this._historyQueue.length > 0)'), '_processHistoryQueue must wrap queue loop in try block');
+        assert(dataServiceSrc.includes('} finally {\n            this._isProcessingHistoryQueue = false;\n        }'), '_processHistoryQueue must reset flag in finally block');
     });
 });
 

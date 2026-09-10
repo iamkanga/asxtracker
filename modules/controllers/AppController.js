@@ -60,6 +60,7 @@ export class AppController {
         // Timers
         this._bootSeedTimer = null;
         this._fetchDebounceTimer = null;
+        this._retryTimer = null;
 
         // Start with loading state until Auth confirms status
         this._setSignInLoadingState(true);
@@ -222,7 +223,7 @@ export class AppController {
             // Allow cached DOM to render completely before sending backend fetch
             if (this._bootSeedTimer) clearTimeout(this._bootSeedTimer);
             this._bootSeedTimer = setTimeout(async () => {
-                await this._refreshAllPrices(AppState.data.shares || []);
+                await this._refreshAllPrices(AppState.data.shares || [], true);
                 this._checkSnapshotNecessity();
             }, 1800);
 
@@ -921,8 +922,8 @@ export class AppController {
         const isTrading = MarketSchedule.isASXTrading();
         const asxSession = MarketSchedule.getASXStatus().session;
         const minInterval = isTrading 
-            ? 55 * 1000 // 55s during active trading
-            : (asxSession === ASX_SESSION.PRE_OPEN ? 4.5 * 60 * 1000 : 14 * 60 * 1000); // 4.5m pre-open, 14m closed
+            ? 5 * 60 * 1000 // 5m during active trading
+            : (asxSession === ASX_SESSION.PRE_OPEN ? 5 * 60 * 1000 : 15 * 60 * 1000); // 5m pre-open, 15m closed
 
         if (!force && AppState.lastGlobalFetch && (now - AppState.lastGlobalFetch < minInterval)) {
             return;
@@ -948,7 +949,7 @@ export class AppController {
                 const freshPrices = result?.prices;
                 const freshDashboard = result?.dashboard;
 
-                if (freshPrices && freshPrices.size > 0) {
+                if (result?.ok && freshPrices && freshPrices.size > 0) {
                     // Non-destructive merge: Never overwrite a valid cached price with 0/NaN
                     const mergedPrices = new Map(AppState.livePrices);
                     freshPrices.forEach((freshVal, code) => {
@@ -979,8 +980,13 @@ export class AppController {
                     AppState.livePrices = mergedPrices;
                     AppState.saveLivePricesToCache();
                     AppState.lastGlobalFetch = Date.now();
+                    AppState.health.consecutiveFailures = 0;
                     AppState.health.status = 'healthy';
                     document.body.classList.remove('is-stale');
+                    if (this._retryTimer) {
+                        clearTimeout(this._retryTimer);
+                        this._retryTimer = null;
+                    }
                     if (this.headerLayout) {
                         this.headerLayout.updateConnectionStatus(true, 'healthy');
                     }
@@ -994,17 +1000,36 @@ export class AppController {
                         totalCached: AppState.livePrices.size,
                         hasDashboard: !!(freshDashboard && freshDashboard.length > 0),
                         timestamp: AppState.lastGlobalFetch,
-                        serverTimestamp: result?.serverTimestamp || null
+                        serverTimestamp: result?.serverTimestamp || null,
+                        isManual: !silent
                     });
-                } else if (result && !result.ok) {
+                } else {
+                    // Fetch failed (result.ok is false or empty)
+                    AppState.health.consecutiveFailures = (AppState.health.consecutiveFailures || 0) + 1;
+                    if (AppState.health.consecutiveFailures >= 3) {
+                        AppState.health.status = 'stale';
+                        document.body.classList.add('is-stale');
+                        if (this.headerLayout) {
+                            this.headerLayout.updateConnectionStatus(true, 'stale');
+                        }
+                    } else {
+                        console.warn(`[AppController] Fetch attempt failed quietly (strike ${AppState.health.consecutiveFailures}/3).`);
+                        this._scheduleFastRetry(12000);
+                    }
+                }
+            } catch (err) {
+                console.warn('[AppController] Global Price Fetch error:', err);
+                AppState.health.consecutiveFailures = (AppState.health.consecutiveFailures || 0) + 1;
+                if (AppState.health.consecutiveFailures >= 3) {
                     AppState.health.status = 'stale';
                     document.body.classList.add('is-stale');
                     if (this.headerLayout) {
                         this.headerLayout.updateConnectionStatus(true, 'stale');
                     }
+                } else {
+                    console.warn(`[AppController] Price fetch error strike ${AppState.health.consecutiveFailures}/3. Failing quietly.`);
+                    this._scheduleFastRetry(12000);
                 }
-            } catch (err) {
-                console.warn('Global Price Seed failed:', err);
             } finally {
                 AppState._isFetching = false;
                 this._activeFetchPromise = null;
@@ -1045,6 +1070,8 @@ export class AppController {
             }
         } else {
             // LOGOUT: Cleanup subscriptions
+            if (this._retryTimer) clearTimeout(this._retryTimer);
+            this._retryTimer = null;
             if (AppState.unsubscribeStore) AppState.unsubscribeStore();
             if (AppState.unsubscribePrefs) AppState.unsubscribePrefs();
             AppState.unsubscribeStore = null;
@@ -1541,35 +1568,21 @@ export class AppController {
                 }
 
                 if (this._lastBackgroundTime) {
-                    // OPTIMISTIC WAKE W/ TARGETED PATCHING (Always trigger on resume)
-                    // Do not pulse 'loading' visually during background updates.
-                    const fetchStartTime = Date.now();
-                    const wasStale = (Date.now() - (AppState.lastGlobalFetch || 0) > 15 * 60 * 1000);
+                    // Dormant / Wake: If waking from sleep with quotes older than 5 minutes,
+                    // dot drops to Grey and screen is Dimmed while quietly executing an update.
+                    const quoteAge = Date.now() - (AppState.lastGlobalFetch || 0);
+                    const isOlderThan5Min = !AppState.lastGlobalFetch || quoteAge > (5 * 60 * 1000);
 
-                    if (wasStale) {
+                    if (isOlderThan5Min) {
                         document.body.classList.add('is-stale');
-                        AppState.health.status = 'stale';
-                        if (this.headerLayout) this.headerLayout.updateConnectionStatus(true, 'stale');
+                        if (this.headerLayout) {
+                            this.headerLayout.updateConnectionStatus(true, 'loading');
+                        }
                     }
 
                     // Trigger a background refresh silently
-                    this._refreshAllPrices(AppState.data.shares || [], true).then(() => {
-                        // The event PRICES_UPDATED will trigger DOM patch, turning opacity to 1.0 instantly.
-                        const elapsed = Date.now() - fetchStartTime;
-                        if (elapsed <= 10000) {
-                            AppState.health.status = 'healthy';
-                            document.body.classList.remove('is-stale');
-                            if (this.headerLayout) this.headerLayout.updateConnectionStatus(true, 'healthy');
-                        } else {
-                            AppState.health.status = 'stale';
-                            document.body.classList.add('is-stale');
-                            if (this.headerLayout) this.headerLayout.updateConnectionStatus(true, 'stale');
-                        }
-                    }).catch(err => {
-                        console.error('Optimistic wake fetch failed', err);
-                        AppState.health.status = 'stale';
-                        document.body.classList.add('is-stale');
-                        if (this.headerLayout) this.headerLayout.updateConnectionStatus(true, 'stale');
+                    this._refreshAllPrices(AppState.data.shares || [], true, true).catch(err => {
+                        console.warn('[AppController] Optimistic wake fetch failed quietly:', err);
                     });
 
                     // Reset Timer
@@ -1596,7 +1609,7 @@ export class AppController {
 
     /**
      * ADAPTIVE POLLING ENGINE: Aligns background quote fetching with the official ASX schedule.
-     * - Open / Auction (10:00-16:10 Sydney): Every 60s
+     * - Open / Auction (10:00-16:10 Sydney): Every 5 minutes (silent background polling)
      * - Pre-Open (07:00-10:00 Sydney): Every 5 minutes
      * - Closed / Overnight / Weekends: Every 15 minutes (or on-demand)
      */
@@ -1616,7 +1629,7 @@ export class AppController {
         let intervalMs = 15 * 60 * 1000; // Default closed: 15 mins
 
         if (status.session === ASX_SESSION.OPEN || status.session === ASX_SESSION.AUCTION) {
-            intervalMs = 60 * 1000; // 60s active trading
+            intervalMs = 5 * 60 * 1000; // 5 mins active trading
         } else if (status.session === ASX_SESSION.PRE_OPEN) {
             intervalMs = 5 * 60 * 1000; // 5 mins pre-open
         }
@@ -1636,7 +1649,37 @@ export class AppController {
     }
 
     /**
+     * Rapid Retry Schedule (10-15s backoff) for strikes 1 and 2.
+     * Prevents locking the user out for a full 5-minute polling interval during boot/wake network blips.
+     * @private
+     */
+    _scheduleFastRetry(delayMs = 12000) {
+        if (this._retryTimer) {
+            clearTimeout(this._retryTimer);
+            this._retryTimer = null;
+        }
+
+        const failures = AppState.health?.consecutiveFailures || 0;
+        if (failures > 0 && failures < 3 && AppState.user) {
+            console.log(`[AppController] Scheduling fast retry in ${delayMs / 1000}s (strike ${failures}/3)...`);
+            this._retryTimer = setTimeout(async () => {
+                this._retryTimer = null;
+                // Double check failures < 3 and user still authenticated
+                if (AppState.user && (AppState.health?.consecutiveFailures || 0) > 0 && (AppState.health?.consecutiveFailures || 0) < 3) {
+                    try {
+                        console.log(`[AppController] Executing fast retry attempt (strike ${(AppState.health?.consecutiveFailures || 0) + 1}/3)...`);
+                        await this._refreshAllPrices(AppState.data.shares || [], true, true);
+                    } catch (err) {
+                        console.warn('[AppController] Fast retry execution failed:', err);
+                    }
+                }
+            }, delayMs);
+        }
+    }
+
+    /**
      * Checks multiple factors to determine if the running app instance is fresh.
+     * Respects the 3-strike failure threshold for price freshness alerting.
      */
     checkAppHealth() {
         const now = Date.now();
@@ -1649,39 +1692,13 @@ export class AppController {
             newStatus = 'stale';
         }
 
-        // 2. DRIFT/WAKE DETECTION
-        // If the gap since last check is significantly more than 30s, browser was likely sleeping.
-        const tickGap = now - this._lastHealthTick;
-        if (tickGap > 15 * 60 * 1000) { // 15 Minutes
-            newStatus = 'stale';
-        }
-        this._lastHealthTick = now;
-
-        // 3. TALLY CHECK (High volume of updates increases risk of cumulative state drift)
-        if (health.dataUpdateTally > 5000) {
-            newStatus = 'stale';
-        }
-
-        // 4. FETCH AGE CHECK (Market-Aware)
-        const isTrading = MarketSchedule.isASXTrading();
-        const sessionAge = now - health.sessionStartTime;
-        if (AppState.lastGlobalFetch > 0) {
-            const fetchAge = now - AppState.lastGlobalFetch;
-            // During active trading hours, flag stale after 5 minutes.
-            // Outside active trading hours (night/weekends/holidays), data is static EOD closing data,
-            // so we don't flag as stale unless no fetch has succeeded in over 24 hours.
-            const maxPermissibleAge = isTrading ? (5 * 60 * 1000) : (24 * 60 * 60 * 1000);
-            if (fetchAge > maxPermissibleAge) {
-                newStatus = 'stale';
-            }
-        } else if (sessionAge > 60000) {
-            // Only consider stale if boot fetch has not succeeded after 60s
+        // 2. 3-STRIKE FAILURE CHECK (Failure-Threshold Alerting)
+        if ((health.consecutiveFailures || 0) >= 3) {
             newStatus = 'stale';
         }
 
         // Update Global State
         if (health.status !== newStatus) {
-            const wasHealthy = health.status === 'healthy';
             health.status = newStatus;
 
             // Only update UI if we are connected (disconnected state handles its own UI)
@@ -1691,17 +1708,6 @@ export class AppController {
 
             if (newStatus === 'stale') {
                 document.body.classList.add('is-stale');
-                // Trigger background refresh silently if we just became stale!
-                if (wasHealthy) {
-                    this._refreshAllPrices(AppState.data.shares || [], true, true).then(() => {
-                        const elapsed = Date.now() - (AppState.lastGlobalFetch || 0);
-                        if (elapsed <= 15 * 60 * 1000) {
-                            AppState.health.status = 'healthy';
-                            document.body.classList.remove('is-stale');
-                            if (this.headerLayout) this.headerLayout.updateConnectionStatus(true, 'healthy');
-                        }
-                    });
-                }
             } else {
                 document.body.classList.remove('is-stale');
             }
@@ -1711,17 +1717,13 @@ export class AppController {
             // Auto-recovery retry loop: if app remains stale, retry background fetch every 60s
             const timeSinceLastAttempt = Date.now() - (this._lastFetchAttemptTime || 0);
             if (timeSinceLastAttempt > 60000 && !AppState._isFetching && AppState.user) {
-                this._refreshAllPrices(AppState.data.shares || [], true, true).then(() => {
-                    const elapsed = Date.now() - (AppState.lastGlobalFetch || 0);
-                    if (elapsed <= 15 * 60 * 1000) {
-                        AppState.health.status = 'healthy';
-                        document.body.classList.remove('is-stale');
-                        if (this.headerLayout) this.headerLayout.updateConnectionStatus(true, 'healthy');
-                    }
-                }).catch(e => console.warn('Background retry failed:', e));
+                this._refreshAllPrices(AppState.data.shares || [], true, true).catch(e => console.warn('Background retry failed:', e));
             }
         } else {
-            document.body.classList.remove('is-stale');
+            // If healthy and verified, ensure screen is at 100% full brightness
+            if (AppState.lastGlobalFetch > 0 && (health.consecutiveFailures || 0) === 0) {
+                document.body.classList.remove('is-stale');
+            }
         }
     }
 
@@ -1922,70 +1924,7 @@ export class AppController {
         }
 
         if (fetchFresh) {
-            if (this._fetchDebounceTimer) clearTimeout(this._fetchDebounceTimer);
-
-            // Return a promise that resolves when the fetch is complete
-            return new Promise((resolve) => {
-                this._fetchDebounceTimer = setTimeout(() => {
-                    const originalWatchlistId = AppState.watchlist.id;
-                    const codes = [...new Set(filteredShares.map(s => s.shareName))].filter(Boolean);
-
-                    if (codes.length === 0) {
-                        resolve();
-                        return;
-                    }
-
-                    // For Manual Pull-to-Refresh (fetchFresh=true), we bypass the 5-minute guard
-                    // to ensure the user gets what they explicitly asked for.
-
-                    if (AppState._isFetching) {
-                        resolve();
-                        return;
-                    }
-                    AppState._isFetching = true;
-
-                    requestAnimationFrame(async () => {
-                        try {
-                            const result = await this.dataService.fetchLivePrices(codes, !isManual);
-                            const freshPrices = result?.prices;
-                            const freshDashboard = result?.dashboard;
-
-                            if (freshPrices && freshPrices.size > 0) {
-                                AppState.livePrices = new Map([...AppState.livePrices, ...freshPrices]);
-                                AppState.saveLivePricesToCache();
-                                AppState.lastGlobalFetch = Date.now();
-
-                                if (freshDashboard && Array.isArray(freshDashboard)) {
-                                    AppState.data.dashboard = freshDashboard;
-                                }
-
-                                if (AppState.watchlist.id === originalWatchlistId) {
-                                    // Recover Health Status to Healthy
-                                    AppState.health.status = 'healthy';
-                                    document.body.classList.remove('is-stale');
-                                    if (this.headerLayout) {
-                                        this.headerLayout.updateConnectionStatus(true, 'healthy');
-                                    }
-                                    // The reactive event will trigger the actual re-render, 
-                                    // but we emit it here.
-                                    StateAuditor.emit('PRICES_UPDATED', {
-                                        count: freshPrices.size,
-                                        totalCached: AppState.livePrices.size,
-                                        hasDashboard: !!(freshDashboard && freshDashboard.length > 0),
-                                        timestamp: AppState.lastGlobalFetch,
-                                        serverTimestamp: result?.serverTimestamp || null
-                                    });
-                                }
-                            }
-                        } catch (e) {
-                            console.warn('Background price refresh failed:', e);
-                        } finally {
-                            AppState._isFetching = false;
-                            resolve(); // Resolve the refresh promise
-                        }
-                    });
-                }, 250);
-            });
+            return this._refreshAllPrices(AppState.data.shares || [], true, !isManual);
         }
     }
 
@@ -2913,8 +2852,12 @@ export class AppController {
             if (btn) {
                 e.preventDefault(); // Good practice for buttons
                 ToastManager.show('Refreshing Live Prices...', 'refresh');
-                // Pass isManual = true to trigger visual pulse
-                this.updateDataAndRender(true, true);
+                // Manual tap: bypass interval throttling (force = true), silent = false
+                this._refreshAllPrices(AppState.data.shares || [], true, false).then(() => {
+                    this.updateDataAndRender(false);
+                }).catch(err => {
+                    console.warn('[AppController] Manual price refresh failed:', err);
+                });
             }
         });
 
