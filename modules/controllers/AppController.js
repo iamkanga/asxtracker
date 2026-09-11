@@ -1426,6 +1426,11 @@ export class AppController {
             // 9. Sync User Categories (Trust Cloud)
             if (prefs.userCategories && Array.isArray(prefs.userCategories)) {
                 const remoteCats = prefs.userCategories;
+                remoteCats.forEach(c => {
+                    if (c && c.id === 'shares' && (c.color?.toLowerCase() === '#808000' || c.color?.toLowerCase() === '#a49393')) {
+                        c.color = '#00D2FF';
+                    }
+                });
 
                 // Overwrite strategy: Trust the Cloud
                 if (JSON.stringify(remoteCats) !== JSON.stringify(AppState.preferences.userCategories)) {

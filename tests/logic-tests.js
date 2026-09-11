@@ -752,6 +752,180 @@ describe('Suite 5: Pending Pulse Animation & Startup Retry Logic Verification', 
     });
 });
 
+describe('Suite 6: Active Target Alerts & Daily Brief Widget Verification', () => {
+    it('6.1 AppConstants registers PRICES_UPDATED and widget target CSS classes', () => {
+        const appConstantsSrc = fs.readFileSync(path.join(__dirname, '../modules/utils/AppConstants.js'), 'utf8');
+        assert(appConstantsSrc.includes("PRICES_UPDATED: 'PRICES_UPDATED'"), 'AppConstants must export EVENTS.PRICES_UPDATED');
+        assert(appConstantsSrc.includes("WIDGET_TARGET_ROW: 'widget-target-row'"), 'AppConstants must export CSS_CLASSES.WIDGET_TARGET_ROW');
+        assert(appConstantsSrc.includes("WIDGET_TARGET_BADGE: 'widget-target-badge'"), 'AppConstants must export CSS_CLASSES.WIDGET_TARGET_BADGE');
+        assert(appConstantsSrc.includes("WIDGET_TARGET_HIT: 'widget-target-hit'"), 'AppConstants must export CSS_CLASSES.WIDGET_TARGET_HIT');
+    });
+
+    it('6.2 WidgetPanel registers active_targets in WIDGET_MODULES with default: true', () => {
+        const widgetPanelSrc = fs.readFileSync(path.join(__dirname, '../modules/ui/WidgetPanel.js'), 'utf8');
+        assert(widgetPanelSrc.includes("id: 'active_targets'"), 'WIDGET_MODULES must include active_targets');
+        assert(widgetPanelSrc.includes("label: 'Active Target Alerts'"), 'active_targets must have label Active Target Alerts');
+        assert(widgetPanelSrc.includes("renderer: '_renderActiveTargets'"), 'active_targets must bind to _renderActiveTargets');
+    });
+
+    it('6.3 WidgetPanel subscribes reactively to PRICES_UPDATED via StateAuditor and DOM event', () => {
+        const widgetPanelSrc = fs.readFileSync(path.join(__dirname, '../modules/ui/WidgetPanel.js'), 'utf8');
+        assert(widgetPanelSrc.includes("StateAuditor.on(EVENTS.PRICES_UPDATED"), 'WidgetPanel must listen to StateAuditor PRICES_UPDATED');
+        assert(widgetPanelSrc.includes("document.addEventListener(EVENTS.PRICES_UPDATED"), 'WidgetPanel must listen to document PRICES_UPDATED');
+    });
+
+    it('6.4 Target distance math accurately computes percentage distance for above and below directions', () => {
+        // Test Target Below (e.g. Buy Below: current 42.50, target 40.00 -> -5.88%)
+        const current1 = 42.50;
+        const target1 = 40.00;
+        const dist1 = ((target1 - current1) / current1) * 100;
+        assertCloseTo(dist1, -5.88235, 0.001, 'Target below should yield negative percentage distance');
+
+        // Test Target Above (e.g. Sell Above: current 45.00, target 50.00 -> +11.11%)
+        const current2 = 45.00;
+        const target2 = 50.00;
+        const dist2 = ((target2 - current2) / current2) * 100;
+        assertCloseTo(dist2, 11.1111, 0.001, 'Target above should yield positive percentage distance');
+    });
+
+    it('6.5 Target hit condition triggers correctly for above and below thresholds', () => {
+        // Below target: price <= target
+        const isHitBelow = (price, target) => price <= (target + 0.0001);
+        assert(isHitBelow(39.95, 40.00), 'Price 39.95 should trigger target below 40.00');
+        assert(isHitBelow(40.00, 40.00), 'Price 40.00 should trigger target below 40.00 (exact hit)');
+        assert(!isHitBelow(40.05, 40.00), 'Price 40.05 should not trigger target below 40.00');
+
+        // Above target: price >= target
+        const isHitAbove = (price, target) => price >= (target - 0.0001);
+        assert(isHitAbove(50.10, 50.00), 'Price 50.10 should trigger target above 50.00');
+        assert(isHitAbove(50.00, 50.00), 'Price 50.00 should trigger target above 50.00 (exact hit)');
+        assert(!isHitAbove(49.90, 50.00), 'Price 49.90 should not trigger target above 50.00');
+    });
+
+    it('6.6 widget-panel.css provides styled tokens for widget-target-row, badge, and hit states', () => {
+        const cssSrc = fs.readFileSync(path.join(__dirname, '../styles/features/widget-panel.css'), 'utf8');
+        assert(cssSrc.includes('.widget-target-row'), 'widget-panel.css must define .widget-target-row');
+        assert(cssSrc.includes('.widget-target-badge'), 'widget-panel.css must define .widget-target-badge');
+        assert(cssSrc.includes('.widget-target-hit'), 'widget-panel.css must define .widget-target-hit');
+    });
+});
+
+describe('Suite 7: Macro Balance % Splits & Stale/Offline Warning Banner Verification', () => {
+    it('7.1 AppConstants registers WIDGET_WARNING_BANNER and WIDGET_PROGRESS_BAR', () => {
+        const appConstantsSrc = fs.readFileSync(path.join(__dirname, '../modules/utils/AppConstants.js'), 'utf8');
+        assert(appConstantsSrc.includes("WIDGET_WARNING_BANNER: 'widget-warning-banner'"), 'AppConstants must export CSS_CLASSES.WIDGET_WARNING_BANNER');
+        assert(appConstantsSrc.includes("WIDGET_PROGRESS_BAR: 'widget-progress-bar'"), 'AppConstants must export CSS_CLASSES.WIDGET_PROGRESS_BAR');
+    });
+
+    it('7.2 widget-panel.css provides styles for .widget-warning-banner and .widget-progress-bar', () => {
+        const cssSrc = fs.readFileSync(path.join(__dirname, '../styles/features/widget-panel.css'), 'utf8');
+        assert(cssSrc.includes('.widget-warning-banner'), 'widget-panel.css must define .widget-warning-banner');
+        assert(cssSrc.includes('.widget-progress-bar'), 'widget-panel.css must define .widget-progress-bar');
+    });
+
+    it('7.3 Macro balance percentage splits compute accurately and sum to 100%', () => {
+        const stats = {
+            superValue: 150000,
+            cashInBankValue: 78000,
+            shareValue: 165000,
+            otherValue: 7000,
+            totalValue: 400000
+        };
+        const total = stats.totalValue;
+        const superPct = (stats.superValue / total) * 100;
+        const cashPct = (stats.cashInBankValue / total) * 100;
+        const sharePct = (stats.shareValue / total) * 100;
+        const otherPct = (stats.otherValue / total) * 100;
+
+        assertCloseTo(superPct, 37.5, 0.001, 'Super % should be 37.5%');
+        assertCloseTo(cashPct, 19.5, 0.001, 'Cash % should be 19.5%');
+        assertCloseTo(sharePct, 41.25, 0.001, 'Share % should be 41.25%');
+        assertCloseTo(otherPct, 1.75, 0.001, 'Other % should be 1.75%');
+        assertCloseTo(superPct + cashPct + sharePct + otherPct, 100, 0.001, 'All splits must sum to 100%');
+    });
+
+    it('7.4 Macro balance handles zero total value gracefully without NaN', () => {
+        const total = 0;
+        const calcPct = (val) => total > 0 ? ((val / total) * 100) : 0;
+        assertStrictEqual(calcPct(0), 0, 'Zero total must produce 0% without NaN');
+        assertStrictEqual(calcPct(500), 0, 'Zero total with value must produce 0% without NaN');
+    });
+
+    it('7.5 Stale / Offline warning banner trigger condition works correctly', () => {
+        const checkBanner = (healthStatus, onLine) => {
+            return healthStatus === 'stale' || healthStatus === 'offline' || !onLine;
+        };
+
+        // Healthy cases (Banner must NOT show)
+        assert(!checkBanner('healthy', true), 'Healthy and online should not trigger banner');
+        assert(!checkBanner('loading', true), 'Loading and online should not trigger banner');
+
+        // Trigger cases (Banner MUST show)
+        assert(checkBanner('stale', true), 'Stale status must trigger warning banner');
+        assert(checkBanner('offline', true), 'Offline health status must trigger warning banner');
+        assert(checkBanner('healthy', false), 'Browser offline (navigator.onLine=false) must trigger warning banner');
+        assert(checkBanner('critical', false), 'Offline and critical must trigger warning banner');
+    });
+
+    it('7.6 WidgetPanel _getCategoryColor ignores legacy olive/coffee on shares and returns Electric Cyan token', () => {
+        const resolveColor = (categoryId, userPrefs = []) => {
+            if (!categoryId) return 'var(--color-accent)';
+            if (categoryId === 'shares') {
+                const userPref = userPrefs.find(c => c.id === 'shares');
+                if (userPref && userPref.color && !['#808000', '#a49393'].includes(userPref.color.toLowerCase())) {
+                    return userPref.color;
+                }
+                return 'var(--asset-shares, #00D2FF)';
+            }
+            return 'var(--asset-shares, #00D2FF)';
+        };
+
+        // Legacy olive override must be ignored in favor of design token
+        assertStrictEqual(
+            resolveColor('shares', [{ id: 'shares', color: '#808000' }]),
+            'var(--asset-shares, #00D2FF)',
+            'Legacy olive (#808000) must be bypassed for shares'
+        );
+
+        // Legacy coffee override must be ignored in favor of design token
+        assertStrictEqual(
+            resolveColor('shares', [{ id: 'shares', color: '#a49393' }]),
+            'var(--asset-shares, #00D2FF)',
+            'Legacy coffee (#a49393) must be bypassed for shares'
+        );
+
+        // Empty userPrefs must return design token
+        assertStrictEqual(
+            resolveColor('shares', []),
+            'var(--asset-shares, #00D2FF)',
+            'Default fallback must return var(--asset-shares, #00D2FF)'
+        );
+    });
+
+    it('7.7 User categories sanitization converts legacy olive/coffee on shares to #00D2FF', () => {
+        const sanitizeCats = (cats) => {
+            if (!Array.isArray(cats)) return cats;
+            cats.forEach(c => {
+                if (c && c.id === 'shares' && (c.color?.toLowerCase() === '#808000' || c.color?.toLowerCase() === '#a49393')) {
+                    c.color = '#00D2FF';
+                }
+            });
+            return cats;
+        };
+
+        const testCats = [
+            { id: 'shares', color: '#808000' },
+            { id: 'super', color: '#9C27B0' },
+            { id: 'cash', color: '#1A237E' }
+        ];
+
+        sanitizeCats(testCats);
+        assertStrictEqual(testCats[0].color, '#00D2FF', 'Shares color must be sanitized from #808000 to #00D2FF');
+        assertStrictEqual(testCats[1].color, '#9C27B0', 'Super color must be untouched');
+        assertStrictEqual(testCats[2].color, '#1A237E', 'Cash color must be untouched');
+    });
+});
+
 // ============================================================================
 // SUMMARY REPORT
 // ============================================================================

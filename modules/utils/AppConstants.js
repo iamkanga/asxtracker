@@ -192,6 +192,7 @@ export const EVENTS = {
     OPEN_EDIT_WATCHLIST: 'open-edit-watchlist',
     WIDGET_TOGGLE: 'widget-toggle',
     WIDGET_CONFIG_CHANGED: 'widget-config-changed',
+    PRICES_UPDATED: 'PRICES_UPDATED',
 
 
 
@@ -868,6 +869,11 @@ export const CSS_CLASSES = {
     WIDGET_ROW: 'widget-row',
     WIDGET_EMPTY: 'widget-empty',
     WIDGET_NOTIFICATION_ITEM: 'widget-notification-item',
+    WIDGET_TARGET_ROW: 'widget-target-row',
+    WIDGET_TARGET_BADGE: 'widget-target-badge',
+    WIDGET_TARGET_HIT: 'widget-target-hit',
+    WIDGET_WARNING_BANNER: 'widget-warning-banner',
+    WIDGET_PROGRESS_BAR: 'widget-progress-bar',
 
     // Briefing / Morning Brief Specific
     BRIEFING_HEADER: 'briefing-header',

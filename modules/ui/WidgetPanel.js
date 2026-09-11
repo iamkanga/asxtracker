@@ -9,6 +9,7 @@
  */
 import { AppState } from '../state/AppState.js';
 import { notificationStore } from '../state/NotificationStore.js';
+import { StateAuditor } from '../state/StateAuditor.js';
 import { CSS_CLASSES, IDS, EVENTS, UI_ICONS, UI_LABELS, DASHBOARD_SYMBOLS, DASHBOARD_LINKS, CASH_WATCHLIST_ID } from '../utils/AppConstants.js';
 import { formatCurrency, formatPercent } from '../utils/formatters.js';
 import { LinkHelper } from '../utils/LinkHelper.js';
@@ -19,6 +20,7 @@ export const WIDGET_MODULES = [
     { id: 'dashboard_snapshot', label: 'Dashboard Snapshot', description: 'Live indexes, currencies & commodities', icon: 'fa-globe', renderer: '_renderDashboardSnapshot', default: true },
     { id: 'portfolio_summary', label: 'Wealth Summary', description: 'Total wealth: Shares, Super, Cash & Assets', icon: 'fa-wallet', renderer: '_renderPortfolioSummary', default: true },
     { id: 'market_movers', label: 'Market Movers', description: 'Top 6 biggest movers on the ASX', icon: 'fa-rocket', renderer: '_renderMarketMovers', default: true },
+    { id: 'active_targets', label: 'Active Target Alerts', description: 'Configured price targets and distances', icon: 'fa-crosshairs', renderer: '_renderActiveTargets', default: true },
     { id: 'notifications', label: 'Latest Alerts', description: 'Most recent price alerts & notifications', icon: 'fa-bell', renderer: '_renderNotifications', default: true },
     { id: 'top_movers', label: 'Watchlist Movers', description: 'Top daily % movers in your portfolio', icon: 'fa-bolt', renderer: '_renderTopMovers', default: false },
     { id: 'top_holdings', label: 'Top Holdings', description: 'Your largest positions by value', icon: 'fa-trophy', renderer: '_renderTopHoldings', default: false },
@@ -103,6 +105,18 @@ export class WidgetPanel {
         document.addEventListener(EVENTS.NOTIFICATION_UPDATE, () => this.render());
         document.addEventListener(EVENTS.WIDGET_CONFIG_CHANGED, () => this.render());
 
+        // Reactive price updates: refresh distances and cards when prices tick
+        StateAuditor.on(EVENTS.PRICES_UPDATED, () => {
+            if (this.container && !this.container.classList.contains(CSS_CLASSES.WIDGET_HIDDEN)) {
+                this.render();
+            }
+        });
+        document.addEventListener(EVENTS.PRICES_UPDATED, () => {
+            if (this.container && !this.container.classList.contains(CSS_CLASSES.WIDGET_HIDDEN)) {
+                this.render();
+            }
+        });
+
         // Keyboard support (Escape to close)
         window.addEventListener('keydown', (e) => {
             if (e.key === 'Escape' && this.container && !this.container.classList.contains(CSS_CLASSES.WIDGET_HIDDEN)) {
@@ -160,6 +174,9 @@ export class WidgetPanel {
             return;
         }
 
+        const scrollContainer = this.container.querySelector('.widget-scroll-container');
+        const prevScroll = scrollContainer ? scrollContainer.scrollTop : 0;
+
         const config = AppState.preferences?.widgetConfig || this._getDefaultConfig();
         const stats = this._getPortfolioStats();
         const dateOptions = { weekday: 'long', month: 'long', day: 'numeric' };
@@ -200,6 +217,12 @@ export class WidgetPanel {
             </div>
 
             <div class="${CSS_CLASSES.W_FULL} widget-scroll-container" style="flex: 1; overflow-y: auto; padding-bottom: 30px;">
+                ${(AppState.health?.status === 'stale' || AppState.health?.status === 'offline' || (typeof navigator !== 'undefined' && !navigator.onLine)) ? `
+                    <div class="${CSS_CLASSES.WIDGET_WARNING_BANNER}" style="margin: 0 16px 8px 16px; padding: 8px 12px; background: rgba(255, 179, 0, 0.15); border: 1px solid rgba(255, 179, 0, 0.4); border-radius: 6px; color: #ffb300; font-size: 0.75rem; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-triangle-exclamation"></i>
+                        <span>Quotes may be delayed or offline</span>
+                    </div>
+                ` : ''}
         `;
 
         // 2. DYNAMIC MODULES
@@ -253,31 +276,60 @@ export class WidgetPanel {
                                     <i class="fas ${module.icon}" style="font-size: 0.75rem; opacity: 0.8;"></i>
                                     <span>${module.label}</span>
                                 </div>
-                                <div style="font-size: 2.1rem; font-weight: 800; color: #fff; line-height: 1.1; margin-bottom: ${module.id === 'portfolio_summary' ? '15px' : '12px'};">
+                                <div style="font-size: 2.1rem; font-weight: 800; color: #fff; line-height: 1.1; margin-bottom: ${module.id === 'portfolio_summary' ? '8px' : '12px'};">
                                     ${module.id === 'portfolio_summary' ? formatCurrency(stats.totalValue) : (stats.dayChange >= 0 ? '+' : '') + formatCurrency(stats.dayChange)}
                                 </div>
                                 
-                                 ${module.id === 'portfolio_summary' ? `
-                                    <!-- Asset Breakout in Hero -->
-                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; width: 100%; margin-bottom: 18px; margin-top: 5px;">
-                                        <div style="display: flex; flex-direction: column; gap: 2px;">
-                                            <span style="font-size: 0.65rem; color: rgba(255,255,255,0.5); font-weight: 700; text-transform: uppercase;">Super</span>
-                                            <span style="font-size: 1.45rem; font-weight: 800; color: ${this._getCategoryColor('super')};">${formatCurrency(stats.superValue)}</span>
+                                 ${module.id === 'portfolio_summary' ? (() => {
+                                    const totalVal = stats.totalValue || 0;
+                                    const superPct = totalVal > 0 ? ((stats.superValue / totalVal) * 100) : 0;
+                                    const cashPct = totalVal > 0 ? ((stats.cashInBankValue / totalVal) * 100) : 0;
+                                    const sharePct = totalVal > 0 ? ((stats.shareValue / totalVal) * 100) : 0;
+                                    const otherPct = totalVal > 0 ? ((stats.otherValue / totalVal) * 100) : 0;
+
+                                    const superColor = this._getCategoryColor('super');
+                                    const bankColor = this._getCategoryColor('cash_in_bank');
+                                    const shareColor = this._getCategoryColor('shares');
+                                    const otherColor = this._getCategoryColor('other');
+
+                                    return `
+                                        <!-- Macro Balance Stacked Progress Bar in Hero -->
+                                        <div class="${CSS_CLASSES.WIDGET_PROGRESS_BAR}" style="margin-bottom: 15px;">
+                                            ${superPct > 0 ? `<div style="width: ${superPct.toFixed(1)}%; background: ${superColor}; height: 100%;" title="Super: ${superPct.toFixed(1)}%"></div>` : ''}
+                                            ${cashPct > 0 ? `<div style="width: ${cashPct.toFixed(1)}%; background: ${bankColor}; height: 100%;" title="Cash: ${cashPct.toFixed(1)}%"></div>` : ''}
+                                            ${sharePct > 0 ? `<div style="width: ${sharePct.toFixed(1)}%; background: ${shareColor}; height: 100%;" title="Shares: ${sharePct.toFixed(1)}%"></div>` : ''}
+                                            ${otherPct > 0 ? `<div style="width: ${otherPct.toFixed(1)}%; background: ${otherColor}; height: 100%;" title="Other Assets: ${otherPct.toFixed(1)}%"></div>` : ''}
                                         </div>
-                                        <div style="display: flex; flex-direction: column; gap: 2px; align-items: flex-end; text-align: right;">
-                                            <span style="font-size: 0.65rem; color: rgba(255,255,255,0.5); font-weight: 700; text-transform: uppercase;">Cash</span>
-                                            <span style="font-size: 1.45rem; font-weight: 800; color: ${this._getCategoryColor('cash_in_bank')};">${formatCurrency(stats.cashInBankValue)}</span>
+
+                                        <!-- Asset Breakout in Hero -->
+                                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; width: 100%; margin-bottom: 18px; margin-top: 5px;">
+                                            <div style="display: flex; flex-direction: column; gap: 2px;">
+                                                <span style="font-size: 0.65rem; color: rgba(255,255,255,0.5); font-weight: 700; text-transform: uppercase;">Super</span>
+                                                <span style="font-size: 1.45rem; font-weight: 800; color: ${superColor};">
+                                                    ${formatCurrency(stats.superValue)} <span style="font-size: 0.75rem; font-weight: 700; color: rgba(255,255,255,0.55);">(${superPct.toFixed(1)}%)</span>
+                                                </span>
+                                            </div>
+                                            <div style="display: flex; flex-direction: column; gap: 2px; align-items: flex-end; text-align: right;">
+                                                <span style="font-size: 0.65rem; color: rgba(255,255,255,0.5); font-weight: 700; text-transform: uppercase;">Cash</span>
+                                                <span style="font-size: 1.45rem; font-weight: 800; color: ${bankColor};">
+                                                    ${formatCurrency(stats.cashInBankValue)} <span style="font-size: 0.75rem; font-weight: 700; color: rgba(255,255,255,0.55);">(${cashPct.toFixed(1)}%)</span>
+                                                </span>
+                                            </div>
+                                            <div style="display: flex; flex-direction: column; gap: 2px;">
+                                                <span style="font-size: 0.65rem; color: rgba(255,255,255,0.5); font-weight: 700; text-transform: uppercase;">Shares</span>
+                                                <span style="font-size: 1.45rem; font-weight: 800; color: ${shareColor};">
+                                                    ${formatCurrency(stats.shareValue)} <span style="font-size: 0.75rem; font-weight: 700; color: rgba(255,255,255,0.55);">(${sharePct.toFixed(1)}%)</span>
+                                                </span>
+                                            </div>
+                                            <div style="display: flex; flex-direction: column; gap: 2px; align-items: flex-end; text-align: right;">
+                                                <span style="font-size: 0.65rem; color: rgba(255,255,255,0.5); font-weight: 700; text-transform: uppercase;">Other Assets</span>
+                                                <span style="font-size: 1.45rem; font-weight: 800; color: ${otherColor};">
+                                                    ${formatCurrency(stats.otherValue)} <span style="font-size: 0.75rem; font-weight: 700; color: rgba(255,255,255,0.55);">(${otherPct.toFixed(1)}%)</span>
+                                                </span>
+                                            </div>
                                         </div>
-                                        <div style="display: flex; flex-direction: column; gap: 2px;">
-                                            <span style="font-size: 0.65rem; color: rgba(255,255,255,0.5); font-weight: 700; text-transform: uppercase;">Shares</span>
-                                            <span style="font-size: 1.45rem; font-weight: 800; color: ${this._getCategoryColor('shares')};">${formatCurrency(stats.shareValue)}</span>
-                                        </div>
-                                        <div style="display: flex; flex-direction: column; gap: 2px; align-items: flex-end; text-align: right;">
-                                            <span style="font-size: 0.65rem; color: rgba(255,255,255,0.5); font-weight: 700; text-transform: uppercase;">Other Assets</span>
-                                            <span style="font-size: 1.45rem; font-weight: 800; color: ${this._getCategoryColor('other')};">${formatCurrency(stats.otherValue)}</span>
-                                        </div>
-                                    </div>
-                                ` : `
+                                    `;
+                                })() : `
                                     <div style="font-size: 0.75rem; color: rgba(255,255,255,0.6); font-weight: 700; text-transform: uppercase;">Day Change</div>
                                 `}
 
@@ -303,7 +355,7 @@ export class WidgetPanel {
             }
 
             const content = this[module.renderer]();
-            if (!content || (typeof content === 'string' && content.includes('empty'))) return '';
+            if (!content || (typeof content === 'string' && content.includes('empty') && module.id !== 'active_targets')) return '';
 
             return `
                 <div class="${CSS_CLASSES.WIDGET_SECTION_WRAPPER}" style="padding: 8px 16px;">
@@ -325,6 +377,11 @@ export class WidgetPanel {
 
         html += `</div>`; // Close scroll container
         this.container.innerHTML = html;
+
+        const newScrollContainer = this.container.querySelector('.widget-scroll-container');
+        if (newScrollContainer && prevScroll > 0) {
+            newScrollContainer.scrollTop = prevScroll;
+        }
 
         this._bindUIActions();
         this._initClocks();
@@ -484,7 +541,18 @@ export class WidgetPanel {
     _getCategoryColor(categoryId) {
         if (!categoryId) return 'var(--color-accent)';
         
-        // 1. Check User Overrides in AppState
+        // 1. Core equities portfolio in Wealth Summary always uses the dedicated theme token
+        if (categoryId === 'shares') {
+            const userPrefs = AppState.preferences?.userCategories || [];
+            const userPref = userPrefs.find(c => c.id === 'shares');
+            // Ignore legacy auto-seeded olive (#808000) or coffee (#a49393) overrides
+            if (userPref && userPref.color && !['#808000', '#a49393'].includes(userPref.color.toLowerCase())) {
+                return userPref.color;
+            }
+            return 'var(--asset-shares, #00D2FF)';
+        }
+
+        // 2. Check User Overrides in AppState
         const userPrefs = AppState.preferences?.userCategories || [];
         let userPref = userPrefs.find(c => c.id === categoryId);
         
@@ -495,13 +563,13 @@ export class WidgetPanel {
 
         if (userPref && userPref.color) return userPref.color;
 
-        // 2. Standard Category Fallbacks (Mirroring App variables)
+        // 3. Standard Category Fallbacks (Mirroring App variables)
         const standardColors = {
-            'shares': 'var(--asset-shares)',
-            'super': 'var(--asset-super)',
-            'cash_in_bank': 'var(--asset-cash-in-bank)',
-            'cash': 'var(--asset-cash)',
-            'other': 'var(--asset-other)'
+            'shares': 'var(--asset-shares, #00D2FF)',
+            'super': 'var(--asset-super, #9C27B0)',
+            'cash_in_bank': 'var(--asset-cash-in-bank, #1A237E)',
+            'cash': 'var(--asset-cash, #2196F3)',
+            'other': 'var(--asset-other, #424242)'
         };
 
         return standardColors[categoryId] || 'var(--color-accent)';
@@ -568,30 +636,52 @@ export class WidgetPanel {
         const bankColor = this._getCategoryColor('cash_in_bank');
         const otherColor = this._getCategoryColor('other');
 
+        // Macro balance percentage splits
+        const totalVal = stats.totalValue || 0;
+        const superPct = totalVal > 0 ? ((stats.superValue / totalVal) * 100) : 0;
+        const cashPct = totalVal > 0 ? ((stats.cashInBankValue / totalVal) * 100) : 0;
+        const sharePct = totalVal > 0 ? ((stats.shareValue / totalVal) * 100) : 0;
+        const otherPct = totalVal > 0 ? ((stats.otherValue / totalVal) * 100) : 0;
+
         return `
             <div class="${CSS_CLASSES.WIDGET_STAT_GRID}" style="padding: 0 18px 12px 18px;">
                 <div class="${CSS_CLASSES.WIDGET_STAT_ITEM}">
                     <label>Net Wealth Overview</label>
                     <span class="value">${formatCurrency(stats.totalValue)}</span>
+                    <!-- Macro Balance Stacked Progress Bar -->
+                    <div class="${CSS_CLASSES.WIDGET_PROGRESS_BAR}" style="margin-top: 8px;">
+                        ${superPct > 0 ? `<div style="width: ${superPct.toFixed(1)}%; background: ${superColor}; height: 100%;" title="Super: ${superPct.toFixed(1)}%"></div>` : ''}
+                        ${cashPct > 0 ? `<div style="width: ${cashPct.toFixed(1)}%; background: ${bankColor}; height: 100%;" title="Cash: ${cashPct.toFixed(1)}%"></div>` : ''}
+                        ${sharePct > 0 ? `<div style="width: ${sharePct.toFixed(1)}%; background: ${shareColor}; height: 100%;" title="Shares: ${sharePct.toFixed(1)}%"></div>` : ''}
+                        ${otherPct > 0 ? `<div style="width: ${otherPct.toFixed(1)}%; background: ${otherColor}; height: 100%;" title="Other Assets: ${otherPct.toFixed(1)}%"></div>` : ''}
+                    </div>
                 </div>
                 <div class="${CSS_CLASSES.WIDGET_STAT_ROW}" style="margin-top: 10px; justify-content: space-between;">
                     <div class="${CSS_CLASSES.WIDGET_STAT_ITEM} ${CSS_CLASSES.WIDGET_STAT_SMALL}">
                         <label>Super</label>
-                        <span class="value" style="color: ${superColor}; font-size: 1.25rem; font-weight: 800;">${formatCurrency(stats.superValue)}</span>
+                        <span class="value" style="color: ${superColor}; font-size: 1.25rem; font-weight: 800;">
+                            ${formatCurrency(stats.superValue)} <span style="font-size: 0.72rem; font-weight: 700; color: rgba(255,255,255,0.55); margin-left: 2px;">(${superPct.toFixed(1)}%)</span>
+                        </span>
                     </div>
                     <div class="${CSS_CLASSES.WIDGET_STAT_ITEM} ${CSS_CLASSES.WIDGET_STAT_SMALL}" style="align-items: flex-end; text-align: right;">
                         <label>Cash</label>
-                        <span class="value" style="color: ${bankColor}; font-size: 1.25rem; font-weight: 800;">${formatCurrency(stats.cashInBankValue)}</span>
+                        <span class="value" style="color: ${bankColor}; font-size: 1.25rem; font-weight: 800;">
+                            ${formatCurrency(stats.cashInBankValue)} <span style="font-size: 0.72rem; font-weight: 700; color: rgba(255,255,255,0.55); margin-left: 2px;">(${cashPct.toFixed(1)}%)</span>
+                        </span>
                     </div>
                 </div>
                 <div class="${CSS_CLASSES.WIDGET_STAT_ROW}" style="margin-top: 10px; justify-content: space-between;">
                     <div class="${CSS_CLASSES.WIDGET_STAT_ITEM} ${CSS_CLASSES.WIDGET_STAT_SMALL}">
                         <label>Shares</label>
-                        <span class="value" style="color: ${shareColor}; font-size: 1.25rem; font-weight: 800;">${formatCurrency(stats.shareValue)}</span>
+                        <span class="value" style="color: ${shareColor}; font-size: 1.25rem; font-weight: 800;">
+                            ${formatCurrency(stats.shareValue)} <span style="font-size: 0.72rem; font-weight: 700; color: rgba(255,255,255,0.55); margin-left: 2px;">(${sharePct.toFixed(1)}%)</span>
+                        </span>
                     </div>
                     <div class="${CSS_CLASSES.WIDGET_STAT_ITEM} ${CSS_CLASSES.WIDGET_STAT_SMALL}" style="align-items: flex-end; text-align: right;">
                         <label>Other Assets</label>
-                        <span class="value" style="color: ${otherColor}; font-size: 1.25rem; font-weight: 800;">${formatCurrency(stats.otherValue)}</span>
+                        <span class="value" style="color: ${otherColor}; font-size: 1.25rem; font-weight: 800;">
+                            ${formatCurrency(stats.otherValue)} <span style="font-size: 0.72rem; font-weight: 700; color: rgba(255,255,255,0.55); margin-left: 2px;">(${otherPct.toFixed(1)}%)</span>
+                        </span>
                     </div>
                 </div>
                 ${stats.shareValue > 0 ? `
@@ -737,6 +827,130 @@ export class WidgetPanel {
         } catch (e) {
             return `<div class="${CSS_CLASSES.WIDGET_EMPTY}">Alerts unavailable</div>`;
         }
+    }
+
+    /**
+     * Active Target Alerts — lists stocks with user-defined target thresholds,
+     * current price, target price, and real-time percentage distance to target.
+     * Highlights targets that have been triggered (HIT).
+     */
+    _renderActiveTargets() {
+        const shares = AppState.data.shares || [];
+        const livePrices = AppState.livePrices || new Map();
+        const targetMap = new Map();
+
+        shares.forEach(s => {
+            if (AppState.hiddenAssets && AppState.hiddenAssets.has(String(s.id))) return;
+            const code = (s.shareName || s.code || '').trim().toUpperCase();
+            if (!code) return;
+            const targetPrice = parseFloat(s.targetPrice ?? s.target_price ?? 0);
+            if (!targetPrice || targetPrice <= 0 || isNaN(targetPrice)) return;
+
+            const targetDirection = (s.targetDirection || 'below').toLowerCase();
+            const buySell = (s.buySell || (targetDirection === 'above' ? 'sell' : 'buy')).toLowerCase();
+            const key = `${code}-${targetDirection}`;
+
+            if (!targetMap.has(key)) {
+                targetMap.set(key, {
+                    id: s.id,
+                    code,
+                    targetPrice,
+                    targetDirection,
+                    buySell
+                });
+            }
+        });
+
+        const targetList = Array.from(targetMap.values());
+
+        if (!targetList.length) {
+            return `
+                <div class="${CSS_CLASSES.WIDGET_EMPTY}" style="padding: 16px 18px; text-align: center; color: rgba(255, 255, 255, 0.45); font-size: 0.82rem;">
+                    <i class="fas fa-crosshairs" style="display: block; font-size: 1.25rem; margin-bottom: 6px; opacity: 0.35;"></i>
+                    No target alerts configured
+                </div>
+            `;
+        }
+
+        // Cross-reference live data and calculate distance + hit state
+        const enriched = targetList.map(item => {
+            const liveData = livePrices.get(item.code) || {};
+            const currentPrice = parseFloat(liveData.live || liveData.price || 0);
+
+            let distPct = null;
+            let isHit = false;
+
+            if (currentPrice > 0) {
+                distPct = ((item.targetPrice - currentPrice) / currentPrice) * 100;
+                isHit = (item.targetDirection === 'above' && currentPrice >= (item.targetPrice - 0.0001)) ||
+                        (item.targetDirection === 'below' && currentPrice <= (item.targetPrice + 0.0001));
+            }
+
+            return {
+                ...item,
+                currentPrice,
+                distPct,
+                isHit
+            };
+        });
+
+        // Priority sort: HIT targets first, then closest distance ascending
+        enriched.sort((a, b) => {
+            if (a.isHit && !b.isHit) return -1;
+            if (!a.isHit && b.isHit) return 1;
+
+            const distA = a.distPct !== null ? Math.abs(a.distPct) : 999999;
+            const distB = b.distPct !== null ? Math.abs(b.distPct) : 999999;
+            return distA - distB;
+        });
+
+        return enriched.map(item => {
+            const isAbove = item.targetDirection === 'above';
+            const dirIcon = isAbove ? UI_ICONS.CARET_UP : UI_ICONS.CARET_DOWN;
+            const dirColor = isAbove ? 'var(--color-positive)' : 'var(--color-negative)';
+            const strategyLabel = item.buySell === 'sell' ? 'Sell' : 'Buy';
+            const priceStr = item.currentPrice > 0 ? formatCurrency(item.currentPrice) : '--';
+
+            let distBadgeHtml;
+            if (item.isHit) {
+                distBadgeHtml = `
+                    <span class="${CSS_CLASSES.WIDGET_TARGET_HIT}">
+                        <i class="fas fa-check" style="font-size: 0.6rem;"></i> HIT${item.distPct !== null ? ` (${item.distPct >= 0 ? '+' : ''}${item.distPct.toFixed(1)}%)` : ''}
+                    </span>
+                `;
+            } else if (item.distPct !== null) {
+                const distSign = item.distPct >= 0 ? '+' : '';
+                const distClass = item.distPct >= 0 ? CSS_CLASSES.TEXT_UP : CSS_CLASSES.TEXT_DOWN;
+                distBadgeHtml = `
+                    <span class="${distClass}" style="font-weight: 700; font-size: 0.82rem; min-width: 55px; text-align: right;">
+                        ${distSign}${item.distPct.toFixed(2)}%
+                    </span>
+                `;
+            } else {
+                distBadgeHtml = `<span style="font-size: 0.8rem; color: rgba(255,255,255,0.3); text-align: right;">--</span>`;
+            }
+
+            return `
+                <div class="${CSS_CLASSES.WIDGET_TARGET_ROW}"
+                     onclick="document.dispatchEvent(new CustomEvent('${EVENTS.ASX_CODE_CLICK}', { detail: { code: '${item.code}' } }))">
+                    <div style="display: flex; flex-direction: column; gap: 2px; flex: 1; text-align: left;">
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            <span class="code" style="font-weight: 800; font-size: 0.88rem; color: #fff;">${item.code}</span>
+                            <span class="${CSS_CLASSES.WIDGET_TARGET_BADGE}">
+                                <i class="fas ${dirIcon}" style="color: ${dirColor};"></i>${strategyLabel}
+                            </span>
+                        </div>
+                        <span style="font-size: 0.74rem; color: rgba(255,255,255,0.5);">
+                            Target: <strong style="color: rgba(255,255,255,0.85); font-weight: 700;">${formatCurrency(item.targetPrice)}</strong>
+                        </span>
+                    </div>
+                    <div style="flex: 1; display: flex; flex-direction: column; align-items: flex-end; gap: 2px;">
+                        <span class="value" style="font-weight: 700; font-size: 0.88rem; color: #fff;">${priceStr}</span>
+                        ${distBadgeHtml}
+                    </div>
+                </div>
+            `;
+        }).join('');
     }
 
     _formatAlertMessage(a) {

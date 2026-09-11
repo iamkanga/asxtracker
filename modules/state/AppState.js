@@ -145,7 +145,20 @@ export const AppState = {
         userCategories: (() => {
             try {
                 const stored = localStorage.getItem(STORAGE_KEYS.USER_CATEGORIES);
-                return stored ? JSON.parse(stored) : null;
+                const parsed = stored ? JSON.parse(stored) : null;
+                if (Array.isArray(parsed)) {
+                    let changed = false;
+                    parsed.forEach(c => {
+                        if (c && c.id === 'shares' && (c.color?.toLowerCase() === '#808000' || c.color?.toLowerCase() === '#a49393')) {
+                            c.color = '#00D2FF';
+                            changed = true;
+                        }
+                    });
+                    if (changed) {
+                        try { localStorage.setItem(STORAGE_KEYS.USER_CATEGORIES, JSON.stringify(parsed)); } catch (e) {}
+                    }
+                }
+                return parsed;
             } catch (e) {
                 return null;
             }

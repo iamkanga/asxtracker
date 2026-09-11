@@ -151,8 +151,8 @@ export class PortfolioChartUI {
                         </button>
                         <button class="layer-toggle-btn ${this.visibleLayers.shares ? 'active' : ''}" data-layer="shares" 
                                 style="background:transparent; border:none; outline:none; padding:4px 0; color:#fff; font-size:0.85rem; font-weight:800; cursor:pointer; display:flex; align-items:center; gap:8px;">
-                             <span style="width:10px; height:10px; border-radius:2px; background:#a49393; opacity:${this.visibleLayers.shares ? 1 : 0.4};"></span>
-                             Shares
+                              <span style="width:10px; height:10px; border-radius:2px; background:#00D2FF; opacity:${this.visibleLayers.shares ? 1 : 0.4};"></span>
+                              Shares
                         </button>
 
                         <button class="layer-toggle-btn ${this.showEvents ? 'active' : ''}" data-layer="events" 
@@ -796,7 +796,7 @@ export class PortfolioChartUI {
         const map = {
             'total': { hex: '#06FF4F', rgb: '6, 255, 79' },
             'super': { hex: '#9C27B0', rgb: '156, 39, 176' },
-            'shares': { hex: '#a49393', rgb: '164, 147, 147' }
+            'shares': { hex: '#00D2FF', rgb: '0, 210, 255' }
         };
         const c = map[filter] || map['total'];
         return { hex: c.hex, rgba: (opacity) => `rgba(${c.rgb}, ${opacity})` };
@@ -945,7 +945,7 @@ export class PortfolioChartUI {
         let html = '';
         if (this.visibleLayers.total) html += renderRangeStat('Total', totalData, '#06FF4F');
         if (this.visibleLayers.super) html += renderRangeStat('Super', superData, '#9C27B0');
-        if (this.visibleLayers.shares) html += renderRangeStat('Shares', sharesData, '#a49393');
+        if (this.visibleLayers.shares) html += renderRangeStat('Shares', sharesData, '#00D2FF');
 
         highLowRow.innerHTML = html;
         highLowRow.style.display = html ? 'flex' : 'none';

@@ -66,7 +66,7 @@ export class CashAssetUI {
         const activeCategoryIds = new Set((AppState.data.cash || []).map(a => a.category).filter(Boolean));
         const standardColors = {
             'cash': '#4db8ff', 'cash_in_bank': '#3399ff', 'term_deposit': '#0066cc',
-            'property': '#ff9933', 'crypto': '#ffcc00', 'shares': '#a49393',
+            'property': '#ff9933', 'crypto': '#ffcc00', 'shares': '#00D2FF',
             'super': '#9933ff', 'personal': '#ff3399', 'other': '#808080'
         };
 
