@@ -277,7 +277,7 @@ export function runHealthCheck() {
         const requiredClasses = [
             'HEALTH_MARKET_OPEN', 'HEALTH_MARKET_CLOSED', 'HEALTH_MARKET_AUCTION', 
             'HEALTH_MARKET_PREOPEN', 'HEALTH_STALE', 'HEALTH_OFFLINE', 'HEALTH_LOADING',
-            'MARKET_STATUS_SUBTEXT', 'STATUS_OPEN', 'STATUS_CLOSED', 'LIVE_REFRESH_TEXT_STACK'
+            'MARKET_STATUS_SUBTEXT', 'STATUS_OPEN', 'STATUS_CLOSED', 'STATUS_PREOPEN', 'LIVE_REFRESH_TEXT_STACK'
         ];
         const missingClasses = requiredClasses.filter(cls => !CSS_CLASSES[cls]);
         if (missingClasses.length > 0) return `Missing CSS_CLASSES: ${missingClasses.join(', ')}`;

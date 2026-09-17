@@ -223,6 +223,10 @@
     color: rgba(76, 175, 80, 0.75);
 }
 
+.market-status-subtext.status-preopen {
+    color: rgba(255, 152, 0, 0.85);
+}
+
 .market-status-subtext.status-closed {
     color: rgba(244, 67, 54, 0.75);
 }
@@ -435,7 +439,7 @@ h1#dynamicWatchlistTitle.active {
     animation: pulse-green-subtle 2s infinite ease-in-out;
 }
 
-/* Market Closed (Verified Fresh Closing Data): Green solid, static dot */
+/* Market Closed / Pre-Open (Verified Data Loaded): Green solid, static dot */
 .connection-dot.connected,
 .connection-dot.health-market-closed,
 .connection-dot.health-market-preopen {

@@ -114,7 +114,11 @@ export const STORAGE_KEYS = {
     CALC_PREFS: 'ASX_NEXT_calcPrefs',
 
     // Dividend Manual Overrides
-    DIVIDEND_OVERRIDES: 'ASX_NEXT_dividendOverrides'
+    DIVIDEND_OVERRIDES: 'ASX_NEXT_dividendOverrides',
+
+    // Global Price Sync Watermarks
+    LAST_GLOBAL_FETCH: 'asx_last_global_fetch',
+    LIVE_PRICES_CACHE: 'asx_live_prices_v2'
 };
 
 export const EVENTS = {
@@ -1305,6 +1309,7 @@ export const CSS_CLASSES = {
     MARKET_STATUS_SUBTEXT: 'market-status-subtext',
     STATUS_OPEN: 'status-open',
     STATUS_CLOSED: 'status-closed',
+    STATUS_PREOPEN: 'status-preopen',
     LIVE_REFRESH_TEXT_STACK: 'live-refresh-text-stack',
     HEALTH_STALE: 'health-stale',
     HEALTH_CRITICAL: 'health-critical',

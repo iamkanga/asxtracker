@@ -194,4 +194,18 @@ export class MarketSchedule {
     static isASXTrading(date = new Date()) {
         return this.getASXStatus(date).isTrading;
     }
+
+    /**
+     * Returns the UTC epoch millisecond timestamp corresponding to 10:00 AM Sydney time on the given date.
+     * Accurately adapts to Australian daylight saving time (AEST vs AEDT).
+     * @param {Date} [date=new Date()]
+     * @returns {number}
+     */
+    static getTodayMarketOpenTimeMs(date = new Date()) {
+        const syd = this.getSydneyTime(date);
+        const targetDate = new Date(Date.UTC(syd.year, syd.month - 1, syd.day, 10, 0, 0));
+        const targetSyd = this.getSydneyTime(targetDate);
+        const diffHours = targetSyd.hour - 10;
+        return targetDate.getTime() - (diffHours * 3600000);
+    }
 }

@@ -89,8 +89,15 @@ export class HeaderLayout {
 
     render() {
         const asxStatus = MarketSchedule.getASXStatus();
-        const initialMarketText = asxStatus.isTrading ? 'Open' : 'Closed';
-        const initialMarketClass = asxStatus.isTrading ? CSS_CLASSES.STATUS_OPEN : CSS_CLASSES.STATUS_CLOSED;
+        let initialMarketText = 'Closed';
+        let initialMarketClass = CSS_CLASSES.STATUS_CLOSED;
+        if (asxStatus.isTrading) {
+            initialMarketText = asxStatus.session === ASX_SESSION.AUCTION ? 'Auction' : 'Open';
+            initialMarketClass = CSS_CLASSES.STATUS_OPEN;
+        } else if (asxStatus.session === ASX_SESSION.PRE_OPEN) {
+            initialMarketText = 'Pre-Open';
+            initialMarketClass = CSS_CLASSES.STATUS_PREOPEN;
+        }
 
         this.container.innerHTML = `
         <div class="${CSS_CLASSES.HEADER_INNER}">
@@ -1096,12 +1103,22 @@ export class HeaderLayout {
         const refreshBtn = document.getElementById(IDS.LIVE_REFRESH_BTN);
         const subtextEl = document.getElementById(IDS.MARKET_STATUS_SUBTEXT);
 
-        // 1. STRICT SEPARATION: Text label strictly displays "Open" or "Closed" based on official exchange schedule
+        // 1. STRICT SEPARATION: Text label displays "Open", "Pre-Open", or "Closed" based on official exchange schedule
         const asxStatus = MarketSchedule.getASXStatus();
         const isTrading = asxStatus.isTrading;
+        const isPreOpen = asxStatus.session === ASX_SESSION.PRE_OPEN;
+
         if (subtextEl) {
-            subtextEl.textContent = isTrading ? 'Open' : 'Closed';
-            subtextEl.className = `${CSS_CLASSES.MARKET_STATUS_SUBTEXT} ${isTrading ? CSS_CLASSES.STATUS_OPEN : CSS_CLASSES.STATUS_CLOSED}`;
+            if (isTrading) {
+                subtextEl.textContent = asxStatus.session === ASX_SESSION.AUCTION ? 'Auction' : 'Open';
+                subtextEl.className = `${CSS_CLASSES.MARKET_STATUS_SUBTEXT} ${CSS_CLASSES.STATUS_OPEN}`;
+            } else if (isPreOpen) {
+                subtextEl.textContent = 'Pre-Open';
+                subtextEl.className = `${CSS_CLASSES.MARKET_STATUS_SUBTEXT} ${CSS_CLASSES.STATUS_PREOPEN}`;
+            } else {
+                subtextEl.textContent = 'Closed';
+                subtextEl.className = `${CSS_CLASSES.MARKET_STATUS_SUBTEXT} ${CSS_CLASSES.STATUS_CLOSED}`;
+            }
         }
 
         if (dot) {
@@ -1148,28 +1165,47 @@ export class HeaderLayout {
 
             // 5. UNVERIFIED / LOADING / BOOT / WAKE STATE: Grey Dot
             // Dot must NEVER turn green solely because the market is open or user is connected.
-            // It remains Grey until price data has arrived and is verified.
+            // It remains Grey until price data has arrived and is verified for the current market state.
             const isDataReady = AppState.isDataReady;
             const hasVerifiedQuotes = AppState.lastGlobalFetch > 0 && AppState.livePrices && AppState.livePrices.size > 0;
-            const isUnverified = healthStatus === 'loading' || (isConnected && !isDataReady) || !hasVerifiedQuotes;
+
+            // Session Freshness Check: If the market is actively open, quotes must have been
+            // fetched during today's open session (at or after 10:00 AM Sydney time), not from pre-market or yesterday.
+            let isStaleForOpenSession = false;
+            if (isTrading) {
+                const openTimeMs = MarketSchedule.getTodayMarketOpenTimeMs();
+                if ((AppState.lastGlobalFetch || 0) < openTimeMs) {
+                    isStaleForOpenSession = true;
+                }
+            }
+
+            const isUnverified = healthStatus === 'loading' || (isConnected && !isDataReady) || !hasVerifiedQuotes || isStaleForOpenSession;
 
             if (isUnverified) {
                 dot.classList.add(CSS_CLASSES.HEALTH_LOADING);
-                const title = !isDataReady ? 'Loading Data...' : 'Updating Stock Prices...';
+                const title = isStaleForOpenSession
+                    ? 'ASX Open • Updating Stock Prices for Market Open...'
+                    : (!isDataReady ? 'Loading Data...' : 'Updating Stock Prices...');
                 dot.title = title;
                 if (refreshBtn) refreshBtn.title = title;
                 return;
             }
 
-            // 6. AUTHENTICATED & FRESH DATA: Exclusively Green Dot
+            // 6. AUTHENTICATED & FRESH DATA: Green Dot strictly reserved for active trading
             if (isConnected) {
                 if (isTrading) {
                     dot.classList.add(asxStatus.session === ASX_SESSION.OPEN ? CSS_CLASSES.HEALTH_MARKET_OPEN : CSS_CLASSES.HEALTH_MARKET_AUCTION);
                     const title = `ASX Open • Live Prices Fresh (${asxStatus.sydneyTime} Sydney)`;
                     dot.title = title;
                     if (refreshBtn) refreshBtn.title = title;
+                } else if (isPreOpen) {
+                    // ASX Pre-Open (07:00-10:00 Sydney) with verified baseline data: Neutral/Calm dot (Orders queued, trading not started)
+                    dot.classList.add(CSS_CLASSES.HEALTH_MARKET_PREOPEN);
+                    const title = `ASX Pre-Open • Orders Queued, Trading Not Started (${asxStatus.sydneyTime} Sydney)`;
+                    dot.title = title;
+                    if (refreshBtn) refreshBtn.title = title;
                 } else {
-                    // ASX Closed (Overnight / Weekend / Pre-Open) with verified closing/EOD prices
+                    // ASX Closed (Overnight / Weekend / Pre-Open) with verified closing/EOD prices: Neutral/Calm dot
                     dot.classList.add(CSS_CLASSES.HEALTH_MARKET_CLOSED);
                     const title = `ASX Closed • Valid Closing/EOD Prices (${asxStatus.sydneyTime} Sydney)`;
                     dot.title = title;

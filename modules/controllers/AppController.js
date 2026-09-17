@@ -1578,11 +1578,14 @@ export class AppController {
                     const quoteAge = Date.now() - (AppState.lastGlobalFetch || 0);
                     const isOlderThan5Min = !AppState.lastGlobalFetch || quoteAge > (5 * 60 * 1000);
 
+                    // Immediate schedule alignment on resume: update header immediately so
+                    // leftover market text from prior session does not linger while network fetches
+                    if (this.headerLayout && AppState.user) {
+                        this.headerLayout.updateConnectionStatus(true, isOlderThan5Min ? 'loading' : AppState.health.status);
+                    }
+
                     if (isOlderThan5Min) {
                         document.body.classList.add('is-stale');
-                        if (this.headerLayout) {
-                            this.headerLayout.updateConnectionStatus(true, 'loading');
-                        }
                     }
 
                     // Trigger a background refresh silently

@@ -65,15 +65,15 @@ export class DataService {
             }
 
             // TRACE LOGGING
-            // TIMEOUT PROTECTION (30 Seconds for Google Apps Script cold starts)
+            // TIMEOUT PROTECTION (60 Seconds for Google Apps Script cold starts)
             const controller = new AbortController();
             let warningId = null;
             if (!silent) {
                 warningId = setTimeout(() => {
                     ToastManager.info("Retrieving stock prices is taking longer than expected. Please wait...", "Slow Connection");
-                }, 18000); // 18s threshold for explicit manual user requests
+                }, 20000); // 20s threshold for explicit manual user requests
             }
-            const timeoutId = setTimeout(() => controller.abort(), 30000);
+            const timeoutId = setTimeout(() => controller.abort(), 60000);
 
             try {
                 const response = await fetch(url.toString(), { signal: controller.signal });
@@ -95,7 +95,7 @@ export class DataService {
                 if (warningId) clearTimeout(warningId);
                 clearTimeout(timeoutId);
                 if (error.name === 'AbortError') {
-                    console.warn("DataService: Fetch timed out (30s limit).");
+                    console.warn("DataService: Fetch timed out (60s limit).");
                 } else if (isNetworkError(error)) {
                     console.warn("DataService: Live prices fetch network failure (Failed to fetch).");
                     if (!silent) {

@@ -329,12 +329,18 @@ export const AppState = {
     },
 
     // Live Data Cache
-    lastGlobalFetch: 0, // Timestamp of last full API fetch
+    lastGlobalFetch: (() => {
+        try {
+            return parseFloat(localStorage.getItem(STORAGE_KEYS.LAST_GLOBAL_FETCH || 'asx_last_global_fetch') || '0') || 0;
+        } catch (e) {
+            return 0;
+        }
+    })(), // Timestamp of last full API fetch
     _isFetching: false, // Concurrency lock
     // Map<StockCode, { live: number, pctChange: number }>
     livePrices: (() => {
         try {
-            const stored = localStorage.getItem('asx_live_prices_v2');
+            const stored = localStorage.getItem(STORAGE_KEYS.LIVE_PRICES_CACHE || 'asx_live_prices_v2');
             if (stored) {
                 const parsed = JSON.parse(stored);
                 if (Array.isArray(parsed)) {
@@ -362,7 +368,10 @@ export const AppState = {
         try {
             if (this.livePrices instanceof Map && this.livePrices.size > 0) {
                 const entries = Array.from(this.livePrices.entries());
-                localStorage.setItem('asx_live_prices_v2', JSON.stringify(entries));
+                localStorage.setItem(STORAGE_KEYS.LIVE_PRICES_CACHE || 'asx_live_prices_v2', JSON.stringify(entries));
+            }
+            if (this.lastGlobalFetch > 0) {
+                localStorage.setItem(STORAGE_KEYS.LAST_GLOBAL_FETCH || 'asx_last_global_fetch', String(this.lastGlobalFetch));
             }
         } catch (e) {
             console.warn('[AppState] Failed to save livePrices to cache:', e);
@@ -876,6 +885,9 @@ export const AppState = {
         };
         this.livePrices.clear();
         this.lastGlobalFetch = 0;
+        try {
+            localStorage.removeItem(STORAGE_KEYS.LAST_GLOBAL_FETCH || 'asx_last_global_fetch');
+        } catch (e) {}
         this._isFetching = false;
 
         // Unsubscribe from everything

@@ -146,9 +146,10 @@ function calculatePortfolioTotals(processedShares) {
 /**
  * 2. Connection Status Evaluator (Reflecting HeaderLayout.updateConnectionStatus logic)
  */
-function evaluateConnectionStatus({ isConnected, isDataReady, healthStatus, isOnline, marketSession, consecutiveFailures = 0, hasVerifiedQuotes = true }) {
+function evaluateConnectionStatus({ isConnected, isDataReady, healthStatus, isOnline, marketSession, consecutiveFailures = 0, hasVerifiedQuotes = true, lastGlobalFetch = 0, marketOpenTimeMs = 0 }) {
     const isTrading = (marketSession === 'OPEN' || marketSession === 'AUCTION');
-    const marketText = isTrading ? 'Open' : 'Closed';
+    const isPreOpen = (marketSession === 'PRE_OPEN');
+    const marketText = isTrading ? (marketSession === 'AUCTION' ? 'Auction' : 'Open') : (isPreOpen ? 'Pre-Open' : 'Closed');
 
     // 1. Network Offline
     if (healthStatus === 'offline' || !isOnline) {
@@ -181,11 +182,20 @@ function evaluateConnectionStatus({ isConnected, isDataReady, healthStatus, isOn
         };
     }
 
+    // Session Freshness Check: If the market is actively open, quotes must have been
+    // fetched during today's open session (at or after 10:00 AM Sydney time), not from pre-market or yesterday.
+    let isStaleForOpenSession = false;
+    if (isTrading && marketOpenTimeMs > 0 && lastGlobalFetch < marketOpenTimeMs) {
+        isStaleForOpenSession = true;
+    }
+
     // 4. Loading State or Unverified Quotes
-    if (healthStatus === 'loading' || (isConnected && !isDataReady) || !hasVerifiedQuotes) {
+    if (healthStatus === 'loading' || (isConnected && !isDataReady) || !hasVerifiedQuotes || isStaleForOpenSession) {
         return {
             statusClass: 'health-loading',
-            title: !isDataReady ? 'Loading Data...' : 'Updating Stock Prices...',
+            title: isStaleForOpenSession
+                ? 'ASX Open • Updating Stock Prices for Market Open...'
+                : (!isDataReady ? 'Loading Data...' : 'Updating Stock Prices...'),
             badgeColor: 'grey',
             marketText
         };
@@ -199,6 +209,13 @@ function evaluateConnectionStatus({ isConnected, isDataReady, healthStatus, isOn
                 title: 'ASX Open • 15-Min Delayed Live Feed',
                 badgeColor: 'green',
                 marketText: 'Open'
+            };
+        } else if (isPreOpen) {
+            return {
+                statusClass: 'health-market-preopen',
+                title: 'ASX Pre-Open • Orders Queued',
+                badgeColor: 'green',
+                marketText: 'Pre-Open'
             };
         } else {
             return {
@@ -435,7 +452,7 @@ describe('Suite 1: Connection State Transition & isDataReady Guard', () => {
         assertStrictEqual(resultStrike3.marketText, 'Open'); // Schedule remains Open
     });
 
-    it('1.9 Fresh market closed confirms valid EOD with green dot and "Closed" subtext', () => {
+    it('1.9 Fresh market closed confirms valid EOD with green solid dot and "Closed" subtext', () => {
         const resultClosed = evaluateConnectionStatus({
             isConnected: true,
             isDataReady: true,
@@ -463,6 +480,61 @@ describe('Suite 1: Connection State Transition & isDataReady Guard', () => {
         assertStrictEqual(resultRecovered.statusClass, 'health-market-open');
         assertStrictEqual(resultRecovered.badgeColor, 'green');
         assertStrictEqual(resultRecovered.marketText, 'Open');
+    });
+
+    it('1.11 Pre-Open session renders "Pre-Open" subtext and green solid dot', () => {
+        const resultPreOpen = evaluateConnectionStatus({
+            isConnected: true,
+            isDataReady: true,
+            healthStatus: 'healthy',
+            isOnline: true,
+            marketSession: 'PRE_OPEN',
+            consecutiveFailures: 0,
+            hasVerifiedQuotes: true
+        });
+        assertStrictEqual(resultPreOpen.statusClass, 'health-market-preopen');
+        assertStrictEqual(resultPreOpen.badgeColor, 'green');
+        assertStrictEqual(resultPreOpen.marketText, 'Pre-Open');
+    });
+
+    it('1.12 Open market session with pre-open/yesterday quotes holds loading grey dot', () => {
+        const marketOpenTimeMs = 1726531200000; // e.g. 10:00:00 AM
+        const yesterdayFetchMs = 1726520000000; // e.g. 06:53:20 AM
+        const result = evaluateConnectionStatus({
+            isConnected: true,
+            isDataReady: true,
+            healthStatus: 'healthy',
+            isOnline: true,
+            marketSession: 'OPEN',
+            consecutiveFailures: 0,
+            hasVerifiedQuotes: true,
+            lastGlobalFetch: yesterdayFetchMs,
+            marketOpenTimeMs: marketOpenTimeMs
+        });
+        assertStrictEqual(result.statusClass, 'health-loading');
+        assertStrictEqual(result.badgeColor, 'grey');
+        assertStrictEqual(result.title, 'ASX Open • Updating Stock Prices for Market Open...');
+        assertStrictEqual(result.marketText, 'Open');
+    });
+
+    it('1.13 Open market session with fresh post-10AM quotes displays pulsing green dot', () => {
+        const marketOpenTimeMs = 1726531200000; // e.g. 10:00:00 AM
+        const freshFetchMs = 1726531230000;     // e.g. 10:00:30 AM
+        const result = evaluateConnectionStatus({
+            isConnected: true,
+            isDataReady: true,
+            healthStatus: 'healthy',
+            isOnline: true,
+            marketSession: 'OPEN',
+            consecutiveFailures: 0,
+            hasVerifiedQuotes: true,
+            lastGlobalFetch: freshFetchMs,
+            marketOpenTimeMs: marketOpenTimeMs
+        });
+        assertStrictEqual(result.statusClass, 'health-market-open');
+        assertStrictEqual(result.badgeColor, 'green');
+        assertStrictEqual(result.title, 'ASX Open • 15-Min Delayed Live Feed');
+        assertStrictEqual(result.marketText, 'Open');
     });
 });
 
