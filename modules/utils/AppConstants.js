@@ -876,6 +876,10 @@ export const CSS_CLASSES = {
     WIDGET_TARGET_ROW: 'widget-target-row',
     WIDGET_TARGET_BADGE: 'widget-target-badge',
     WIDGET_TARGET_HIT: 'widget-target-hit',
+    BADGE_POSITIVE: 'badge-positive',
+    BADGE_NEGATIVE: 'badge-negative',
+    BADGE_UP: 'badge-up',
+    BADGE_DOWN: 'badge-down',
     WIDGET_WARNING_BANNER: 'widget-warning-banner',
     WIDGET_PROGRESS_BAR: 'widget-progress-bar',
 

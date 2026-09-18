@@ -331,6 +331,31 @@
     letter-spacing: 0.5px;
 }
 
+/* Dashboard Snapshot & Movement Badges */
+.badge-up,
+.badge-positive {
+    background: rgba(6, 255, 79, 0.15);
+    border: 1px solid rgba(6, 255, 79, 0.3);
+    color: var(--color-positive);
+    padding: 2px 8px;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.badge-down,
+.badge-negative {
+    background: rgba(255, 49, 49, 0.15);
+    border: 1px solid rgba(255, 49, 49, 0.3);
+    color: var(--color-negative);
+    padding: 2px 8px;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
 /* Stale / Offline Warning Banner */
 .widget-warning-banner {
     margin: 0 16px 8px 16px;

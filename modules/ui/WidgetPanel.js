@@ -720,22 +720,31 @@ export class WidgetPanel {
             .filter(c => {
                 if (c === 'COMMODITIES') return true;
                 const ld = livePrices.get(c);
-                return ld && ld.live;
+                if (ld && (ld.live || ld.price)) return true;
+                const dbItem = dashboardData.find(d => (d.ASXCode || d.code || '').toUpperCase() === c);
+                return dbItem && (dbItem.live || dbItem.LivePrice);
             });
 
         if (!displayItems.length) return `<div class="${CSS_CLASSES.WIDGET_EMPTY}">No live snapshot data</div>`;
 
         return displayItems.map(code => {
             const liveData = livePrices.get(code) || {};
-            const price = parseFloat(liveData.live) || 0;
-            const pct = parseFloat(liveData.pctChange) || 0;
+            const dbItem = dashboardData.find(d => (d.ASXCode || d.code || '').toUpperCase() === code) || {};
+            const price = parseFloat(liveData.live || liveData.price || dbItem.live || dbItem.LivePrice || 0);
+
+            const rawPct = liveData.pctChange ?? liveData.dayChangePercent ?? liveData.changePct ?? liveData.pct ?? dbItem.pctChange ?? dbItem.PctChange;
+            const rawChange = liveData.change ?? liveData.valueChange ?? dbItem.valueChange ?? dbItem.Change;
+            const pct = rawPct !== undefined && !isNaN(parseFloat(rawPct)) ? parseFloat(rawPct) : (rawChange !== undefined && !isNaN(parseFloat(rawChange)) ? parseFloat(rawChange) : 0);
+            const changeVal = rawChange !== undefined && !isNaN(parseFloat(rawChange)) ? parseFloat(rawChange) : 0;
+
             const isCommodityBypass = code === 'COMMODITIES';
-            const pctClass = isCommodityBypass
+            const isPositive = (pct !== 0 ? pct : changeVal) >= 0;
+            const badgeClass = isCommodityBypass
                 ? CSS_CLASSES.TEXT_NEUTRAL
-                : (pct >= 0 ? CSS_CLASSES.TEXT_UP : CSS_CLASSES.TEXT_DOWN);
-            const pctSign = pct >= 0 ? '+' : '';
+                : (isPositive ? `${CSS_CLASSES.BADGE_POSITIVE} ${CSS_CLASSES.BADGE_UP}` : `${CSS_CLASSES.BADGE_NEGATIVE} ${CSS_CLASSES.BADGE_DOWN}`);
+            const pctSign = isPositive ? '+' : '';
             const priceStr = isCommodityBypass ? '--' : this._formatDashboardPrice(code, price);
-            const pctStr = isCommodityBypass ? '--' : `${pctSign}${pct.toFixed(2)}%`;
+            const pctStr = isCommodityBypass ? '--' : `${pct < 0 ? '' : pctSign}${pct.toFixed(2)}%`;
             const displayName = DASHBOARD_NAMES[code] || code;
 
             const clickHandlerStr = isCommodityBypass
@@ -755,7 +764,7 @@ export class WidgetPanel {
                     </div>
                     <div style="flex: 2; display: flex; justify-content: flex-end; align-items: center; gap: 8px;">
                         <span class="value" style="font-weight: 700; font-size: 1.1rem; color: #fff;">${priceStr}</span>
-                        <span class="change ${pctClass}" style="font-weight: 700; font-size: 0.9rem; min-width: 65px; text-align: right;">${pctStr}</span>
+                        <span class="change ${badgeClass}" style="font-weight: 700; font-size: 0.85rem; min-width: 65px; text-align: right;">${pctStr}</span>
                     </div>
                 </div>
             `;
@@ -881,9 +890,15 @@ export class WidgetPanel {
             let isHit = false;
 
             if (currentPrice > 0) {
-                distPct = ((item.targetPrice - currentPrice) / currentPrice) * 100;
-                isHit = (item.targetDirection === 'above' && currentPrice >= (item.targetPrice - 0.0001)) ||
-                        (item.targetDirection === 'below' && currentPrice <= (item.targetPrice + 0.0001));
+                // Objective distance calculation: ((livePrice - targetPrice) / targetPrice) * 100
+                // Above target = positive (+), below target = negative (-). No sign flipping based on order type.
+                distPct = ((currentPrice - item.targetPrice) / item.targetPrice) * 100;
+
+                // Hit logic: BUY triggers when price falls to or below limit; SELL triggers when price rises to or above limit.
+                const isBuy = item.buySell === 'buy';
+                isHit = isBuy
+                    ? currentPrice <= (item.targetPrice + 0.0001)
+                    : currentPrice >= (item.targetPrice - 0.0001);
             }
 
             return {
@@ -905,25 +920,31 @@ export class WidgetPanel {
         });
 
         return enriched.map(item => {
-            const isAbove = item.targetDirection === 'above';
-            const dirIcon = isAbove ? UI_ICONS.CARET_UP : UI_ICONS.CARET_DOWN;
-            const dirColor = isAbove ? 'var(--color-positive)' : 'var(--color-negative)';
-            const strategyLabel = item.buySell === 'sell' ? 'Sell' : 'Buy';
+            const isBuy = item.buySell === 'buy';
+            const dirIcon = isBuy ? UI_ICONS.CARET_DOWN : UI_ICONS.CARET_UP;
+            const dirColor = isBuy ? 'var(--color-negative)' : 'var(--color-positive)';
+            const strategyLabel = isBuy ? 'Buy' : 'Sell';
             const priceStr = item.currentPrice > 0 ? formatCurrency(item.currentPrice) : '--';
 
             let distBadgeHtml;
+            const distSign = item.distPct !== null && item.distPct >= 0 ? '+' : '';
+            const formattedPct = item.distPct !== null ? `${distSign}${item.distPct.toFixed(2)}%` : '--';
+
             if (item.isHit) {
                 distBadgeHtml = `
-                    <span class="${CSS_CLASSES.WIDGET_TARGET_HIT}">
-                        <i class="fas fa-check" style="font-size: 0.6rem;"></i> HIT${item.distPct !== null ? ` (${item.distPct >= 0 ? '+' : ''}${item.distPct.toFixed(1)}%)` : ''}
-                    </span>
+                    <div style="display: flex; align-items: center; justify-content: flex-end; gap: 6px;">
+                        <span class="${CSS_CLASSES.WIDGET_TARGET_HIT}">
+                            <i class="fas fa-check" style="font-size: 0.6rem;"></i> HIT
+                        </span>
+                        <span style="font-weight: 600; font-size: 0.80rem; color: #E0E0E0; min-width: 50px; text-align: right;">
+                            (${formattedPct})
+                        </span>
+                    </div>
                 `;
             } else if (item.distPct !== null) {
-                const distSign = item.distPct >= 0 ? '+' : '';
-                const distClass = item.distPct >= 0 ? CSS_CLASSES.TEXT_UP : CSS_CLASSES.TEXT_DOWN;
                 distBadgeHtml = `
-                    <span class="${distClass}" style="font-weight: 700; font-size: 0.82rem; min-width: 55px; text-align: right;">
-                        ${distSign}${item.distPct.toFixed(2)}%
+                    <span style="font-weight: 600; font-size: 0.82rem; color: #E0E0E0; min-width: 55px; text-align: right;">
+                        ${formattedPct}
                     </span>
                 `;
             } else {

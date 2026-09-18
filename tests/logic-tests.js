@@ -880,6 +880,10 @@ describe('Suite 6: Active Target Alerts & Daily Brief Widget Verification', () =
         assert(appConstantsSrc.includes("WIDGET_TARGET_ROW: 'widget-target-row'"), 'AppConstants must export CSS_CLASSES.WIDGET_TARGET_ROW');
         assert(appConstantsSrc.includes("WIDGET_TARGET_BADGE: 'widget-target-badge'"), 'AppConstants must export CSS_CLASSES.WIDGET_TARGET_BADGE');
         assert(appConstantsSrc.includes("WIDGET_TARGET_HIT: 'widget-target-hit'"), 'AppConstants must export CSS_CLASSES.WIDGET_TARGET_HIT');
+        assert(appConstantsSrc.includes("BADGE_POSITIVE: 'badge-positive'"), 'AppConstants must export CSS_CLASSES.BADGE_POSITIVE');
+        assert(appConstantsSrc.includes("BADGE_NEGATIVE: 'badge-negative'"), 'AppConstants must export CSS_CLASSES.BADGE_NEGATIVE');
+        assert(appConstantsSrc.includes("BADGE_UP: 'badge-up'"), 'AppConstants must export CSS_CLASSES.BADGE_UP');
+        assert(appConstantsSrc.includes("BADGE_DOWN: 'badge-down'"), 'AppConstants must export CSS_CLASSES.BADGE_DOWN');
     });
 
     it('6.2 WidgetPanel registers active_targets in WIDGET_MODULES with default: true', () => {
@@ -895,39 +899,68 @@ describe('Suite 6: Active Target Alerts & Daily Brief Widget Verification', () =
         assert(widgetPanelSrc.includes("document.addEventListener(EVENTS.PRICES_UPDATED"), 'WidgetPanel must listen to document PRICES_UPDATED');
     });
 
-    it('6.4 Target distance math accurately computes percentage distance for above and below directions', () => {
-        // Test Target Below (e.g. Buy Below: current 42.50, target 40.00 -> -5.88%)
-        const current1 = 42.50;
-        const target1 = 40.00;
-        const dist1 = ((target1 - current1) / current1) * 100;
-        assertCloseTo(dist1, -5.88235, 0.001, 'Target below should yield negative percentage distance');
+    it('6.4 Target distance math accurately computes objective mathematical percentage distance', () => {
+        // Objective distance: ((livePrice - targetPrice) / targetPrice) * 100
+        // ARB (BUY: Target $20.00 | Live $18.10) -> -9.50%
+        const liveARB = 18.10;
+        const targetARB = 20.00;
+        const distARB = ((liveARB - targetARB) / targetARB) * 100;
+        assertCloseTo(distARB, -9.50, 0.001, 'Live below target must yield negative percentage distance (-9.50%)');
 
-        // Test Target Above (e.g. Sell Above: current 45.00, target 50.00 -> +11.11%)
-        const current2 = 45.00;
-        const target2 = 50.00;
-        const dist2 = ((target2 - current2) / current2) * 100;
-        assertCloseTo(dist2, 11.1111, 0.001, 'Target above should yield positive percentage distance');
+        // BPT (BUY: Target $0.80 | Live $0.90) -> +12.50%
+        const liveBPT = 0.90;
+        const targetBPT = 0.80;
+        const distBPT = ((liveBPT - targetBPT) / targetBPT) * 100;
+        assertCloseTo(distBPT, 12.50, 0.001, 'Live above target must yield positive percentage distance (+12.50%)');
+
+        // SELL target: Target $50.00 | Live $45.00 -> -10.00%
+        const liveSellBelow = 45.00;
+        const targetSell = 50.00;
+        const distSellBelow = ((liveSellBelow - targetSell) / targetSell) * 100;
+        assertCloseTo(distSellBelow, -10.00, 0.001, 'Sell order below target must yield negative distance (-10.00%)');
+
+        // SELL target: Target $50.00 | Live $55.00 -> +10.00%
+        const liveSellAbove = 55.00;
+        const distSellAbove = ((liveSellAbove - targetSell) / targetSell) * 100;
+        assertCloseTo(distSellAbove, 10.00, 0.001, 'Sell order above target must yield positive distance (+10.00%)');
     });
 
-    it('6.5 Target hit condition triggers correctly for above and below thresholds', () => {
-        // Below target: price <= target
-        const isHitBelow = (price, target) => price <= (target + 0.0001);
-        assert(isHitBelow(39.95, 40.00), 'Price 39.95 should trigger target below 40.00');
-        assert(isHitBelow(40.00, 40.00), 'Price 40.00 should trigger target below 40.00 (exact hit)');
-        assert(!isHitBelow(40.05, 40.00), 'Price 40.05 should not trigger target below 40.00');
+    it('6.5 Target hit condition triggers correctly for BUY (price <= target) and SELL (price >= target)', () => {
+        // BUY targets: price <= target
+        const isHitBuy = (live, target) => live <= (target + 0.0001);
+        assert(isHitBuy(18.10, 20.00), 'ARB at $18.10 triggers BUY target $20.00');
+        assert(isHitBuy(20.00, 20.00), 'ARB at $20.00 triggers BUY target $20.00 (exact hit)');
+        assert(!isHitBuy(0.90, 0.80), 'BPT at $0.90 does NOT trigger BUY target $0.80');
 
-        // Above target: price >= target
-        const isHitAbove = (price, target) => price >= (target - 0.0001);
-        assert(isHitAbove(50.10, 50.00), 'Price 50.10 should trigger target above 50.00');
-        assert(isHitAbove(50.00, 50.00), 'Price 50.00 should trigger target above 50.00 (exact hit)');
-        assert(!isHitAbove(49.90, 50.00), 'Price 49.90 should not trigger target above 50.00');
+        // SELL targets: price >= target
+        const isHitSell = (live, target) => live >= (target - 0.0001);
+        assert(isHitSell(55.00, 50.00), 'Price 55.00 triggers SELL target 50.00');
+        assert(isHitSell(50.00, 50.00), 'Price 50.00 triggers SELL target 50.00 (exact hit)');
+        assert(!isHitSell(45.00, 50.00), 'Price 45.00 does NOT trigger SELL target 50.00');
     });
 
-    it('6.6 widget-panel.css provides styled tokens for widget-target-row, badge, and hit states', () => {
+    it('6.6 widget-panel.css provides styled tokens for widget-target-row, badge, hit states, and snapshot movement badges', () => {
         const cssSrc = fs.readFileSync(path.join(__dirname, '../styles/features/widget-panel.css'), 'utf8');
         assert(cssSrc.includes('.widget-target-row'), 'widget-panel.css must define .widget-target-row');
         assert(cssSrc.includes('.widget-target-badge'), 'widget-panel.css must define .widget-target-badge');
         assert(cssSrc.includes('.widget-target-hit'), 'widget-panel.css must define .widget-target-hit');
+        assert(cssSrc.includes('.badge-positive'), 'widget-panel.css must define .badge-positive');
+        assert(cssSrc.includes('.badge-negative'), 'widget-panel.css must define .badge-negative');
+        assert(cssSrc.includes('.badge-up'), 'widget-panel.css must define .badge-up');
+        assert(cssSrc.includes('.badge-down'), 'widget-panel.css must define .badge-down');
+    });
+
+    it('6.7 Dashboard snapshot badge class evaluates correctly for positive and negative percentage changes', () => {
+        const getBadgeClass = (pct, changeVal) => {
+            const isPositive = (pct !== 0 ? pct : changeVal) >= 0;
+            return isPositive ? 'badge-positive badge-up' : 'badge-negative badge-down';
+        };
+
+        assertStrictEqual(getBadgeClass(1.5, 10.2), 'badge-positive badge-up', 'Positive percentage yields badge-positive');
+        assertStrictEqual(getBadgeClass(0, 0), 'badge-positive badge-up', 'Zero change yields badge-positive');
+        assertStrictEqual(getBadgeClass(-1.14, -60.5), 'badge-negative badge-down', 'Negative S&P 500 yields badge-negative');
+        assertStrictEqual(getBadgeClass(-1.60, -250), 'badge-negative badge-down', 'Negative Nasdaq yields badge-negative');
+        assertStrictEqual(getBadgeClass(-0.14, -0.10), 'badge-negative badge-down', 'Negative Brent Oil yields badge-negative');
     });
 });
 
