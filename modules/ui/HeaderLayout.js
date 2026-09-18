@@ -1153,11 +1153,30 @@ export class HeaderLayout {
                 return;
             }
 
-            // 4. PERSISTENT FAILURE (3-Strike Policy: 3 consecutive failed fetches)
-            const isPersistentFailure = (AppState.health?.consecutiveFailures >= 3) || (healthStatus === 'stale');
+            // 4. PERSISTENT FAILURE & ELAPSED FRESHNESS (Market Open: 5-minute strict cap)
+            const quoteAge = Date.now() - (AppState.lastGlobalFetch || 0);
+            const MAX_FRESH_AGE_MS = 5 * 60 * 1000;
+            const openTimeMs = isTrading ? MarketSchedule.getTodayMarketOpenTimeMs() : 0;
+            const isStaleForOpenSession = isTrading && ((AppState.lastGlobalFetch || 0) < openTimeMs);
+
+            // Stale condition during active trading:
+            // Quotes were fetched during today's session but are > 5m old,
+            // or market has been open for > 5m and we still only hold pre-market/yesterday quotes.
+            const isQuoteExpiredDuringTrading = isTrading && (AppState.lastGlobalFetch || 0) > 0 && (
+                ((AppState.lastGlobalFetch || 0) >= openTimeMs && quoteAge > MAX_FRESH_AGE_MS) ||
+                (isStaleForOpenSession && (Date.now() - openTimeMs) > MAX_FRESH_AGE_MS)
+            );
+
+            const isPersistentFailure = (AppState.health?.consecutiveFailures >= 3) || 
+                                        (healthStatus === 'stale') || 
+                                        isQuoteExpiredDuringTrading;
+
             if (isPersistentFailure) {
                 dot.classList.add(CSS_CLASSES.HEALTH_STALE);
-                const title = 'Feed Delayed / Stale (Click Live Refresh to update)';
+                const formattedTime = AppState.lastGlobalFetch ? new Date(AppState.lastGlobalFetch).toLocaleTimeString('en-GB', { hour12: false }) : '--:--:--';
+                const title = isQuoteExpiredDuringTrading
+                    ? `Quotes Delayed • Last Updated: ${formattedTime} (Click to refresh)`
+                    : 'Feed Delayed / Stale (Click Live Refresh to update)';
                 dot.title = title;
                 if (refreshBtn) refreshBtn.title = title;
                 return;
@@ -1168,16 +1187,6 @@ export class HeaderLayout {
             // It remains Grey until price data has arrived and is verified for the current market state.
             const isDataReady = AppState.isDataReady;
             const hasVerifiedQuotes = AppState.lastGlobalFetch > 0 && AppState.livePrices && AppState.livePrices.size > 0;
-
-            // Session Freshness Check: If the market is actively open, quotes must have been
-            // fetched during today's open session (at or after 10:00 AM Sydney time), not from pre-market or yesterday.
-            let isStaleForOpenSession = false;
-            if (isTrading) {
-                const openTimeMs = MarketSchedule.getTodayMarketOpenTimeMs();
-                if ((AppState.lastGlobalFetch || 0) < openTimeMs) {
-                    isStaleForOpenSession = true;
-                }
-            }
 
             const isUnverified = healthStatus === 'loading' || (isConnected && !isDataReady) || !hasVerifiedQuotes || isStaleForOpenSession;
 

@@ -1572,30 +1572,32 @@ export class AppController {
                     this.handleSecurityLock();
                 }
 
-                if (this._lastBackgroundTime) {
-                    // Dormant / Wake: If waking from sleep with quotes older than 5 minutes,
-                    // dot drops to Grey and screen is Dimmed while quietly executing an update.
-                    const quoteAge = Date.now() - (AppState.lastGlobalFetch || 0);
-                    const isOlderThan5Min = !AppState.lastGlobalFetch || quoteAge > (5 * 60 * 1000);
+                // UNCONDITIONAL RESUME FRESHNESS CHECK:
+                // Do not gate behind this._lastBackgroundTime because mobile power locks
+                // often suspend execution without firing 'hidden'.
+                const quoteAge = Date.now() - (AppState.lastGlobalFetch || 0);
+                const isOlderThan5Min = !AppState.lastGlobalFetch || quoteAge > (5 * 60 * 1000);
 
-                    // Immediate schedule alignment on resume: update header immediately so
-                    // leftover market text from prior session does not linger while network fetches
-                    if (this.headerLayout && AppState.user) {
-                        this.headerLayout.updateConnectionStatus(true, isOlderThan5Min ? 'loading' : AppState.health.status);
-                    }
-
-                    if (isOlderThan5Min) {
-                        document.body.classList.add('is-stale');
-                    }
-
-                    // Trigger a background refresh silently
-                    this._refreshAllPrices(AppState.data.shares || [], true, true).catch(err => {
-                        console.warn('[AppController] Optimistic wake fetch failed quietly:', err);
-                    });
-
-                    // Reset Timer
-                    this._lastBackgroundTime = 0;
+                // Immediate schedule alignment on resume: update header immediately so
+                // leftover market text from prior session does not linger while network fetches
+                if (this.headerLayout && AppState.user) {
+                    this.headerLayout.updateConnectionStatus(true, isOlderThan5Min ? 'loading' : AppState.health.status);
                 }
+
+                if (isOlderThan5Min) {
+                    document.body.classList.add('is-stale');
+                }
+
+                // Trigger immediate wake refresh with force=true, silent=true
+                this._refreshAllPrices(AppState.data.shares || [], true, true).catch(err => {
+                    console.warn('[AppController] Optimistic wake fetch failed quietly:', err);
+                });
+
+                // Re-arm adaptive polling loop to guarantee timer is active
+                this.startAdaptivePolling();
+
+                // Reset Timer
+                this._lastBackgroundTime = 0;
             }
         });
     }
@@ -1609,10 +1611,10 @@ export class AppController {
         this._lastHealthTick = Date.now();
         this.checkAppHealth(); // Evaluate immediately upon boot
 
-        // Run check every 30 seconds
+        // Run check every 15 seconds as an active watchdog
         this._healthMonitorInterval = setInterval(() => {
             this.checkAppHealth();
-        }, 30000);
+        }, 15000);
     }
 
     /**
@@ -1694,13 +1696,21 @@ export class AppController {
         const health = AppState.health;
         let newStatus = 'healthy';
 
-        // 1. AGE CHECK (12 Hours)
+        // 1. ELAPSED QUOTE FRESHNESS (Market Hours: 5-minute strict cap)
+        const isTrading = MarketSchedule.isASXTrading();
+        const quoteAge = now - (AppState.lastGlobalFetch || 0);
+        const FIVE_MINUTES = 5 * 60 * 1000;
+        if (isTrading && AppState.lastGlobalFetch > 0 && quoteAge > FIVE_MINUTES) {
+            newStatus = 'stale';
+        }
+
+        // 2. AGE CHECK (12 Hours)
         const TWELVE_HOURS = 12 * 60 * 60 * 1000;
         if (now - health.sessionStartTime > TWELVE_HOURS) {
             newStatus = 'stale';
         }
 
-        // 2. 3-STRIKE FAILURE CHECK (Failure-Threshold Alerting)
+        // 3. 3-STRIKE FAILURE CHECK (Failure-Threshold Alerting)
         if ((health.consecutiveFailures || 0) >= 3) {
             newStatus = 'stale';
         }

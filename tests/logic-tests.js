@@ -146,7 +146,7 @@ function calculatePortfolioTotals(processedShares) {
 /**
  * 2. Connection Status Evaluator (Reflecting HeaderLayout.updateConnectionStatus logic)
  */
-function evaluateConnectionStatus({ isConnected, isDataReady, healthStatus, isOnline, marketSession, consecutiveFailures = 0, hasVerifiedQuotes = true, lastGlobalFetch = 0, marketOpenTimeMs = 0 }) {
+function evaluateConnectionStatus({ isConnected, isDataReady, healthStatus, isOnline, marketSession, consecutiveFailures = 0, hasVerifiedQuotes = true, lastGlobalFetch = 0, marketOpenTimeMs = 0, currentTimeMs = null }) {
     const isTrading = (marketSession === 'OPEN' || marketSession === 'AUCTION');
     const isPreOpen = (marketSession === 'PRE_OPEN');
     const marketText = isTrading ? (marketSession === 'AUCTION' ? 'Auction' : 'Open') : (isPreOpen ? 'Pre-Open' : 'Closed');
@@ -171,22 +171,30 @@ function evaluateConnectionStatus({ isConnected, isDataReady, healthStatus, isOn
         };
     }
 
-    // 3. Persistent Failure (3 strikes or stale)
-    const isPersistentFailure = consecutiveFailures >= 3 || healthStatus === 'stale';
+    // 3. Persistent Failure & Elapsed Freshness (Market Open: 5-minute strict cap)
+    const MAX_FRESH_AGE_MS = 5 * 60 * 1000;
+    const now = currentTimeMs !== null
+        ? currentTimeMs
+        : (marketOpenTimeMs > 0 ? Math.max(marketOpenTimeMs + 10000, (lastGlobalFetch || 0) + 10000) : Date.now());
+
+    const quoteAge = now - (lastGlobalFetch || 0);
+    const isStaleForOpenSession = isTrading && marketOpenTimeMs > 0 && lastGlobalFetch < marketOpenTimeMs;
+    const isQuoteExpiredDuringTrading = isTrading && (lastGlobalFetch || 0) > 0 && (
+        (lastGlobalFetch >= marketOpenTimeMs && quoteAge > MAX_FRESH_AGE_MS) ||
+        (isStaleForOpenSession && marketOpenTimeMs > 0 && (now - marketOpenTimeMs) > MAX_FRESH_AGE_MS)
+    );
+
+    const isPersistentFailure = consecutiveFailures >= 3 || healthStatus === 'stale' || isQuoteExpiredDuringTrading;
     if (isPersistentFailure) {
+        const formattedTime = lastGlobalFetch ? new Date(lastGlobalFetch).toLocaleTimeString('en-GB', { hour12: false }) : '--:--:--';
         return {
             statusClass: 'health-stale',
-            title: 'Feed Delayed / Stale (Click Live Refresh to update)',
+            title: isQuoteExpiredDuringTrading
+                ? `Quotes Delayed • Last Updated: ${formattedTime} (Click to refresh)`
+                : 'Feed Delayed / Stale (Click Live Refresh to update)',
             badgeColor: 'amber',
             marketText
         };
-    }
-
-    // Session Freshness Check: If the market is actively open, quotes must have been
-    // fetched during today's open session (at or after 10:00 AM Sydney time), not from pre-market or yesterday.
-    let isStaleForOpenSession = false;
-    if (isTrading && marketOpenTimeMs > 0 && lastGlobalFetch < marketOpenTimeMs) {
-        isStaleForOpenSession = true;
     }
 
     // 4. Loading State or Unverified Quotes
@@ -535,6 +543,47 @@ describe('Suite 1: Connection State Transition & isDataReady Guard', () => {
         assertStrictEqual(result.badgeColor, 'green');
         assertStrictEqual(result.title, 'ASX Open • 15-Min Delayed Live Feed');
         assertStrictEqual(result.marketText, 'Open');
+    });
+
+    it('1.14 Open market session with quotes older than 5 minutes transitions to amber stale dot', () => {
+        const marketOpenTimeMs = 1726531200000; // 10:00:00 AM
+        const fetchTimeMs = 1726531230000;      // 10:00:30 AM
+        const sixMinutesLaterMs = fetchTimeMs + (6 * 60 * 1000); // 10:06:30 AM
+        const result = evaluateConnectionStatus({
+            isConnected: true,
+            isDataReady: true,
+            healthStatus: 'healthy',
+            isOnline: true,
+            marketSession: 'OPEN',
+            consecutiveFailures: 0,
+            hasVerifiedQuotes: true,
+            lastGlobalFetch: fetchTimeMs,
+            marketOpenTimeMs: marketOpenTimeMs,
+            currentTimeMs: sixMinutesLaterMs
+        });
+        assertStrictEqual(result.statusClass, 'health-stale');
+        assertStrictEqual(result.badgeColor, 'amber');
+        assert(result.title.includes('Quotes Delayed'), 'Title must indicate quotes delayed');
+        assertStrictEqual(result.marketText, 'Open');
+    });
+
+    it('1.15 Market closed session with quotes older than 5 minutes remains green solid (EOD valid)', () => {
+        const fetchTimeMs = 1726531230000;
+        const oneHourLaterMs = fetchTimeMs + (60 * 60 * 1000);
+        const result = evaluateConnectionStatus({
+            isConnected: true,
+            isDataReady: true,
+            healthStatus: 'healthy',
+            isOnline: true,
+            marketSession: 'CLOSED',
+            consecutiveFailures: 0,
+            hasVerifiedQuotes: true,
+            lastGlobalFetch: fetchTimeMs,
+            currentTimeMs: oneHourLaterMs
+        });
+        assertStrictEqual(result.statusClass, 'health-market-closed');
+        assertStrictEqual(result.badgeColor, 'green');
+        assertStrictEqual(result.marketText, 'Closed');
     });
 });
 
