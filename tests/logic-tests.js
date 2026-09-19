@@ -939,28 +939,33 @@ describe('Suite 6: Active Target Alerts & Daily Brief Widget Verification', () =
         assert(!isHitSell(45.00, 50.00), 'Price 45.00 does NOT trigger SELL target 50.00');
     });
 
-    it('6.6 widget-panel.css provides styled tokens for widget-target-row, badge, hit states, and snapshot movement badges', () => {
+    it('6.6 widget-panel.css provides styled tokens for target alerts and plain text coloring', () => {
         const cssSrc = fs.readFileSync(path.join(__dirname, '../styles/features/widget-panel.css'), 'utf8');
         assert(cssSrc.includes('.widget-target-row'), 'widget-panel.css must define .widget-target-row');
         assert(cssSrc.includes('.widget-target-badge'), 'widget-panel.css must define .widget-target-badge');
-        assert(cssSrc.includes('.widget-target-hit'), 'widget-panel.css must define .widget-target-hit');
-        assert(cssSrc.includes('.badge-positive'), 'widget-panel.css must define .badge-positive');
-        assert(cssSrc.includes('.badge-negative'), 'widget-panel.css must define .badge-negative');
-        assert(cssSrc.includes('.badge-up'), 'widget-panel.css must define .badge-up');
-        assert(cssSrc.includes('.badge-down'), 'widget-panel.css must define .badge-down');
+        assert(cssSrc.includes('.widget-target-hit'), 'widget-panel.css must define .widget-target-hit (preserved HIT badge)');
+        assert(cssSrc.includes('.text-up'), 'widget-panel.css must define .text-up');
+        assert(cssSrc.includes('.text-down'), 'widget-panel.css must define .text-down');
     });
 
-    it('6.7 Dashboard snapshot badge class evaluates correctly for positive and negative percentage changes', () => {
-        const getBadgeClass = (pct, changeVal) => {
+    it('6.7 Dashboard Snapshot renders plain uncontained text coloring without badge pills', () => {
+        const widgetPanelSrc = fs.readFileSync(path.join(__dirname, '../modules/ui/WidgetPanel.js'), 'utf8');
+        // Must use colorClass (TEXT_UP / TEXT_DOWN), not badgeClass
+        assert(!widgetPanelSrc.includes('change ${badgeClass}'), 'WidgetPanel must not apply badgeClass to snapshot items');
+        assert(widgetPanelSrc.includes('change ${colorClass}'), 'WidgetPanel must apply plain change ${colorClass} to snapshot items');
+
+        const getColorClass = (pct, changeVal, isCommodityBypass = false) => {
+            if (isCommodityBypass) return 'text-neutral';
             const isPositive = (pct !== 0 ? pct : changeVal) >= 0;
-            return isPositive ? 'badge-positive badge-up' : 'badge-negative badge-down';
+            return isPositive ? 'text-up' : 'text-down';
         };
 
-        assertStrictEqual(getBadgeClass(1.5, 10.2), 'badge-positive badge-up', 'Positive percentage yields badge-positive');
-        assertStrictEqual(getBadgeClass(0, 0), 'badge-positive badge-up', 'Zero change yields badge-positive');
-        assertStrictEqual(getBadgeClass(-1.14, -60.5), 'badge-negative badge-down', 'Negative S&P 500 yields badge-negative');
-        assertStrictEqual(getBadgeClass(-1.60, -250), 'badge-negative badge-down', 'Negative Nasdaq yields badge-negative');
-        assertStrictEqual(getBadgeClass(-0.14, -0.10), 'badge-negative badge-down', 'Negative Brent Oil yields badge-negative');
+        assertStrictEqual(getColorClass(1.5, 10.2), 'text-up', 'Positive percentage yields text-up (green)');
+        assertStrictEqual(getColorClass(0, 0), 'text-up', 'Zero change yields text-up (green)');
+        assertStrictEqual(getColorClass(-1.14, -60.5), 'text-down', 'Negative S&P 500 yields text-down (red)');
+        assertStrictEqual(getColorClass(-1.60, -250), 'text-down', 'Negative Nasdaq yields text-down (red)');
+        assertStrictEqual(getColorClass(-0.14, -0.10), 'text-down', 'Negative Brent Oil yields text-down (red)');
+        assertStrictEqual(getColorClass(0, 0, true), 'text-neutral', 'Commodities bypass yields text-neutral');
     });
 });
 
@@ -1077,6 +1082,172 @@ describe('Suite 7: Macro Balance % Splits & Stale/Offline Warning Banner Verific
         assertStrictEqual(testCats[0].color, '#00D2FF', 'Shares color must be sanitized from #808000 to #00D2FF');
         assertStrictEqual(testCats[1].color, '#9C27B0', 'Super color must be untouched');
         assertStrictEqual(testCats[2].color, '#1A237E', 'Cash color must be untouched');
+    });
+});
+
+describe('Suite 8: Active Target Directional Text Coloring & Notification Preference Lifecycle', () => {
+    it('8.1 Active Target Alerts percentage renders with directional color classes (text-up / text-down)', () => {
+        const widgetCode = fs.readFileSync(path.join(__dirname, '../modules/ui/WidgetPanel.js'), 'utf8');
+        
+        // Ensure hardcoded color #E0E0E0 was removed from distance percentages
+        assertStrictEqual(
+            widgetCode.includes('color: #E0E0E0;'),
+            false,
+            'WidgetPanel.js must not hardcode color: #E0E0E0 for distance percentages'
+        );
+
+        // Ensure distColorClass logic uses TEXT_UP and TEXT_DOWN
+        assertStrictEqual(
+            widgetCode.includes('item.distPct >= 0 ? CSS_CLASSES.TEXT_UP : CSS_CLASSES.TEXT_DOWN'),
+            true,
+            'WidgetPanel.js must use CSS_CLASSES.TEXT_UP and CSS_CLASSES.TEXT_DOWN for distColorClass'
+        );
+
+        // Simulate distance percentage rendering
+        const computeDistBadge = (distPct, isHit) => {
+            const distSign = distPct !== null && distPct >= 0 ? '+' : '';
+            const formattedPct = distPct !== null ? `${distSign}${distPct.toFixed(2)}%` : '--';
+            const distColorClass = distPct !== null
+                ? (distPct >= 0 ? 'text-up' : 'text-down')
+                : '';
+            
+            if (isHit) {
+                return `<span class="widget-target-hit"><i class="fas fa-check"></i> HIT</span><span class="${distColorClass}">(${formattedPct})</span>`;
+            } else if (distPct !== null) {
+                return `<span class="${distColorClass}">${formattedPct}</span>`;
+            }
+            return '<span>--</span>';
+        };
+
+        const posHit = computeDistBadge(9.5, true);
+        assertStrictEqual(posHit.includes('class="text-up"'), true, 'Positive HIT must have class text-up');
+        assertStrictEqual(posHit.includes('+9.50%'), true, 'Positive HIT must format with plus sign');
+
+        const negHit = computeDistBadge(-2.3, true);
+        assertStrictEqual(negHit.includes('class="text-down"'), true, 'Negative HIT must have class text-down');
+        assertStrictEqual(negHit.includes('-2.30%'), true, 'Negative HIT must format with minus sign');
+
+        const nonHitPos = computeDistBadge(4.2, false);
+        assertStrictEqual(nonHitPos.includes('class="text-up"'), true, 'Positive non-hit must have class text-up');
+        assertStrictEqual(nonHitPos.includes('widget-target-hit'), false, 'Non-hit must not have HIT badge');
+
+        const nonHitNeg = computeDistBadge(-5.1, false);
+        assertStrictEqual(nonHitNeg.includes('class="text-down"'), true, 'Negative non-hit must have class text-down');
+    });
+
+    it('8.2 AppState._triggerSync payload includes scannerRules, scanner, and excludePortfolio', () => {
+        const appStateCode = fs.readFileSync(path.join(__dirname, '../modules/state/AppState.js'), 'utf8');
+
+        assertStrictEqual(
+            appStateCode.includes('scannerRules: this.preferences.scannerRules || {}'),
+            true,
+            'AppState._triggerSync must include scannerRules in payload'
+        );
+        assertStrictEqual(
+            appStateCode.includes('scanner: this.preferences.scanner || {}'),
+            true,
+            'AppState._triggerSync must include scanner in payload'
+        );
+        assertStrictEqual(
+            appStateCode.includes('excludePortfolio: this.preferences.excludePortfolio ?? true'),
+            true,
+            'AppState._triggerSync must include excludePortfolio in payload'
+        );
+    });
+
+    it('8.3 AppController freshPrefs guarantees fresh reads of scannerRules, scanner, and excludePortfolio', () => {
+        const appControllerCode = fs.readFileSync(path.join(__dirname, '../modules/controllers/AppController.js'), 'utf8');
+
+        assertStrictEqual(
+            appControllerCode.includes('scannerRules: AppState.preferences.scannerRules || {}'),
+            true,
+            'AppController freshPrefs must include scannerRules'
+        );
+        assertStrictEqual(
+            appControllerCode.includes('scanner: AppState.preferences.scanner || {}'),
+            true,
+            'AppController freshPrefs must include scanner'
+        );
+        assertStrictEqual(
+            appControllerCode.includes('excludePortfolio: AppState.preferences.excludePortfolio ?? true'),
+            true,
+            'AppController freshPrefs must include excludePortfolio'
+        );
+    });
+
+    it('8.4 AppConstants registers storage keys for notification settings and preferences', () => {
+        const appConstantsCode = fs.readFileSync(path.join(__dirname, '../modules/utils/AppConstants.js'), 'utf8');
+
+        assertStrictEqual(
+            appConstantsCode.includes("SHOW_BADGES: 'ASX_NEXT_showBadges'"),
+            true,
+            'AppConstants must define SHOW_BADGES storage key'
+        );
+        assertStrictEqual(
+            appConstantsCode.includes("EXCLUDE_PORTFOLIO: 'ASX_NEXT_excludePortfolio'"),
+            true,
+            'AppConstants must define EXCLUDE_PORTFOLIO storage key'
+        );
+        assertStrictEqual(
+            appConstantsCode.includes("SCANNER_RULES_CACHE: 'asx_scanner_rules_cache'"),
+            true,
+            'AppConstants must define SCANNER_RULES_CACHE storage key'
+        );
+        assertStrictEqual(
+            appConstantsCode.includes("ACTIVE_FILTERS: 'ASX_NEXT_activeFilters'"),
+            true,
+            'AppConstants must define ACTIVE_FILTERS storage key'
+        );
+    });
+
+    it('8.5 SettingsUI implements direct cloud persistence and pending save flushing on close', () => {
+        const settingsCode = fs.readFileSync(path.join(__dirname, '../modules/ui/SettingsUI.js'), 'utf8');
+
+        // Direct userStore.savePreferences call
+        assertStrictEqual(
+            settingsCode.includes('userStore.savePreferences(userId,'),
+            true,
+            'SettingsUI must directly invoke userStore.savePreferences on save'
+        );
+
+        // Flush pending save on close
+        assertStrictEqual(
+            settingsCode.includes('if (saveTimer) {'),
+            true,
+            'SettingsUI close method must flush pending saveTimer'
+        );
+
+        // Immediate toggle update
+        assertStrictEqual(
+            settingsCode.includes("triggerUpdate('immediate', contextMsg)"),
+            true,
+            'SettingsUI pill click handler must trigger immediate save'
+        );
+    });
+
+    it('8.6 NotificationStore captures all scanner toggle rules in refreshScannerRules', () => {
+        const notifStoreCode = fs.readFileSync(path.join(__dirname, '../modules/state/NotificationStore.js'), 'utf8');
+
+        assertStrictEqual(
+            notifStoreCode.includes('moversEnabled:'),
+            true,
+            'NotificationStore.refreshScannerRules must map moversEnabled'
+        );
+        assertStrictEqual(
+            notifStoreCode.includes('hiloEnabled:'),
+            true,
+            'NotificationStore.refreshScannerRules must map hiloEnabled'
+        );
+        assertStrictEqual(
+            notifStoreCode.includes('personalEnabled:'),
+            true,
+            'NotificationStore.refreshScannerRules must map personalEnabled'
+        );
+        assertStrictEqual(
+            notifStoreCode.includes('excludePortfolio:'),
+            true,
+            'NotificationStore.refreshScannerRules must map excludePortfolio'
+        );
     });
 });
 

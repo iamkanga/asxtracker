@@ -18,8 +18,20 @@ export class SettingsUI {
         const modal = this._renderModal();
         document.body.appendChild(modal);
 
-        // Subscribe to feed data into form
-        const unsubscribe = userStore.subscribeToPreferences(userId, (prefs) => {
+        // Immediate population from AppState/localStorage so UI is ready instantly
+        this._populateForm(modal, {
+            showBadges: AppState.preferences?.showBadges !== false,
+            badgeScope: AppState.preferences?.badgeScope || 'custom',
+            dailyEmail: AppState.preferences?.dailyEmail === true,
+            alertEmailRecipients: AppState.preferences?.alertEmailRecipients || '',
+            excludePortfolio: AppState.preferences?.excludePortfolio ?? true,
+            scannerRules: AppState.preferences?.scannerRules || {},
+            scanner: AppState.preferences?.scanner || {}
+        });
+
+        // Subscribe to feed data into form (Ignore local echo pending writes)
+        const unsubscribe = userStore.subscribeToPreferences(userId, (prefs, metadata) => {
+            if (metadata && metadata.hasPendingWrites) return;
             if (document.contains(modal)) {
                 this._populateForm(modal, prefs || {});
             }
@@ -702,8 +714,13 @@ export class SettingsUI {
     }
 
     static _updateValuesOnly(modal, prefs) {
-        // Initialize Form from Prefs
-        const rules = prefs.scannerRules || {};
+        // Initialize Form from Prefs with reliable fallbacks to AppState
+        const rules = prefs.scannerRules !== undefined ? prefs.scannerRules : (AppState.preferences?.scannerRules || {});
+        const showBadges = prefs.showBadges !== undefined ? (prefs.showBadges !== false) : (AppState.preferences?.showBadges !== false);
+        const dailyEmail = prefs.dailyEmail !== undefined ? (prefs.dailyEmail === true || prefs.dailyEmail === 'true') : (AppState.preferences?.dailyEmail === true);
+        const excludePortfolio = prefs.excludePortfolio !== undefined ? (prefs.excludePortfolio !== false) : (AppState.preferences?.excludePortfolio !== false);
+        const badgeScope = prefs.badgeScope || AppState.preferences?.badgeScope || 'custom';
+
         const updateCheck = (id, val) => {
             // Flexible Input Resolution (Inline)
             let el = modal.querySelector(`#${id}`);
@@ -719,11 +736,11 @@ export class SettingsUI {
         updateCheck('toggle-moversEnabled', rules.moversEnabled !== false);
         updateCheck('toggle-hiloEnabled', rules.hiloEnabled !== false);
         updateCheck('toggle-personalEnabled', rules.personalEnabled !== false);
-        updateCheck('toggle-pref-showBadges', prefs.showBadges !== false);
-        updateCheck('toggle-pref-dailyEmail', prefs.dailyEmail === true);
+        updateCheck('toggle-pref-showBadges', showBadges);
+        updateCheck('toggle-pref-dailyEmail', dailyEmail);
         // Robustly check constants
-        updateCheck(IDS.PREF_EXCLUDE_PORTFOLIO, prefs.excludePortfolio ?? true);
-        updateCheck(IDS.PREF_BADGE_SCOPE, prefs.badgeScope || 'custom');
+        updateCheck(IDS.PREF_EXCLUDE_PORTFOLIO, excludePortfolio);
+        updateCheck(IDS.PREF_BADGE_SCOPE, badgeScope);
 
         // Thresholds & Min Prices
         updateCheck('global-minPrice', rules.minPrice);
@@ -1211,7 +1228,7 @@ export class SettingsUI {
         this._executeSave = (modal, userId) => {
             const newPrefs = this._harvestState(modal);
 
-            // UPDATE APP STATE: Ensure global sync payload has fresh data.
+            // 1. UPDATE APP STATE: Ensure global sync payload has fresh data.
             AppState.preferences.dailyEmail = newPrefs.dailyEmail;
             AppState.preferences.alertEmailRecipients = newPrefs.alertEmailRecipients;
             AppState.preferences.badgeScope = newPrefs.badgeScope;
@@ -1226,10 +1243,45 @@ export class SettingsUI {
             if (!AppState.preferences.scanner) AppState.preferences.scanner = {};
             AppState.preferences.scanner.activeFilters = newPrefs.scanner.activeFilters;
 
-            // Persist locally as well (Registry Rule)
+            // 2. PERSIST LOCALLY: Immediate localStorage backup for hard refresh protection
             localStorage.setItem(STORAGE_KEYS.DAILY_EMAIL, newPrefs.dailyEmail);
             localStorage.setItem(STORAGE_KEYS.EMAIL_RECIPIENTS, newPrefs.alertEmailRecipients);
             localStorage.setItem(STORAGE_KEYS.BADGE_SCOPE, newPrefs.badgeScope);
+            localStorage.setItem(STORAGE_KEYS.SHOW_BADGES, newPrefs.showBadges);
+            localStorage.setItem(STORAGE_KEYS.EXCLUDE_PORTFOLIO, newPrefs.excludePortfolio);
+            localStorage.setItem(STORAGE_KEYS.SCANNER_RULES_CACHE, JSON.stringify({
+                ...newPrefs.scannerRules,
+                excludePortfolio: newPrefs.excludePortfolio,
+                activeFilters: newPrefs.scanner.activeFilters
+            }));
+            if (newPrefs.scanner?.activeFilters !== undefined) {
+                localStorage.setItem(STORAGE_KEYS.ACTIVE_FILTERS, JSON.stringify(newPrefs.scanner.activeFilters));
+            }
+
+            // 3. DIRECT PERSISTENCE TO CLOUD: Direct savePreferences call with full preference payload
+            if (userId && userStore) {
+                userStore.savePreferences(userId, {
+                    showBadges: newPrefs.showBadges,
+                    badgeScope: newPrefs.badgeScope,
+                    dailyEmail: newPrefs.dailyEmail,
+                    alertEmailRecipients: newPrefs.alertEmailRecipients,
+                    excludePortfolio: newPrefs.excludePortfolio,
+                    scannerRules: newPrefs.scannerRules,
+                    scanner: newPrefs.scanner
+                }).catch(err => console.warn('[SettingsUI] Direct cloud preference save failed:', err));
+            }
+
+            // 4. SYNC IN-MEMORY NOTIFICATION STORE
+            if (notificationStore) {
+                notificationStore.scannerRules = {
+                    ...notificationStore.scannerRules,
+                    ...newPrefs.scannerRules,
+                    excludePortfolio: newPrefs.excludePortfolio,
+                    activeFilters: newPrefs.scanner.activeFilters
+                };
+                notificationStore._invalidateCache();
+                notificationStore.recalculateBadges();
+            }
 
             // Trigger Badge Update (Full Refresh using new persisted data)
             document.dispatchEvent(new CustomEvent(EVENTS.NOTIFICATION_UPDATE, {
@@ -1248,6 +1300,13 @@ export class SettingsUI {
         const close = () => {
             if (modal._isClosing) return;
             modal._isClosing = true;
+
+            // Flush any pending debounced save immediately on close so state is never lost
+            if (saveTimer) {
+                clearTimeout(saveTimer);
+                saveTimer = null;
+                this._executeSave(modal, userId);
+            }
 
             // NO REVERT LOGIC - Auto-Saved.
             modal.classList.remove(CSS_CLASSES.SHOW);
@@ -1401,7 +1460,7 @@ export class SettingsUI {
             }
 
             // A. Alert/Monitoring Pill Selectors
-            const pill = e.target.closest('.pill-segment-badge, .pill-segment-email, .pill-segment-override, .movers-pill-selector span, .hilo-pill-selector span, .personal-pill-selector span, .pill-segment-badge-scope');
+            const pill = e.target.closest(`.${CSS_CLASSES.PILL_SEGMENT_BADGE}, .${CSS_CLASSES.PILL_SEGMENT_EMAIL}, .${CSS_CLASSES.PILL_SEGMENT_OVERRIDE}, .${CSS_CLASSES.PILL_SEGMENT_MOVERS}, .${CSS_CLASSES.PILL_SEGMENT_HILO}, .${CSS_CLASSES.PILL_SEGMENT_PERSONAL}, .${CSS_CLASSES.PILL_SEGMENT_BADGE_SCOPE}`);
             if (pill) {
                 const isBadgeScope = pill.classList.contains(CSS_CLASSES.PILL_SEGMENT_BADGE_SCOPE);
                 const val = isBadgeScope ? pill.dataset.value : (pill.dataset.value === 'true');
@@ -1412,12 +1471,10 @@ export class SettingsUI {
                 if (pill.classList.contains(CSS_CLASSES.PILL_SEGMENT_BADGE)) {
                     targetId = 'toggle-pref-showBadges';
                     contextMsg = val ? 'Badges Enabled' : 'Badges Disabled';
-                    // NOTE: _executeSave will sync to AppState, no need for manual set here if we save immediate.
                 }
                 else if (pill.classList.contains(CSS_CLASSES.PILL_SEGMENT_BADGE_SCOPE)) {
                     targetId = IDS.PREF_BADGE_SCOPE;
                     contextMsg = 'Badge Scope updated';
-                    // Auto-Save handles sync.
                 }
                 else if (pill.classList.contains(CSS_CLASSES.PILL_SEGMENT_EMAIL)) {
                     targetId = 'toggle-pref-dailyEmail';
@@ -1427,9 +1484,18 @@ export class SettingsUI {
                     targetId = IDS.PREF_EXCLUDE_PORTFOLIO;
                     contextMsg = val ? 'Override Enabled' : 'Override Disabled';
                 }
-                else if (pill.closest('.movers-pill-selector')) { targetId = 'toggle-moversEnabled'; contextMsg = 'Movers Filter updated'; }
-                else if (pill.closest('.hilo-pill-selector')) { targetId = 'toggle-hiloEnabled'; contextMsg = '52w High/Low Filter updated'; }
-                else if (pill.closest('.personal-pill-selector')) { targetId = 'toggle-personalEnabled'; contextMsg = 'Personal Filter updated'; }
+                else if (pill.classList.contains(CSS_CLASSES.PILL_SEGMENT_MOVERS)) {
+                    targetId = 'toggle-moversEnabled';
+                    contextMsg = 'Movers Filter updated';
+                }
+                else if (pill.classList.contains(CSS_CLASSES.PILL_SEGMENT_HILO)) {
+                    targetId = 'toggle-hiloEnabled';
+                    contextMsg = '52w High/Low Filter updated';
+                }
+                else if (pill.classList.contains(CSS_CLASSES.PILL_SEGMENT_PERSONAL)) {
+                    targetId = 'toggle-personalEnabled';
+                    contextMsg = 'Personal Filter updated';
+                }
 
                 if (targetId) {
                     const hiddenInput = modal.querySelector(`#${targetId}`);
@@ -1448,7 +1514,7 @@ export class SettingsUI {
                             notificationStore.recalculateBadges();
                         }
 
-                        triggerUpdate('fast', contextMsg); // Fast Save (Skip heavy sector sweep)
+                        triggerUpdate('immediate', contextMsg); // Immediate Save for toggles
                     }
                 }
                 return;

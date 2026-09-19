@@ -90,7 +90,14 @@ export const AppState = {
             }
         })(),
         scanner: {  // NEW: Global Scanner Settings
-            activeFilters: null // null means No Filter (Show All). [] means Filter to None.
+            activeFilters: (() => {
+                try {
+                    const stored = localStorage.getItem(STORAGE_KEYS.ACTIVE_FILTERS);
+                    return stored ? JSON.parse(stored) : null;
+                } catch (e) {
+                    return null;
+                }
+            })()
         },
         dashboardOrder: (() => {
             try {
@@ -213,7 +220,19 @@ export const AppState = {
             const stored = localStorage.getItem(STORAGE_KEYS.CARD_CHART_OPACITY) || localStorage.getItem('asx_card_chart_opacity');
             return stored !== null ? parseFloat(stored) : 1.0;
         })(),
-        showBadges: localStorage.getItem('ASX_NEXT_showBadges') !== 'false',
+        showBadges: localStorage.getItem(STORAGE_KEYS.SHOW_BADGES) !== 'false',
+        excludePortfolio: (() => {
+            const stored = localStorage.getItem(STORAGE_KEYS.EXCLUDE_PORTFOLIO);
+            return stored !== null ? stored !== 'false' : true;
+        })(),
+        scannerRules: (() => {
+            try {
+                const stored = localStorage.getItem(STORAGE_KEYS.SCANNER_RULES_CACHE);
+                return stored ? JSON.parse(stored) : { up: {}, down: {}, moversEnabled: true, hiloEnabled: true, personalEnabled: true };
+            } catch (e) {
+                return { up: {}, down: {}, moversEnabled: true, hiloEnabled: true, personalEnabled: true };
+            }
+        })(),
         oneTapResearch: localStorage.getItem(STORAGE_KEYS.ONE_TAP_RESEARCH) === 'true',
         aiPromptTemplates: (() => {
             try {
@@ -471,7 +490,10 @@ export const AppState = {
                 oneTapResearch: this.preferences.oneTapResearch || false,
                 aiPromptTemplates: this.preferences.aiPromptTemplates || {},
                 widgetConfig: this.preferences.widgetConfig || null,
-                widgetDashboardItems: this.preferences.widgetDashboardItems || null
+                widgetDashboardItems: this.preferences.widgetDashboardItems || null,
+                scannerRules: this.preferences.scannerRules || {},
+                scanner: this.preferences.scanner || {},
+                excludePortfolio: this.preferences.excludePortfolio ?? true
             };
             this.onPersistenceUpdate(payload);
         } else {

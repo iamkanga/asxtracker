@@ -456,7 +456,9 @@ export class NotificationStore {
                         return final;
                     })(),
                     excludePortfolio: config.excludePortfolio !== false, // Capture Override Toggle
-                    hiloEnabled: data.hiloEnabled // Capture 52-Week Toggle
+                    moversEnabled: (data.moversEnabled !== undefined) ? data.moversEnabled : (config.scannerRules?.moversEnabled !== false),
+                    hiloEnabled: (data.hiloEnabled !== undefined) ? data.hiloEnabled : (config.scannerRules?.hiloEnabled !== false),
+                    personalEnabled: (data.personalEnabled !== undefined) ? data.personalEnabled : (config.scannerRules?.personalEnabled !== false)
                 };
             }
         } catch (e) {
@@ -487,8 +489,7 @@ export class NotificationStore {
             moversEnabled: internal.moversEnabled !== undefined ? internal.moversEnabled : (external.moversEnabled !== false),
             hiloEnabled: internal.hiloEnabled !== undefined ? internal.hiloEnabled : (external.hiloEnabled !== false),
             personalEnabled: internal.personalEnabled !== undefined ? internal.personalEnabled : (external.personalEnabled !== false),
-            personalEnabled: internal.personalEnabled !== undefined ? internal.personalEnabled : (external.personalEnabled !== false),
-            excludePortfolio: (AppState.preferences && AppState.preferences.excludePortfolio !== undefined) ? AppState.preferences.excludePortfolio !== false : true,
+            excludePortfolio: internal.excludePortfolio !== undefined ? internal.excludePortfolio : ((AppState.preferences && AppState.preferences.excludePortfolio !== undefined) ? AppState.preferences.excludePortfolio !== false : true),
             activeFilters: internal.activeFilters // Normalized in refreshScannerRules
         };
 
@@ -713,17 +714,8 @@ export class NotificationStore {
             if (snap.exists()) {
                 const data = snap.data();
                 this.pinnedAlerts = Array.isArray(data.pinnedAlerts) ? data.pinnedAlerts : [];
-                this.scannerRules = data.scannerRules || { up: {}, down: {} };
-
-                // --- CROSS-DEVICE SYNC OF READ STATE ---
-                // DISABLED: Session-Only Notifications requested.
-                // if (data.lastViewedAlerts && data.lastViewedAlerts > this.lastViewedTime) {
-                //    this.lastViewedTime = data.lastViewedAlerts;
-                //    localStorage.setItem(STORAGE_KEYS.LAST_VIEWED_ALERTS, this.lastViewedTime.toString());
-                // }
             } else {
                 this.pinnedAlerts = [];
-                this.scannerRules = { up: {}, down: {} };
             }
             this._invalidateCache();
             this._notifyDataChange();

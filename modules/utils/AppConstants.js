@@ -3,7 +3,7 @@
  * Centralized constants for the application.
  */
 
-export const APP_VERSION = '1.33';
+export const APP_VERSION = '1.39';
 export const ALL_SHARES_ID = 'ALL';
 export const KANGAROO_ICON_SRC = 'favicon.svg';
 export const CASH_WATCHLIST_ID = 'CASH';
@@ -93,6 +93,10 @@ export const STORAGE_KEYS = {
     DAILY_EMAIL: 'ASX_NEXT_dailyEmail',
     EMAIL_RECIPIENTS: 'ASX_NEXT_emailRecipients',
     BADGE_SCOPE: 'ASX_NEXT_badgeScope',
+    SHOW_BADGES: 'ASX_NEXT_showBadges',
+    EXCLUDE_PORTFOLIO: 'ASX_NEXT_excludePortfolio',
+    SCANNER_RULES_CACHE: 'asx_scanner_rules_cache',
+    ACTIVE_FILTERS: 'ASX_NEXT_activeFilters',
     GRADIENT_STRENGTH: 'ASX_NEXT_gradientStrength',
     BORDER_PREFS: 'ASX_NEXT_borderPrefs',
     QUICK_NAV: 'ASX_NEXT_quickNav',

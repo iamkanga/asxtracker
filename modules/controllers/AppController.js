@@ -776,7 +776,10 @@ export class AppController {
                     favoriteLinks: AppState.preferences.favoriteLinks || [],  // Fresh Read
                     viewMode: AppState.viewMode, // Fresh Read
                     widgetConfig: AppState.preferences.widgetConfig || null, // Fresh Read (Fix Persistence)
-                    widgetDashboardItems: AppState.preferences.widgetDashboardItems || null // Fresh Read (Fix Persistence)
+                    widgetDashboardItems: AppState.preferences.widgetDashboardItems || null, // Fresh Read (Fix Persistence)
+                    scannerRules: AppState.preferences.scannerRules || {}, // Fresh Read (Fix Notification Persistence)
+                    scanner: AppState.preferences.scanner || {}, // Fresh Read (Fix Notification Persistence)
+                    excludePortfolio: AppState.preferences.excludePortfolio ?? true // Fresh Read (Fix Notification Persistence)
                 };
 
                 if (freshPrefs.userCategories) {
@@ -1204,6 +1207,7 @@ export class AppController {
             // 0b. Sync Notification Prefs
             if (prefs.showBadges !== undefined && AppState.preferences.showBadges !== (prefs.showBadges !== false)) {
                 AppState.preferences.showBadges = prefs.showBadges !== false;
+                localStorage.setItem(STORAGE_KEYS.SHOW_BADGES, AppState.preferences.showBadges);
                 needsRender = true;
             }
             if (prefs.quickNav !== undefined) {
@@ -1231,9 +1235,21 @@ export class AppController {
             }
             if (prefs.alertEmailRecipients !== undefined) {
                 AppState.preferences.alertEmailRecipients = prefs.alertEmailRecipients || '';
+                localStorage.setItem(STORAGE_KEYS.EMAIL_RECIPIENTS, AppState.preferences.alertEmailRecipients);
             }
             if (prefs.excludePortfolio !== undefined) {
                 AppState.preferences.excludePortfolio = prefs.excludePortfolio;
+                localStorage.setItem(STORAGE_KEYS.EXCLUDE_PORTFOLIO, prefs.excludePortfolio);
+            }
+            if (prefs.scannerRules !== undefined) {
+                AppState.preferences.scannerRules = { ...AppState.preferences.scannerRules, ...prefs.scannerRules };
+                localStorage.setItem(STORAGE_KEYS.SCANNER_RULES_CACHE, JSON.stringify(AppState.preferences.scannerRules));
+            }
+            if (prefs.scanner !== undefined) {
+                AppState.preferences.scanner = { ...AppState.preferences.scanner, ...prefs.scanner };
+                if (prefs.scanner.activeFilters !== undefined) {
+                    localStorage.setItem(STORAGE_KEYS.ACTIVE_FILTERS, JSON.stringify(prefs.scanner.activeFilters));
+                }
             }
             if (prefs.dailyEmail !== undefined && prefs.dailyEmail !== null) {
                 // ROBUSTNESS: Handle string 'true' from legacy/external updates

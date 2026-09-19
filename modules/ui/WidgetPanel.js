@@ -739,9 +739,9 @@ export class WidgetPanel {
 
             const isCommodityBypass = code === 'COMMODITIES';
             const isPositive = (pct !== 0 ? pct : changeVal) >= 0;
-            const badgeClass = isCommodityBypass
+            const colorClass = isCommodityBypass
                 ? CSS_CLASSES.TEXT_NEUTRAL
-                : (isPositive ? `${CSS_CLASSES.BADGE_POSITIVE} ${CSS_CLASSES.BADGE_UP}` : `${CSS_CLASSES.BADGE_NEGATIVE} ${CSS_CLASSES.BADGE_DOWN}`);
+                : (isPositive ? CSS_CLASSES.TEXT_UP : CSS_CLASSES.TEXT_DOWN);
             const pctSign = isPositive ? '+' : '';
             const priceStr = isCommodityBypass ? '--' : this._formatDashboardPrice(code, price);
             const pctStr = isCommodityBypass ? '--' : `${pct < 0 ? '' : pctSign}${pct.toFixed(2)}%`;
@@ -764,7 +764,7 @@ export class WidgetPanel {
                     </div>
                     <div style="flex: 2; display: flex; justify-content: flex-end; align-items: center; gap: 8px;">
                         <span class="value" style="font-weight: 700; font-size: 1.1rem; color: #fff;">${priceStr}</span>
-                        <span class="change ${badgeClass}" style="font-weight: 700; font-size: 0.85rem; min-width: 65px; text-align: right;">${pctStr}</span>
+                        <span class="change ${colorClass}" style="font-weight: 700; font-size: 0.9rem; min-width: 65px; text-align: right;">${pctStr}</span>
                     </div>
                 </div>
             `;
@@ -929,6 +929,9 @@ export class WidgetPanel {
             let distBadgeHtml;
             const distSign = item.distPct !== null && item.distPct >= 0 ? '+' : '';
             const formattedPct = item.distPct !== null ? `${distSign}${item.distPct.toFixed(2)}%` : '--';
+            const distColorClass = item.distPct !== null
+                ? (item.distPct >= 0 ? CSS_CLASSES.TEXT_UP : CSS_CLASSES.TEXT_DOWN)
+                : '';
 
             if (item.isHit) {
                 distBadgeHtml = `
@@ -936,14 +939,14 @@ export class WidgetPanel {
                         <span class="${CSS_CLASSES.WIDGET_TARGET_HIT}">
                             <i class="fas fa-check" style="font-size: 0.6rem;"></i> HIT
                         </span>
-                        <span style="font-weight: 600; font-size: 0.80rem; color: #E0E0E0; min-width: 50px; text-align: right;">
+                        <span class="${distColorClass}" style="font-weight: 600; font-size: 0.80rem; min-width: 50px; text-align: right;">
                             (${formattedPct})
                         </span>
                     </div>
                 `;
             } else if (item.distPct !== null) {
                 distBadgeHtml = `
-                    <span style="font-weight: 600; font-size: 0.82rem; color: #E0E0E0; min-width: 55px; text-align: right;">
+                    <span class="${distColorClass}" style="font-weight: 600; font-size: 0.82rem; min-width: 55px; text-align: right;">
                         ${formattedPct}
                     </span>
                 `;

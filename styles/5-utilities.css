@@ -613,17 +613,3 @@ body:not(.is-stale) td:nth-child(3) {
     color: var(--color-negative) !important;
 }
 
-.badge-positive,
-.badge-up {
-    background: rgba(6, 255, 79, 0.15);
-    border: 1px solid rgba(6, 255, 79, 0.3);
-    color: var(--color-positive);
-}
-
-.badge-negative,
-.badge-down {
-    background: rgba(255, 49, 49, 0.15);
-    border: 1px solid rgba(255, 49, 49, 0.3);
-    color: var(--color-negative);
-}
-
