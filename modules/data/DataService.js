@@ -71,7 +71,7 @@ export class DataService {
             if (!silent) {
                 warningId = setTimeout(() => {
                     ToastManager.info("Retrieving stock prices is taking longer than expected. Please wait...", "Slow Connection");
-                }, 20000); // 20s threshold for explicit manual user requests
+                }, 40000); // 40s threshold to tolerate Google Apps Script container spin-up times
             }
             const timeoutId = setTimeout(() => controller.abort(), 60000);
 

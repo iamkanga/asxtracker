@@ -58,7 +58,6 @@ export class AppController {
         this.viewRenderer = new ViewRenderer();
 
         // Timers
-        this._bootSeedTimer = null;
         this._fetchDebounceTimer = null;
         this._retryTimer = null;
 
@@ -83,7 +82,6 @@ export class AppController {
 
         // Carousel Stability
         this._carouselGuard = false;
-        this._bootSeedTimer = null; // Throttling logic for startup sequence
 
         // State Tracking
         this._isUnlockedThisSession = false;
@@ -219,13 +217,12 @@ export class AppController {
                 this.watchlistUI.updateHeaderTitle();
             }
 
-            // === GLOBAL PRICE SEEDING (DEBOUNCED & STAGGERED) ===
-            // Allow cached DOM to render completely before sending backend fetch
-            if (this._bootSeedTimer) clearTimeout(this._bootSeedTimer);
-            this._bootSeedTimer = setTimeout(async () => {
+            // === GLOBAL PRICE SEEDING ===
+            // Fire initial fetch immediately as soon as auth/state is ready without artificial delay
+            (async () => {
                 await this._refreshAllPrices(AppState.data.shares || [], true);
                 this._checkSnapshotNecessity();
-            }, 1800);
+            })();
 
             // === WATCHLIST RESTORATION (First Run Only) ===
             if (!this._initialWatchlistRestored) {

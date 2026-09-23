@@ -171,14 +171,28 @@ function evaluateConnectionStatus({ isConnected, isDataReady, healthStatus, isOn
         };
     }
 
-    // 3. Persistent Failure & Elapsed Freshness (Market Open: 5-minute strict cap)
+    // 3. Loading State or In-Flight / Unverified Quotes (Takes precedence over quote expiration)
+    const openTimeMs = isTrading ? marketOpenTimeMs : 0;
+    const isStaleForOpenSession = isTrading && marketOpenTimeMs > 0 && lastGlobalFetch < marketOpenTimeMs;
+
+    if (healthStatus === 'loading' || (isConnected && !isDataReady) || !hasVerifiedQuotes) {
+        return {
+            statusClass: 'health-loading',
+            title: isStaleForOpenSession
+                ? 'ASX Open • Updating Stock Prices for Market Open...'
+                : (!isDataReady ? 'Loading Data...' : 'Updating Stock Prices...'),
+            badgeColor: 'grey',
+            marketText
+        };
+    }
+
+    // 4. Persistent Failure & Elapsed Freshness (Market Open: 5-minute strict cap)
     const MAX_FRESH_AGE_MS = 5 * 60 * 1000;
     const now = currentTimeMs !== null
         ? currentTimeMs
         : (marketOpenTimeMs > 0 ? Math.max(marketOpenTimeMs + 10000, (lastGlobalFetch || 0) + 10000) : Date.now());
 
     const quoteAge = now - (lastGlobalFetch || 0);
-    const isStaleForOpenSession = isTrading && marketOpenTimeMs > 0 && lastGlobalFetch < marketOpenTimeMs;
     const isQuoteExpiredDuringTrading = isTrading && (lastGlobalFetch || 0) > 0 && (
         (lastGlobalFetch >= marketOpenTimeMs && quoteAge > MAX_FRESH_AGE_MS) ||
         (isStaleForOpenSession && marketOpenTimeMs > 0 && (now - marketOpenTimeMs) > MAX_FRESH_AGE_MS)
@@ -197,13 +211,11 @@ function evaluateConnectionStatus({ isConnected, isDataReady, healthStatus, isOn
         };
     }
 
-    // 4. Loading State or Unverified Quotes
-    if (healthStatus === 'loading' || (isConnected && !isDataReady) || !hasVerifiedQuotes || isStaleForOpenSession) {
+    // 5. Open Session Transitional Loading
+    if (isStaleForOpenSession) {
         return {
             statusClass: 'health-loading',
-            title: isStaleForOpenSession
-                ? 'ASX Open • Updating Stock Prices for Market Open...'
-                : (!isDataReady ? 'Loading Data...' : 'Updating Stock Prices...'),
+            title: 'ASX Open • Updating Stock Prices for Market Open...',
             badgeColor: 'grey',
             marketText
         };
@@ -584,6 +596,29 @@ describe('Suite 1: Connection State Transition & isDataReady Guard', () => {
         assertStrictEqual(result.statusClass, 'health-market-closed');
         assertStrictEqual(result.badgeColor, 'green');
         assertStrictEqual(result.marketText, 'Closed');
+    });
+
+    it('1.16 Wake/resume loading state takes precedence over expired quotes during active trading', () => {
+        const marketOpenTimeMs = 1726531200000;
+        const fetchTimeMs = 1726531230000;
+        const twentyMinutesLaterMs = fetchTimeMs + (20 * 60 * 1000);
+        // On wake/resume when quotes are > 5 min old, AppController passes healthStatus: 'loading'
+        const result = evaluateConnectionStatus({
+            isConnected: true,
+            isDataReady: true,
+            healthStatus: 'loading',
+            isOnline: true,
+            marketSession: 'OPEN',
+            consecutiveFailures: 0,
+            hasVerifiedQuotes: true,
+            lastGlobalFetch: fetchTimeMs,
+            marketOpenTimeMs: marketOpenTimeMs,
+            currentTimeMs: twentyMinutesLaterMs
+        });
+        assertStrictEqual(result.statusClass, 'health-loading');
+        assertStrictEqual(result.badgeColor, 'grey');
+        assertStrictEqual(result.title, 'Updating Stock Prices...');
+        assertStrictEqual(result.marketText, 'Open');
     });
 });
 

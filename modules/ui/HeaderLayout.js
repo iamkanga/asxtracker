@@ -1153,11 +1153,33 @@ export class HeaderLayout {
                 return;
             }
 
-            // 4. PERSISTENT FAILURE & ELAPSED FRESHNESS (Market Open: 5-minute strict cap)
-            const quoteAge = Date.now() - (AppState.lastGlobalFetch || 0);
-            const MAX_FRESH_AGE_MS = 5 * 60 * 1000;
+            // 4. UNVERIFIED / LOADING / BOOT / WAKE STATE: Grey Dot
+            // Takes precedence over quote expiration checks so that in-flight fetches on boot/wake/refresh
+            // display the neutral pulsing grey indicator instead of premature amber stale.
+            const isDataReady = AppState.isDataReady;
+            const hasVerifiedQuotes = AppState.lastGlobalFetch > 0 && AppState.livePrices && AppState.livePrices.size > 0;
             const openTimeMs = isTrading ? MarketSchedule.getTodayMarketOpenTimeMs() : 0;
             const isStaleForOpenSession = isTrading && ((AppState.lastGlobalFetch || 0) < openTimeMs);
+            const isFetchingActive = (typeof AppState !== 'undefined' && AppState._isFetching);
+
+            const isLoadingOrInFlight = healthStatus === 'loading' || 
+                                       (isFetchingActive && healthStatus !== 'stale') ||
+                                       (isConnected && !isDataReady) || 
+                                       !hasVerifiedQuotes;
+
+            if (isLoadingOrInFlight) {
+                dot.classList.add(CSS_CLASSES.HEALTH_LOADING);
+                const title = isStaleForOpenSession
+                    ? 'ASX Open • Updating Stock Prices for Market Open...'
+                    : (!isDataReady ? 'Loading Data...' : 'Updating Stock Prices...');
+                dot.title = title;
+                if (refreshBtn) refreshBtn.title = title;
+                return;
+            }
+
+            // 5. PERSISTENT FAILURE & ELAPSED FRESHNESS (Market Open: 5-minute strict cap)
+            const quoteAge = Date.now() - (AppState.lastGlobalFetch || 0);
+            const MAX_FRESH_AGE_MS = 5 * 60 * 1000;
 
             // Stale condition during active trading:
             // Quotes were fetched during today's session but are > 5m old,
@@ -1182,19 +1204,11 @@ export class HeaderLayout {
                 return;
             }
 
-            // 5. UNVERIFIED / LOADING / BOOT / WAKE STATE: Grey Dot
-            // Dot must NEVER turn green solely because the market is open or user is connected.
-            // It remains Grey until price data has arrived and is verified for the current market state.
-            const isDataReady = AppState.isDataReady;
-            const hasVerifiedQuotes = AppState.lastGlobalFetch > 0 && AppState.livePrices && AppState.livePrices.size > 0;
-
-            const isUnverified = healthStatus === 'loading' || (isConnected && !isDataReady) || !hasVerifiedQuotes || isStaleForOpenSession;
-
-            if (isUnverified) {
+            // 6. OPEN SESSION TRANSITIONAL LOADING:
+            // Market has opened within last 5 minutes, quotes are from pre-open/yesterday, holding loading dot until fresh quote arrives
+            if (isStaleForOpenSession) {
                 dot.classList.add(CSS_CLASSES.HEALTH_LOADING);
-                const title = isStaleForOpenSession
-                    ? 'ASX Open • Updating Stock Prices for Market Open...'
-                    : (!isDataReady ? 'Loading Data...' : 'Updating Stock Prices...');
+                const title = 'ASX Open • Updating Stock Prices for Market Open...';
                 dot.title = title;
                 if (refreshBtn) refreshBtn.title = title;
                 return;
