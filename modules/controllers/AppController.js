@@ -245,6 +245,8 @@ export class AppController {
         // REACTIVE REFRESH: Centralize UI updates when prices arrive
         StateAuditor.on('PRICES_UPDATED', () => {
             this.checkAppHealth(); // Evaluate freshness to clear stale styling immediately
+            // Live sync finished: it is now safe for the quiet sparkline refresher to run.
+            if (this.dataService) this.dataService.armSparklineRefresher();
             if (!AppState.isLocked && this.watchlistUI && AppState.watchlist.id) {
                 this.updateDataAndRender(false);
             }

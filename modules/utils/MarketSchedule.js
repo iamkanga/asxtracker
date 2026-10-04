@@ -208,4 +208,47 @@ export class MarketSchedule {
         const diffHours = targetSyd.hour - 10;
         return targetDate.getTime() - (diffHours * 3600000);
     }
+
+    /**
+     * Whether the given Sydney calendar date is an ASX trading day (not weekend / public holiday).
+     * @param {number} year
+     * @param {number} month - 1-indexed
+     * @param {number} day
+     * @returns {boolean}
+     */
+    static isTradingDay(year, month, day) {
+        const dow = new Date(Date.UTC(year, month - 1, day)).getUTCDay();
+        if (dow === 0 || dow === 6) return false;
+        return !isASXHoliday(year, month, day);
+    }
+
+    /**
+     * Returns the UTC epoch ms of the most recent trading-day close that has already "settled"
+     * (Sydney wall-clock `settleMinutes` after midnight, default 16:30) at or before `date`.
+     * Used to decide whether end-of-day data cached earlier is missing a newer session close.
+     * @param {Date} [date=new Date()]
+     * @param {number} [settleMinutes=990] - Minutes after Sydney midnight (990 = 16:30)
+     * @returns {number} epoch ms (0 if none found within 14 days)
+     */
+    static getLastCloseSettledMs(date = new Date(), settleMinutes = 16 * 60 + 30) {
+        const nowMs = date.getTime();
+        const syd = this.getSydneyTime(date);
+        for (let back = 0; back <= 14; back++) {
+            const cal = new Date(Date.UTC(syd.year, syd.month - 1, syd.day - back));
+            const y = cal.getUTCFullYear();
+            const m = cal.getUTCMonth() + 1;
+            const d = cal.getUTCDate();
+            if (!this.isTradingDay(y, m, d)) continue;
+
+            // Convert Sydney wall-clock (y-m-d @ settleMinutes) to a UTC instant (DST-aware).
+            const wallAsUtc = Date.UTC(y, m - 1, d, 0, settleMinutes, 0);
+            let utc = wallAsUtc - 10 * 3600000; // First guess: AEST (UTC+10)
+            const s = this.getSydneyTime(new Date(utc));
+            const sWallAsUtc = Date.UTC(s.year, s.month - 1, s.day, s.hour, s.minute, 0);
+            utc -= (sWallAsUtc - wallAsUtc); // Correct for AEDT (+1h) if applicable
+
+            if (utc <= nowMs) return utc;
+        }
+        return 0;
+    }
 }

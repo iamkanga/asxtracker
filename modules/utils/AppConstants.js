@@ -122,7 +122,14 @@ export const STORAGE_KEYS = {
 
     // Global Price Sync Watermarks
     LAST_GLOBAL_FETCH: 'asx_last_global_fetch',
-    LIVE_PRICES_CACHE: 'asx_live_prices_v2'
+    LIVE_PRICES_CACHE: 'asx_live_prices_v2',
+
+    // Historical chart cache (full responses, used by ChartModal)
+    HISTORY_CACHE_PREFIX: 'asx_history_v3_',
+
+    // Sparkline cache (slim closes-only records, used by portfolio card backgrounds)
+    SPARKLINE_MIGRATED: 'asx_sparkline_migrated_v1',
+    SPARKLINE_FALLBACK_CACHE: 'asx_sparkline_cache_v1'
 };
 
 export const EVENTS = {
@@ -201,6 +208,7 @@ export const EVENTS = {
     WIDGET_TOGGLE: 'widget-toggle',
     WIDGET_CONFIG_CHANGED: 'widget-config-changed',
     PRICES_UPDATED: 'PRICES_UPDATED',
+    SPARKLINE_UPDATED: 'sparkline-updated', // detail: { code }
 
 
 
@@ -211,6 +219,35 @@ export const EVENTS = {
     DIV_OVERRIDE_CLICK: 'DIV_OVERRIDE_CLICK',
     DIV_OVERRIDE_SAVE: 'DIV_OVERRIDE_SAVE'
 };
+
+/**
+ * Sparkline cache + background refresher tuning.
+ * Sparklines are illustrative only: cache-first, refreshed at most ~once per trading day.
+ */
+export const SPARKLINE_CONFIG = Object.freeze({
+    // Storage
+    DB_NAME: 'asx_sparkline_db',
+    DB_VERSION: 1,
+    STORE_NAME: 'sparklines',
+    RANGE: '1y',
+    MAX_POINTS: 60,
+    MAX_RECORDS: 400,
+    TRIM_EVERY_N_WRITES: 25,
+
+    // Freshness policy
+    MAX_AGE_MS: 24 * 60 * 60 * 1000,          // Fallback age limit (24h)
+    MIN_ATTEMPT_GAP_MS: 6 * 60 * 60 * 1000,   // Back-off after ANY attempt (incl. failures/timeouts)
+    CLOSE_SETTLE_MINUTES: 16 * 60 + 30,       // 16:30 Sydney: close auction done + data provider settled
+
+    // Background refresher pacing
+    BOOT_DEFER_MS: 30000,                     // 30s quiet period on boot (100% priority to live prices/auth)
+    SESSION_REFRESH_CAP: 30,                  // Max network refreshes per page session
+    REFRESH_GAP_MS: 1500,                     // Gap between background fetches (1.5s+ serialized)
+    BUSY_RETRY_MS: 3000,                      // Wait while foreground traffic is in flight
+    MAX_BUSY_WAITS: 20,                       // Give up this run after this many busy waits
+    ARM_FALLBACK_MS: 35000,                   // Arm fallback after boot quiet window
+    IDLE_TIMEOUT_MS: 5000                     // requestIdleCallback timeout
+});
 
 export const SORT_OPTIONS = {
     STOCK: [ // Main Watchlists & All Shares

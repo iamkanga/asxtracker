@@ -22,6 +22,9 @@ export const userStore = new UserStore();
 export { AuthService };
 import { ToastManager } from '../ui/ToastManager.js';
 import { MarketSchedule, ASX_SESSION } from '../utils/MarketSchedule.js';
+import { STORAGE_KEYS, SPARKLINE_CONFIG } from '../utils/AppConstants.js';
+import { SparklineCache } from './SparklineCache.js';
+import { SparklineRefresher } from './SparklineRefresher.js';
 
 /**
  * Helper to detect network/connectivity failures from fetch requests.
@@ -43,6 +46,57 @@ export class DataService {
         this.API_ENDPOINT = API_ENDPOINT;
         this._historyQueue = [];
         this._isProcessingHistoryQueue = false;
+        this._historyInflight = new Map(); // cacheKey -> Promise (de-dupes identical in-flight requests)
+        this._liveFetchCount = 0; // In-flight live price requests (foreground traffic signal)
+
+        // Sparkline pipeline: cache-first reads (UI) + quiet background refresh (network)
+        this.sparklineCache = new SparklineCache();
+        this.sparklineRefresher = new SparklineRefresher({
+            cache: this.sparklineCache,
+            fetchRows: (code) => this._fetchSparklineRows(code),
+            canFetch: () => {
+                try { return !!AuthService.getCurrentUser(); } catch (e) { return false; }
+            },
+            isForegroundBusy: () => this._liveFetchCount > 0 ||
+                this._historyQueue.length > 0 ||
+                this._isProcessingHistoryQueue
+        });
+    }
+
+    /**
+     * Queues a background sparkline refresh for a code IF the cache says it is stale.
+     * Never blocks and never fetches inline. Safe to call on every card render.
+     * @param {string} code
+     * @returns {Promise<boolean>} true if queued
+     */
+    requestSparklineRefresh(code) {
+        try {
+            if (!this.sparklineRefresher) return Promise.resolve(false);
+            return this.sparklineRefresher.request(code);
+        } catch (e) {
+            return Promise.resolve(false);
+        }
+    }
+
+    /**
+     * Opens the background refresher gate. Call after a live price sync completes.
+     */
+    armSparklineRefresher() {
+        try {
+            if (this.sparklineRefresher) this.sparklineRefresher.arm();
+        } catch (e) {
+            console.warn('[DataService] Failed to arm sparkline refresher:', e);
+        }
+    }
+
+    /**
+     * Network fetch of 1y history rows for the sparkline refresher.
+     * Does NOT write the legacy full-history cache (sparklines have their own slim cache).
+     * @private
+     */
+    async _fetchSparklineRows(code) {
+        const res = await this._execFetchHistory(code, SPARKLINE_CONFIG.RANGE, true, null, false);
+        return (res && res.ok && Array.isArray(res.data)) ? res.data : null;
     }
     /**
      * Fetches live prices for specific codes or all stocks if no codes provided.
@@ -51,6 +105,7 @@ export class DataService {
      * @returns {Promise<Map<string, Object>>} - Map of clean price objects keyed by code.
      */
     async fetchLivePrices(codesArray = null, silent = false) {
+        this._liveFetchCount++;
         try {
             const url = new URL(API_ENDPOINT);
             url.searchParams.append('_ts', Date.now()); // Prevent caching
@@ -110,6 +165,8 @@ export class DataService {
             // This outer catch handles errors from URL construction or initial setup
             console.error("DataService: Outer fetchLivePrices error:", error);
             return { ok: false, prices: new Map(), dashboard: [] };
+        } finally {
+            this._liveFetchCount = Math.max(0, this._liveFetchCount - 1);
         }
     }
 
@@ -414,7 +471,7 @@ export class DataService {
      */
     async fetchHistory(code, range, silent = false) {
         // CACHE IMPLEMENTATION: Check localStorage first to save API quota
-        const cacheKey = `asx_history_v3_${code}_${range}`;
+        const cacheKey = `${STORAGE_KEYS.HISTORY_CACHE_PREFIX}${code}_${range}`;
         const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 
         try {
@@ -429,11 +486,22 @@ export class DataService {
             console.warn('[DataService] Cache read error:', e);
         }
 
-        // Queue Network Request with Staggering
-        return new Promise((resolve) => {
-            this._historyQueue.push({ code, range, silent, cacheKey, resolve });
+        // IN-FLIGHT DE-DUPE: identical concurrent requests share one network call
+        const inflight = this._historyInflight.get(cacheKey);
+        if (inflight) return inflight;
+
+        // Queue Network Request with Staggering.
+        // User-initiated (non-silent) requests jump ahead of silent background ones.
+        const promise = new Promise((resolve) => {
+            const entry = { code, range, silent, cacheKey, resolve };
+            if (silent) this._historyQueue.push(entry);
+            else this._historyQueue.unshift(entry);
             this._processHistoryQueue();
+        }).finally(() => {
+            this._historyInflight.delete(cacheKey);
         });
+        this._historyInflight.set(cacheKey, promise);
+        return promise;
     }
 
     async _processHistoryQueue() {
@@ -445,6 +513,10 @@ export class DataService {
                 const item = this._historyQueue.shift();
                 try {
                     const res = await this._execFetchHistory(item.code, item.range, item.silent, item.cacheKey);
+                    // FREE SEED: a successful 1y chart fetch also warms the slim sparkline cache
+                    if (res && res.ok && item.range === SPARKLINE_CONFIG.RANGE && this.sparklineCache) {
+                        this.sparklineCache.saveFromRows(item.code, res.data).catch(() => { });
+                    }
                     item.resolve(res);
                 } catch (err) {
                     item.resolve({ ok: false, error: err?.message || 'History fetch failed' });
@@ -460,7 +532,10 @@ export class DataService {
         }
     }
 
-    async _execFetchHistory(code, range, silent, cacheKey) {
+    /**
+     * @param {boolean} [persist=true] - If false, skips writing the legacy full-history localStorage cache.
+     */
+    async _execFetchHistory(code, range, silent, cacheKey, persist = true) {
         // RANGE HYGIENE: Yahoo Finance API expects 'mo' for months (1mo, 3mo, 6mo)
         const rangeMap = {
             '1m': '1mo',
@@ -515,7 +590,7 @@ export class DataService {
             const json = await response.json();
 
             // Cache successful valid responses only
-            if (json && json.ok && Array.isArray(json.data) && json.data.length > 0) {
+            if (persist && cacheKey && json && json.ok && Array.isArray(json.data) && json.data.length > 0) {
                 try {
                     localStorage.setItem(cacheKey, JSON.stringify({
                         timestamp: Date.now(),
