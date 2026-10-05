@@ -209,7 +209,7 @@ export class ModalController {
             onLookupPrice: async (code) => {
                 const result = await dataService.fetchLivePrices([code]);
                 const prices = result?.prices;
-                return prices.get(code);
+                return prices?.get ? prices.get(code) : null;
             },
 
             // Callback: Delete

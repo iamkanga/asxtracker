@@ -3,8 +3,6 @@
  * Handles fetching and normalizing stock price data from the API.
  */
 
-const API_ENDPOINT = "https://script.google.com/macros/s/AKfycbwwwMEss5DIYblLNbjIbt_TAzWh54AwrfQlVwCrT_P0S9xkAoXhAUEUg7vSEPYUPOZp/exec";
-
 import { UserStore } from './UserStore.js';
 import { db, AuthService } from '../auth/AuthService.js';
 import {
@@ -22,7 +20,7 @@ export const userStore = new UserStore();
 export { AuthService };
 import { ToastManager } from '../ui/ToastManager.js';
 import { MarketSchedule, ASX_SESSION } from '../utils/MarketSchedule.js';
-import { STORAGE_KEYS, SPARKLINE_CONFIG } from '../utils/AppConstants.js';
+import { API_ENDPOINT, STORAGE_KEYS, SPARKLINE_CONFIG } from '../utils/AppConstants.js';
 import { SparklineCache } from './SparklineCache.js';
 import { SparklineRefresher } from './SparklineRefresher.js';
 
@@ -43,7 +41,7 @@ function isNetworkError(error) {
 
 export class DataService {
     constructor() {
-        this.API_ENDPOINT = API_ENDPOINT;
+        this.API_ENDPOINT = (API_ENDPOINT || '').replace(/\/+$/, '');
         this._historyQueue = [];
         this._isProcessingHistoryQueue = false;
         this._historyInflight = new Map(); // cacheKey -> Promise (de-dupes identical in-flight requests)
@@ -108,7 +106,8 @@ export class DataService {
     async fetchLivePrices(codesArray = null, silent = false) {
         this._liveFetchCount++;
         try {
-            const url = new URL(API_ENDPOINT);
+            const cleanBase = (this.API_ENDPOINT || API_ENDPOINT).replace(/\/+$/, '');
+            const url = new URL(cleanBase);
             url.searchParams.append('_ts', Date.now()); // Prevent caching
 
             // API STRATEGY:
@@ -116,8 +115,8 @@ export class DataService {
             // 2. Multiple Codes: Fetch ALL (No params). 
             //    Reason: API fails with comma-separated list, and API ignores repeated params (only returns one).
             //    Fetching all is the only reliable way to get a batch.
-            if (codesArray && codesArray.length === 1) {
-                url.searchParams.append('stockCode', codesArray[0]);
+            if (Array.isArray(codesArray) && codesArray.length === 1 && typeof codesArray[0] === 'string' && codesArray[0].trim()) {
+                url.searchParams.append('stockCode', codesArray[0].trim().toUpperCase());
             }
 
             // TRACE LOGGING
@@ -132,16 +131,41 @@ export class DataService {
             const timeoutId = setTimeout(() => controller.abort(), 60000);
 
             try {
-                const response = await fetch(url.toString(), { signal: controller.signal });
+                const response = await fetch(url.toString(), {
+                    method: 'GET',
+                    redirect: 'follow', // Explicitly handle Google Apps Script 302 -> script.googleusercontent.com
+                    cache: 'no-store',  // Bypass browser/proxy cache for live price polling
+                    headers: {
+                        'Accept': 'application/json'
+                    },
+                    signal: controller.signal
+                });
                 if (warningId) clearTimeout(warningId);
                 clearTimeout(timeoutId);
 
                 if (!response.ok) {
-                    console.error(`DataService Fetch Error: ${response.status} ${response.statusText}`);
+                    if (response.status === 404) {
+                        console.warn(`DataService: Live price fetch returned 404 (likely Google Apps Script container spin-up timeout). Fast retry will re-poll warm container.`);
+                    } else {
+                        console.error(`DataService Fetch Error: ${response.status} ${response.statusText}`);
+                    }
                     return { ok: false, prices: new Map(), dashboard: [] };
                 }
 
-                const json = await response.json();
+                // Protect against HTML responses (e.g. Google error/login pages served with 200)
+                const contentType = response.headers.get('content-type') || '';
+                let json;
+                if (contentType.includes('application/json') || contentType.includes('text/plain') || contentType.includes('application/javascript')) {
+                    json = await response.json();
+                } else {
+                    const text = await response.text();
+                    try {
+                        json = JSON.parse(text);
+                    } catch (parseErr) {
+                        console.warn(`DataService: Received non-JSON response (${contentType}, length: ${text.length}).`);
+                        return { ok: false, prices: new Map(), dashboard: [] };
+                    }
+                }
 
                 // Normalize and return both prices and dashboard data
                 const normalized = this._normalizePriceData(json);
@@ -185,14 +209,18 @@ export class DataService {
         }
         this._lastSyncUserSettingsTime = now;
         try {
-            const url = new URL(API_ENDPOINT);
+            const cleanBase = (this.API_ENDPOINT || API_ENDPOINT).replace(/\/+$/, '');
+            const url = new URL(cleanBase);
             url.searchParams.append('userId', userId);
             url.searchParams.append('callback', 'sync_callback_' + Date.now());
             url.searchParams.append('_ts', Date.now());
 
             // We use a simple fetch. Since it's JSONP-style on the backend, 
             // it will return a 200 OK with a javascript body.
-            const response = await fetch(url.toString());
+            const response = await fetch(url.toString(), {
+                method: 'GET',
+                redirect: 'follow'
+            });
             if (!response.ok) {
                 console.warn(`DataService: Sync request failed with status ${response.status}`);
             }
@@ -224,8 +252,10 @@ export class DataService {
                 userId: userId
             };
 
-            const response = await fetch(this.API_ENDPOINT, {
+            const cleanBase = (this.API_ENDPOINT || API_ENDPOINT).replace(/\/+$/, '');
+            const response = await fetch(cleanBase, {
                 method: 'POST',
+                redirect: 'follow',
                 body: JSON.stringify(payload)
             });
 
@@ -302,8 +332,10 @@ export class DataService {
                 query: query,
                 context: context
             };
-            const response = await fetch(API_ENDPOINT, {
+            const cleanBase = (this.API_ENDPOINT || API_ENDPOINT).replace(/\/+$/, '');
+            const response = await fetch(cleanBase, {
                 method: 'POST',
+                redirect: 'follow',
                 body: JSON.stringify(payload)
             });
 
@@ -357,8 +389,10 @@ export class DataService {
                 prompt: prompt,
                 thinking: true // Critical for dividend/technical analysis
             };
-            const response = await fetch(API_ENDPOINT, {
+            const cleanBase = (this.API_ENDPOINT || API_ENDPOINT).replace(/\/+$/, '');
+            const response = await fetch(cleanBase, {
                 method: 'POST',
+                redirect: 'follow',
                 body: JSON.stringify(payload)
             });
             if (!response.ok) {
@@ -579,9 +613,11 @@ export class DataService {
                 range: mappedRange
             };
 
-            const response = await fetch(this.API_ENDPOINT, {
+            const cleanBase = (this.API_ENDPOINT || API_ENDPOINT).replace(/\/+$/, '');
+            const response = await fetch(cleanBase, {
                 method: 'POST',
                 mode: 'cors',
+                redirect: 'follow',
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                 body: JSON.stringify(payload),
                 signal: controller.signal

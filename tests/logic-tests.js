@@ -1403,6 +1403,19 @@ describe('Suite 9: Live Sync Timing, Staleness Healing, and Cloud Persistence Th
         assert(clearFetchIndex < headerUpdateIndex, '_isFetching must be cleared BEFORE updating connection status');
         assert(headerUpdateIndex < emitIndex, 'Header must be updated to healthy before emitting PRICES_UPDATED');
     });
+
+    it('9.8 DataService enforces centralized API_ENDPOINT, redirect follow, and trailing slash immunity', () => {
+        const appConstantsCode = fs.readFileSync(path.join(__dirname, '../modules/utils/AppConstants.js'), 'utf8');
+        const dataServiceCode = fs.readFileSync(path.join(__dirname, '../modules/data/DataService.js'), 'utf8');
+
+        assert(appConstantsCode.includes('export const API_ENDPOINT'), 'AppConstants must export API_ENDPOINT');
+        assert(!appConstantsCode.includes('/exec/'), 'API_ENDPOINT must not contain a trailing slash');
+
+        assert(dataServiceCode.includes('import { API_ENDPOINT'), 'DataService must import API_ENDPOINT from AppConstants');
+        assert(dataServiceCode.includes("redirect: 'follow'"), 'DataService must explicitly configure redirect: follow');
+        assert(dataServiceCode.includes(".replace(/\\/+$/, '')"), 'DataService must sanitize trailing slashes');
+        assert(dataServiceCode.includes("cache: 'no-store'"), 'DataService must bypass HTTP caches for live price polling');
+    });
 });
 
 // ============================================================================
