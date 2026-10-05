@@ -56,7 +56,12 @@ export class HeaderLayout {
         // AUTO-UPDATE: Refresh timestamp and market telemetry when prices arrive
         StateAuditor.on('PRICES_UPDATED', (payload) => {
             this._updateRefreshTime(payload?.timestamp);
-            const currentHealth = !AppState.user ? 'offline' : (AppState.isDataReady ? (AppState.health?.status || 'healthy') : 'loading');
+            if (AppState.user && AppState.isDataReady) {
+                AppState.health.status = 'healthy';
+                AppState.health.consecutiveFailures = 0;
+                document.body.classList.remove('is-stale');
+            }
+            const currentHealth = !AppState.user ? 'offline' : (AppState.isDataReady ? 'healthy' : 'loading');
             this.updateConnectionStatus(!!AppState.user, currentHealth);
 
             // Visual feedback: pulse the connection dot ONLY on manual refresh
@@ -67,6 +72,12 @@ export class HeaderLayout {
                     setTimeout(() => dot.classList.remove(CSS_CLASSES.PULSE_FRESH), 2000);
                 }
             }
+        });
+
+        // AUTO-UPDATE: Sync connection status immediately when user data lands or updates
+        StateAuditor.on('DATA_UPDATED', () => {
+            const currentHealth = !AppState.user ? 'offline' : (AppState.isDataReady ? (AppState.health?.status || 'healthy') : 'loading');
+            this.updateConnectionStatus(!!AppState.user, currentHealth);
         });
     }
 
@@ -1163,7 +1174,7 @@ export class HeaderLayout {
             const isFetchingActive = (typeof AppState !== 'undefined' && AppState._isFetching);
 
             const isLoadingOrInFlight = healthStatus === 'loading' || 
-                                       (isFetchingActive && healthStatus !== 'stale') ||
+                                       (isFetchingActive && healthStatus !== 'stale' && healthStatus !== 'healthy') ||
                                        (isConnected && !isDataReady) || 
                                        !hasVerifiedQuotes;
 

@@ -93,6 +93,7 @@ export class AppController {
         this._localPrefsTimestamp = 0; // Track local preferences modification timestamp
         this._sortConfigDebounceTimer = null; // Debounce timer for sortConfig writes
         this._lastSortConfigWriteTime = 0;    // Last write timestamp for sortConfig to avoid dual-write collision
+        this._lastSyncedPrefsSignature = null; // Signature of last cloud-persisted preferences to avoid redundant writes
 
         // Binds
         this.init = this.init.bind(this);
@@ -205,7 +206,10 @@ export class AppController {
 
             // Update Connection Indicator now that Firestore data is resolved into local memory
             if (this.headerLayout && AppState.user) {
-                this.headerLayout.updateConnectionStatus(true, AppState.health.status);
+                const targetHealth = (AppState.lastGlobalFetch > 0 && (AppState.health?.consecutiveFailures || 0) === 0)
+                    ? 'healthy'
+                    : (AppState.health?.status || 'healthy');
+                this.headerLayout.updateConnectionStatus(true, targetHealth);
             }
 
             // ONBOARDING GATE: Handles Race Condition between Data and Prefs
@@ -244,6 +248,12 @@ export class AppController {
 
         // REACTIVE REFRESH: Centralize UI updates when prices arrive
         StateAuditor.on('PRICES_UPDATED', () => {
+            AppState.health.status = 'healthy';
+            AppState.health.consecutiveFailures = 0;
+            document.body.classList.remove('is-stale');
+            if (this.headerLayout && AppState.user) {
+                this.headerLayout.updateConnectionStatus(true, 'healthy');
+            }
             this.checkAppHealth(); // Evaluate freshness to clear stale styling immediately
             // Live sync finished: it is now safe for the quiet sparkline refresher to run.
             if (this.dataService) this.dataService.armSparklineRefresher();
@@ -272,6 +282,7 @@ export class AppController {
                     AppState.isDataReady = false;
                     this._cloudPrefsLoaded = false;
                     this._localPrefsTimestamp = 0; // Reset local prefs timestamp for new user/session
+                    this._lastSyncedPrefsSignature = null;
                     this._syncingPreferences = false; // Re-entrancy guard for Cloud Sync
                     this._isUnlockedThisSession = false;
                     await this.appService.sanitizeCorruptedShares(user.uid);
@@ -785,7 +796,15 @@ export class AppController {
                 }
                 // if (freshPrefs.hiddenAssets) {
                 // }
+                // Skip sync if payload data has not meaningfully changed
+                const { modified: _, ...comparablePrefs } = freshPrefs;
+                const currentPrefsSignature = JSON.stringify(comparablePrefs);
+                if (this._lastSyncedPrefsSignature === currentPrefsSignature) {
+                    return; // Unchanged data: skip redundant Firestore write & Apps Script call
+                }
+
                 await this.appService.saveUserPreferences(freshPrefs);
+                this._lastSyncedPrefsSignature = currentPrefsSignature;
 
                 if (AppState.user) {
                     await this.dataService.syncUserSettings(AppState.user.uid);
@@ -795,7 +814,7 @@ export class AppController {
             } finally {
                 this._syncTimeout = null;
             }
-        }, 250); // 250ms debounce
+        }, 3500); // 3.5s debounce (lengthened to protect free quota)
     }
 
     _handleQuickNav(detail) {
@@ -924,7 +943,7 @@ export class AppController {
         const isTrading = MarketSchedule.isASXTrading();
         const asxSession = MarketSchedule.getASXStatus().session;
         const minInterval = isTrading 
-            ? 5 * 60 * 1000 // 5m during active trading
+            ? 4 * 60 * 1000 // 4m during active trading (aligned with 4m poll interval)
             : (asxSession === ASX_SESSION.PRE_OPEN ? 5 * 60 * 1000 : 15 * 60 * 1000); // 5m pre-open, 15m closed
 
         if (!force && AppState.lastGlobalFetch && (now - AppState.lastGlobalFetch < minInterval)) {
@@ -984,11 +1003,17 @@ export class AppController {
                     AppState.lastGlobalFetch = Date.now();
                     AppState.health.consecutiveFailures = 0;
                     AppState.health.status = 'healthy';
+                    AppState.health.sessionStartTime = Date.now();
                     document.body.classList.remove('is-stale');
                     if (this._retryTimer) {
                         clearTimeout(this._retryTimer);
                         this._retryTimer = null;
                     }
+
+                    // Release in-flight fetch lock immediately before notifying indicator and state listeners
+                    AppState._isFetching = false;
+                    this._activeFetchPromise = null;
+
                     if (this.headerLayout) {
                         this.headerLayout.updateConnectionStatus(true, 'healthy');
                     }
@@ -1082,6 +1107,7 @@ export class AppController {
             this._userDataLoaded = false;
             this._cloudPrefsLoaded = false;
             this._localPrefsTimestamp = 0; // Reset local prefs timestamp on logout
+            this._lastSyncedPrefsSignature = null;
         }
     }
 
@@ -1654,7 +1680,7 @@ export class AppController {
         let intervalMs = 15 * 60 * 1000; // Default closed: 15 mins
 
         if (status.session === ASX_SESSION.OPEN || status.session === ASX_SESSION.AUCTION) {
-            intervalMs = 5 * 60 * 1000; // 5 mins active trading
+            intervalMs = 4 * 60 * 1000; // 4 mins active trading (aligned with staleness threshold)
         } else if (status.session === ASX_SESSION.PRE_OPEN) {
             intervalMs = 5 * 60 * 1000; // 5 mins pre-open
         }
@@ -1711,7 +1737,7 @@ export class AppController {
         const health = AppState.health;
         let newStatus = 'healthy';
 
-        // 1. ELAPSED QUOTE FRESHNESS (Market Hours: 5-minute strict cap)
+        // 1. ELAPSED QUOTE FRESHNESS (Market Hours: 5-minute strict cap, protected by 4m adaptive poll)
         const isTrading = MarketSchedule.isASXTrading();
         const quoteAge = now - (AppState.lastGlobalFetch || 0);
         const FIVE_MINUTES = 5 * 60 * 1000;
@@ -1719,9 +1745,9 @@ export class AppController {
             newStatus = 'stale';
         }
 
-        // 2. AGE CHECK (12 Hours)
-        const TWELVE_HOURS = 12 * 60 * 60 * 1000;
-        if (now - health.sessionStartTime > TWELVE_HOURS) {
+        // 2. AGE CHECK: Evaluated strictly against lastGlobalFetch (eliminates 12-hour sessionStartTime trap)
+        const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
+        if (AppState.lastGlobalFetch > 0 && (now - AppState.lastGlobalFetch > TWENTY_FOUR_HOURS)) {
             newStatus = 'stale';
         }
 
@@ -1747,10 +1773,15 @@ export class AppController {
         } else if (newStatus === 'stale') {
             document.body.classList.add('is-stale');
 
-            // Auto-recovery retry loop: if app remains stale, retry background fetch every 60s
-            const timeSinceLastAttempt = Date.now() - (this._lastFetchAttemptTime || 0);
-            if (timeSinceLastAttempt > 60000 && !AppState._isFetching && AppState.user) {
-                this._refreshAllPrices(AppState.data.shares || [], true, true).catch(e => console.warn('Background retry failed:', e));
+            // Auto-recovery retry loop with exponential backoff:
+            // ONLY fires when consecutiveFailures > 0 (prevents runaway retries on idle/session age)
+            const failures = health.consecutiveFailures || 0;
+            if (failures > 0 && !AppState._isFetching && AppState.user) {
+                const backoffDelay = Math.min(60000 * Math.pow(2, Math.max(0, failures - 3)), 5 * 60 * 1000);
+                const timeSinceLastAttempt = Date.now() - (this._lastFetchAttemptTime || 0);
+                if (timeSinceLastAttempt >= backoffDelay) {
+                    this._refreshAllPrices(AppState.data.shares || [], true, true).catch(e => console.warn('Background retry failed:', e));
+                }
             }
         } else {
             // If healthy and verified, ensure screen is at 100% full brightness

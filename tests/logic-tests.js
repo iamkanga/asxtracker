@@ -1287,6 +1287,125 @@ describe('Suite 8: Active Target Directional Text Coloring & Notification Prefer
 });
 
 // ============================================================================
+// SUITE 9: Live Sync Timing, Staleness Healing, and Cloud Persistence Throttling
+// ============================================================================
+describe('Suite 9: Live Sync Timing, Staleness Healing, and Cloud Persistence Throttling', () => {
+    it('9.1 HeaderLayout updateConnectionStatus allows healthy status without in-flight loading lock', () => {
+        const headerCode = fs.readFileSync(path.join(__dirname, '../modules/ui/HeaderLayout.js'), 'utf8');
+
+        assertStrictEqual(
+            headerCode.includes("healthStatus !== 'healthy'"),
+            true,
+            "HeaderLayout must not lock out healthy status during in-flight checks"
+        );
+        assertStrictEqual(
+            headerCode.includes("StateAuditor.on('DATA_UPDATED'"),
+            true,
+            "HeaderLayout must listen directly to DATA_UPDATED for immediate sync status update"
+        );
+    });
+
+    it('9.2 AppController checkAppHealth evaluates freshness strictly against lastGlobalFetch and eliminates 12-hour session trap', () => {
+        const appControllerCode = fs.readFileSync(path.join(__dirname, '../modules/controllers/AppController.js'), 'utf8');
+
+        assertStrictEqual(
+            appControllerCode.includes('now - health.sessionStartTime > TWELVE_HOURS'),
+            false,
+            'AppController.checkAppHealth must NOT trap sessions in stale status based on sessionStartTime'
+        );
+        assertStrictEqual(
+            appControllerCode.includes('TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000'),
+            true,
+            'AppController.checkAppHealth must evaluate absolute staleness against lastGlobalFetch'
+        );
+    });
+
+    it('9.3 AppController recovery retry loop strictly gates on consecutiveFailures > 0 with exponential backoff', () => {
+        const appControllerCode = fs.readFileSync(path.join(__dirname, '../modules/controllers/AppController.js'), 'utf8');
+
+        assertStrictEqual(
+            appControllerCode.includes('const failures = health.consecutiveFailures || 0;'),
+            true,
+            'AppController recovery retry must check consecutiveFailures'
+        );
+        assertStrictEqual(
+            appControllerCode.includes('failures > 0 && !AppState._isFetching'),
+            true,
+            'AppController recovery retry must only trigger when failures > 0'
+        );
+        assertStrictEqual(
+            appControllerCode.includes('Math.min(60000 * Math.pow(2, Math.max(0, failures - 3)), 5 * 60 * 1000)'),
+            true,
+            'AppController recovery retry must apply exponential backoff (60s to 300s)'
+        );
+    });
+
+    it('9.4 AppController adaptive poll interval during active trading is aligned to 4 minutes (240000ms)', () => {
+        const appControllerCode = fs.readFileSync(path.join(__dirname, '../modules/controllers/AppController.js'), 'utf8');
+
+        assertStrictEqual(
+            appControllerCode.includes('intervalMs = 4 * 60 * 1000; // 4 mins active trading'),
+            true,
+            'AppController._scheduleNextPoll must use 4 minutes during active trading'
+        );
+        assertStrictEqual(
+            appControllerCode.includes('? 4 * 60 * 1000 // 4m during active trading'),
+            true,
+            'AppController._refreshAllPrices minInterval must use 4 minutes during active trading'
+        );
+    });
+
+    it('9.5 AppController _syncPreferencesToCloud debounces at 3.5s and skips unchanged payloads', () => {
+        const appControllerCode = fs.readFileSync(path.join(__dirname, '../modules/controllers/AppController.js'), 'utf8');
+
+        assertStrictEqual(
+            appControllerCode.includes('}, 3500); // 3.5s debounce'),
+            true,
+            'AppController._syncPreferencesToCloud must debounce at 3.5 seconds'
+        );
+        assertStrictEqual(
+            appControllerCode.includes('this._lastSyncedPrefsSignature === currentPrefsSignature'),
+            true,
+            'AppController._syncPreferencesToCloud must compare signature and skip unchanged data'
+        );
+    });
+
+    it('9.6 DataService syncUserSettings implements 15s throttle guard against rapid invocations', () => {
+        const dataServiceCode = fs.readFileSync(path.join(__dirname, '../modules/data/DataService.js'), 'utf8');
+
+        assertStrictEqual(
+            dataServiceCode.includes('this._lastSyncUserSettingsTime = 0;'),
+            true,
+            'DataService must track _lastSyncUserSettingsTime in constructor'
+        );
+        assertStrictEqual(
+            dataServiceCode.includes('now - this._lastSyncUserSettingsTime < 15000'),
+            true,
+            'DataService.syncUserSettings must throttle calls within 15 seconds'
+        );
+    });
+
+    it('9.7 AppController immediately clears _isFetching before updating connection status on price land', () => {
+        const appControllerCode = fs.readFileSync(path.join(__dirname, '../modules/controllers/AppController.js'), 'utf8');
+
+        const refreshIndex = appControllerCode.indexOf('async _refreshAllPrices(');
+        assert(refreshIndex !== -1, 'Must define async _refreshAllPrices');
+
+        const successIndex = appControllerCode.indexOf("AppState.health.status = 'healthy';", refreshIndex);
+        const clearFetchIndex = appControllerCode.indexOf('AppState._isFetching = false;', successIndex);
+        const headerUpdateIndex = appControllerCode.indexOf("this.headerLayout.updateConnectionStatus(true, 'healthy');", successIndex);
+        const emitIndex = appControllerCode.indexOf("StateAuditor.emit('PRICES_UPDATED',", successIndex);
+
+        assert(successIndex !== -1, 'Must set healthy status on success');
+        assert(clearFetchIndex !== -1, 'Must clear _isFetching on success');
+        assert(headerUpdateIndex !== -1, 'Must update header on success');
+        assert(emitIndex !== -1, 'Must emit PRICES_UPDATED on success');
+        assert(clearFetchIndex < headerUpdateIndex, '_isFetching must be cleared BEFORE updating connection status');
+        assert(headerUpdateIndex < emitIndex, 'Header must be updated to healthy before emitting PRICES_UPDATED');
+    });
+});
+
+// ============================================================================
 // SUMMARY REPORT
 // ============================================================================
 console.log('\n==================================================');

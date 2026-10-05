@@ -48,6 +48,7 @@ export class DataService {
         this._isProcessingHistoryQueue = false;
         this._historyInflight = new Map(); // cacheKey -> Promise (de-dupes identical in-flight requests)
         this._liveFetchCount = 0; // In-flight live price requests (foreground traffic signal)
+        this._lastSyncUserSettingsTime = 0; // Throttling guard for syncUserSettings
 
         // Sparkline pipeline: cache-first reads (UI) + quiet background refresh (network)
         this.sparklineCache = new SparklineCache();
@@ -173,10 +174,16 @@ export class DataService {
     /**
      * Triggers the Apps Script to synchronize user profile settings to central global settings.
      * Uses JSONP style fallback (callback param) as the Apps Script handles it via doGet.
+     * Throttled with a 15-second minimum gap to prevent redundant network invocations.
      * @param {string} userId - The Firebase UID of the current user.
      */
     async syncUserSettings(userId) {
         if (!userId) return;
+        const now = Date.now();
+        if (this._lastSyncUserSettingsTime && (now - this._lastSyncUserSettingsTime < 15000)) {
+            return;
+        }
+        this._lastSyncUserSettingsTime = now;
         try {
             const url = new URL(API_ENDPOINT);
             url.searchParams.append('userId', userId);
