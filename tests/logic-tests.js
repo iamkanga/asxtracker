@@ -1416,6 +1416,16 @@ describe('Suite 9: Live Sync Timing, Staleness Healing, and Cloud Persistence Th
         assert(dataServiceCode.includes(".replace(/\\/+$/, '')"), 'DataService must sanitize trailing slashes');
         assert(dataServiceCode.includes("cache: 'no-store'"), 'DataService must bypass HTTP caches for live price polling');
     });
+
+    it('9.9 DividendService implements in-memory session cache and in-flight deduplication', () => {
+        const divServiceCode = fs.readFileSync(path.join(__dirname, '../modules/data/DividendService.js'), 'utf8');
+
+        assert(divServiceCode.includes('static _sessionCache = new Map();'), 'DividendService must maintain _sessionCache');
+        assert(divServiceCode.includes('static _inflight = new Map();'), 'DividendService must maintain _inflight promise map');
+        assert(divServiceCode.includes('DividendService._sessionCache.has(code)'), 'getHistory must check _sessionCache first');
+        assert(divServiceCode.includes('DividendService._inflight.has(code)'), 'getHistory must check _inflight for concurrent calls');
+        assert(!divServiceCode.includes('console.log(`[DividendService] TTM Inclusion'), 'TTM calculation must not flood logs with inclusions');
+    });
 });
 
 // ============================================================================

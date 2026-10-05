@@ -52,10 +52,24 @@ const CACHE_DURATION_MS = 4 * 60 * 60 * 1000; // 4 hours client-side cache
 // ============================================================================
 
 export class DividendService {
+    /** In-memory session cache: Map<code, {history: Array, lastSync: string|null, status: string}> */
+    static _sessionCache = new Map();
+
+    /** In-flight Promise deduplication: Map<code, Promise> */
+    static _inflight = new Map();
+
+    /**
+     * Clears in-memory session cache (useful for testing or forced refresh).
+     */
+    static clearSessionCache() {
+        if (DividendService._sessionCache) DividendService._sessionCache.clear();
+        if (DividendService._inflight) DividendService._inflight.clear();
+    }
 
     /**
      * Fetches dividend history for a ticker from Firestore (read-only).
-     * Uses localStorage as a short-lived client cache to avoid redundant reads.
+     * Uses an in-memory session cache and localStorage as a short-lived client cache to avoid redundant reads.
+     * De-duplicates concurrent in-flight requests for the same ticker.
      * 
      * @param {string} ticker - ASX code (e.g. "BHP")
      * @returns {Promise<{history: Array, lastSync: string|null, status: string}>}
@@ -65,13 +79,26 @@ export class DividendService {
 
         const code = ticker.toUpperCase();
 
-        // 1. Check localStorage cache
+        // 1. Check in-memory session cache (Fastest: 0 latency, 0 IO, 0 JSON parsing, 0 Firestore reads)
+        if (DividendService._sessionCache && DividendService._sessionCache.has(code)) {
+            return DividendService._sessionCache.get(code);
+        }
+
+        // 2. Check in-flight promise de-duplication (Prevents duplicate concurrent Firestore reads)
+        if (DividendService._inflight && DividendService._inflight.has(code)) {
+            return DividendService._inflight.get(code);
+        }
+
+        // 3. Check localStorage cache
         try {
             const cacheKey = `${CACHE_PREFIX}${code}`;
             const cached = localStorage.getItem(cacheKey);
             if (cached) {
                 const parsed = JSON.parse(cached);
                 if (Date.now() - parsed.timestamp < CACHE_DURATION_MS) {
+                    if (DividendService._sessionCache) {
+                        DividendService._sessionCache.set(code, parsed.data);
+                    }
                     return parsed.data;
                 }
             }
@@ -79,45 +106,61 @@ export class DividendService {
             // Cache miss or corrupt — continue to Firestore
         }
 
-        // 2. Firestore read
-        try {
-            if (!db) return { history: [], lastSync: null, status: 'NO_DB' };
-
-            const docRef = doc(db, `artifacts/${APP_ID}/metadata_dividends/${code}`);
-            console.log(`[DividendService] Reading Firestore for: ${code}...`);
-            const snap = await getDoc(docRef);
-
-            if (!snap.exists()) {
-                console.warn(`[DividendService] No document found for: ${code}`);
-                return { history: [], lastSync: null, status: 'PENDING' };
-            }
-
-            const data = snap.data();
-            console.log(`[DividendService] RAW DATA for ${code}:`, data);
-            const result = {
-                history: Array.isArray(data.history) ? data.history : [],
-                lastSync: data.lastSync || null,
-                status: 'OK'
-            };
-
-            console.log(`[DividendService] PROCESSED for ${code}:`, result);
-
-            // 3. Cache to localStorage
+        // 4. Firestore read with in-flight deduplication
+        const fetchPromise = (async () => {
             try {
-                localStorage.setItem(`${CACHE_PREFIX}${code}`, JSON.stringify({
-                    timestamp: Date.now(),
-                    data: result
-                }));
-            } catch (e) {
-                // Quota exceeded — non-critical
+                if (!db) return { history: [], lastSync: null, status: 'NO_DB' };
+
+                const docRef = doc(db, `artifacts/${APP_ID}/metadata_dividends/${code}`);
+                const snap = await getDoc(docRef);
+
+                if (!snap.exists()) {
+                    const pendingResult = { history: [], lastSync: null, status: 'PENDING' };
+                    if (DividendService._sessionCache) {
+                        DividendService._sessionCache.set(code, pendingResult);
+                    }
+                    return pendingResult;
+                }
+
+                const data = snap.data();
+                const result = {
+                    history: Array.isArray(data.history) ? data.history : [],
+                    lastSync: data.lastSync || null,
+                    status: 'OK'
+                };
+
+                // Save to in-memory session cache
+                if (DividendService._sessionCache) {
+                    DividendService._sessionCache.set(code, result);
+                }
+
+                // Cache to localStorage
+                try {
+                    localStorage.setItem(`${CACHE_PREFIX}${code}`, JSON.stringify({
+                        timestamp: Date.now(),
+                        data: result
+                    }));
+                } catch (e) {
+                    // Quota exceeded — non-critical
+                }
+
+                return result;
+
+            } catch (err) {
+                console.warn(`[DividendService] Read failed for ${code}:`, err);
+                return { history: [], lastSync: null, status: 'OFFLINE' };
+            } finally {
+                if (DividendService._inflight) {
+                    DividendService._inflight.delete(code);
+                }
             }
+        })();
 
-            return result;
-
-        } catch (err) {
-            console.warn(`[DividendService] Read failed for ${code}:`, err);
-            return { history: [], lastSync: null, status: 'OFFLINE' };
+        if (DividendService._inflight) {
+            DividendService._inflight.set(code, fetchPromise);
         }
+
+        return fetchPromise;
     }
 
     // ========================================================================
@@ -191,7 +234,6 @@ export class DividendService {
             // Include everything from the most recent payment back 1 year
             if (entry?.exDate > cutoffStr && entry?.exDate <= sorted[0].exDate) {
                 const amt = parseFloat(entry.amount) || 0;
-                console.log(`[DividendService] TTM Inclusion: ${entry.exDate} | $${amt}`);
                 return sum + amt;
             }
             return sum;
@@ -525,14 +567,18 @@ export class DividendService {
             };
         }
 
+        const ttmDividend = DividendService.getTTMDividends(history);
+        const currentYield = currentPrice > 0 ? (ttmDividend / currentPrice) * 100 : 0;
+        const yieldOnCost = avgCostPrice > 0 ? (ttmDividend / avgCostPrice) * 100 : 0;
+
         return {
             status,
             isStale: DividendService.isStale(lastSync),
             lastSync,
-            ttmDividend: DividendService.getTTMDividends(history),
-            currentYield: DividendService.getCurrentYield(history, currentPrice),
+            ttmDividend,
+            currentYield,
             grossedUpYield: DividendService.getGrossedUpYield(history, currentPrice),
-            yieldOnCost: DividendService.getYieldOnCost(history, avgCostPrice),
+            yieldOnCost,
             cagr3Y: DividendService.getCAGR(history, 3),
             cagr5Y: DividendService.getCAGR(history, 5),
             consecutiveYears: DividendService.getConsecutiveYears(history),
