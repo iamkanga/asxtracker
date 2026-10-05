@@ -353,7 +353,7 @@ export class ChartComponent {
                         axisLabelVisible: true,
                         title: '',
                         axisLabelColor: '#06FF4F',
-                        axisLabelTextColor: '#ffffff',
+                        axisLabelTextColor: '#000000',
                     });
                 } else {
                     this.scrubPriceLine.applyOptions({
@@ -686,7 +686,7 @@ export class ChartComponent {
                 axisLabelVisible: true,
                 title: 'HIGH',
                 axisLabelColor: '#06FF4F',
-                axisLabelTextColor: '#ffffff',
+                axisLabelTextColor: '#000000',
             });
         }
 

@@ -481,7 +481,7 @@ export class PortfolioChartUI {
             axisLabelVisible: true,
             title: '',
             axisLabelColor: '#06FF4F', // Neon Green Background
-            axisLabelTextColor: '#ffffff', // White Text for maximum clarity
+            axisLabelTextColor: '#000000', // Crisp Black Text on solid green badge for optimal high contrast
         });
         this.scrubPriceLine._parentSeries = this.series.total;
         this.scrubPriceLine.applyOptions({ visible: false });
@@ -541,7 +541,7 @@ export class PortfolioChartUI {
                             axisLabelVisible: true,
                             title: '',
                             axisLabelColor: trackColor,
-                            axisLabelTextColor: '#ffffff',
+                            axisLabelTextColor: trackColor === '#06FF4F' ? '#000000' : '#ffffff',
                         });
                         this.scrubPriceLine._parentSeries = seriesToTrack;
                         this.scrubPriceLine._lastColor = trackColor;
@@ -1093,7 +1093,7 @@ export class PortfolioChartUI {
                 axisLabelVisible: true,
                 title: `${label.toUpperCase()} H`,
                 axisLabelColor: '#06FF4F',
-                axisLabelTextColor: '#ffffff',
+                axisLabelTextColor: '#000000',
             });
             highLine._parentSeries = series;
             this.axisPriceLines.push(highLine);
