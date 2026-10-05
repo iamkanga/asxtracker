@@ -4,7 +4,7 @@ import { AppState } from '../state/AppState.js';
 import { navManager } from '../utils/NavigationManager.js';
 import { DataService, userStore } from '../data/DataService.js';
 import { resolveStockPrice } from '../data/DataProcessor.js';
-import { ChartDataSanitizer } from '../utils/ChartDataSanitizer.js';
+import { ChartDataSanitizer, ensureChartMilestoneFormatting } from '../utils/ChartDataSanitizer.js';
 import { ToastManager } from './ToastManager.js';
 
 /**
@@ -380,8 +380,10 @@ export class PortfolioChartUI {
         const container = document.getElementById('portfolio-chart-container');
         if (!container || typeof LightweightCharts === 'undefined') return;
 
+        ensureChartMilestoneFormatting();
+
         this.chart = LightweightCharts.createChart(container, {
-            layout: { background: { type: 'solid', color: 'transparent' }, textColor: '#d1d4dc' },
+            layout: { background: { type: 'solid', color: 'transparent' }, textColor: '#ffffff' },
             grid: { vertLines: { color: 'rgba(42, 46, 57, 0.05)' }, horzLines: { color: 'rgba(42, 46, 57, 0.05)' } },
             handleScroll: {
                 vertTouchDrag: false, // Allow page scroll on mobile
@@ -479,7 +481,7 @@ export class PortfolioChartUI {
             axisLabelVisible: true,
             title: '',
             axisLabelColor: '#06FF4F', // Neon Green Background
-            axisLabelTextColor: '#000', // Black Text for maximum clarity
+            axisLabelTextColor: '#ffffff', // White Text for maximum clarity
         });
         this.scrubPriceLine._parentSeries = this.series.total;
         this.scrubPriceLine.applyOptions({ visible: false });
@@ -539,7 +541,7 @@ export class PortfolioChartUI {
                             axisLabelVisible: true,
                             title: '',
                             axisLabelColor: trackColor,
-                            axisLabelTextColor: '#000',
+                            axisLabelTextColor: '#ffffff',
                         });
                         this.scrubPriceLine._parentSeries = seriesToTrack;
                         this.scrubPriceLine._lastColor = trackColor;
@@ -935,8 +937,8 @@ export class PortfolioChartUI {
                         <div style="position: absolute; left: calc(${progress}% - 1px); top: -2px; width: 2px; height: 7px; background: #fff; box-shadow: 0 0 4px ${color}; z-index: 2;"></div>
                     </div>
                     <div style="display:flex; justify-content: space-between; font-size: 0.6rem; font-weight: 800;">
-                        <span style="color: #FF3131;">L: $${Math.floor(low).toLocaleString('en-AU')}</span>
-                        <span style="color: #06FF4F;">H: $${Math.floor(high).toLocaleString('en-AU')}</span>
+                        <span style="color: #FF3131;">L: <span style="color: #ffffff;">$${Math.floor(low).toLocaleString('en-AU')}</span></span>
+                        <span style="color: #06FF4F;">H: <span style="color: #ffffff;">$${Math.floor(high).toLocaleString('en-AU')}</span></span>
                     </div>
                 </div>
             `;
@@ -1091,7 +1093,7 @@ export class PortfolioChartUI {
                 axisLabelVisible: true,
                 title: `${label.toUpperCase()} H`,
                 axisLabelColor: '#06FF4F',
-                axisLabelTextColor: '#000',
+                axisLabelTextColor: '#ffffff',
             });
             highLine._parentSeries = series;
             this.axisPriceLines.push(highLine);
@@ -1104,7 +1106,7 @@ export class PortfolioChartUI {
                 axisLabelVisible: true,
                 title: `${label.toUpperCase()} L`,
                 axisLabelColor: '#FF3131',
-                axisLabelTextColor: '#000',
+                axisLabelTextColor: '#ffffff',
             });
             lowLine._parentSeries = series;
             this.axisPriceLines.push(lowLine);

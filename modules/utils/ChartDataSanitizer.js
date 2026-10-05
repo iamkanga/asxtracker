@@ -7,6 +7,44 @@
 import { MarketSchedule } from './MarketSchedule.js';
 import { resolveStockPrice } from '../data/DataProcessor.js';
 
+/**
+ * Ensures on-chart milestone marker callouts (e.g., Shares High: 17 Aug, Super High: 18 Aug, Super Low: 28 July)
+ * render the label and arrow in the sentiment color (green for High, red for Low),
+ * but render the date portion in brightest primary white (#ffffff) for optimal mobile readability.
+ */
+export function ensureChartMilestoneFormatting() {
+    if (typeof window === 'undefined' || typeof CanvasRenderingContext2D === 'undefined') return;
+    if (CanvasRenderingContext2D.prototype._milestoneFormattingPatched) return;
+    CanvasRenderingContext2D.prototype._milestoneFormattingPatched = true;
+
+    const originalFillText = CanvasRenderingContext2D.prototype.fillText;
+    CanvasRenderingContext2D.prototype.fillText = function(text, x, y, maxWidth) {
+        if (typeof text === 'string' && /(High|Low):\s+\d+/.test(text)) {
+            const colonIdx = text.indexOf(':');
+            if (colonIdx !== -1) {
+                const label = text.slice(0, colonIdx + 1);
+                const datePortion = text.slice(colonIdx + 1);
+                const originalFill = this.fillStyle;
+
+                // 1. Draw label in original sentiment color (Green or Red)
+                originalFillText.call(this, label, x, y);
+
+                // 2. Measure label to position date portion
+                const labelWidth = this.measureText(label).width;
+
+                // 3. Draw date portion in brightest primary white (#ffffff)
+                this.fillStyle = '#ffffff';
+                originalFillText.call(this, datePortion, x + labelWidth, y);
+
+                // 4. Restore original fillStyle for subsequent drawings (arrow, etc.)
+                this.fillStyle = originalFill;
+                return;
+            }
+        }
+        return originalFillText.apply(this, arguments);
+    };
+}
+
 export class ChartDataSanitizer {
     /**
      * Sanitizes an array of historical snapshot objects in-place or returning a cleaned copy.

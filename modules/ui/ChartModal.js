@@ -2,6 +2,7 @@ import { formatCurrency } from '../utils/formatters.js';
 import { UI_ICONS, CSS_CLASSES, IDS, KANGAROO_ICON_SRC } from '../utils/AppConstants.js';
 import { AppState } from '../state/AppState.js';
 import { navManager } from '../utils/NavigationManager.js';
+import { ensureChartMilestoneFormatting } from '../utils/ChartDataSanitizer.js';
 
 /**
  * Reusable Chart Component
@@ -215,8 +216,8 @@ export class ChartComponent {
                     </div>
                     <div class="chart-period-overlay" id="chartPeriodStats_${this.code}" style="display: flex; flex-direction: column; gap: 6px;">
                         <div class="chart-range-row" style="display: flex; gap: 6px;">
-                            <span class="chart-period-low" style="background: rgba(255, 49, 49, 0.15); color: #FF3131; padding: 2px 8px; border-radius: 4px; font-weight: 800; font-size: 0.7rem; border: 1px solid rgba(255, 49, 49, 0.2);">L: --</span>
-                            <span class="chart-period-high" style="background: rgba(6, 255, 79, 0.15); color: #06FF4F; padding: 2px 8px; border-radius: 4px; font-weight: 800; font-size: 0.7rem; border: 1px solid rgba(6, 255, 79, 0.2);">H: --</span>
+                            <span class="chart-period-low" style="background: rgba(255, 49, 49, 0.15); color: #ffffff; padding: 2px 8px; border-radius: 4px; font-weight: 800; font-size: 0.7rem; border: 1px solid rgba(255, 49, 49, 0.2);">L: --</span>
+                            <span class="chart-period-high" style="background: rgba(6, 255, 79, 0.15); color: #ffffff; padding: 2px 8px; border-radius: 4px; font-weight: 800; font-size: 0.7rem; border: 1px solid rgba(6, 255, 79, 0.2);">H: --</span>
                         </div>
                         <span class="chart-period-change" style="color:#a49393; font-weight:900; font-size: 0.9rem; margin-left: 2px;">--</span>
                     </div>
@@ -273,10 +274,12 @@ export class ChartComponent {
             return;
         }
 
+        ensureChartMilestoneFormatting();
+
         this.chart = LightweightCharts.createChart(div, {
             layout: {
                 background: { type: 'solid', color: '#111' },
-                textColor: '#DDD',
+                textColor: '#ffffff',
             },
             grid: { vertLines: { color: '#333' }, horzLines: { color: '#333' } },
             width: div.clientWidth,
@@ -350,7 +353,7 @@ export class ChartComponent {
                         axisLabelVisible: true,
                         title: '',
                         axisLabelColor: '#06FF4F',
-                        axisLabelTextColor: '#000',
+                        axisLabelTextColor: '#ffffff',
                     });
                 } else {
                     this.scrubPriceLine.applyOptions({
@@ -447,7 +450,7 @@ export class ChartComponent {
             axisLabelVisible: true,
             title: '',
             axisLabelColor: '#a49393', // Background (Coffee)
-            axisLabelTextColor: '#000', // Black Text for highlight effect
+            axisLabelTextColor: '#ffffff', // Brightest white text for high contrast on mobile
         });
     }
 
@@ -683,7 +686,7 @@ export class ChartComponent {
                 axisLabelVisible: true,
                 title: 'HIGH',
                 axisLabelColor: '#06FF4F',
-                axisLabelTextColor: '#000',
+                axisLabelTextColor: '#ffffff',
             });
         }
 
@@ -710,7 +713,7 @@ export class ChartComponent {
                 axisLabelVisible: true,
                 title: 'LOW',
                 axisLabelColor: '#FF3131',
-                axisLabelTextColor: '#000',
+                axisLabelTextColor: '#ffffff',
             });
         }
 
@@ -1068,10 +1071,12 @@ export class MiniChartPreview {
             return;
         }
 
+        ensureChartMilestoneFormatting();
+
         this.chart = LightweightCharts.createChart(div, {
             layout: {
                 background: { type: 'solid', color: 'transparent' },
-                textColor: '#AAA',
+                textColor: '#ffffff',
             },
             grid: {
                 vertLines: { visible: false },
