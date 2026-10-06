@@ -1933,10 +1933,19 @@ export class NotificationUI {
         const totalAlertsCount = targetCount + moversCount + totalGlobal;
 
         // Threshold extraction with fallbacks
-        const upPct = rules.up?.percentThreshold || 0;
-        const upDol = rules.up?.dollarThreshold || 0;
-        const downPct = rules.down?.percentThreshold || 0;
-        const downDol = rules.down?.dollarThreshold || 0;
+        const formatThreshold = (pct, dol, sign) => {
+            const hasP = pct !== null && pct !== undefined && Number(pct) > 0;
+            const hasD = dol !== null && dol !== undefined && Number(dol) > 0;
+            const pVal = hasP ? `${sign}${pct}%` : null;
+            const dVal = hasD ? `${sign}$${Number(dol).toFixed(2)}` : null;
+            if (hasP && hasD) return `${pVal} or ${dVal}`;
+            if (hasP) return pVal;
+            if (hasD) return dVal;
+            return 'OFF';
+        };
+
+        const gainerThresholdDisplay = formatThreshold(rules.up?.percentThreshold, rules.up?.dollarThreshold, '+');
+        const loserThresholdDisplay = formatThreshold(rules.down?.percentThreshold, rules.down?.dollarThreshold, '-');
         const moversMinPrice = rules.minPrice || 0;
         const hiloMinPrice = rules.hiloMinPrice || 0;
 
@@ -1992,7 +2001,7 @@ export class NotificationUI {
 
                 <div class="report-rule-item" style="border-bottom: none; padding-bottom: 0;">
                     <span class="report-rule-label">Gainer Threshold</span>
-                    <span class="report-rule-value status-count-green">+${upPct}% or +$${upDol.toFixed(2)}</span>
+                    <span class="report-rule-value status-count-green">${gainerThresholdDisplay}</span>
                 </div>
                 <div style="font-size: 0.65rem; color: var(--text-muted); opacity: 0.7; margin-bottom: 12px; font-style: italic;">
                     Minimum daily gain required to trigger an alert.
@@ -2000,7 +2009,7 @@ export class NotificationUI {
                 
                 <div class="report-rule-item" style="border-bottom: none; padding-bottom: 0;">
                     <span class="report-rule-label">Loser Threshold</span>
-                    <span class="report-rule-value status-count-red">-${downPct}% or -$${downDol.toFixed(2)}</span>
+                    <span class="report-rule-value status-count-red">${loserThresholdDisplay}</span>
                 </div>
                 <div style="font-size: 0.65rem; color: var(--text-muted); opacity: 0.7; margin-bottom: 12px; font-style: italic;">
                     Minimum daily drop required to trigger an alert.
@@ -2024,28 +2033,28 @@ export class NotificationUI {
 
 
 
-        <!--ALERT MECHANICS & TIMING-->
+        <!--ALERT DELIVERY & SCHEDULE-->
             <div class="report-section">
-                <div class="report-section-title">Alert Mechanics & Timing</div>
+                <div class="report-section-title">Alert Delivery & Schedule</div>
                 <div class="report-rule-item" style="border-bottom: none; padding-bottom: 0;">
-                    <span class="report-rule-label">52-Week Price Records</span>
+                    <span class="report-rule-label">52-Week High & Low Milestones</span>
                 </div>
                 <div style="font-size: 0.65rem; color: var(--text-muted); opacity: 0.7; margin-bottom: 12px; font-style: italic;">
-                    You are notified when a stock touches a 12-month price record or gets within 1% of it.
+                    Alerts triggered when an ASX stock trades within 1% of its 12-month peak or trough.
                 </div>
 
                 <div class="report-rule-item" style="border-bottom: none; padding-bottom: 0;">
-                    <span class="report-rule-label">App (The Live Feed)</span>
+                    <span class="report-rule-label">In-App Alerts (Kangaroo Bell)</span>
                 </div>
                 <div style="font-size: 0.65rem; color: var(--text-muted); opacity: 0.7; margin-bottom: 12px; font-style: italic;">
-                    Shows every price alert recorded today. If it happened, it stays on this list.
+                    Alerts appear live in this drawer and on the kangaroo bell icon during ASX market hours. They reset each trading morning at 7:00 AM.
                 </div>
 
                 <div class="report-rule-item" style="border-bottom: none; padding-bottom: 0;">
-                    <span class="report-rule-label">Email (The Final Verdict)</span>
+                    <span class="report-rule-label">Daily 4:15 PM Email Digest</span>
                 </div>
                 <div style="font-size: 0.65rem; color: var(--text-muted); opacity: 0.7; margin-bottom: 12px; font-style: italic;">
-                    A summary of where stocks stood at the 4:15 PM market close.
+                    A daily snapshot sent to your email shortly after market close with your portfolio movers and 52-week records.
                 </div>
                 
                 <!-- SUBTLE SYSTEM HEALTH FOOTER -->
