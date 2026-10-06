@@ -3,7 +3,7 @@
  * Centralized constants for the application.
  */
 
-export const APP_VERSION = '1.39';
+export const APP_VERSION = '1.3';
 export const API_ENDPOINT = 'https://script.google.com/macros/s/AKfycbwwwMEss5DIYblLNbjIbt_TAzWh54AwrfQlVwCrT_P0S9xkAoXhAUEUg7vSEPYUPOZp/exec';
 export const ALL_SHARES_ID = 'ALL';
 export const KANGAROO_ICON_SRC = 'favicon.svg';
