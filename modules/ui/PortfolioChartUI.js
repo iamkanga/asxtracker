@@ -256,7 +256,11 @@ export class PortfolioChartUI {
             });
         });
 
-        setTimeout(() => this.initChart(), 100);
+        setTimeout(() => {
+            this.initChart();
+            setTimeout(() => { if (this.chart) this.chart.timeScale().fitContent(); }, 200);
+            setTimeout(() => { if (this.chart) this.chart.timeScale().fitContent(); }, 400);
+        }, 100);
     }
 
     _bindEvents() {
@@ -286,12 +290,18 @@ export class PortfolioChartUI {
 
         // Bind Range Buttons
         this.modal.querySelectorAll('.range-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
+            btn.addEventListener('click', async () => {
                 this.range = btn.dataset.range;
                 localStorage.setItem('ASX_NEXT_portfolioChartRange', this.range);
                 this.modal.querySelectorAll('.range-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
-                this.loadData();
+                await this.loadData();
+                if (this.chart) {
+                    this.chart.timeScale().fitContent();
+                    requestAnimationFrame(() => {
+                        if (this.chart) this.chart.timeScale().fitContent();
+                    });
+                }
             });
         });
 
@@ -388,8 +398,14 @@ export class PortfolioChartUI {
             handleScroll: {
                 vertTouchDrag: false, // Allow page scroll on mobile
             },
-            rightPriceScale: { borderVisible: false, scaleMargins: { top: 0.1, bottom: 0.1 } },
-            timeScale: { borderVisible: false, rightOffset: 5 },
+            rightPriceScale: { borderVisible: false, scaleMargins: { top: 0.1, bottom: 0.18 } },
+            timeScale: {
+                borderVisible: false,
+                rightOffset: 0,
+                fixLeftEdge: true,
+                fixRightEdge: true,
+                minBarSpacing: 0.001,
+            },
             crosshair: {
                 vertLine: { 
                     color: 'rgba(164, 147, 147, 0.8)', 
@@ -421,9 +437,20 @@ export class PortfolioChartUI {
             const width = container.offsetWidth;
             const height = container.offsetHeight;
             if (width > 0 && height > 0) {
-                this.chart.applyOptions({ width, height });
+                const isPortrait = height > width || window.innerHeight > window.innerWidth;
+                const bottomMargin = isPortrait ? 0.20 : 0.16;
+                this.chart.applyOptions({
+                    width,
+                    height,
+                    rightPriceScale: {
+                        scaleMargins: { top: 0.1, bottom: bottomMargin }
+                    }
+                });
                 // Force a fitContent to ensure simulation isn't "half screen"
                 this.chart.timeScale().fitContent();
+                requestAnimationFrame(() => {
+                    if (this.chart) this.chart.timeScale().fitContent();
+                });
             }
         });
         this.resizeObserver.observe(container);
@@ -432,8 +459,19 @@ export class PortfolioChartUI {
         window.addEventListener('orientationchange', () => {
             setTimeout(() => {
                 if (this.chart && container) {
-                    this.chart.applyOptions({ width: container.offsetWidth, height: container.offsetHeight });
+                    const isPortrait = container.offsetHeight > container.offsetWidth || window.innerHeight > window.innerWidth;
+                    const bottomMargin = isPortrait ? 0.20 : 0.16;
+                    this.chart.applyOptions({
+                        width: container.offsetWidth,
+                        height: container.offsetHeight,
+                        rightPriceScale: {
+                            scaleMargins: { top: 0.1, bottom: bottomMargin }
+                        }
+                    });
                     this.chart.timeScale().fitContent();
+                    requestAnimationFrame(() => {
+                        if (this.chart) this.chart.timeScale().fitContent();
+                    });
                 }
             }, 200);
         });
@@ -480,7 +518,7 @@ export class PortfolioChartUI {
             lineStyle: 0, // Solid
             axisLabelVisible: true,
             title: '',
-            axisLabelColor: '#06FF4F', // Neon Green Background
+            axisLabelColor: '#00E676', // Vibrant Accent Green Background
             axisLabelTextColor: '#000000', // Crisp Black Text on solid green badge for optimal high contrast
         });
         this.scrubPriceLine._parentSeries = this.series.total;
@@ -541,7 +579,7 @@ export class PortfolioChartUI {
                             axisLabelVisible: true,
                             title: '',
                             axisLabelColor: trackColor,
-                            axisLabelTextColor: trackColor === '#06FF4F' ? '#000000' : '#ffffff',
+                            axisLabelTextColor: (trackColor === '#06FF4F' || trackColor === '#00E676' || trackColor === '#00D2FF') ? '#000000' : '#ffffff',
                         });
                         this.scrubPriceLine._parentSeries = seriesToTrack;
                         this.scrubPriceLine._lastColor = trackColor;
@@ -573,6 +611,12 @@ export class PortfolioChartUI {
         // Update Stats UI to match new visibility
         if (this.lastData) {
             this._updateStats(this.lastData.total, this.lastData.shares, this.lastData.super);
+        }
+        if (this.chart) {
+            this.chart.timeScale().fitContent();
+            requestAnimationFrame(() => {
+                if (this.chart) this.chart.timeScale().fitContent();
+            });
         }
     }
 
@@ -761,7 +805,12 @@ export class PortfolioChartUI {
             });
 
             // 7. Markers logic handled in _updateStats -> _updateMarkers
-            if (this.chart) this.chart.timeScale().fitContent();
+            if (this.chart) {
+                this.chart.timeScale().fitContent();
+                requestAnimationFrame(() => {
+                    if (this.chart) this.chart.timeScale().fitContent();
+                });
+            }
             
             // Store for UI updates (like toggles)
             this.lastData = { total: cleanTotalData, shares: cleanSharesData, super: cleanSuperData };
@@ -998,7 +1047,7 @@ export class PortfolioChartUI {
                 {
                     time: data[highIdx].time,
                     position: 'aboveBar',
-                    color: '#06FF4F',
+                    color: '#00E676', // Vibrant high-contrast accent green
                     shape: 'arrowDown',
                     text: `${label} High: ${formatDate(data[highIdx].time)}`,
                     size: 1.5
@@ -1006,7 +1055,7 @@ export class PortfolioChartUI {
                 {
                     time: data[lowIdx].time,
                     position: 'belowBar',
-                    color: '#FF3131',
+                    color: '#FF5252', // Coral red
                     shape: 'arrowUp',
                     text: `${label} Low: ${formatDate(data[lowIdx].time)}`,
                     size: 1.5
@@ -1087,12 +1136,12 @@ export class PortfolioChartUI {
             // 4. Axis Price Lines (Right Sidebar)
             const highLine = series.createPriceLine({
                 price: highVal,
-                color: '#06FF4F',
+                color: '#00E676',
                 lineWidth: 1,
                 lineStyle: 2,
                 axisLabelVisible: true,
                 title: `${label.toUpperCase()} H`,
-                axisLabelColor: '#06FF4F',
+                axisLabelColor: '#00E676',
                 axisLabelTextColor: '#000000',
             });
             highLine._parentSeries = series;
@@ -1100,12 +1149,12 @@ export class PortfolioChartUI {
 
             const lowLine = series.createPriceLine({
                 price: lowVal,
-                color: '#FF3131',
+                color: '#FF5252',
                 lineWidth: 1,
                 lineStyle: 2,
                 axisLabelVisible: true,
                 title: `${label.toUpperCase()} L`,
-                axisLabelColor: '#FF3131',
+                axisLabelColor: '#FF5252',
                 axisLabelTextColor: '#ffffff',
             });
             lowLine._parentSeries = series;

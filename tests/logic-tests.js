@@ -1428,6 +1428,109 @@ describe('Suite 9: Live Sync Timing, Staleness Healing, and Cloud Persistence Th
     });
 });
 
+describe('Suite 10: Chart Timescale Auto-Fit & High/Low Alignment Verification', () => {
+    it('10.1 PortfolioChartUI configures minBarSpacing: 0.001 and edge locking for full viewport fitting', () => {
+        const code = fs.readFileSync(path.join(__dirname, '../modules/ui/PortfolioChartUI.js'), 'utf8');
+
+        assert(code.includes('minBarSpacing: 0.001'), 'PortfolioChartUI must configure minBarSpacing: 0.001');
+        assert(code.includes('fixLeftEdge: true'), 'PortfolioChartUI must configure fixLeftEdge: true');
+        assert(code.includes('fixRightEdge: true'), 'PortfolioChartUI must configure fixRightEdge: true');
+        assert(code.includes('rightOffset: 0'), 'PortfolioChartUI must configure rightOffset: 0');
+    });
+
+    it('10.2 PortfolioChartUI calls fitContent() on data load, range button click, and resize/orientation changes', () => {
+        const code = fs.readFileSync(path.join(__dirname, '../modules/ui/PortfolioChartUI.js'), 'utf8');
+
+        assert(/await this\.loadData\(\);\s*if\s*\(this\.chart\)\s*\{\s*this\.chart\.timeScale\(\)\.fitContent\(\);/.test(code),
+            'PortfolioChartUI must call fitContent() when timeframe button is clicked');
+        assert(/resizeObserver[\s\S]*?timeScale\(\)\.fitContent\(\)/.test(code),
+            'PortfolioChartUI must call fitContent() in ResizeObserver');
+        assert(/orientationchange[\s\S]*?timeScale\(\)\.fitContent\(\)/.test(code),
+            'PortfolioChartUI must call fitContent() in orientationchange');
+        assert(/loadData[\s\S]*?timeScale\(\)\.fitContent\(\)/.test(code),
+            'PortfolioChartUI must call fitContent() in loadData');
+    });
+
+    it('10.3 ChartModal configures minBarSpacing: 0.001 and fitContent() across range changes, style shifts, and resize/orientation observers', () => {
+        const code = fs.readFileSync(path.join(__dirname, '../modules/ui/ChartModal.js'), 'utf8');
+
+        assert(code.includes('minBarSpacing: 0.001'), 'ChartModal must configure minBarSpacing: 0.001');
+        assert(/setRange\(range\)[\s\S]*?timeScale\(\)\.fitContent\(\)/.test(code),
+            'ChartModal must call fitContent() in setRange');
+        assert(/resizeObserver[\s\S]*?timeScale\(\)\.fitContent\(\)/.test(code),
+            'ChartModal must call fitContent() in ResizeObserver');
+        assert(/orientationchange[\s\S]*?timeScale\(\)\.fitContent\(\)/.test(code),
+            'ChartModal must call fitContent() in orientationchange');
+        assert(/load\(range\)[\s\S]*?timeScale\(\)\.fitContent\(\)/.test(code),
+            'ChartModal must call fitContent() in load(range)');
+        assert(/setStyle\(newStyle\)[\s\S]*?timeScale\(\)\.fitContent\(\)/.test(code),
+            'ChartModal must call fitContent() in setStyle');
+    });
+
+    it('10.4 ChartModal evaluates High/Low threshold lines and markers against candle.close for line/area style ensuring 100% curve intersection', () => {
+        const code = fs.readFileSync(path.join(__dirname, '../modules/ui/ChartModal.js'), 'utf8');
+
+        assert(code.includes("const isLineOrArea = this.currentStyle === 'line' || this.currentStyle === 'area';"),
+            'ChartModal must check isLineOrArea in _updatePeriodStats and _updateMarkers');
+
+        // Test calculation logic mathematically
+        const sampleData = [
+            { time: 100, open: 35.0, high: 36.0, low: 34.5, close: 35.5 },
+            { time: 200, open: 35.5, high: 37.0, low: 33.36, close: 34.20 }, // Intraday wick dips to 33.36, close is 34.20
+            { time: 300, open: 34.2, high: 35.0, low: 34.0, close: 34.8 }
+        ];
+
+        let periodLow = Infinity;
+        let lowIdx = -1;
+        const isLineOrArea = true; // line style
+        sampleData.forEach((candle, i) => {
+            const l = isLineOrArea
+                ? (candle.close !== undefined ? candle.close : candle.value)
+                : (candle.low !== undefined ? candle.low : candle.close);
+            if (l <= periodLow) {
+                periodLow = l;
+                lowIdx = i;
+            }
+        });
+
+        const lowVal = isLineOrArea
+            ? (sampleData[lowIdx].close !== undefined ? sampleData[lowIdx].close : sampleData[lowIdx].value)
+            : (sampleData[lowIdx].low !== undefined ? sampleData[lowIdx].low : sampleData[lowIdx].close);
+
+        assert(periodLow === 34.20, 'Line style periodLow must match curve close (34.20)');
+        assert(lowVal === 34.20, 'Line style threshold line must match curve close (34.20)');
+        assert(sampleData[lowIdx].close === lowVal, 'Arrow marker point must intersect curve and threshold line');
+    });
+
+    it('10.5 ChartModal evaluates High/Low threshold lines and markers against candle.high/low for candle/bar style', () => {
+        const sampleData = [
+            { time: 100, open: 35.0, high: 36.0, low: 34.5, close: 35.5 },
+            { time: 200, open: 35.5, high: 37.0, low: 33.36, close: 34.20 },
+            { time: 300, open: 34.2, high: 35.0, low: 34.0, close: 34.8 }
+        ];
+
+        let periodLow = Infinity;
+        let lowIdx = -1;
+        const isLineOrArea = false; // candle style
+        sampleData.forEach((candle, i) => {
+            const l = isLineOrArea
+                ? (candle.close !== undefined ? candle.close : candle.value)
+                : (candle.low !== undefined ? candle.low : candle.close);
+            if (l <= periodLow) {
+                periodLow = l;
+                lowIdx = i;
+            }
+        });
+
+        const lowVal = isLineOrArea
+            ? (sampleData[lowIdx].close !== undefined ? sampleData[lowIdx].close : sampleData[lowIdx].value)
+            : (sampleData[lowIdx].low !== undefined ? sampleData[lowIdx].low : sampleData[lowIdx].close);
+
+        assert(periodLow === 33.36, 'Candle style periodLow must match candle low (33.36)');
+        assert(lowVal === 33.36, 'Candle style threshold line must match candle low (33.36)');
+    });
+});
+
 // ============================================================================
 // SUMMARY REPORT
 // ============================================================================

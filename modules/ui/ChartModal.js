@@ -247,7 +247,10 @@ export class ChartComponent {
         // 4. Bind Events
         // Range Buttons
         this.container.querySelectorAll('[data-range]').forEach(btn => {
-            btn.addEventListener('click', (e) => this.setRange(e.target.dataset.range));
+            btn.addEventListener('click', (e) => {
+                const range = e.target.closest('[data-range]')?.dataset.range || e.target.dataset.range;
+                if (range) this.setRange(range);
+            });
         });
 
         // Style Selector
@@ -294,12 +297,13 @@ export class ChartComponent {
                 rightOffset: 0,
                 fixLeftEdge: true,
                 fixRightEdge: true,
+                minBarSpacing: 0.001,
             },
             rightPriceScale: {
                 borderColor: '#333',
                 scaleMargins: {
                     top: 0.1,
-                    bottom: 0.1,
+                    bottom: 0.18, // 18% bottom cushion prevents clipping of LOW line and troughs
                 },
             },
             crosshair: {
@@ -327,9 +331,49 @@ export class ChartComponent {
         this.resizeObserver = new ResizeObserver(entries => {
             if (!entries[0] || !entries[0].contentRect) return;
             const { width, height } = entries[0].contentRect;
-            if (this.chart) this.chart.applyOptions({ width, height });
+            if (this.chart && width > 0 && height > 0) {
+                const isPortrait = height > width || window.innerHeight > window.innerWidth;
+                const bottomMargin = isPortrait ? 0.20 : 0.16;
+                this.chart.applyOptions({
+                    width,
+                    height,
+                    rightPriceScale: {
+                        scaleMargins: { top: 0.1, bottom: bottomMargin }
+                    }
+                });
+                this.chart.timeScale().fitContent();
+                requestAnimationFrame(() => {
+                    if (this.chart) this.chart.timeScale().fitContent();
+                });
+            }
         });
         this.resizeObserver.observe(div);
+
+        // Orientation change listener for mobile
+        this._orientationHandler = () => {
+            setTimeout(() => {
+                if (this.chart && div) {
+                    const width = div.clientWidth;
+                    const height = div.clientHeight;
+                    if (width > 0 && height > 0) {
+                        const isPortrait = height > width || window.innerHeight > window.innerWidth;
+                        const bottomMargin = isPortrait ? 0.20 : 0.16;
+                        this.chart.applyOptions({
+                            width,
+                            height,
+                            rightPriceScale: {
+                                scaleMargins: { top: 0.1, bottom: bottomMargin }
+                            }
+                        });
+                        this.chart.timeScale().fitContent();
+                        requestAnimationFrame(() => {
+                            if (this.chart) this.chart.timeScale().fitContent();
+                        });
+                    }
+                }
+            }, 200);
+        };
+        window.addEventListener('orientationchange', this._orientationHandler);
 
         // Dynamic "Scrub" Highlight Line
         this.chart.subscribeCrosshairMove(param => {
@@ -352,7 +396,7 @@ export class ChartComponent {
                         lineStyle: 0,
                         axisLabelVisible: true,
                         title: '',
-                        axisLabelColor: '#06FF4F',
+                        axisLabelColor: '#00E676',
                         axisLabelTextColor: '#000000',
                     });
                 } else {
@@ -474,9 +518,16 @@ export class ChartComponent {
 
             this.series.setData(dataToSet);
             this._updateLastPriceLine(dataToSet);
+            this._updatePeriodStats(this.cachedData);
             // Apply Dynamic Color for Area/Line
             if (newStyle === 'line' || newStyle === 'area') {
                 this._updateSeriesColor(this.cachedData);
+            }
+            if (this.chart) {
+                this.chart.timeScale().fitContent();
+                requestAnimationFrame(() => {
+                    if (this.chart) this.chart.timeScale().fitContent();
+                });
             }
         }
     }
@@ -516,7 +567,12 @@ export class ChartComponent {
                             this._updateSeriesColor(this.cachedData);
                         }
 
-                        if (this.chart) this.chart.timeScale().fitContent();
+                        if (this.chart) {
+                            this.chart.timeScale().fitContent();
+                            requestAnimationFrame(() => {
+                                if (this.chart) this.chart.timeScale().fitContent();
+                            });
+                        }
                     } catch (err) {
                         console.warn('Error updating chart data:', err);
                     }
@@ -531,9 +587,15 @@ export class ChartComponent {
         }
     }
 
-    setRange(range) {
-        // Just wrapper for load
-        this.load(range);
+    async setRange(range) {
+        // Just wrapper for load with timescale auto-fit
+        await this.load(range);
+        if (this.chart) {
+            this.chart.timeScale().fitContent();
+            requestAnimationFrame(() => {
+                if (this.chart) this.chart.timeScale().fitContent();
+            });
+        }
     }
 
     /**
@@ -601,9 +663,14 @@ export class ChartComponent {
         let highIdx = -1;
         let lowIdx = -1;
 
+        const isLineOrArea = this.currentStyle === 'line' || this.currentStyle === 'area';
         data.forEach((candle, i) => {
-            const h = candle.high !== undefined ? candle.high : candle.close;
-            const l = candle.low !== undefined ? candle.low : candle.close;
+            const h = isLineOrArea
+                ? (candle.close !== undefined ? candle.close : candle.value)
+                : (candle.high !== undefined ? candle.high : candle.close);
+            const l = isLineOrArea
+                ? (candle.close !== undefined ? candle.close : candle.value)
+                : (candle.low !== undefined ? candle.low : candle.close);
             if (h >= periodHigh) {
                 periodHigh = h;
                 highIdx = i;
@@ -663,15 +730,19 @@ export class ChartComponent {
             return d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
         };
 
+        const isLineOrArea = this.currentStyle === 'line' || this.currentStyle === 'area';
+
         // 1. High Marker
         if (highIdx !== -1) {
-            const highVal = data[highIdx].high !== undefined ? data[highIdx].high : data[highIdx].close;
+            const highVal = isLineOrArea
+                ? (data[highIdx].close !== undefined ? data[highIdx].close : data[highIdx].value)
+                : (data[highIdx].high !== undefined ? data[highIdx].high : data[highIdx].close);
             
             // Marker on Graph
             markers.push({
                 time: data[highIdx].time,
                 position: 'aboveBar',
-                color: '#06FF4F', // Green
+                color: '#00E676', // Vibrant high-contrast accent green
                 shape: 'arrowDown',
                 text: `High: ${formatDate(data[highIdx].time)}`,
                 size: 1.5
@@ -680,25 +751,27 @@ export class ChartComponent {
             // Label on Axis
             this.highPriceLine = this.series.createPriceLine({
                 price: highVal,
-                color: '#06FF4F',
+                color: '#00E676',
                 lineWidth: 1,
                 lineStyle: 2,
                 axisLabelVisible: true,
                 title: 'HIGH',
-                axisLabelColor: '#06FF4F',
+                axisLabelColor: '#00E676',
                 axisLabelTextColor: '#000000',
             });
         }
 
         // 2. Low Marker
         if (lowIdx !== -1) {
-            const lowVal = data[lowIdx].low !== undefined ? data[lowIdx].low : data[lowIdx].close;
+            const lowVal = isLineOrArea
+                ? (data[lowIdx].close !== undefined ? data[lowIdx].close : data[lowIdx].value)
+                : (data[lowIdx].low !== undefined ? data[lowIdx].low : data[lowIdx].close);
 
             // Marker on Graph
             markers.push({
                 time: data[lowIdx].time,
                 position: 'belowBar',
-                color: '#FF3131', // Red
+                color: '#FF5252', // Vibrant coral red
                 shape: 'arrowUp',
                 text: `Low: ${formatDate(data[lowIdx].time)}`,
                 size: 1.5
@@ -707,12 +780,12 @@ export class ChartComponent {
             // Label on Axis
             this.lowPriceLine = this.series.createPriceLine({
                 price: lowVal,
-                color: '#FF3131',
+                color: '#FF5252',
                 lineWidth: 1,
                 lineStyle: 2,
                 axisLabelVisible: true,
                 title: 'LOW',
-                axisLabelColor: '#FF3131',
+                axisLabelColor: '#FF5252',
                 axisLabelTextColor: '#ffffff',
             });
         }
@@ -724,6 +797,10 @@ export class ChartComponent {
     }
 
     destroy() {
+        if (this._orientationHandler) {
+            window.removeEventListener('orientationchange', this._orientationHandler);
+            this._orientationHandler = null;
+        }
         if (this.resizeObserver) this.resizeObserver.disconnect();
         if (this.chart) {
             this.chart.remove();
@@ -836,8 +913,19 @@ export class ChartModal {
                     const height = div.clientHeight;
 
                     if (width > 0 && height > 0) {
-                        chartComp.chart.applyOptions({ width, height });
+                        const isPortrait = height > width || window.innerHeight > window.innerWidth;
+                        const bottomMargin = isPortrait ? 0.20 : 0.16;
+                        chartComp.chart.applyOptions({
+                            width,
+                            height,
+                            rightPriceScale: {
+                                scaleMargins: { top: 0.1, bottom: bottomMargin }
+                            }
+                        });
                         chartComp.chart.timeScale().fitContent();
+                        requestAnimationFrame(() => {
+                            if (chartComp.chart) chartComp.chart.timeScale().fitContent();
+                        });
                     }
                 }
             }

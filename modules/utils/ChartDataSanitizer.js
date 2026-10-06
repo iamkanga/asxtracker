@@ -19,25 +19,29 @@ export function ensureChartMilestoneFormatting() {
 
     const originalFillText = CanvasRenderingContext2D.prototype.fillText;
     CanvasRenderingContext2D.prototype.fillText = function(text, x, y, maxWidth) {
-        if (typeof text === 'string' && /(High|Low):\s+\d+/.test(text)) {
+        if (typeof text === 'string' && /(High|Low):\s+/i.test(text)) {
             const colonIdx = text.indexOf(':');
             if (colonIdx !== -1) {
                 const label = text.slice(0, colonIdx + 1);
                 const datePortion = text.slice(colonIdx + 1);
-                const originalFill = this.fillStyle;
 
-                // 1. Draw label in original sentiment color (Green or Red)
+                // 1. Determine vibrant prefix color: #00E676 for High, #FF5252 for Low
+                const isHigh = /High:/i.test(label);
+                const prefixColor = isHigh ? '#00E676' : '#FF5252';
+
+                // 2. Draw label with vibrant accent color
+                this.fillStyle = prefixColor;
                 originalFillText.call(this, label, x, y);
 
-                // 2. Measure label to position date portion
+                // 3. Measure label to position date portion
                 const labelWidth = this.measureText(label).width;
 
-                // 3. Draw date portion in brightest primary white (#ffffff)
-                this.fillStyle = '#ffffff';
+                // 4. Draw date portion in brightest primary white (#FFFFFF)
+                this.fillStyle = '#FFFFFF';
                 originalFillText.call(this, datePortion, x + labelWidth, y);
 
-                // 4. Restore original fillStyle for subsequent drawings (arrow, etc.)
-                this.fillStyle = originalFill;
+                // 5. Restore fillStyle with vibrant color so the arrow also renders vibrant
+                this.fillStyle = prefixColor;
                 return;
             }
         }
