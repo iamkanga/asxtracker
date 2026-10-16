@@ -304,8 +304,8 @@ export class ViewRenderer {
                     pctNode.className = `${CSS_CLASSES.CHANGE_PERCENT} ${CSS_CLASSES.TEXT_SM} ${changePercent >= 0 ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}`;
                 }
 
-                // Update Valuation & Net P&L for Simulated Cards
-                if (AppState.watchlist.id === SIMULATIONS_WATCHLIST_ID) {
+                // Update Valuation & Net P&L for Portfolio & Simulated Cards
+                if (isPortfolioView) {
                     const value = item.value || 0;
                     const capitalGain = item.capitalGain || 0;
 
@@ -652,11 +652,11 @@ export class ViewRenderer {
                     <div class="${CSS_CLASSES.CARD_BODY_SECTION} ${CSS_CLASSES.W_FULL} ${CSS_CLASSES.MT_TINY} ${CSS_CLASSES.PT_SMALL} ${CSS_CLASSES.BORDER_TOP_NONE}" style="position:relative; z-index:1;">
                         <div class="${CSS_CLASSES.DETAIL_ROW} ${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.JUSTIFY_BETWEEN} ${CSS_CLASSES.PY_TINY}">
                             <span class="${CSS_CLASSES.DETAIL_LABEL}">Current Value</span>
-                            <span class="${CSS_CLASSES.DETAIL_VALUE} ${CSS_CLASSES.FONT_BOLD}">${formatCurrency(value)}</span>
+                            <span class="${CSS_CLASSES.SIM_VALUATION_VAL} ${CSS_CLASSES.DETAIL_VALUE} ${CSS_CLASSES.FONT_BOLD}">${formatCurrency(value)}</span>
                         </div>
                         <div class="${CSS_CLASSES.DETAIL_ROW} ${CSS_CLASSES.FLEX_ROW} ${CSS_CLASSES.JUSTIFY_BETWEEN} ${CSS_CLASSES.PY_TINY}">
                             <span class="${CSS_CLASSES.DETAIL_LABEL}">Capital Gain</span>
-                            <span class="${CSS_CLASSES.DETAIL_VALUE} ${CSS_CLASSES.FONT_BOLD} ${capitalGain >= 0 ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}">
+                            <span class="${CSS_CLASSES.SIM_PNL_VAL} ${CSS_CLASSES.DETAIL_VALUE} ${CSS_CLASSES.FONT_BOLD} ${capitalGain >= 0 ? CSS_CLASSES.TEXT_POSITIVE : CSS_CLASSES.TEXT_NEGATIVE}">
                                 ${formatCurrency(Math.abs(capitalGain))}
                             </span>
                         </div>

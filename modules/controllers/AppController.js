@@ -938,13 +938,14 @@ export class AppController {
             return this._activeFetchPromise;
         }
 
-        // 2. FRESHNESS GUARD: Adaptive threshold based on market hours
+        // 2. FRESHNESS GUARD: Adaptive threshold with safety buffer below polling intervals
+        // Buffer absorbs network latency and timer drift so scheduled polls are never blocked.
         const now = Date.now();
         const isTrading = MarketSchedule.isASXTrading();
         const asxSession = MarketSchedule.getASXStatus().session;
         const minInterval = isTrading 
-            ? 4 * 60 * 1000 // 4m during active trading (aligned with 4m poll interval)
-            : (asxSession === ASX_SESSION.PRE_OPEN ? 5 * 60 * 1000 : 15 * 60 * 1000); // 5m pre-open, 15m closed
+            ? 3 * 60 * 1000 // 3m during active trading (1m buffer below 4m poll; well below 5m staleness)
+            : (asxSession === ASX_SESSION.PRE_OPEN ? 4 * 60 * 1000 : 12 * 60 * 1000); // 4m pre-open, 12m closed
 
         if (!force && AppState.lastGlobalFetch && (now - AppState.lastGlobalFetch < minInterval)) {
             return;
