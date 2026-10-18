@@ -38,15 +38,13 @@ export class SearchDiscoveryUI {
 
                 <div class="${CSS_CLASSES.MODAL_BODY}" style="padding: 1rem; overflow: hidden; display: flex; flex-direction: column;">
                     <!-- SEARCH INPUT AREA -->
-                    <div class="${CSS_CLASSES.DISCOVERY_SEARCH_AREA}" style="margin-bottom: 1rem;">
+                    <div class="${CSS_CLASSES.DISCOVERY_SEARCH_AREA} ${CSS_CLASSES.INPUT_WRAPPER}" style="margin-bottom: 1rem; position: relative;">
                         <input type="text" id="${IDS.DISCOVERY_SEARCH_INPUT}" class="${CSS_CLASSES.FORM_CONTROL}" placeholder="Search by Code or Name (e.g. CBA, BHP)..." autocomplete="off" style="font-size: 1.1rem; padding: 12px;">
+                        <ul id="${IDS.DISCOVERY_RESULT_LIST}" class="${CSS_CLASSES.SUGGESTION_LIST} ${CSS_CLASSES.HIDDEN}"></ul>
                     </div>
 
                     <!-- TWO PANE LAYOUT -->
                     <div class="${CSS_CLASSES.DISCOVERY_INTERFACE}" id="discoveryInterface" style="flex: 1; overflow-y: auto; position: relative;">
-                        <!-- RESULT LIST -->
-                        <ul id="${IDS.DISCOVERY_RESULT_LIST}" class="${CSS_CLASSES.DISCOVERY_LIST} ${CSS_CLASSES.HIDDEN}"></ul>
-
                         <!-- DETAIL VIEW -->
                         <div id="${IDS.DISCOVERY_DETAIL_VIEW}" class="${CSS_CLASSES.DISCOVERY_DETAIL} ${CSS_CLASSES.HIDDEN}"></div>
                         
@@ -155,6 +153,20 @@ export class SearchDiscoveryUI {
             }, 300);
         });
 
+        // BLUR: Hide list (delayed to allow clicks)
+        input.addEventListener('blur', () => {
+            setTimeout(() => {
+                if (list) list.classList.add(CSS_CLASSES.HIDDEN);
+            }, 200);
+        });
+
+        // FOCUS: Reshow list if valid
+        input.addEventListener('focus', () => {
+            if (input.value.trim().length >= 2 && list.children.length > 0) {
+                list.classList.remove(CSS_CLASSES.HIDDEN);
+            }
+        });
+
         // Search Results Handler (Internal to Modal logic)
         // We need to listen to the specific event triggered by AppController
         this._resultsHandler = (e) => {
@@ -187,6 +199,7 @@ export class SearchDiscoveryUI {
             // Normal Render if not auto-selected
             if (!autoSelected) {
                 this._renderResults(list, results, (selectedStock) => {
+                    input.value = selectedStock.code;
                     // Update dataset for Preview sync
                     modal.dataset.viewingCode = selectedStock.code;
 
@@ -201,12 +214,9 @@ export class SearchDiscoveryUI {
 
                 if (results.length > 0) {
                     list.classList.remove(CSS_CLASSES.HIDDEN);
-                    empty.classList.add(CSS_CLASSES.HIDDEN);
-                    detail.classList.add(CSS_CLASSES.HIDDEN); // Show list, hide detail
                 } else {
                     list.classList.add(CSS_CLASSES.HIDDEN);
-                    // Only show empty state if detail is ALSO hidden (don't clobber detail view on random typing if we decide to keep it?)
-                    // Current logic: new search result = list or empty.
+                    // Only show empty state if detail is ALSO hidden
                     if (detail.classList.contains(CSS_CLASSES.HIDDEN)) empty.classList.remove(CSS_CLASSES.HIDDEN);
                 }
             }
@@ -261,7 +271,7 @@ export class SearchDiscoveryUI {
         listContainer.innerHTML = '';
         results.forEach(item => {
             const li = document.createElement('li');
-            li.className = CSS_CLASSES.DISCOVERY_ITEM;
+            li.className = `${CSS_CLASSES.SUGGESTION_ITEM} ${CSS_CLASSES.DISCOVERY_ITEM}`;
             li.innerHTML = `
                 <div style="font-weight: bold;">${item.code}</div>
                 <div style="font-size: 0.9rem; color: var(--text-muted);">${item.name}</div>
