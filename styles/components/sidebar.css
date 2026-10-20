@@ -134,6 +134,7 @@
     width: 145px;
     height: auto;
     fill: var(--color-accent);
+    color: var(--color-accent);
     opacity: 0;
     pointer-events: none;
     z-index: 1;

@@ -381,6 +381,12 @@
 }
 
 /* Sequential sync appearance - all vanish together at 90-95% */
+.paw-0 {
+    bottom: 18%;
+    left: 0%;
+    animation: trek-0 8s infinite;
+}
+
 .paw-1 {
     bottom: 22%;
     left: 5%;
@@ -453,12 +459,30 @@
     animation: trek-12 8s infinite;
 }
 
-@keyframes trek-1 {
+@keyframes trek-0 {
     0% {
         opacity: 0;
     }
 
-    1%,
+    0.5%,
+    90% {
+        opacity: 1;
+        transform: rotate(60deg) translateX(5px);
+    }
+
+    95%,
+    100% {
+        opacity: 0;
+    }
+}
+
+@keyframes trek-1 {
+    0%,
+    4.5% {
+        opacity: 0;
+    }
+
+    5%,
     90% {
         opacity: 1;
         transform: rotate(65deg);
@@ -471,13 +495,12 @@
 }
 
 @keyframes trek-2 {
-
     0%,
-    5% {
+    9% {
         opacity: 0;
     }
 
-    6%,
+    9.5%,
     90% {
         opacity: 1;
         transform: rotate(70deg) translateX(5px);
@@ -490,13 +513,12 @@
 }
 
 @keyframes trek-3 {
-
     0%,
-    10% {
+    13.5% {
         opacity: 0;
     }
 
-    11%,
+    14%,
     90% {
         opacity: 1;
         transform: rotate(102deg) translateX(-5px);
@@ -509,13 +531,12 @@
 }
 
 @keyframes trek-4 {
-
     0%,
-    15% {
+    18% {
         opacity: 0;
     }
 
-    16%,
+    18.5%,
     90% {
         opacity: 1;
         transform: rotate(102deg) translateX(5px);
@@ -528,13 +549,12 @@
 }
 
 @keyframes trek-5 {
-
     0%,
-    20% {
+    22.5% {
         opacity: 0;
     }
 
-    21%,
+    23%,
     90% {
         opacity: 1;
         transform: rotate(72deg) translateX(-5px);
@@ -547,13 +567,12 @@
 }
 
 @keyframes trek-6 {
-
     0%,
-    25% {
+    27% {
         opacity: 0;
     }
 
-    26%,
+    27.5%,
     90% {
         opacity: 1;
         transform: rotate(57deg) translateX(5px);
@@ -566,13 +585,12 @@
 }
 
 @keyframes trek-7 {
-
     0%,
-    30% {
+    31.5% {
         opacity: 0;
     }
 
-    31%,
+    32%,
     90% {
         opacity: 1;
         transform: rotate(66deg) translateX(-5px);
@@ -585,13 +603,12 @@
 }
 
 @keyframes trek-8 {
-
     0%,
-    35% {
+    36% {
         opacity: 0;
     }
 
-    36%,
+    36.5%,
     90% {
         opacity: 1;
         transform: rotate(102deg) translateX(5px);
@@ -604,9 +621,8 @@
 }
 
 @keyframes trek-9 {
-
     0%,
-    40% {
+    40.5% {
         opacity: 0;
     }
 
@@ -623,13 +639,12 @@
 }
 
 @keyframes trek-10 {
-
     0%,
     45% {
         opacity: 0;
     }
 
-    46%,
+    45.5%,
     90% {
         opacity: 1;
         transform: rotate(67deg) translateX(5px);
@@ -642,13 +657,12 @@
 }
 
 @keyframes trek-11 {
-
     0%,
-    50% {
+    49.5% {
         opacity: 0;
     }
 
-    51%,
+    50%,
     90% {
         opacity: 1;
         transform: rotate(21deg) translateX(-5px);
@@ -661,13 +675,12 @@
 }
 
 @keyframes trek-12 {
-
     0%,
-    55% {
+    54% {
         opacity: 0;
     }
 
-    56%,
+    54.5%,
     90% {
         opacity: 1;
         transform: rotate(21deg) translateX(5px);
@@ -696,6 +709,10 @@
 .paw-print {
     width: 22px;
     height: 22px;
+}
+
+.paw-0 {
+    bottom: 18%;
 }
 
 .paw-2 {
