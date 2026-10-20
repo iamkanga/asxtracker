@@ -1405,6 +1405,7 @@ export const CSS_CLASSES = {
     MODAL_REORDER_CONTROLS: 'modal-reorder-controls',
     MODAL_REORDER_BTN: 'modal-reorder-btn',
     EXTRA_GRAPHIC: 'sidebar-extra-graphic',
+    SIDEBAR_HEADER_BRAND: 'sidebar-header-brand',
 
     // Splash Screen System
     SPLASH_LOGO: 'splash-logo',

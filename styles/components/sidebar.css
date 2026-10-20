@@ -34,18 +34,29 @@
 }
 
 .sidebar-header {
-    padding: 20px 20px 0 20px;
+    position: relative;
+    padding: 10px 16px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     border-bottom: none;
     margin-bottom: 0;
+    min-height: 64px;
+    box-sizing: border-box;
+}
+
+/* Group kangaroo icon and logo graphic together on the left */
+.sidebar-header-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
 /* Decorative Kangaroo Icon - mirrored to face right, sized at 2.5x the close button */
 .sidebar-kangaroo-icon {
-    width: 3.75rem;
-    height: 3.75rem;
+    width: 3rem;
+    height: 3rem;
+    max-height: 100%;
     fill: var(--color-accent, #a49393);
     color: var(--color-accent, #a49393);
     opacity: 1;
@@ -174,11 +185,14 @@
     background: none;
     border: none;
     color: var(--color-accent);
-    font-size: 1.5rem;
+    font-size: 1.65rem;
     cursor: pointer;
-    padding: 0 8px;
+    padding: 4px 6px;
     line-height: 1;
-    transform: translate(12px, 15px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform: none;
 }
 
 .sidebar-content {
@@ -295,12 +309,10 @@
 /* --- SIDEBAR SPACING FIX --- */
 /* Reduce excessively large gap at the top of the sidebar */
 .sidebar-header {
-    padding-bottom: 0px !important;
     margin-bottom: 0px !important;
-    height: 40px !important;
-    min-height: 0 !important;
     display: flex;
     align-items: center;
+    justify-content: space-between;
 }
 
 .sidebar-content {
