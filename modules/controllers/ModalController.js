@@ -242,73 +242,95 @@ export class ModalController {
 
                     const errors = [];
                     let successCount = 0;
+                    const updatedDocIds = new Set();
 
-                    // 1. ADD: New watchlists not in existing
-                    // 1. ADD: New watchlists not in existing
-                    const toAdd = newWatchlists.filter(w => !existingMemberships.has(w));
-
-                    // OPTIMISTIC INJECTION FIX:
                     // Determine if the share already exists in AppState (Global Lookup)
                     const lookupKey = String(formData.shareName).trim().toUpperCase();
-                    // FIX: Trust the ID if present (Edit Mode / Search Redirect), otherwise fallback to name check
-                    let shareExists = !!formData.id || AppState.data.shares.some(s => (s.shareName || '').toUpperCase() === lookupKey);
 
-                    for (const wid of toAdd) {
-                        // FIX: Use explicit PORTFOLIO_ID instead of null for visibility
-                        const persistenceId = (wid === PORTFOLIO_ID || wid === 'main') ? PORTFOLIO_ID : wid;
+                    // 1. Resolve Target Document ID once before loops (Preserve real ID)
+                    let targetDocId = formData.id;
+                    if (!targetDocId || targetDocId === 'OPTIMISTIC_LOCK' || String(targetDocId).startsWith('temp_')) {
+                        targetDocId = null;
+                        const found = AppState.data.shares.find(s => (s.shareName || '').toUpperCase() === lookupKey && s.id && !String(s.id).startsWith('temp_') && s.id !== 'OPTIMISTIC_LOCK');
+                        if (found) targetDocId = found.id;
+                    }
 
-                        // FLAT LOGIC: Resolve Target ID, then Link. If no ID, Create.
-                        const lookupKey = String(formData.shareName).trim().toUpperCase();
-
-                        // 1. Resolve Target Document ID
-                        // Check inputs + Global State
-                        let targetDocId = formData.id;
-
-                        if (!targetDocId) {
-                            const found = AppState.data.shares.find(s => (s.shareName || '').toUpperCase() === lookupKey);
-                            if (found && found.id) targetDocId = found.id;
-                        }
-
-                        if (targetDocId && targetDocId !== 'OPTIMISTIC_LOCK' && !targetDocId.startsWith('temp_')) {
-                            // PATH A: LINK EXISTING (Updated to include full formData)
-                            try {
-                                const dataToUpdate = { ...formData, watchlistId: persistenceId, watchlistIds: newWatchlists };
-                                delete dataToUpdate.watchlists;
-
-                                // Optimistic local update
-                                const shareToUpdate = AppState.data.shares.find(s => String(s.id) === String(targetDocId));
-                                if (shareToUpdate) {
-                                    Object.assign(shareToUpdate, dataToUpdate);
+                    if (!targetDocId) {
+                        for (const [, docIds] of existingMemberships) {
+                            if (docIds && docIds.size > 0) {
+                                for (const dId of docIds) {
+                                    if (dId && !String(dId).startsWith('temp_') && dId !== 'OPTIMISTIC_LOCK') {
+                                        targetDocId = dId;
+                                        break;
+                                    }
                                 }
+                            }
+                            if (targetDocId) break;
+                        }
+                    }
 
-                                await appService.updateShareRecord(targetDocId, dataToUpdate);
-                                successCount++;
-                            } catch (err) {
-                                console.error(`Failed to link ${wid}:`, err);
-                                errors.push(wid);
+                    // Resolve primary watchlist ID
+                    const resolvePersistenceId = (wid) => (wid === PORTFOLIO_ID || wid === 'main') ? PORTFOLIO_ID : wid;
+                    let primaryWatchlistId = PORTFOLIO_ID;
+                    if (formData.watchlistId && newWatchlists.includes(formData.watchlistId)) {
+                        primaryWatchlistId = resolvePersistenceId(formData.watchlistId);
+                    } else if (newWatchlists.includes(PORTFOLIO_ID)) {
+                        primaryWatchlistId = PORTFOLIO_ID;
+                    } else if (newWatchlists.length > 0) {
+                        primaryWatchlistId = resolvePersistenceId(newWatchlists[0]);
+                    }
+
+                    // Prepare consolidated update payload with all watchlists in a single payload
+                    const dataToUpdate = {
+                        ...formData,
+                        watchlistId: primaryWatchlistId,
+                        watchlistIds: newWatchlists
+                    };
+                    delete dataToUpdate.watchlists;
+
+                    // 1. ADD: New watchlists not in existing
+                    const toAdd = newWatchlists.filter(w => !existingMemberships.has(w));
+                    for (const wid of toAdd) {
+                        if (targetDocId && targetDocId !== 'OPTIMISTIC_LOCK' && !String(targetDocId).startsWith('temp_')) {
+                            // PATH A: LINK EXISTING (Updated once across all watchlists)
+                            if (!updatedDocIds.has(String(targetDocId))) {
+                                try {
+                                    // Optimistic local update
+                                    const shareToUpdate = AppState.data.shares.find(s => String(s.id) === String(targetDocId));
+                                    if (shareToUpdate) {
+                                        Object.assign(shareToUpdate, dataToUpdate);
+                                    }
+
+                                    await appService.updateShareRecord(targetDocId, dataToUpdate);
+                                    updatedDocIds.add(String(targetDocId));
+                                    successCount++;
+                                } catch (err) {
+                                    console.error('Failed to link ' + wid + ':', err);
+                                    errors.push(wid);
+                                }
                             }
                         } else {
                             // PATH B: CREATE NEW (Master Record)
                             try {
-
                                 const priceData = AppState.livePrices?.get(lookupKey);
-                                const entryPrice = priceData ? (parseFloat(priceData.live) || 0) : 0;
-                                const purchaseDate = new Date().toISOString();
+                                const entryPrice = priceData ? (parseFloat(priceData.live) || 0) : (parseFloat(formData.enteredPrice) || 0);
+                                const purchaseDate = formData.purchaseDate || new Date().toISOString();
 
                                 const dataToAdd = {
                                     ...formData,
                                     code: lookupKey,
                                     shareName: lookupKey,
-                                    watchlistId: persistenceId,
+                                    watchlistId: primaryWatchlistId,
                                     enteredPrice: entryPrice,
                                     purchaseDate: purchaseDate,
                                     entryDate: purchaseDate,
                                     watchlistIds: newWatchlists
                                 };
                                 delete dataToAdd.watchlists;
+                                delete dataToAdd.id;
 
                                 // STRICT OPTIMISM: Inject into State with temp ID IMMEDIATELY
-                                const tempId = `temp_${Date.now()}`;
+                                const tempId = 'temp_' + Date.now();
 
                                 AppState.data.shares.push({
                                     ...dataToAdd,
@@ -318,15 +340,17 @@ export class ModalController {
 
                                 const newId = await appService.addBaseShareRecord(dataToAdd);
 
-
                                 if (!newId) {
-                                    throw new Error(`Failed to create share record for ${wid} (ID was null)`);
+                                    throw new Error('Failed to create share record for ' + wid + ' (ID was null)');
                                 }
+
+                                // Preserve newly created document ID so subsequent iterations do not create duplicates
                                 targetDocId = newId;
+                                formData.id = newId;
+                                updatedDocIds.add(String(newId));
                                 successCount++;
 
                                 // Update TEMP ID with REAL ID
-                                // Fallback: If snapshot replaced the array, find by name
                                 let tempShare = AppState.data.shares.find(s => s.id === tempId);
                                 if (!tempShare) {
                                     tempShare = AppState.data.shares.find(s => (s.shareName || '').toUpperCase() === lookupKey && !s.id);
@@ -342,7 +366,7 @@ export class ModalController {
                                     if (this.updateCallback) await this.updateCallback(); // RE-RENDER: Important to update DOM with real ID
                                 }
                             } catch (err) {
-                                console.error(`Failed to create for ${wid}:`, err);
+                                console.error('Failed to create for ' + wid + ':', err);
                                 // Rollback temp share
                                 AppState.data.shares = AppState.data.shares.filter(s => !String(s.id).startsWith('temp_'));
                                 if (this.updateCallback) await this.updateCallback();
@@ -357,60 +381,58 @@ export class ModalController {
                         const docIds = existingMemberships.get(wid);
                         if (!docIds || docIds.size === 0) {
                             // GHOST RECOVERY IN UPDATE LOOP
-                            // The user "kept" this share in the watchlist, but it has no ID (Ghost).
-                            // We must Resurrect it (Create/Link).
-                            try {
-                                const lookupKey = String(formData.shareName).trim().toUpperCase();
-                                // Reuse the "Link/Create" logic from addStock
-                                const persistenceId = (wid === PORTFOLIO_ID || wid === "main") ? PORTFOLIO_ID : wid;
+                            // The user 'kept' this share in the watchlist, but it has no ID (Ghost).
+                            // Only resurrect if no document exists yet and none was created in this save operation.
+                            if (!targetDocId && updatedDocIds.size === 0) {
+                                try {
+                                    const entryPrice = formData.enteredPrice || 0;
+                                    const purchaseDate = formData.purchaseDate || new Date().toISOString();
 
-                                // We use price from formData if available
-                                const entryPrice = formData.enteredPrice || 0;
-                                const purchaseDate = formData.purchaseDate || new Date().toISOString();
-
-                                const dataToAdd = {
-                                    ...formData,
-                                    code: lookupKey,
-                                    shareName: lookupKey,
-                                    watchlistId: persistenceId,
-                                    enteredPrice: entryPrice,
-                                    purchaseDate: purchaseDate,
-                                    entryDate: purchaseDate,
-                                    watchlistIds: newWatchlists
-                                };
-                                delete dataToAdd.watchlists;
-
-                                const newId = await appService.addBaseShareRecord(dataToAdd);
-                                if (!newId) throw new Error(`Ghost Resurrection failed: ID returned null for ${formData.shareName}`);
-                                successCount++;
-
-                                // Update Injection
-                                const shareNowInState = AppState.data.shares.find(s => s.id === newId || (s.shareName || '').toUpperCase() === lookupKey);
-
-                                if (shareNowInState) {
-                                    if (!shareNowInState.id) shareNowInState.id = newId;
-                                    shareExists = true;
-                                } else {
-                                    AppState.data.shares.push({
+                                    const dataToAdd = {
+                                        ...formData,
+                                        code: lookupKey,
                                         shareName: lookupKey,
-                                        id: newId,
-                                        watchlistId: persistenceId,
-                                        watchlistIds: [persistenceId]
-                                    });
-                                    shareExists = true;
+                                        watchlistId: primaryWatchlistId,
+                                        enteredPrice: entryPrice,
+                                        purchaseDate: purchaseDate,
+                                        entryDate: purchaseDate,
+                                        watchlistIds: newWatchlists
+                                    };
+                                    delete dataToAdd.watchlists;
+                                    delete dataToAdd.id;
+
+                                    const newId = await appService.addBaseShareRecord(dataToAdd);
+                                    if (!newId) throw new Error('Ghost Resurrection failed: ID returned null for ' + formData.shareName);
+
+                                    targetDocId = newId;
+                                    formData.id = newId;
+                                    updatedDocIds.add(String(newId));
+                                    successCount++;
+
+                                    const shareNowInState = AppState.data.shares.find(s => s.id === newId || (s.shareName || '').toUpperCase() === lookupKey);
+                                    if (shareNowInState) {
+                                        if (!shareNowInState.id) shareNowInState.id = newId;
+                                    } else {
+                                        AppState.data.shares.push({
+                                            shareName: lookupKey,
+                                            id: newId,
+                                            watchlistId: primaryWatchlistId,
+                                            watchlistIds: newWatchlists
+                                        });
+                                    }
+                                } catch (err) {
+                                    console.error('Failed to resurrect ghost in ' + wid + ':', err);
+                                    errors.push(wid);
                                 }
-                            } catch (err) {
-                                console.error(`Failed to resurrect ghost in ${wid}:`, err);
-                                errors.push(wid);
                             }
                             continue;
                         }
 
-                        // FIX (Duplicates): Update ALL documents found for this code in this watchlist
+                        // Update ALL documents found for this code in this watchlist exactly once
                         for (const docId of docIds) {
-                            const persistenceId = (wid === PORTFOLIO_ID || wid === 'main') ? PORTFOLIO_ID : wid;
-                            const dataToUpdate = { ...formData, watchlistId: persistenceId, watchlistIds: newWatchlists };
-                            delete dataToUpdate.watchlists;
+                            if (!docId || updatedDocIds.has(String(docId))) {
+                                continue;
+                            }
 
                             try {
                                 // Optimistic local update
@@ -420,9 +442,10 @@ export class ModalController {
                                 }
 
                                 await appService.updateShareRecord(docId, dataToUpdate);
+                                updatedDocIds.add(String(docId));
                                 successCount++;
                             } catch (err) {
-                                console.error(`Failed to update doc ${docId} in ${wid}:`, err);
+                                console.error('Failed to update doc ' + docId + ' in ' + wid + ':', err);
                                 errors.push(wid);
                             }
                         }
@@ -430,6 +453,8 @@ export class ModalController {
 
                     // 3. REMOVE: Watchlists deselected
                     const toRemove = previousWatchlists.filter(w => !newWatchlists.includes(w));
+                    const deletedDocIds = new Set();
+
                     for (const wid of toRemove) {
                         const docIds = existingMemberships.get(wid);
                         // FIX: Use Original Name for removal if renamed
@@ -440,43 +465,45 @@ export class ModalController {
                             try {
                                 await appService.removeStock(code, wid);
                             } catch (err) {
-                                console.error(`Failed to remove link from ${wid}:`, err);
+                                console.error('Failed to remove link from ' + wid + ':', err);
                                 errors.push(wid);
                             }
                         } else {
-                            // CASE B: Removing the MASTER RECORD (Document)
-                            // Loop through all associated Doc IDs to clear potential duplicates
+                            // CASE B: Removing or migrating the share document
                             for (const docId of docIds) {
+                                if (!docId) continue;
+
                                 if (newWatchlists.length > 0) {
                                     // MIGRATION: The user kept the share in other watchlists.
-                                    const newMasterWl = newWatchlists[0];
-                                    const newPersistenceId = (newMasterWl === PORTFOLIO_ID || newMasterWl === 'main') ? PORTFOLIO_ID : newMasterWl;
+                                    // Only update if not already updated in this save operation.
+                                    if (!updatedDocIds.has(String(docId))) {
+                                        try {
+                                            // Optimistic local update
+                                            const shareToUpdate = AppState.data.shares.find(s => String(s.id) === String(docId));
+                                            if (shareToUpdate) {
+                                                Object.assign(shareToUpdate, dataToUpdate);
+                                            }
 
-                                    try {
-                                        const dataToUpdate = { ...formData, watchlistId: newPersistenceId, watchlistIds: newWatchlists };
-                                        delete dataToUpdate.watchlists;
-
-                                        // Optimistic local update
-                                        const shareToUpdate = AppState.data.shares.find(s => String(s.id) === String(docId));
-                                        if (shareToUpdate) {
-                                            Object.assign(shareToUpdate, dataToUpdate);
+                                            await appService.updateShareRecord(docId, dataToUpdate);
+                                            updatedDocIds.add(String(docId));
+                                        } catch (err) {
+                                            console.error('Failed to migrate share ' + docId + ':', err);
+                                            errors.push(wid);
                                         }
-
-                                        await appService.updateShareRecord(docId, dataToUpdate);
-                                    } catch (err) {
-                                        console.error(`Failed to migrate share ${docId}:`, err);
-                                        errors.push(wid);
                                     }
                                 } else {
                                     // DELETION: The user removed it from ALL watchlists.
-                                    try {
-                                        // Optimistic local update
-                                        AppState.data.shares = AppState.data.shares.filter(s => String(s.id) !== String(docId));
+                                    if (!deletedDocIds.has(String(docId))) {
+                                        try {
+                                            // Optimistic local update
+                                            AppState.data.shares = AppState.data.shares.filter(s => String(s.id) !== String(docId));
 
-                                        await appService.deleteShareRecord(null, docId);
-                                    } catch (err) {
-                                        console.error(`Failed to delete share ${docId}:`, err);
-                                        errors.push(wid);
+                                            await appService.deleteShareRecord(null, docId);
+                                            deletedDocIds.add(String(docId));
+                                        } catch (err) {
+                                            console.error('Failed to delete share ' + docId + ':', err);
+                                            errors.push(wid);
+                                        }
                                     }
                                 }
                             }
