@@ -832,6 +832,16 @@ export class ShareFormUI {
             // Detach keyboard handler before closing
             KeyboardModalHandler.detach();
 
+            // Detach global event listeners to prevent memory leaks and duplicate execution
+            if (modal._searchHandler) {
+                document.removeEventListener(EVENTS.UPDATE_SEARCH_RESULTS, modal._searchHandler);
+                modal._searchHandler = null;
+            }
+            if (modal._previewHandler) {
+                document.removeEventListener(EVENTS.UPDATE_MODAL_PREVIEW, modal._previewHandler);
+                modal._previewHandler = null;
+            }
+
             modal.classList.remove(CSS_CLASSES.SHOW);
             modal.style.pointerEvents = 'none';
 
@@ -1231,7 +1241,7 @@ export class ShareFormUI {
         const list = modal.querySelector(`#${IDS.SUGGESTION_LIST}`);
         const input = modal.querySelector(`#${IDS.SHARE_NAME}`);
 
-        document.addEventListener(EVENTS.UPDATE_SEARCH_RESULTS, (e) => {
+        modal._searchHandler = (e) => {
             // Ensure we are acting on the open modal
             if (!document.contains(list)) return;
 
@@ -1300,14 +1310,15 @@ export class ShareFormUI {
             });
 
             list.classList.remove(CSS_CLASSES.HIDDEN);
-        });
+        };
+        document.addEventListener(EVENTS.UPDATE_SEARCH_RESULTS, modal._searchHandler);
     }
 
     static _bindPreviewUpdate(modal) {
         const panel = modal.querySelector(`#${IDS.PRICE_PREVIEW_PANEL}`);
         const subtitle = modal.querySelector(`#${IDS.MODAL_SUBTITLE}`);
 
-        document.addEventListener(EVENTS.UPDATE_MODAL_PREVIEW, (e) => {
+        modal._previewHandler = (e) => {
             // Ensure we are acting on the open modal
             if (!document.contains(panel)) return;
 
@@ -1372,7 +1383,8 @@ export class ShareFormUI {
             modal.classList.remove(CSS_CLASSES.HIDDEN);
             void modal.offsetWidth; // Force Reflow
             // Note: SHOW is already on the classList from render, so reflow triggers the transition immediately
-        });
+        };
+        document.addEventListener(EVENTS.UPDATE_MODAL_PREVIEW, modal._previewHandler);
     }
 
     static _extractShareData(modal, suppressToasts = false) {

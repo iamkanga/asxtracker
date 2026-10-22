@@ -1883,10 +1883,6 @@ export class NotificationStore {
         return { total: totalCount, custom: customCount, announcements: annCount };
     }
 
-    getScannerRules() {
-        return this.scannerRules;
-    }
-
     /**
      * Centralized Cache Invalidation: Clears memoized alert computations.
      */

@@ -1516,6 +1516,9 @@ export const CSS_CLASSES = {
     CHART_BTN: 'chart-btn',
     CHART_SELECT: 'chart-select',
     CHART_OVERLAY_LOADER: 'chart-overlay-loader',
+    CHART_RANGE_BADGE: 'chart-range-badge',
+    CHART_RANGE_BADGE_HIGH: 'chart-range-badge-high',
+    CHART_RANGE_BADGE_LOW: 'chart-range-badge-low',
 
 
 

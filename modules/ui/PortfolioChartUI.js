@@ -43,6 +43,10 @@ export class PortfolioChartUI {
             cash: null
         };
 
+        // Mirrored Left-Side Range Badges
+        this.rangeBadges = {};
+        this.lastRangeItems = [];
+
         // Visibility State (Sources instead of Metric Types)
         const savedLayers = JSON.parse(localStorage.getItem('ASX_NEXT_portfolioChartLayers') || 'null');
         this.visibleLayers = savedLayers || {
@@ -109,7 +113,7 @@ export class PortfolioChartUI {
                 </div>
                 
                 <div class="${CSS_CLASSES.MODAL_BODY}" style="flex:1; position:relative; padding:0; overflow:hidden; background:#111;">
-                    <div id="portfolio-chart-container" style="width:100%; height:100%; touch-action: pan-y;"></div>
+                    <div id="portfolio-chart-container" style="width:100%; height:100%; position:relative; touch-action: pan-y;"></div>
                     <div id="portfolio-chart-loading" style="position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center; flex-direction:column; z-index:10; backdrop-filter: blur(2px);">
                         <i class="fas ${UI_ICONS.SPINNER} fa-2x" style="color:var(--color-accent);"></i>
                         <span style="margin-top:16px; font-weight:600; font-size: 0.9rem; color: #fff;">Calculating Performance...</span>
@@ -429,6 +433,11 @@ export class PortfolioChartUI {
             }
         });
 
+        // Re-align mirrored badges whenever visible range scales or pans
+        this.chart.timeScale().subscribeVisibleLogicalRangeChange(() => {
+            this._updateRangeBadges();
+        });
+
         // AUTO-RESIZE OBSERVER (Fixes Mobile Landscape / Orientation Issues)
         // This ensures the chart adapts to the container's new size immediately
         this.resizeObserver = new ResizeObserver(entries => {
@@ -450,6 +459,7 @@ export class PortfolioChartUI {
                 this.chart.timeScale().fitContent();
                 requestAnimationFrame(() => {
                     if (this.chart) this.chart.timeScale().fitContent();
+                    this._updateRangeBadges();
                 });
             }
         });
@@ -471,6 +481,7 @@ export class PortfolioChartUI {
                     this.chart.timeScale().fitContent();
                     requestAnimationFrame(() => {
                         if (this.chart) this.chart.timeScale().fitContent();
+                        this._updateRangeBadges();
                     });
                 }
             }, 200);
@@ -1026,12 +1037,17 @@ export class PortfolioChartUI {
         if (this.visibleLayers.shares) seriesToMark.push({ data: sharesData, series: this.series.shares, label: 'Shares' });
         if (this.visibleLayers.super) seriesToMark.push({ data: superData, series: this.series.super, label: 'Super' });
 
-        if (seriesToMark.length === 0) return;
+        if (seriesToMark.length === 0) {
+            this._hideRangeBadges();
+            return;
+        }
 
         const formatDate = (ts) => {
             const d = new Date(ts * 1000);
             return d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
         };
+
+        const rangeItems = [];
 
         seriesToMark.forEach((config, idx) => {
             const { data, series, label } = config;
@@ -1040,8 +1056,11 @@ export class PortfolioChartUI {
             const values = data.map(d => d.value);
             const highVal = Math.max(...values);
             const lowVal = Math.min(...values);
+            const currentVal = data[data.length - 1].value;
             const highIdx = data.findLastIndex(d => d.value === highVal);
             const lowIdx = data.findLastIndex(d => d.value === lowVal);
+
+            rangeItems.push({ series, label, highVal, lowVal, currentVal });
 
             const markers = [
                 {
@@ -1133,6 +1152,7 @@ export class PortfolioChartUI {
 
             series.setMarkers(markers.sort((a, b) => a.time - b.time));
 
+
             // 4. Axis Price Lines (Right Sidebar)
             const highLine = series.createPriceLine({
                 price: highVal,
@@ -1159,6 +1179,117 @@ export class PortfolioChartUI {
             });
             lowLine._parentSeries = series;
             this.axisPriceLines.push(lowLine);
+        });
+
+        // 5. Mirrored Left-Side Range Badges (For ALL visible active series)
+        this._updateRangeBadges(rangeItems);
+    }
+
+    /**
+     * Updates or creates mirrored High/Low relative percentage badges on the left side of the chart
+     * for all active visible series simultaneously.
+     * @param {Array<Object>} [items] - Array of { series, label, highVal, lowVal, currentVal }
+     */
+    _updateRangeBadges(items) {
+        if (items && Array.isArray(items)) {
+            this.lastRangeItems = items;
+        } else if (this.lastRangeItems) {
+            items = this.lastRangeItems;
+        }
+
+        if (!items || items.length === 0 || !this.modal) {
+            this._hideRangeBadges();
+            return;
+        }
+
+        const container = this.modal.querySelector('#portfolio-chart-container');
+        if (!container) return;
+
+        // Hide all current badges first; active ones are positioned and displayed below
+        this._hideRangeBadges();
+
+        const SERIES_COLORS = {
+            'total': '#06FF4F',
+            'shares': '#00D2FF',
+            'super': '#9C27B0'
+        };
+
+        const activeBadges = [];
+
+        for (const item of items) {
+            const { series, label, highVal, lowVal, currentVal } = item;
+            if (!series || highVal == null || lowVal == null || currentVal == null) continue;
+
+            // 1. Calculate relative percentage swings from currentVal
+            const highDiff = currentVal > 0 ? (((highVal - currentVal) / currentVal) * 100) : 0;
+            const lowDiff = currentVal > 0 ? (((lowVal - currentVal) / currentVal) * 100) : 0;
+
+            const highPctStr = (highDiff > 0 ? '+' : '') + highDiff.toFixed(1) + '%';
+            const lowPctVal = Math.abs(lowDiff) < 0.05 ? 0 : lowDiff;
+            const lowPctStr = (lowDiff > 0 ? '+' : '') + lowPctVal.toFixed(1) + '%';
+
+            // 2. Convert highVal and lowVal to pixel Y-coordinates
+            const highY = series.priceToCoordinate(highVal);
+            const lowY = series.priceToCoordinate(lowVal);
+
+            // Defer if chart coordinates are not yet calculated in current frame
+            if (highY === null || lowY === null) {
+                requestAnimationFrame(() => this._updateRangeBadges());
+                return;
+            }
+
+            // 3. Create or reuse badge elements for this series label
+            if (!this.rangeBadges[label]) {
+                const seriesKey = (label || '').toLowerCase();
+                const seriesColor = SERIES_COLORS[seriesKey] || '#00E676';
+
+                const highBadge = document.createElement('div');
+                highBadge.className = `${CSS_CLASSES.CHART_RANGE_BADGE || 'chart-range-badge'} ${CSS_CLASSES.CHART_RANGE_BADGE_HIGH || 'chart-range-badge-high'}`;
+                highBadge.style.cssText = `position:absolute; left:8px; z-index:5; pointer-events:none; user-select:none; font-size:0.68rem; font-weight:800; padding:2px 6px; border-radius:3px; background:#00E676; color:#000000; border-left:3px solid ${seriesColor}; box-shadow:0 1px 4px rgba(0,0,0,0.5); line-height:1.2; white-space:nowrap;`;
+                container.appendChild(highBadge);
+
+                const lowBadge = document.createElement('div');
+                lowBadge.className = `${CSS_CLASSES.CHART_RANGE_BADGE || 'chart-range-badge'} ${CSS_CLASSES.CHART_RANGE_BADGE_LOW || 'chart-range-badge-low'}`;
+                lowBadge.style.cssText = `position:absolute; left:8px; z-index:5; pointer-events:none; user-select:none; font-size:0.68rem; font-weight:800; padding:2px 6px; border-radius:3px; background:#FF5252; color:#ffffff; border-left:3px solid ${seriesColor}; box-shadow:0 1px 4px rgba(0,0,0,0.5); line-height:1.2; white-space:nowrap;`;
+                container.appendChild(lowBadge);
+
+                this.rangeBadges[label] = { high: highBadge, low: lowBadge };
+            }
+
+            const badges = this.rangeBadges[label];
+            badges.high.textContent = `${label} H: ${highPctStr}`;
+            badges.low.textContent = `${label} L: ${lowPctStr}`;
+
+            activeBadges.push({ el: badges.high, y: highY });
+            activeBadges.push({ el: badges.low, y: lowY });
+        }
+
+        // 4. Anti-collision mapping: sort by Y and offset overlapping badges horizontally
+        activeBadges.sort((a, b) => a.y - b.y);
+
+        let currentLeft = 8;
+        let lastY = -999;
+
+        activeBadges.forEach(b => {
+            if (Math.abs(b.y - lastY) < 20) {
+                currentLeft += 96; // Offset horizontally to prevent collision
+            } else {
+                currentLeft = 8; // Reset to standard left edge
+            }
+            lastY = b.y;
+
+            b.el.style.top = `${b.y}px`;
+            b.el.style.left = `${currentLeft}px`;
+            b.el.style.transform = 'translateY(-50%)';
+            b.el.style.display = 'block';
+        });
+    }
+
+    _hideRangeBadges() {
+        if (!this.rangeBadges) return;
+        Object.values(this.rangeBadges).forEach(pair => {
+            if (pair?.high) pair.high.style.display = 'none';
+            if (pair?.low) pair.low.style.display = 'none';
         });
     }
 }
