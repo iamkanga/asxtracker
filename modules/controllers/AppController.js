@@ -288,7 +288,6 @@ export class AppController {
                     this._lastSyncedPrefsSignature = null;
                     this._syncingPreferences = false; // Re-entrancy guard for Cloud Sync
                     this._isUnlockedThisSession = false;
-                    await this.appService.sanitizeCorruptedShares(user.uid);
                 }
 
                 // Security Challenge
@@ -1165,7 +1164,7 @@ export class AppController {
             this._cloudPrefsLoaded = true;
 
             // Broadcast cloud prefs to decoupled stores
-            document.dispatchEvent(new CustomEvent('cloud-preferences-loaded', { detail: prefs }));
+            document.dispatchEvent(new CustomEvent(EVENTS.CLOUD_PREFERENCES_LOADED, { detail: prefs }));
 
             let needsRender = false;
 
@@ -1233,6 +1232,11 @@ export class AppController {
             }
 
 
+
+            // 0b. Sync Pinned Alerts
+            if (prefs.pinnedAlerts !== undefined) {
+                AppState.preferences.pinnedAlerts = Array.isArray(prefs.pinnedAlerts) ? prefs.pinnedAlerts : [];
+            }
 
             // 0b. Sync Notification Prefs
             if (prefs.showBadges !== undefined && AppState.preferences.showBadges !== (prefs.showBadges !== false)) {

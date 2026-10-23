@@ -185,6 +185,7 @@ export const EVENTS = {
     OPEN_NOTIFICATIONS: 'open-notifications',
     NOTIFICATION_UPDATE: 'notification-update', // New Event
     MARKET_INDEX_UPDATED: 'asx_market_index_updated', // REGISTERED EVENT
+    CLOUD_PREFERENCES_LOADED: 'cloud-preferences-loaded',
     NOTIFICATION_READY: 'notification-ready', // Data loaded event
     OPEN_PORTFOLIO_VIEW: 'open-portfolio-view',
     OPEN_MARKET_PULSE: 'open-market-pulse',

@@ -8,8 +8,6 @@
 import { db } from '../auth/AuthService.js';
 import { AppState } from './AppState.js';
 import { StateAuditor } from './StateAuditor.js';
-// Import userStore to listen for Preference Updates
-import { userStore } from '../data/DataService.js';
 import { EVENTS, STORAGE_KEYS, DASHBOARD_SYMBOLS, SECTOR_INDUSTRY_MAP } from '../utils/AppConstants.js';
 import { doc, getDoc, updateDoc, arrayUnion, arrayRemove, onSnapshot, setDoc, getDocFromServer, collection, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getBestShareMatch } from '../data/DataProcessor.js';
@@ -47,6 +45,13 @@ export class NotificationStore {
         // --- CACHE: Memoization for expensive alert computations ---
         this._globalAlertsCache = null;
         this._localAlertsCache = null;
+
+        // Reactive listener for central preference broadcasts (Zero duplicate reads)
+        document.addEventListener(EVENTS.CLOUD_PREFERENCES_LOADED, (e) => {
+            if (e.detail) {
+                this.applyPreferences(e.detail);
+            }
+        });
     }
 
     /**
@@ -133,15 +138,13 @@ export class NotificationStore {
             document.addEventListener('refresh-personal-alerts', () => this.refreshPersonalAlerts());
 
             if (userId) {
-                this._subscribeToPinned(userId);
-                // Subscribe to Live Preferences (Rules)
-                this._subscribeToPreferences(userId);
+                // Hydrate from cached or preloaded AppState preferences immediately without extra reads
+                if (AppState.preferences) {
+                    this.applyPreferences(AppState.preferences);
+                }
 
                 // Fetch data implies a network call. We do this once on init.
                 await this.refreshDailyData();
-
-                // Initial Rule Fetch (Redundant if subscription works fast, but safe)
-                await this.refreshScannerRules();
 
                 // FAILSAFE: If no rules loaded yet (first run after fix), try to grab from AppState immediately
                 // FIX: Check 'up' key specifically because constructor inits with { up: {}, down: {} }
@@ -224,82 +227,71 @@ export class NotificationStore {
     }
 
     /**
-     * Subscribes to User Preferences to auto-update alerts when Settings change.
+     * Applies user preferences received from central AppController subscription.
+     * Consolidates pinned alerts, scanner rules, and dismissal state with zero extra reads.
+     * @param {Object} prefs
      */
-    _subscribeToPreferences(userId) {
-        if (this.unsubscribePrefs) this.unsubscribePrefs();
+    applyPreferences(prefs) {
+        if (!prefs) return;
 
-        // LOGIC HARDENING: Null guard for userStore
-        if (!userStore) {
-            return;
+        // 1. Pinned Alerts
+        if (Array.isArray(prefs.pinnedAlerts)) {
+            this.pinnedAlerts = prefs.pinnedAlerts;
         }
 
+        // 2. Scanner Rules
+        const data = prefs.scannerRules || {};
+        this.scannerRules = {
+            up: data.up || {},
+            down: data.down || {},
+            minPrice: (data.minPrice !== undefined && data.minPrice !== null) ? data.minPrice : null,
+            hiloMinPrice: (data.hiloMinPrice !== undefined && data.hiloMinPrice !== null) ? data.hiloMinPrice : null,
+            activeFilters: (() => {
+                const raw = data.activeFilters ?? prefs.scanner?.activeFilters;
+                return Array.isArray(raw) ? raw.map(f => (f || '').toUpperCase()) : null;
+            })(),
+            excludePortfolio: prefs.excludePortfolio !== false,
+            moversEnabled: (data.moversEnabled !== undefined) ? data.moversEnabled : (prefs.scannerRules?.moversEnabled !== false),
+            hiloEnabled: (data.hiloEnabled !== undefined) ? data.hiloEnabled : (prefs.scannerRules?.hiloEnabled !== false),
+            personalEnabled: (data.personalEnabled !== undefined) ? data.personalEnabled : (prefs.scannerRules?.personalEnabled !== false)
+        };
+
+        // Persist to local cache
         try {
-            this.unsubscribePrefs = userStore.subscribeToPreferences(userId, (prefs, metadata) => {
-                if (prefs) {
-                    // Update Local Rules
-                    const data = prefs.scannerRules || {};
-                    this.scannerRules = {
-                        up: data.up || {},
-                        down: data.down || {},
-                        minPrice: (data.minPrice !== undefined && data.minPrice !== null) ? data.minPrice : null,
-                        hiloMinPrice: (data.hiloMinPrice !== undefined && data.hiloMinPrice !== null) ? data.hiloMinPrice : null,
-                        moversEnabled: data.moversEnabled, // Capture toggle
-                        hiloEnabled: data.hiloEnabled,     // Capture 52W Toggle
-                        personalEnabled: data.personalEnabled, // Capture Personal Toggle
-                        excludePortfolio: prefs.excludePortfolio !== false, // Capture Override Toggle
-                        activeFilters: Array.isArray(prefs.scanner?.activeFilters)
-                            ? prefs.scanner.activeFilters.map(f => (f || '').toUpperCase())
-                            : null // Preserve 'null' for "All Sectors"
-                    };
+            localStorage.setItem('asx_scanner_rules_cache', JSON.stringify(this.scannerRules));
+        } catch (e) { /* ignore */ }
 
-                    // Persist to cache
-                    try {
-                        localStorage.setItem('asx_scanner_rules_cache', JSON.stringify(this.scannerRules));
-                    } catch (e) { /* ignore */ }
-
-                    this._invalidateCache();
-                    this._notifyCountChange();
-
-                    // --- SYNC DISMISSAL STATE (From Cloud to Device) ---
-                    // 1. Alert Dismissal (Session-Only: Cloud sync disabled to prevent mid-session overrides)
-
-                    // 2. Announcement Dismissal (Dismissed IDs)
-                    if (Array.isArray(prefs.dismissedMarketAlerts)) {
-                        let changed = false;
-                        prefs.dismissedMarketAlerts.forEach(id => {
-                            if (!this.dismissedAnnouncements.has(id)) {
-                                this.dismissedAnnouncements.add(id);
-                                changed = true;
-                            }
-                        });
-                        if (changed) {
-                            localStorage.setItem('asx_market_stream_dismissed', JSON.stringify([...this.dismissedAnnouncements]));
-                        }
-                    }
-
-                    // 3. Announcement Read State (Read IDs)
-                    let syncReadChanged = false;
-                    if (Array.isArray(prefs.readMarketAlerts)) {
-                        prefs.readMarketAlerts.forEach(id => {
-                            if (!this.readAnnouncements.has(id)) {
-                                this.readAnnouncements.add(id);
-                                syncReadChanged = true;
-                            }
-                        });
-                        if (syncReadChanged) {
-                            localStorage.setItem('asx_market_stream_read', JSON.stringify([...this.readAnnouncements]));
-                        }
-                    }
-
-                    if (syncReadChanged) {
-                        this._notifyCountChange();
-                    }
+        // 3. Announcement Dismissal Sync
+        if (Array.isArray(prefs.dismissedMarketAlerts)) {
+            let changed = false;
+            prefs.dismissedMarketAlerts.forEach(id => {
+                if (!this.dismissedAnnouncements.has(id)) {
+                    this.dismissedAnnouncements.add(id);
+                    changed = true;
                 }
             });
-        } catch (err) {
-            console.warn('[NotificationStore] Failed to subscribe to preferences:', err);
+            if (changed) {
+                localStorage.setItem('asx_market_stream_dismissed', JSON.stringify([...this.dismissedAnnouncements]));
+            }
         }
+
+        // 4. Announcement Read State Sync
+        let syncReadChanged = false;
+        if (Array.isArray(prefs.readMarketAlerts)) {
+            prefs.readMarketAlerts.forEach(id => {
+                if (!this.readAnnouncements.has(id)) {
+                    this.readAnnouncements.add(id);
+                    syncReadChanged = true;
+                }
+            });
+            if (syncReadChanged) {
+                localStorage.setItem('asx_market_stream_read', JSON.stringify([...this.readAnnouncements]));
+            }
+        }
+
+        this._invalidateCache();
+        this._notifyCountChange();
+        this._notifyDataChange();
     }
 
     /**
@@ -429,40 +421,12 @@ export class NotificationStore {
     }
 
     /**
-     * Fetches user's scanner preferences to ensure Global Alerts reflect actual thresholds.
+     * In-memory scanner rules refresher (non-network).
+     * Re-applies preferences from AppState if available.
      */
     async refreshScannerRules() {
-        if (!this.userId) return;
-        try {
-            const rulesRef = doc(db, `artifacts/${APP_ID}/users/${this.userId}/preferences/config`);
-            const snap = await getDocFromServer(rulesRef);
-            if (snap.exists()) {
-                const config = snap.data();
-                // FIX: SettingsUI saves scanner settings under 'scannerRules' field in 'config' doc.
-                const data = config.scannerRules || {};
-
-                // Map to internal structure
-                this.scannerRules = {
-                    up: data.up || {},
-                    down: data.down || {},
-                    // FIX: Allow 0 vs Null for Global Limit too.
-                    minPrice: (data.minPrice !== undefined && data.minPrice !== null) ? data.minPrice : null,
-                    // FIX: Allow 0 (None). Use Nullish Coalescing.
-                    hiloMinPrice: (data.hiloMinPrice !== undefined && data.hiloMinPrice !== null) ? data.hiloMinPrice : null,
-                    // FIX: Preserve 'null' for "All Sectors" - null should NOT become empty array
-                    activeFilters: (() => {
-                        const raw = data.activeFilters ?? config.scanner?.activeFilters;
-                        const final = Array.isArray(raw) ? raw.map(f => f.toUpperCase()) : null;
-                        return final;
-                    })(),
-                    excludePortfolio: config.excludePortfolio !== false, // Capture Override Toggle
-                    moversEnabled: (data.moversEnabled !== undefined) ? data.moversEnabled : (config.scannerRules?.moversEnabled !== false),
-                    hiloEnabled: (data.hiloEnabled !== undefined) ? data.hiloEnabled : (config.scannerRules?.hiloEnabled !== false),
-                    personalEnabled: (data.personalEnabled !== undefined) ? data.personalEnabled : (config.scannerRules?.personalEnabled !== false)
-                };
-            }
-        } catch (e) {
-            console.error('[NotificationStore] Error fetching rules:', e);
+        if (AppState.preferences) {
+            this.applyPreferences(AppState.preferences);
         }
     }
 
@@ -701,28 +665,6 @@ export class NotificationStore {
     }
 
     /**
-     * Subscribes to the specific pinnedAlerts field in User Preferences.
-     */
-    _subscribeToPinned(userId) {
-        if (this.unsubscribePinned) this.unsubscribePinned();
-
-        const prefRef = doc(db, `artifacts/${APP_ID}/users/${userId}/preferences/config`);
-        this.unsubscribePinned = onSnapshot(prefRef, (snap) => {
-            const metadata = snap.metadata;
-
-
-            if (snap.exists()) {
-                const data = snap.data();
-                this.pinnedAlerts = Array.isArray(data.pinnedAlerts) ? data.pinnedAlerts : [];
-            } else {
-                this.pinnedAlerts = [];
-            }
-            this._invalidateCache();
-            this._notifyDataChange();
-        });
-    }
-
-    /**
      * Pins an alert item. API: Saves entire item object to Firestore to persist even if daily file clears.
      */
     async pinAlert(alertItem) {
@@ -730,6 +672,13 @@ export class NotificationStore {
         // Sanitize object for Firestore (remove undefined)
         const sanitized = JSON.parse(JSON.stringify(alertItem));
         const prefRef = doc(db, `artifacts/${APP_ID}/users/${this.userId}/preferences/config`);
+
+        // Optimistic local update
+        if (!this.pinnedAlerts.some(p => p.id === sanitized.id || (p.code === sanitized.code && p.timestamp === sanitized.timestamp))) {
+            this.pinnedAlerts = [...this.pinnedAlerts, sanitized];
+            this._invalidateCache();
+            this._notifyDataChange();
+        }
 
         // We use arrayUnion. Firestore equality checks deep objects, so exact matches work.
         // But if timestamps differ, it might dup. Ideally we pin by ID, but alerts lack stable IDs across days.
@@ -749,6 +698,11 @@ export class NotificationStore {
         // Must match exactly for arrayRemove.
         // Strategy: We rely on the UI passing back the exact object reference from the `pinned` array.
         const prefRef = doc(db, `artifacts/${APP_ID}/users/${this.userId}/preferences/config`);
+
+        // Optimistic local update
+        this.pinnedAlerts = this.pinnedAlerts.filter(p => !(p.id === alertItem.id || (p.code === alertItem.code && p.timestamp === alertItem.timestamp)));
+        this._invalidateCache();
+        this._notifyDataChange();
 
         try {
             await updateDoc(prefRef, {

@@ -81,9 +81,14 @@ export class DataManagementUI {
                             <p style="color: var(--text-muted); font-size: 0.8rem; line-height: 1.4; margin-bottom: 12px;">
                                 Automatically scan and permanently purge artificial out-of-hours $0 pricing glitches from your cloud historical snapshots.
                             </p>
-                            <button id="dm-btn-scrub-history" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 12px; background: rgba(var(--color-accent-rgb), 0.1); border: 1px solid var(--color-accent); border-radius: 8px; color: var(--color-accent); font-weight: 700; cursor: pointer; transition: all 0.2s;">
-                                <i class="fas fa-magic"></i> Purge Corrupted Snapshots
-                            </button>
+                            <div style="display: flex; gap: 10px; flex-direction: column;">
+                                <button id="dm-btn-scrub-history" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 12px; background: rgba(var(--color-accent-rgb), 0.1); border: 1px solid var(--color-accent); border-radius: 8px; color: var(--color-accent); font-weight: 700; cursor: pointer; transition: all 0.2s;">
+                                    <i class="fas fa-magic"></i> Purge Corrupted Snapshots
+                                </button>
+                                <button id="dm-btn-scrub-shares" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 12px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 8px; color: white; font-weight: 700; cursor: pointer; transition: all 0.2s;">
+                                    <i class="fas fa-shield-alt"></i> Sanitize Corrupted Shares
+                                </button>
+                            </div>
                         </div>
                     </div>
 
@@ -240,6 +245,37 @@ export class DataManagementUI {
             });
         }
 
+
+        // Sanitize Corrupted Shares (Manual Maintenance)
+        const scrubSharesBtn = modal.querySelector('#dm-btn-scrub-shares');
+        if (scrubSharesBtn) {
+            scrubSharesBtn.addEventListener('click', async () => {
+                if (!AppState.user?.uid) {
+                    ToastManager.error('User not logged in.');
+                    return;
+                }
+
+                scrubSharesBtn.disabled = true;
+                scrubSharesBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Scanning cloud shares...';
+
+                try {
+                    const { AppService } = await import('../data/AppService.js');
+                    const appService = new AppService();
+                    const deletedCount = await appService.sanitizeCorruptedShares(AppState.user.uid);
+                    if (deletedCount > 0) {
+                        ToastManager.success(`Successfully cleaned ${deletedCount} corrupted share record(s)!`);
+                    } else {
+                        ToastManager.info('All share records are healthy. No corrupted items found.');
+                    }
+                } catch (e) {
+                    console.error('[DataManagementUI] Share Sanitize Error:', e);
+                    ToastManager.error('Failed to sanitize shares: ' + e.message);
+                } finally {
+                    scrubSharesBtn.disabled = false;
+                    scrubSharesBtn.innerHTML = '<i class="fas fa-shield-alt"></i> Sanitize Corrupted Shares';
+                }
+            });
+        }
 
         // --- IMPORT HANDLERS ---
         const fileInput = modal.querySelector('#dm-file-input');

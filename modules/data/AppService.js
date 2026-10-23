@@ -408,11 +408,12 @@ export class AppService {
     }
 
     /**
-     * EMERGENCY: Sanitizes corrupted share records (missing shareName).
+     * EMERGENCY / MANUAL: Sanitizes corrupted share records (missing shareName) via cloud scan.
      * @param {string} userId 
+     * @returns {Promise<number>} Number of deleted corrupted records
      */
     async sanitizeCorruptedShares(userId) {
-        if (!userId) return;
+        if (!userId) return 0;
         try {
             const shares = await userStore.getAllDocuments(userId, 'shares');
             let deletedCount = 0;
@@ -430,8 +431,10 @@ export class AppService {
                 // alert(`Sanitation Complete: Removed ${deletedCount} corrupted records.`); // Optional specific feedback
             } else {
             }
+            return deletedCount;
         } catch (e) {
             console.error("Sanitize Error:", e);
+            return 0;
         }
     }
     /**
@@ -558,6 +561,15 @@ export class AppService {
                 if (match) {
                     s.id = match.id;
                 }
+            }
+        }
+
+        // 1b. In-memory health check: purge corrupted share records with zero extra reads
+        const corrupted = shares.filter(s => s.id && (!s.shareName || s.shareName === 'undefined' || s.shareName.trim() === ''));
+        if (corrupted.length > 0) {
+            console.warn(`[AppService] Data Health Check found ${corrupted.length} corrupted share record(s) in memory. Deleting...`, corrupted);
+            for (const s of corrupted) {
+                await userStore.deleteDocument(user.uid, 'shares', s.id);
             }
         }
 
