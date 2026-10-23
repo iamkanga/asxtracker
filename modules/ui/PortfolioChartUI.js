@@ -24,6 +24,7 @@ export class PortfolioChartUI {
     }
 
     static async show() {
+        PortfolioChartUI.clearCache();
         const shares = AppState.data?.shares || [];
         const cash = AppState.data?.cash || [];
 
