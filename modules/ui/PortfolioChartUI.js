@@ -15,6 +15,14 @@ import { ToastManager } from './ToastManager.js';
  * v1151: Fixed double-counting of portfolio shares in total wealth.
  */
 export class PortfolioChartUI {
+    static _cachedSnapshots = null;
+    static _cachedUserId = null;
+
+    static clearCache() {
+        PortfolioChartUI._cachedSnapshots = null;
+        PortfolioChartUI._cachedUserId = null;
+    }
+
     static async show() {
         const shares = AppState.data?.shares || [];
         const cash = AppState.data?.cash || [];
@@ -674,11 +682,13 @@ export class PortfolioChartUI {
             const rawCash = AppState.data.cash || [];
             if (!AppState.user?.uid) return;
 
-            // 1. Fetch and Cache Recorded History Snapshots (Instance Cache to save reads)
-            if (!this._cachedSnapshots) {
-                this._cachedSnapshots = await userStore.getHistorySnapshots(AppState.user.uid);
+            // 1. Fetch and Cache Recorded History Snapshots (Session-level Cache to save reads)
+            const currentUserId = AppState.user.uid;
+            if (!PortfolioChartUI._cachedSnapshots || PortfolioChartUI._cachedUserId !== currentUserId) {
+                PortfolioChartUI._cachedSnapshots = await userStore.getHistorySnapshots(currentUserId);
+                PortfolioChartUI._cachedUserId = currentUserId;
             }
-            const snapshots = this._cachedSnapshots;
+            const snapshots = PortfolioChartUI._cachedSnapshots || [];
             const startTs = this._getRangeStartTs();
 
             // 2. Calculate Current LIVE Valuation First (Anchor for Sanitization & Chart Endpoint)

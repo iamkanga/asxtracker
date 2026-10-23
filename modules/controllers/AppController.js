@@ -298,11 +298,6 @@ export class AppController {
                 // Start Notification Stream
                 notificationStore.init(user.uid);
 
-                if (this.userStore && AppState.user?.uid) {
-                    this.userStore.cleanCorruptedHistorySnapshots(AppState.user.uid)
-                        .then(res => console.log(`[AutoPurge] Cleaned: ${res?.deleted || 0} anomaly snapshots.`))
-                        .catch(err => console.warn('[AutoPurge] Failed silently:', err));
-                }
 
                 // Update Connection Indicator: Keep loading until Firestore data resolves
                 if (this.headerLayout) {
