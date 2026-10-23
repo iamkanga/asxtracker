@@ -272,6 +272,21 @@ export class PortfolioChartUI {
             if (this.modal._isClosing) return;
             this.modal._isClosing = true;
 
+            if (this.axisPriceLines) {
+                this.axisPriceLines.forEach(line => {
+                    try {
+                        if (line && line._parentSeries) line._parentSeries.removePriceLine(line);
+                    } catch (_) {}
+                });
+                this.axisPriceLines = [];
+            }
+            if (this.scrubPriceLine && this.scrubPriceLine._parentSeries) {
+                try {
+                    this.scrubPriceLine._parentSeries.removePriceLine(this.scrubPriceLine);
+                } catch (_) {}
+                this.scrubPriceLine = null;
+            }
+
             if (this.resizeObserver) { this.resizeObserver.disconnect(); this.resizeObserver = null; }
             if (this.chart) { this.chart.remove(); this.chart = null; }
             
@@ -421,7 +436,7 @@ export class PortfolioChartUI {
                     color: 'rgba(164, 147, 147, 0.8)', 
                     width: 1,
                     style: 2, // Dotted
-                    labelBackgroundColor: '#06FF4F', // Total color (Neon Green)
+                    labelVisible: false, // Suppress default crosshair price label to prevent overlapping badges with scrubPriceLine
                 }
             },
             localization: {
@@ -500,7 +515,9 @@ export class PortfolioChartUI {
             bottomColor: 'rgba(6, 255, 79, 0.05)',
             lineWidth: 3,
             visible: this.visibleLayers.total,
-            priceFormat: accountingFormat
+            priceFormat: accountingFormat,
+            lastValueVisible: true,
+            priceLineVisible: false
         });
 
         // Superannuation Series
@@ -508,7 +525,9 @@ export class PortfolioChartUI {
             color: '#9C27B0',
             lineWidth: 2,
             visible: this.visibleLayers.super,
-            priceFormat: accountingFormat
+            priceFormat: accountingFormat,
+            lastValueVisible: true,
+            priceLineVisible: false
         });
 
         // Shares Portfolio Series
@@ -516,7 +535,9 @@ export class PortfolioChartUI {
             color: '#a49393',
             lineWidth: 2,
             visible: this.visibleLayers.shares,
-            priceFormat: accountingFormat
+            priceFormat: accountingFormat,
+            lastValueVisible: true,
+            priceLineVisible: false
         });
 
         // Dynamic "Scrub" Price Line (Highlight box for mobile scrubbing)
@@ -529,17 +550,22 @@ export class PortfolioChartUI {
             lineStyle: 0, // Solid
             axisLabelVisible: true,
             title: '',
-            axisLabelColor: '#00E676', // Vibrant Accent Green Background
+            axisLabelColor: '#06FF4F',
             axisLabelTextColor: '#000000', // Crisp Black Text on solid green badge for optimal high contrast
         });
         this.scrubPriceLine._parentSeries = this.series.total;
+        this.scrubPriceLine._lastColor = '#06FF4F';
         this.scrubPriceLine.applyOptions({ visible: false });
+
+        container.addEventListener('mouseleave', () => {
+            if (this.scrubPriceLine) this.scrubPriceLine.applyOptions({ visible: false });
+        });
 
         // CROSSHAIR MOVE LISTENER (Mobile Scrubbing Support)
         this.chart.subscribeCrosshairMove(param => {
             if (!this.chart) return;
 
-            if (!param.time || !param.point || param.point.x < 0) {
+            if (!param.time || !param.point || param.point.x < 0 || param.point.x > container.clientWidth || param.point.y < 0 || param.point.y > container.clientHeight) {
                 if (this.scrubPriceLine) this.scrubPriceLine.applyOptions({ visible: false });
                 return;
             }
@@ -563,6 +589,9 @@ export class PortfolioChartUI {
             const data = param.seriesData.get(seriesToTrack);
             if (data && (data.value !== undefined || data.close !== undefined)) {
                 const price = data.value !== undefined ? data.value : data.close;
+                const lastVal = seriesToTrack._lastValue;
+                // Suppress scrubPriceLine axis label if cursor is at the identical coordinate as the native series last-value tag
+                const isAtLastValue = lastVal != null && Math.round(price) === Math.round(lastVal);
                 
                 // Update and show the scrub line
                 // Note: We re-attach/re-create if series changes, but simple update is usually enough
@@ -578,16 +607,18 @@ export class PortfolioChartUI {
                     }
 
                     // Re-create if parent series changed OR if color needs updating
-                    if (this.scrubPriceLine._parentSeries !== seriesToTrack) {
+                    if (this.scrubPriceLine._parentSeries !== seriesToTrack || this.scrubPriceLine._lastColor !== trackColor) {
                         if (this.scrubPriceLine._parentSeries) {
-                            this.scrubPriceLine._parentSeries.removePriceLine(this.scrubPriceLine);
+                            try {
+                                this.scrubPriceLine._parentSeries.removePriceLine(this.scrubPriceLine);
+                            } catch (_) {}
                         }
                         this.scrubPriceLine = seriesToTrack.createPriceLine({
                             price: price,
                             color: trackColor + '4D',
                             lineWidth: 1,
                             lineStyle: 0,
-                            axisLabelVisible: true,
+                            axisLabelVisible: !isAtLastValue,
                             title: '',
                             axisLabelColor: trackColor,
                             axisLabelTextColor: (trackColor === '#06FF4F' || trackColor === '#00E676' || trackColor === '#00D2FF') ? '#000000' : '#ffffff',
@@ -598,7 +629,8 @@ export class PortfolioChartUI {
 
                     this.scrubPriceLine.applyOptions({
                         price: price,
-                        visible: true
+                        visible: true,
+                        axisLabelVisible: !isAtLastValue
                     });
                 }
             } else {
@@ -611,6 +643,7 @@ export class PortfolioChartUI {
 
     _updateSeriesVisibility() {
         if (!this.chart) return;
+        if (this.scrubPriceLine) this.scrubPriceLine.applyOptions({ visible: false });
         Object.keys(this.series).forEach(key => {
             if (this.series[key]) this.series[key].applyOptions({ visible: !!this.visibleLayers[key] });
         });
@@ -632,6 +665,7 @@ export class PortfolioChartUI {
     }
 
     async loadData() {
+        if (this.scrubPriceLine) this.scrubPriceLine.applyOptions({ visible: false });
         const loading = document.getElementById('portfolio-chart-loading');
         if (loading) loading.style.display = 'flex';
 
@@ -662,7 +696,8 @@ export class PortfolioChartUI {
             // Deduplicate shares by ticker to match DataProcessor logic
             const dedupedSharesMap = new Map();
             rawShares.forEach(s => {
-                if (AppState.hiddenAssets.has(String(s.id))) return;
+                // Note: Historical chart uses all holdings without omitting hidden assets
+                // to stay aligned with the pre-saved snapshot aggregate baseline.
                 const units = parseFloat(s.portfolioShares) || parseFloat(s.units) || 0;
                 if (units <= 0) return;
 
@@ -712,7 +747,7 @@ export class PortfolioChartUI {
             });
 
             rawCash.forEach(c => {
-                if (AppState.hiddenAssets.has(String(c.id))) return;
+                // Note: All cash assets are included in historical chart to match snapshot baseline.
                 if (c.category === 'shares') return; // Exclude duplicate shares asset from cash
 
                 const bal = parseFloat(c.balance || 0);
@@ -797,9 +832,18 @@ export class PortfolioChartUI {
             const cleanSuperData = ChartDataSanitizer.sanitizeLineSeries(superData);
 
             // Push to Series
-            if (this.series.total) this.series.total.setData(cleanTotalData);
-            if (this.series.super) this.series.super.setData(cleanSuperData);
-            if (this.series.shares) this.series.shares.setData(cleanSharesData);
+            if (this.series.total) {
+                this.series.total.setData(cleanTotalData);
+                this.series.total._lastValue = cleanTotalData.length > 0 ? cleanTotalData[cleanTotalData.length - 1].value : null;
+            }
+            if (this.series.super) {
+                this.series.super.setData(cleanSuperData);
+                this.series.super._lastValue = cleanSuperData.length > 0 ? cleanSuperData[cleanSuperData.length - 1].value : null;
+            }
+            if (this.series.shares) {
+                this.series.shares.setData(cleanSharesData);
+                this.series.shares._lastValue = cleanSharesData.length > 0 ? cleanSharesData[cleanSharesData.length - 1].value : null;
+            }
 
             // Breakdown Series
             Object.keys(catBuffers).forEach((catId, idx) => {
@@ -809,10 +853,13 @@ export class PortfolioChartUI {
                         color: this._getCategoryColor(catId, idx),
                         lineWidth: 2,
                         visible: !!this.visibleLayers[`cat_${catId}`],
-                        priceFormat: { type: 'price', precision: 0, minMove: 1 }
+                        priceFormat: { type: 'price', precision: 0, minMove: 1 },
+                        lastValueVisible: false,
+                        priceLineVisible: false
                     });
                 }
                 this.categorySeries[catId].setData(cleanCatData);
+                this.categorySeries[catId]._lastValue = cleanCatData.length > 0 ? cleanCatData[cleanCatData.length - 1].value : null;
             });
 
             // 7. Markers logic handled in _updateStats -> _updateMarkers
@@ -1028,7 +1075,9 @@ export class PortfolioChartUI {
         // Management of Axis Price Lines (Price lines on the right sidebar)
         if (!this.axisPriceLines) this.axisPriceLines = [];
         this.axisPriceLines.forEach(line => {
-            if (line && line._parentSeries) line._parentSeries.removePriceLine(line);
+            try {
+                if (line && line._parentSeries) line._parentSeries.removePriceLine(line);
+            } catch (_) {}
         });
         this.axisPriceLines = [];
 

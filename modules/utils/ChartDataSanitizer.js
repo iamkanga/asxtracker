@@ -214,7 +214,8 @@ export class ChartDataSanitizer {
                     (!isMarketOpen && (dropPctTotal >= 0.02 || dropPctShares >= 0.025 || dropPctSuper >= 0.03 || absoluteDrop >= 15000)) ||
                     (dropPctShares >= 0.20 && !isMarketOpen) ||
                     (pCurr <= 0.30 * pBase) ||
-                    (dropPctTotal >= 0.10 && !isMarketOpen)
+                    (dropPctTotal >= 0.10 && !isMarketOpen) ||
+                    (dropPctTotal >= dropThreshold && (dropPctTotal >= 0.05 || absoluteDrop >= 10000))
                 );
 
                 if (isDepressedPoint) {
@@ -367,6 +368,8 @@ export class ChartDataSanitizer {
                     reason = 'Zeroed shares valuation out-of-hours';
                 } else if (!isMarketOpen) {
                     reason = `Unconfirmed out-of-hours dip ($${Math.round(orig.total)} vs baseline $${Math.round(clean.total)})`;
+                } else if (orig.total < clean.total) {
+                    reason = `Temporary asset omission / crater dip ($${Math.round(orig.total)} vs baseline $${Math.round(clean.total)})`;
                 } else {
                     reason = 'Transient single-point pricing glitch';
                 }
@@ -445,6 +448,7 @@ export class ChartDataSanitizer {
 
     /**
      * Ingestion Gatekeeper: Validates a proposed real-time portfolio snapshot before committing.
+     * Always calculates against TOTAL portfolio wealth without omitting hidden assets, matching the historical baseline.
      * Prevents transient bad data reads, unconfirmed out-of-hours drops, or zeroed holdings from polluting history.
      * @param {Object} params
      * @param {Array} params.shares - Current shares list from AppState
@@ -463,7 +467,7 @@ export class ChartDataSanitizer {
         isMarketOpen = false,
         pendingDownshift = null
     }) {
-        // 1. Check for Active Holding Zero-Price Collapses
+        // 1. Check for Active Holding Zero-Price Collapses (all active holdings included, no hidden-asset exclusion)
         const activeShares = (shares || []).filter(s => {
             const units = parseFloat(s.portfolioShares) || parseFloat(s.units) || 0;
             return units > 0;
@@ -493,7 +497,7 @@ export class ChartDataSanitizer {
             };
         }
 
-        // 2. Calculate Total Proposed Valuation
+        // 2. Calculate Total Proposed Valuation (all cash assets included without omitting hidden items)
         let calculatedCashTotal = 0;
         (cash || []).forEach(c => {
             if (c.category === 'shares') return; // Exclude redundant share-cash link to prevent double-counting

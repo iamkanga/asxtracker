@@ -20,6 +20,8 @@ export class ChartComponent {
         this.currentStyle = localStorage.getItem('asx_chart_style') || 'candle'; // Persist choice
         this.cachedData = null; // Store data to allow instant style switching
         this.resizeObserver = null;
+        this.rangeBadges = null;
+        this.lastRangeData = null;
 
         this.init();
     }
@@ -178,6 +180,29 @@ export class ChartComponent {
                     color: white;
                     display: none;
                 }
+                .${CSS_CLASSES.CHART_RANGE_BADGE} {
+                    position: absolute;
+                    left: 8px;
+                    z-index: 6;
+                    pointer-events: none;
+                    user-select: none;
+                    font-size: 0.68rem;
+                    font-weight: 800;
+                    padding: 2px 6px;
+                    border-radius: 3px;
+                    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+                    line-height: 1.2;
+                    white-space: nowrap;
+                    display: none;
+                }
+                .${CSS_CLASSES.CHART_RANGE_BADGE_HIGH} {
+                    background: #00E676;
+                    color: #000000;
+                }
+                .${CSS_CLASSES.CHART_RANGE_BADGE_LOW} {
+                    background: #FF5252;
+                    color: #ffffff;
+                }
                 /* Fullscreen Zoom Mode - uses inset anchoring, no viewport units */
                 .chart-fullscreen {
                     position: fixed !important;
@@ -318,14 +343,18 @@ export class ChartComponent {
                     color: '#a49393',
                     width: 1,
                     style: 2, // Dotted
-                    labelBackgroundColor: '#06FF4F', // Neon Green for Price
-                    labelVisible: true,
+                    labelVisible: false, // Prevent crosshair overlay from duplicating scrubPriceLine
                 },
             },
         });
 
         // Initial Series Creation
         this._createSeries(this.currentStyle);
+
+        // Re-align mirrored badges whenever visible range scales or pans
+        this.chart.timeScale().subscribeVisibleLogicalRangeChange(() => {
+            this._updateRangeBadges();
+        });
 
         // Resize Observer
         this.resizeObserver = new ResizeObserver(entries => {
@@ -344,6 +373,7 @@ export class ChartComponent {
                 this.chart.timeScale().fitContent();
                 requestAnimationFrame(() => {
                     if (this.chart) this.chart.timeScale().fitContent();
+                    this._updateRangeBadges();
                 });
             }
         });
@@ -368,6 +398,7 @@ export class ChartComponent {
                         this.chart.timeScale().fitContent();
                         requestAnimationFrame(() => {
                             if (this.chart) this.chart.timeScale().fitContent();
+                            this._updateRangeBadges();
                         });
                     }
                 }
@@ -387,6 +418,7 @@ export class ChartComponent {
             const data = param.seriesData.get(this.series);
             if (data && (data.value !== undefined || data.close !== undefined)) {
                 const price = data.value !== undefined ? data.value : data.close;
+                const isAtLastPrice = (this.lastPriceLine && Math.abs(price - this.lastPriceLine.options().price) < 0.001);
                 
                 if (!this.scrubPriceLine) {
                     this.scrubPriceLine = this.series.createPriceLine({
@@ -394,7 +426,7 @@ export class ChartComponent {
                         color: 'rgba(6, 255, 79, 0.4)',
                         lineWidth: 1,
                         lineStyle: 0,
-                        axisLabelVisible: true,
+                        axisLabelVisible: !isAtLastPrice,
                         title: '',
                         axisLabelColor: '#00E676',
                         axisLabelTextColor: '#000000',
@@ -402,7 +434,8 @@ export class ChartComponent {
                 } else {
                     this.scrubPriceLine.applyOptions({
                         price: price,
-                        visible: true
+                        visible: true,
+                        axisLabelVisible: !isAtLastPrice
                     });
                 }
             } else {
@@ -527,6 +560,7 @@ export class ChartComponent {
                 this.chart.timeScale().fitContent();
                 requestAnimationFrame(() => {
                     if (this.chart) this.chart.timeScale().fitContent();
+                    this._updateRangeBadges();
                 });
             }
         }
@@ -571,6 +605,7 @@ export class ChartComponent {
                             this.chart.timeScale().fitContent();
                             requestAnimationFrame(() => {
                                 if (this.chart) this.chart.timeScale().fitContent();
+                                this._updateRangeBadges();
                             });
                         }
                     } catch (err) {
@@ -594,6 +629,7 @@ export class ChartComponent {
             this.chart.timeScale().fitContent();
             requestAnimationFrame(() => {
                 if (this.chart) this.chart.timeScale().fitContent();
+                this._updateRangeBadges();
             });
         }
     }
@@ -655,6 +691,7 @@ export class ChartComponent {
             if (highEl) highEl.textContent = 'H: --';
             if (lowEl) lowEl.textContent = 'L: --';
             if (changeEl) changeEl.textContent = '--';
+            this._hideRangeBadges();
             return;
         }
 
@@ -706,6 +743,9 @@ export class ChartComponent {
             // User Request: Use coffee color instead of sentiment colors
             changeEl.style.color = '#a49393';
         }
+
+        // Update Mirrored Left-Side Range Badges
+        this._updateRangeBadges(periodHigh, periodLow, endPrice);
     }
 
     /**
@@ -796,6 +836,116 @@ export class ChartComponent {
         this.series.setMarkers(markers);
     }
 
+    /**
+     * Updates or creates mirrored High/Low relative percentage badges on the left side of the chart.
+     * High Badge: +((highVal - currentVal) / currentVal * 100).toFixed(1)%
+     * Low Badge: ((lowVal - currentVal) / currentVal * 100).toFixed(1)%
+     * @param {number} [highVal]
+     * @param {number} [lowVal]
+     * @param {number} [currentVal]
+     */
+    _updateRangeBadges(highVal, lowVal, currentVal) {
+        if (highVal !== undefined && lowVal !== undefined && currentVal !== undefined) {
+            this.lastRangeData = { highVal, lowVal, currentVal };
+        } else if (this.lastRangeData) {
+            ({ highVal, lowVal, currentVal } = this.lastRangeData);
+        }
+
+        if (highVal == null || lowVal == null || currentVal == null || !this.series || !this.chart) {
+            this._hideRangeBadges();
+            return;
+        }
+
+        const canvasContainer = this.container.querySelector(`.${CSS_CLASSES.CHART_CANVAS_CONTAINER}`);
+        if (!canvasContainer) return;
+
+        // Ensure badge elements exist
+        if (!this.rangeBadges) {
+            const highBadge = document.createElement('div');
+            highBadge.className = `${CSS_CLASSES.CHART_RANGE_BADGE} ${CSS_CLASSES.CHART_RANGE_BADGE_HIGH}`;
+            canvasContainer.appendChild(highBadge);
+
+            const lowBadge = document.createElement('div');
+            lowBadge.className = `${CSS_CLASSES.CHART_RANGE_BADGE} ${CSS_CLASSES.CHART_RANGE_BADGE_LOW}`;
+            canvasContainer.appendChild(lowBadge);
+
+            this.rangeBadges = { high: highBadge, low: lowBadge };
+        }
+
+        // 1. Calculate relative percentage swings from currentVal
+        const highDiff = currentVal > 0 ? (((highVal - currentVal) / currentVal) * 100) : 0;
+        const lowDiff = currentVal > 0 ? (((lowVal - currentVal) / currentVal) * 100) : 0;
+
+        const highPctStr = (highDiff > 0 ? '+' : '') + highDiff.toFixed(1) + '%';
+        const lowPctVal = Math.abs(lowDiff) < 0.05 ? 0 : lowDiff;
+        const lowPctStr = (lowDiff > 0 ? '+' : '') + lowPctVal.toFixed(1) + '%';
+
+        this.rangeBadges.high.textContent = `H: ${highPctStr}`;
+        this.rangeBadges.low.textContent = `L: ${lowPctStr}`;
+
+        // 2. Convert highVal and lowVal to pixel Y-coordinates
+        const highY = this.series.priceToCoordinate(highVal);
+        const lowY = this.series.priceToCoordinate(lowVal);
+
+        if (highY === null || lowY === null) {
+            requestAnimationFrame(() => this._updateRangeBadges());
+            return;
+        }
+
+        const containerHeight = canvasContainer.clientHeight;
+        const activeBadges = [];
+
+        if (highY >= 0 && highY <= containerHeight) {
+            activeBadges.push({ el: this.rangeBadges.high, y: highY });
+        } else {
+            this.rangeBadges.high.style.display = 'none';
+        }
+
+        if (lowY >= 0 && lowY <= containerHeight) {
+            activeBadges.push({ el: this.rangeBadges.low, y: lowY });
+        } else {
+            this.rangeBadges.low.style.display = 'none';
+        }
+
+        // Anti-collision with top-left period stats overlay if present
+        const overlay = canvasContainer.querySelector('.chart-period-overlay');
+        let overlayBottom = 0;
+        let overlayRight = 0;
+        if (overlay && overlay.offsetParent !== null) {
+            overlayBottom = overlay.offsetTop + overlay.offsetHeight;
+            overlayRight = overlay.offsetLeft + overlay.offsetWidth;
+        }
+
+        // Sort by Y and offset if overlapping or colliding
+        activeBadges.sort((a, b) => a.y - b.y);
+
+        let lastY = -999;
+        let currentLeft = 8;
+
+        activeBadges.forEach(b => {
+            const hitsOverlay = (b.y - 12 < overlayBottom && b.y + 12 > 0);
+            const baseLeft = hitsOverlay ? (overlayRight + 8) : 8;
+
+            if (Math.abs(b.y - lastY) < 20) {
+                currentLeft += 80;
+            } else {
+                currentLeft = baseLeft;
+            }
+            lastY = b.y;
+
+            b.el.style.top = `${b.y}px`;
+            b.el.style.left = `${currentLeft}px`;
+            b.el.style.transform = 'translateY(-50%)';
+            b.el.style.display = 'block';
+        });
+    }
+
+    _hideRangeBadges() {
+        if (!this.rangeBadges) return;
+        if (this.rangeBadges.high) this.rangeBadges.high.style.display = 'none';
+        if (this.rangeBadges.low) this.rangeBadges.low.style.display = 'none';
+    }
+
     destroy() {
         if (this._orientationHandler) {
             window.removeEventListener('orientationchange', this._orientationHandler);
@@ -806,6 +956,9 @@ export class ChartComponent {
             this.chart.remove();
             this.chart = null;
         }
+        this._hideRangeBadges();
+        this.rangeBadges = null;
+        this.lastRangeData = null;
         this.container.innerHTML = '';
     }
 }

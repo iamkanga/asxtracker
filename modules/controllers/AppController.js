@@ -5,7 +5,7 @@
  */
 
 import { AuthService } from '../auth/AuthService.js';
-import { DataService } from '../data/DataService.js';
+import { DataService, userStore } from '../data/DataService.js';
 import { AppService } from '../data/AppService.js';
 import { ViewRenderer } from '../ui/ViewRenderer.js';
 import { AppState } from '../state/AppState.js';
@@ -54,6 +54,7 @@ export class AppController {
         AppState.controller = this; // Register global controller for UI modules
         // Services
         this.dataService = new DataService();
+        this.userStore = userStore;
         this.appService = new AppService();
         this.viewRenderer = new ViewRenderer();
 
@@ -120,6 +121,8 @@ export class AppController {
         // STATE AUDITOR: Enable diagnostic monitoring (non-invasive)
         StateAuditor.enable();
         startRaceRegressionMonitor(); // v1135: Monitor race regressions on fixed keys
+
+
         // StateHealthPanel.init(); // Disabled per user request (v1144) to keep UI clean.
 
         // AUTO HEALTH CHECK: Run 8s after boot (allows data to load)
@@ -294,6 +297,12 @@ export class AppController {
 
                 // Start Notification Stream
                 notificationStore.init(user.uid);
+
+                if (this.userStore && AppState.user?.uid) {
+                    this.userStore.cleanCorruptedHistorySnapshots(AppState.user.uid)
+                        .then(res => console.log(`[AutoPurge] Cleaned: ${res?.deleted || 0} anomaly snapshots.`))
+                        .catch(err => console.warn('[AutoPurge] Failed silently:', err));
+                }
 
                 // Update Connection Indicator: Keep loading until Firestore data resolves
                 if (this.headerLayout) {
