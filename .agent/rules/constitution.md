@@ -2,32 +2,41 @@
 trigger: always_on
 ---
 
-🧱 SYSTEM ARCHITECTURE & OPERATIONAL CONSTITUTION (v2.3 - Modular Edition)
-STATUS: [ACTIVE LAW]
+# 🧱 SYSTEM ARCHITECTURE & OPERATIONAL CONSTITUTION (v2.4 - Modular Edition)
+STATUS: [ACTIVE LAW]  
 INSTRUCTION: READ AND ACKNOWLEDGE. THIS IS THE HIGHEST AUTHORITY IN THE CONTEXT.
 
-1. Core Philosophy
+---
+
+## 1. Core Philosophy
+
 | Aspect | Standard |
 | :--- | :--- |
-| Architecture | Strict MVC (Model-View-Controller) |
-| Pattern | Decoupled & Event-Driven |
-| Resilience | Asynchronous Readiness & Null-Safety |
-| Goal | "Bulletproof" modularity. Zero global pollution. Zero magic strings. No Race Conditions. |
+| **Architecture** | Strict MVC (Model-View-Controller) |
+| **Pattern** | Decoupled & Event-Driven |
+| **Resilience** | Asynchronous Readiness & Null-Safety |
+| **Goal** | "Bulletproof" modularity. Zero global pollution. Zero magic strings. Zero quota waste. No Race Conditions. |
 
-2. Directory Structure & Responsibilities
+---
+
+## 2. Directory Structure & Responsibilities
+
 | File/Folder | Role | Responsibility |
 | :--- | :--- | :--- |
-| main.js | Controller | Bootstraps the app with try/catch safety wrappers. |
-| AppController.js | Controller | The Brain. Manages logic via Event Listeners. NEVER assigns functions to window. |
-| ViewRenderer.js | View | The Artist. Generates HTML. Must check Store.isReady before rendering. |
-| AppConstants.js | Registry | The Single Source of Truth for CSS_CLASSES, EVENTS, and IDS. |
-| /styles/ | CSS Home | The Modular Style System. New styles MUST live here. |
-| style.css | Legacy | DEPRECATED SKELETON. Do NOT add new styles here. |
+| `main.js` | Controller | Bootstraps the app with `try/catch` safety wrappers. |
+| `AppController.js` | Controller | The Brain. Manages logic via Event Listeners. NEVER assigns functions to `window`. |
+| `ViewRenderer.js` | View | The Artist. Generates HTML. Must check `Store.isReady` before rendering. |
+| `AppConstants.js` | Registry | The Single Source of Truth for `CSS_CLASSES`, `EVENTS`, and `IDS`. |
+| `/styles/` | CSS Home | The Modular Style System. New styles MUST live here. |
+| `style.css` | Legacy | DEPRECATED SKELETON. Do NOT add new styles here. |
 
-3. ⚠️ Non-Negotiable Architectural Mandates
+---
 
-I. THE REGISTRY RULE (Anti-Magic String)
+## 3. ⚠️ Non-Negotiable Architectural Mandates
+
+### I. THE REGISTRY RULE (Anti-Magic String)
 You are FORBIDDEN from using hardcoded string literals for CSS classes or IDs in JavaScript.
+
 ```javascript
 // ❌ Illegal (Magic String):
 div.classList.add('share-card');
@@ -36,8 +45,9 @@ div.classList.add('share-card');
 div.classList.add(CSS_CLASSES.CARD); // Imported from AppConstants.js
 ```
 
-II. THE EVENT BUS RULE
-Components must communicate via standard CustomEvent. Do not rely on global functions.
+### II. THE EVENT BUS RULE
+Components must communicate via standard `CustomEvent`. Do not rely on global functions.
+
 ```javascript
 // ❌ Illegal:
 window.refreshWatchlist();
@@ -46,13 +56,14 @@ window.refreshWatchlist();
 document.dispatchEvent(new CustomEvent(EVENTS.REFRESH_WATCHLIST));
 ```
 
-III. THE "READY" RULE (Anti-Race Condition)
-CRITICAL: UI Modules must NEVER assume data is loaded immediately.
-- Stores: Must initialize `this.isReady = false`. Must dispatch `EVENTS.NOTIFICATION_READY` when data is fetched.
-- UI: Must check `if (!Store.isReady)` in the render method. If false, show a loading state/spinner.
+### III. THE "READY" RULE (Anti-Race Condition)
+**CRITICAL:** UI Modules must NEVER assume data is loaded immediately.
+- **Stores:** Must initialize `this.isReady = false`. Must dispatch `EVENTS.NOTIFICATION_READY` when data is fetched.
+- **UI:** Must check `if (!Store.isReady)` in the `render` method. If false, show a loading state or spinner.
 
-IV. THE NULL GUARD RULE (Anti-Crash)
+### IV. THE NULL GUARD RULE (Anti-Crash)
 Never access external services, global stores, or deep object properties without safety checks.
+
 ```javascript
 // ❌ Illegal (Risk of Crash):
 userStore.subscribe(...);
@@ -63,30 +74,45 @@ if (userStore) userStore.subscribe(...);
 const badge = AppState.preferences?.showBadges;
 ```
 
-V. THE MODULAR CSS STANDARD (Hierarchy)
-Styles are now strictly categorized. New code must be injected into the specific module matching its role:
-1. `styles/1-variables.css`: Root tokens, colors, and fonts.
-2. `styles/2-base.css`: Global resets and standard HTML tags.
-3. `styles/components/`: Reusable UI elements (Buttons, Cards, Modals, Toasts).
-4. `styles/features/`: Complex functional UI (Dashboard, Research, Calculator, Settings).
-5. `styles/5-utilities.css`: Atomic helper classes (.hidden, .text-center).
-6. `styles/7-media-queries.css`: Global responsiveness (Must remain last in cascade).
+### V. THE MODULAR CSS STANDARD (Hierarchy)
+Styles are strictly categorized across dedicated files. New styles must be placed in their corresponding module:
+1. `styles/1-variables.css` – Root tokens, colors, and typography.
+2. `styles/2-base.css` – Global resets and standard HTML tags.
+3. `styles/components/` – Reusable UI elements (Buttons, Cards, Modals, Toasts).
+4. `styles/features/` – Complex functional UI (Dashboard, Research, Calculator, Settings).
+5. `styles/5-utilities.css` – Atomic helper classes (`.hidden`, `.text-center`).
+6. `styles/7-media-queries.css` – Global responsiveness (**MUST remain last in the cascade**).
 
-**Mandate**: Never dump CSS at the bottom of a file. Never use the root `style.css` for new features.
+> [!IMPORTANT]
+> Never dump CSS at the bottom of an unrelated file. Never use the legacy root `style.css` for new features.
 
-VI. ZERO GLOBAL POLLUTION
-Never attach variables or functions to window. Instances must be scoped to `main.js` or passed via dependency injection.
+### VI. ZERO GLOBAL POLLUTION
+Never attach variables or functions to `window`. Instances must be scoped to `main.js` or passed via dependency injection.
 
-VII. THE SUPERANNUATION DATA RULE (Anti-Hallucination)
+### VII. THE SUPERANNUATION DATA RULE (Anti-Hallucination)
 Because superannuation legislation, contribution caps (e.g., NCC), and Transfer Balance Cap (TBC) indexation change frequently, you are FORBIDDEN from relying solely on your internal training data for any legislative limits.
-**Mandate**: You MUST always run a live web search (against ATO/government sources) to verify the exact, current financial year figures before implementing or updating any superannuation strategy calculations.
 
-4. Operational Rules for the Executor
+> [!WARNING]
+> You MUST always run a live web search (against ATO/government sources) to verify exact, current financial year figures before implementing or updating any superannuation strategy calculations.
+
+---
+
+## 4. Operational Rules for the Executor
+
 | Rule | Action |
 | :--- | :--- |
-| Consult walkthrough.md | This file in the root contains specific implementation patterns. |
-| Context-Complete | Provide full logical blocks, not snippets. Do not use // ... rest of code. |
-| Destructive Protection | If a user request would violate the Registry Rule or Global Rule, STOP and warn. |
-| Logic Hardening | Always wrap external service calls and initialization logic in try/catch blocks. |
+| **Consult `walkthrough.md`** | This file in the root contains specific implementation patterns. |
+| **Context-Complete Output** | Provide full logical blocks, not snippets. Do not use `// ... rest of code`. |
+| **Destructive Protection** | If a user request would violate the Registry Rule or Global Rule, STOP and warn the user. |
+| **Logic Hardening** | Always wrap external service calls and initialization logic in `try/catch` blocks. |
 
-When modifying or troubleshooting any alerts or notifications, you MUST read the `NOTIFICATION_ENGINE.md` file first to understand the architectural data flow, the watchlist overrides, and the threshold logic.
+> [!NOTE]
+> When modifying or troubleshooting any alerts or notifications, you MUST read `NOTIFICATION_ENGINE.md` first to understand the architectural data flow, the watchlist overrides, and threshold logic.
+
+
+---
+
+## 5. Pre-Task Execution Rules & Code Modification Guardrails
+
+- **Rule Definition (Automatic Pre-Task Backup):** Before modifying, generating, or refactoring code in any project directory, automatically trigger the master backup script via `call "C:\Users\Kanga\Desktop\Projects\_tools\TXT Make-AI-Zip.bat" "C:\Users\Kanga\Desktop\Projects\<TargetProject>"` to bundle a fresh codebase text export and zip archive before applying changes. All backup archives and codebase text bundles reside strictly within `<TargetProject>\backups\`.
+- **Guardrail (Targeted Edits Only):** Do not perform wholesale file rewrites on monolithic scripts (e.g., `app.js` or `AccountCard.js`). Restrict code modifications strictly to targeted functions or localized edits required for the user's explicit task.

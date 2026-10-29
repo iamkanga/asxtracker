@@ -31,6 +31,7 @@ import { SecurityController } from './SecurityController.js';
 import { SecurityUI } from '../ui/SecurityUI.js';
 import { GeneralSettingsUI } from '../ui/GeneralSettingsUI.js';
 import CalculatorUI from '../ui/CalculatorUI.js';
+import CurrencyModalUI from '../ui/CurrencyModalUI.js';
 import { PortfolioChartUI } from '../ui/PortfolioChartUI.js';
 import { AnalogClock } from '../ui/AnalogClock.js';
 import { AiSummaryUI } from '../ui/AiSummaryUI.js';
@@ -375,6 +376,14 @@ export class AppController {
                 CalculatorUI.showModal();
             } catch (err) {
                 console.error('[AppController] Error opening CalculatorUI:', err);
+            }
+        });
+
+        document.addEventListener(EVENTS.OPEN_CURRENCY || 'open-currency', () => {
+            try {
+                CurrencyModalUI.showModal();
+            } catch (err) {
+                console.error('[AppController] Error opening CurrencyModalUI:', err);
             }
         });
 

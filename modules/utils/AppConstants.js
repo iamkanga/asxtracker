@@ -189,6 +189,7 @@ export const EVENTS = {
     NOTIFICATION_READY: 'notification-ready', // Data loaded event
     OPEN_PORTFOLIO_VIEW: 'open-portfolio-view',
     OPEN_MARKET_PULSE: 'open-market-pulse',
+    OPEN_CURRENCY: 'open-currency',
     TOGGLE_SHARE_MUTE: 'toggle-share-mute', // Added for Constitution Compliance
     OPEN_SETTINGS: 'open-settings',
     OPEN_GENERAL_SETTINGS: 'open-general-settings',
@@ -495,6 +496,7 @@ export const UI_ICONS = {
     SYNC: 'fa-sync-alt',
     ANNOUNCEMENTS: 'fa-satellite-dish',
     CALCULATOR: 'fa-calculator',
+    CURRENCY: 'fa-dollar-sign',
 
     SIMULATED: 'fa-flask'
 };
@@ -1764,6 +1766,7 @@ export const IDS = {
     // Calculators
     BTN_OPEN_CALCULATOR: 'btn-open-calculator',
     CALCULATOR_MODAL: 'calculator-modal',
+    CURRENCY_MODAL: 'currency-modal',
     CALC_TAB_DIVIDEND: 'calc-tab-dividend',
     LIVE_REFRESH_BTN: 'live-refresh-btn',
     LIVE_REFRESH_TIME: 'live-refresh-time',

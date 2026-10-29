@@ -296,8 +296,8 @@ export class SidebarCommandCenter {
                                 ${this.annCount > 0 ? `<span class="notification-badge" style="position: absolute; top: -6px; right: -8px; font-size: 0.65rem; color: var(--color-accent); display: flex; align-items: center; justify-content: center; font-weight: 700; z-index: 10; background: var(--bg-color); border: 1px solid rgba(var(--color-accent-rgb), 0.3); border-radius: 50%; padding: 2px; min-width: 14px; height: 14px;">${this.annCount}</span>` : ''}
                             </div>
                         </button>
-                        <button class="command-grid-item" id="nav-widgets" title="Quick Widget">
-                            <i class="fas fa-layer-group command-icon"></i>
+                        <button class="command-grid-item" id="nav-currency" title="Currency Converter">
+                            <i class="fas ${UI_ICONS.CURRENCY} command-icon"></i>
                         </button>
                         <button class="command-grid-item" id="nav-market-pulse" title="Market Pulse">
                             <i class="fas fa-heartbeat command-icon"></i>
@@ -469,6 +469,11 @@ export class SidebarCommandCenter {
             case 'nav-portfolio-history':
                 this._closeSidebar();
                 document.dispatchEvent(new CustomEvent(EVENTS.OPEN_PORTFOLIO_CHART));
+                break;
+
+            case 'nav-currency':
+                this._closeSidebar();
+                document.dispatchEvent(new CustomEvent(EVENTS.OPEN_CURRENCY));
                 break;
 
             case 'nav-widgets':
