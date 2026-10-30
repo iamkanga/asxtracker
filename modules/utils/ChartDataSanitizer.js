@@ -6,6 +6,7 @@
 
 import { MarketSchedule } from './MarketSchedule.js';
 import { resolveStockPrice } from '../data/DataProcessor.js';
+import { convertAssetToAud } from './CurrencyHelper.js';
 
 /**
  * Ensures on-chart milestone marker callouts (e.g., Shares High: 17 Aug, Super High: 18 Aug, Super Low: 28 July)
@@ -501,7 +502,7 @@ export class ChartDataSanitizer {
         let calculatedCashTotal = 0;
         (cash || []).forEach(c => {
             if (c.category === 'shares') return; // Exclude redundant share-cash link to prevent double-counting
-            calculatedCashTotal += parseFloat(c.balance || 0);
+            calculatedCashTotal += convertAssetToAud(c);
         });
 
         const proposedTotal = calculatedSharesTotal + calculatedCashTotal;

@@ -2580,10 +2580,23 @@ export class NotificationStore {
 
                         // 2. Ensure Code/ID
                         if (!item.code) item.code = 'MARKET';
-                        // v1158: MANDRILL/MAILCHIMP URL DECODER
-                        // Firestore stores email tracking redirect URLs (mandrillapp.com/track/click/...),
-                        // NOT direct Market Index URLs. The real destination is base64-encoded in the 'p' parameter.
-                        // We decode it to get the actual Market Index URL, then construct the specific announcement URL.
+
+                        // Extract ASX Code from Title if the provided code is missing or generic
+                        let resolvedCode = (item.code || '').replace(/.*[:\[]/, '').replace(/[\]\s].*/, '').trim().toUpperCase();
+                        if ((!resolvedCode || resolvedCode === 'UNKNOWN' || resolvedCode === 'ASX' || resolvedCode === 'MARKET') && (item.title || item.headline)) {
+                            const text = item.title || item.headline || '';
+                            const match = text.match(/^\[?([A-Z]{3,4})\]?\b/) || text.match(/ASX:([A-Z0-9]{2,5})/i);
+                            if (match) resolvedCode = match[1].toUpperCase();
+                        }
+                        if (resolvedCode && resolvedCode !== 'UNKNOWN' && resolvedCode !== 'MARKET' && resolvedCode !== 'ASX') {
+                            item.code = resolvedCode;
+                        }
+
+                        // v1158 & v1162: TRACKING REDIRECT URL DECODER & CANONICAL RESOLVER
+                        // Firestore stores email tracking redirect URLs (mandrillapp.com/track/click or click.mail.marketindex.com.au),
+                        // NOT direct Market Index URLs. These tracking URLs are protected by Cloudflare bot mitigation
+                        // (returning 403 Forbidden to AI bots/crawlers like Gemini).
+                        // We decode them or normalize them to clean, canonical Market Index URLs.
                         if (item.link) {
                             let resolvedUrl = item.link;
 
@@ -2593,7 +2606,6 @@ export class NotificationStore {
                                     const urlObj = new URL(item.link);
                                     const pParam = urlObj.searchParams.get('p');
                                     if (pParam) {
-                                        // Fix Base64 URL encoding characters and padding
                                         let base64 = pParam.replace(/-/g, '+').replace(/_/g, '/');
                                         while (base64.length % 4) base64 += '=';
                                         
@@ -2610,6 +2622,21 @@ export class NotificationStore {
                                 }
                             }
 
+                            // 1b. Normalize click.mail.marketindex or tracking redirects
+                            const isMarketReportItem = (item.code === 'MARKET' || batch.batchType === 'MARKET_REPORT');
+                            const isTrackingUrl = resolvedUrl.includes('click.mail.marketindex') || 
+                                                  resolvedUrl.includes('mandrillapp.com') || 
+                                                  resolvedUrl.includes('/track/click') ||
+                                                  resolvedUrl.includes('/click?');
+
+                            if (isTrackingUrl) {
+                                if (!isMarketReportItem && item.code && item.code !== 'MARKET' && item.code !== 'UNKNOWN' && item.code !== 'ASX') {
+                                    resolvedUrl = `https://www.marketindex.com.au/asx/${item.code.toLowerCase()}/announcements`;
+                                } else if (isMarketReportItem) {
+                                    resolvedUrl = 'https://www.marketindex.com.au';
+                                }
+                            }
+
                             // 2. Redirect to the company's announcements page
                             // Market Index requires a specific document ID in announcement URLs (e.g. -3A691173)
                             // which isn't available in the Firestore data. The announcements list page is the 
@@ -2618,7 +2645,7 @@ export class NotificationStore {
                                 const codeMatch = resolvedUrl.match(/marketindex\.com\.au\/asx\/([a-z0-9]{2,5})\b/i);
                                 const urlCode = codeMatch ? codeMatch[1].toLowerCase() : (item.code || '').replace(/.*[:]/, '').trim().toLowerCase();
 
-                                if (urlCode) {
+                                if (urlCode && urlCode !== 'unknown' && urlCode !== 'asx' && urlCode !== 'market') {
                                     resolvedUrl = `https://www.marketindex.com.au/asx/${urlCode}/announcements`;
                                 }
                             }

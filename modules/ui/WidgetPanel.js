@@ -14,6 +14,7 @@ import { CSS_CLASSES, IDS, EVENTS, UI_ICONS, UI_LABELS, DASHBOARD_SYMBOLS, DASHB
 import { formatCurrency, formatPercent } from '../utils/formatters.js';
 import { LinkHelper } from '../utils/LinkHelper.js';
 import { MarketSchedule } from '../utils/MarketSchedule.js';
+import { convertAssetToAud } from '../utils/CurrencyHelper.js';
 
 export const WIDGET_MODULES = [
     { id: 'day_performance', label: 'Day Performance', description: "Today's portfolio gain/loss detail", icon: 'fa-calendar-day', renderer: '_renderDayPerformance', default: true },
@@ -430,7 +431,7 @@ export class WidgetPanel {
         let otherValue = 0;
 
         cashItems.forEach(c => {
-            const val = parseFloat(c.balance) || 0;
+            const val = convertAssetToAud(c);
             const category = (c.category || '').toLowerCase();
             if (category === 'super') superValue += val;
             else if (category === 'cash_in_bank' || category === 'cash' || category === 'term_deposit') cashInBankValue += val;
@@ -1075,7 +1076,7 @@ export class WidgetPanel {
         const cashItems = this._getCashItems();
         if (!cashItems.length) return `<div class="${CSS_CLASSES.WIDGET_EMPTY}">No cash assets</div>`;
 
-        const totalCash = cashItems.reduce((acc, c) => acc + (parseFloat(c.balance) || 0), 0);
+        const totalCash = cashItems.reduce((acc, c) => acc + convertAssetToAud(c), 0);
         return `
             <div class="${CSS_CLASSES.WIDGET_ROW}" style="padding: 10px 18px;">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -1087,7 +1088,7 @@ export class WidgetPanel {
                 <div class="${CSS_CLASSES.WIDGET_ROW}" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 18px; cursor: pointer;" 
                      onclick="document.dispatchEvent(new CustomEvent('${EVENTS.REQUEST_QUICK_NAV}', { detail: { watchlistId: '${CASH_WATCHLIST_ID}' } }))">
                     <span class="label" style="font-size: 0.8rem; color: rgba(255,255,255,0.6); flex: 1; text-align: left;">${c.name || c.category}</span>
-                    <span class="value" style="font-weight: 600; font-size: 0.85rem; color: #fff; flex: 1; text-align: right;">${formatCurrency(parseFloat(c.balance) || 0)}</span>
+                    <span class="value" style="font-weight: 600; font-size: 0.85rem; color: #fff; flex: 1; text-align: right;">${formatCurrency(convertAssetToAud(c))}</span>
                 </div>
             `).join('')}
         `;

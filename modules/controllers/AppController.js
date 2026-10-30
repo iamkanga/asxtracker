@@ -32,6 +32,7 @@ import { SecurityUI } from '../ui/SecurityUI.js';
 import { GeneralSettingsUI } from '../ui/GeneralSettingsUI.js';
 import CalculatorUI from '../ui/CalculatorUI.js';
 import CurrencyModalUI from '../ui/CurrencyModalUI.js';
+import { convertAssetToAud } from '../utils/CurrencyHelper.js';
 import { PortfolioChartUI } from '../ui/PortfolioChartUI.js';
 import { AnalogClock } from '../ui/AnalogClock.js';
 import { AiSummaryUI } from '../ui/AiSummaryUI.js';
@@ -3713,7 +3714,9 @@ export class AppController {
 
         // Add Cash
         data.cash.forEach(c => {
-            csvContent += `Cash,${c.name},${c.balance},1,${c.balance},${c.category}\n`;
+            const audVal = convertAssetToAud(c);
+            const isThb = (c.currency || '').toUpperCase() === 'THB';
+            csvContent += `Cash,${c.name}${isThb ? ' (THB)' : ''},${c.balance},1,${audVal.toFixed(2)},${c.category}\n`;
         });
 
         const encodedUri = encodeURI(csvContent);

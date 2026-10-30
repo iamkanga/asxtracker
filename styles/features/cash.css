@@ -445,3 +445,47 @@ input[type="number"] {
     transform: rotate(180deg);
     color: var(--color-accent);
 }
+
+
+
+/* Currency Selector & Baht Display */
+.cash-currency-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 0.65rem;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--color-accent, #10b981);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    vertical-align: middle;
+    margin-left: 6px;
+    font-weight: 700;
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+.cash-sub-conversion {
+    font-size: 0.72rem;
+    font-weight: 600;
+    opacity: 0.85;
+    color: var(--text-muted, #94a3b8);
+    line-height: 1.1;
+    margin-top: 2px;
+}
+
+.cash-view-three-column .cash-sub-conversion {
+    font-size: 0.65rem;
+    margin-top: 1px;
+}
+
+.cash-currency-pill:hover {
+    border-color: rgba(255, 255, 255, 0.25) !important;
+}
+
+.cash-currency-pill.active {
+    border-color: var(--color-accent, #10b981) !important;
+    background: rgba(16, 185, 129, 0.15) !important;
+    color: #fff !important;
+}

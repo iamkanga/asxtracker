@@ -6,6 +6,7 @@ import { DataService, userStore } from '../data/DataService.js';
 import { resolveStockPrice } from '../data/DataProcessor.js';
 import { ChartDataSanitizer, ensureChartMilestoneFormatting } from '../utils/ChartDataSanitizer.js';
 import { ToastManager } from './ToastManager.js';
+import { convertAssetToAud } from '../utils/CurrencyHelper.js';
 
 /**
  * PortfolioChartUI
@@ -760,7 +761,7 @@ export class PortfolioChartUI {
                 // Note: All cash assets are included in historical chart to match snapshot baseline.
                 if (c.category === 'shares') return; // Exclude duplicate shares asset from cash
 
-                const bal = parseFloat(c.balance || 0);
+                const bal = convertAssetToAud(c);
                 const cid = c.category || 'other';
                 liveCashVal += bal;
                 if (cid === 'super') liveSuperVal += bal;
@@ -935,7 +936,7 @@ export class PortfolioChartUI {
             if (item.category === 'super') return; // Super is handled as a primary series
 
             const cid = item.category || 'cash';
-            map[cid] = (map[cid] || 0) + (parseFloat(item.balance) || 0);
+            map[cid] = (map[cid] || 0) + convertAssetToAud(item);
         });
 
         return map;

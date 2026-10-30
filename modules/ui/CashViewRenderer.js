@@ -5,6 +5,7 @@
  */
 import { CASH_CATEGORIES, CSS_CLASSES, UI_ICONS, EVENTS, ASSET_CUSTOM_COLORS } from '../utils/AppConstants.js';
 import { formatCurrency } from '../utils/formatters.js';
+import { convertAssetToAud, formatBaht, getAudThbRate } from '../utils/CurrencyHelper.js';
 import { AppState } from '../state/AppState.js';
 import { CashPieChart } from './CashPieChart.js';
 
@@ -211,9 +212,14 @@ export class CashViewRenderer {
             .filter(c => c && c.id)
             .find(c => c.id === asset.category);
 
+        const isThb = (asset.currency || '').toUpperCase() === 'THB';
+        const rate = isThb ? getAudThbRate() : 1;
+        const audVal = isThb ? convertAssetToAud(asset, rate) : (parseFloat(asset.balance) || 0);
+
         card.innerHTML = `
             <div class="cash-grid-category">
                 ${escapeHtml((catObj ? catObj.label : (asset.category || 'Cash').replace(/^user_/i, '').replace(/_/g, ' ')).toUpperCase())}
+                ${isThb ? `<span class="cash-currency-badge" style="display: inline-flex; align-items: center; gap: 3px; font-size: 0.65rem; padding: 1px 6px; border-radius: 4px; background: rgba(16, 185, 129, 0.15); color: var(--color-accent, #10b981); border: 1px solid rgba(16, 185, 129, 0.3); vertical-align: middle; margin-left: 6px; font-weight: 700; text-transform: none; letter-spacing: 0;">🇹🇭 THB</span>` : ''}
                 ${hasComments ? `<i class="fas ${UI_ICONS.COMMENTS} cash-comment-indicator" style="font-size: 10px; opacity: 0.4; margin-left: 6px;" title="Comments available"></i>` : ''}
             </div>
             <div class="cash-grid-name">
@@ -221,7 +227,14 @@ export class CashViewRenderer {
             </div>
             <div class="cash-grid-balance ${asset.balance > 0 ? CSS_CLASSES.CASH_VALUE_POSITIVE : asset.balance < 0 ? CSS_CLASSES.CASH_VALUE_NEGATIVE : ''}" 
                  style="${asset.balance === 0 ? 'color: var(--color-accent);' : ''}">
-                ${formatCurrency(asset.balance)}
+                ${isThb ? `
+                    <span>${formatBaht(asset.balance)}</span>
+                    <div class="cash-sub-conversion" style="font-size: 0.75rem; font-weight: 600; opacity: 0.85; color: var(--text-muted); line-height: 1.1; margin-top: 2px;">
+                        ≈ ${formatCurrency(audVal)} <span style="font-size: 0.68rem; opacity: 0.75;">(1 AUD = ${rate.toFixed(2)} ฿)</span>
+                    </div>
+                ` : `
+                    ${formatCurrency(asset.balance)}
+                `}
             </div>
             <div class="cash-grid-actions">
                 <button class="${CSS_CLASSES.ICON_BTN_GHOST} ${CSS_CLASSES.CASH_EYE_BTN}" title="${asset.isHidden ? "Show Asset" : "Hide Asset"}">

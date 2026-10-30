@@ -1,4 +1,5 @@
 import { formatCurrency, formatPercent } from '../utils/formatters.js';
+import { convertAssetToAud } from '../utils/CurrencyHelper.js';
 import { CASH_CATEGORIES, CSS_CLASSES, UI_ICONS, ASSET_CUSTOM_COLORS, EVENTS } from '../utils/AppConstants.js';
 import { AppState } from '../state/AppState.js';
 import { navManager } from '../utils/NavigationManager.js';
@@ -375,12 +376,12 @@ export class CashPieChart {
     _getBreakdown(byIndividual = false) {
         if (byIndividual) {
             return this.assets
-                .filter(a => !a.isHidden && parseFloat(a.balance) > 0)
+                .filter(a => !a.isHidden && convertAssetToAud(a) > 0)
                 .map(asset => {
                     return {
                         id: asset.id,
                         label: asset.name,
-                        val: parseFloat(asset.balance),
+                        val: convertAssetToAud(asset),
                         color: this._getAssetColor(asset)
                     };
                 })
@@ -390,7 +391,7 @@ export class CashPieChart {
         const breakdown = {};
         this.assets.forEach(asset => {
             const catId = asset.category || 'other';
-            const val = parseFloat(asset.balance || 0);
+            const val = convertAssetToAud(asset);
             if (val <= 0 || asset.isHidden) return;
 
             if (!breakdown[catId]) {

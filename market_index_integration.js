@@ -119,7 +119,7 @@ const CTA_JUNK_TEXT = /View\s*this\s*email|Manage\s*your\s*preferences|Update.*p
  * Domains we trust for content URLs. Anything outside these (except Mandrill
  * tracking redirects) is ignored during the fallback URL sweep.
  */
-const TRUSTED_DOMAINS = /(?:www\.)?(?:marketindex\.com\.au|asx\.com\.au|mandrillapp\.com\/track\/click)/i;
+const TRUSTED_DOMAINS = /(?:www\.)?(?:marketindex\.com\.au|asx\.com\.au|mandrillapp\.com\/track\/click|click\.mail\.marketindex\.com\.au)/i;
 
 // =============================================================================
 // CLASSIFICATION RULES
@@ -375,7 +375,13 @@ function extractAlert_(subject, bodyHtml, date) {
       headline = colonMatch[2].trim() || subject;
     }
 
-    const link = findBestUrl_(bodyHtml);
+    let link = findBestUrl_(bodyHtml);
+
+    // If only a click tracking link is found, normalize it to the direct announcements page
+    // to bypass Cloudflare bot challenges (HTTP 403) when shared with AI agents like Gemini
+    if (link && (link.includes('click.mail.marketindex') || link.includes('mandrillapp.com/track/click')) && code !== 'UNKNOWN') {
+      link = `https://www.marketindex.com.au/asx/${code.toLowerCase()}/announcements`;
+    }
 
     return {
       code,
@@ -554,7 +560,7 @@ function findBestUrl_(html) {
 
   //  PHASE 2: Fallback  Regex sweep of raw HTML for non-anchor URLs 
   // Some emails embed URLs in tracking pixels or inline styles.
-  const rawUrlRegex = /https?:\/\/(?:www\.)?(?:marketindex\.com\.au|asx\.com\.au|mandrillapp\.com\/track\/click)\/[^\s"'<>]+/gi;
+  const rawUrlRegex = /https?:\/\/(?:www\.)?(?:marketindex\.com\.au|asx\.com\.au|mandrillapp\.com\/track\/click|click\.mail\.marketindex\.com\.au)\/[^\s"'<>]+/gi;
   const rawUrls = (html.match(rawUrlRegex) || []).filter(url => !isBlockedUrl_(url));
 
   if (rawUrls.length > 0) {

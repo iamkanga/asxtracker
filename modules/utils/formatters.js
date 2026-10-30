@@ -21,6 +21,15 @@ export const formatCurrency = (value) => {
     return new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD' }).format(value);
 };
 
+export const formatBaht = (value) => {
+    const num = typeof value === 'number' ? value : parseFloat(value);
+    if (isNaN(num)) return '฿0.00';
+    return '฿' + num.toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+};
+
 export const formatPercent = (value) => {
     if (typeof value !== 'number') return '0.00%';
     // Always use absolute value - colors indicate direction, not signs

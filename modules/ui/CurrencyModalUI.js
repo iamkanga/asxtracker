@@ -16,7 +16,7 @@ export default class CurrencyModalUI {
         modal.id = modalId;
         modal.className = `${CSS_CLASSES.MODAL} ${CSS_CLASSES.HIDDEN}`;
         modal.innerHTML = `
-            <div class="${CSS_CLASSES.MODAL_OVERLAY}"></div>
+            <div class="${CSS_CLASSES.MODAL_OVERLAY}" style="cursor: pointer;"></div>
             <div class="${CSS_CLASSES.MODAL_CONTENT} ${CSS_CLASSES.MODAL_CONTENT_MEDIUM}" style="height: 88vh; max-height: 820px; max-width: 480px; display: flex; flex-direction: column; padding: 0; overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.1);">
                 <div class="${CSS_CLASSES.MODAL_HEADER}" style="padding: 12px 16px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); display: flex; align-items: center; justify-content: space-between; background: rgba(18, 20, 26, 0.95);">
                     <div style="display: flex; align-items: center; gap: 8px;">
@@ -79,5 +79,13 @@ export default class CurrencyModalUI {
 
         const overlay = modal.querySelector(`.${CSS_CLASSES.MODAL_OVERLAY}`);
         if (overlay) overlay.addEventListener('click', close);
+
+        // Dismiss when clicking anywhere outside modal content container
+        modal.addEventListener('click', (e) => {
+            const content = modal.querySelector(`.${CSS_CLASSES.MODAL_CONTENT}`);
+            if (content && !content.contains(e.target)) {
+                close();
+            }
+        });
     }
 }

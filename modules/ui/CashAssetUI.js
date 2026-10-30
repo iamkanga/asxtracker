@@ -8,6 +8,8 @@ import { AppState } from '../state/AppState.js';
 import { ToastManager } from './ToastManager.js';
 import { navManager } from '../utils/NavigationManager.js';
 import { KeyboardModalHandler } from '../utils/KeyboardModalHandler.js';
+import { getAudThbRate } from '../utils/CurrencyHelper.js';
+import { formatCurrency } from '../utils/formatters.js';
 
 export class CashAssetUI {
     constructor() {
@@ -168,6 +170,8 @@ export class CashAssetUI {
         const startColor = userCatTheme?.color || (asset ? asset.color : null) || this._pickInitialColor(asset?.name || '', asset?.id, this.selectedCategory);
         modal.dataset.selectedColor = startColor;
         modal.dataset.selectedCategory = this.selectedCategory;
+        const selectedCurrency = (asset && asset.currency) ? String(asset.currency).toUpperCase() : 'AUD';
+        modal.dataset.selectedCurrency = selectedCurrency;
         if (isEdit) modal.dataset.editingAssetId = asset.id;
 
         const dropdownHtml = `
@@ -229,8 +233,24 @@ export class CashAssetUI {
                             <input type="text" id="${IDS.ASSET_NAME}" class="${CSS_CLASSES.STANDARD_INPUT}" value="${asset ? asset.name : ''}" placeholder="e.g. High Interest Savings">
                         </div>
                         <div class="${CSS_CLASSES.FORM_GROUP} stacked">
-                            <label for="${IDS.ASSET_BALANCE}" class="${CSS_CLASSES.INPUT_LABEL}">Balance ($)</label>
+                        </div>
+                        <div class="${CSS_CLASSES.FORM_GROUP} stacked">
+                            <label class="${CSS_CLASSES.INPUT_LABEL}">Currency</label>
+                            <div class="cash-currency-selector" style="display: flex; gap: 8px; margin-bottom: 4px;">
+                                <button type="button" class="cash-currency-pill ${selectedCurrency === 'AUD' ? 'active' : ''}" data-currency="AUD" style="flex: 1; padding: 9px 12px; border-radius: 8px; border: 1px solid ${selectedCurrency === 'AUD' ? 'var(--color-accent, #10b981)' : 'rgba(255,255,255,0.1)'}; background: ${selectedCurrency === 'AUD' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255,255,255,0.03)'}; color: ${selectedCurrency === 'AUD' ? '#fff' : 'var(--text-muted)'}; font-weight: 600; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s ease;">
+                                    <i class="fas fa-dollar-sign" style="font-size: 0.85rem; color: ${selectedCurrency === 'AUD' ? 'var(--color-accent)' : 'inherit'};"></i>
+                                    <span>AUD ($)</span>
+                                </button>
+                                <button type="button" class="cash-currency-pill ${selectedCurrency === 'THB' ? 'active' : ''}" data-currency="THB" style="flex: 1; padding: 9px 12px; border-radius: 8px; border: 1px solid ${selectedCurrency === 'THB' ? 'var(--color-accent, #10b981)' : 'rgba(255,255,255,0.1)'}; background: ${selectedCurrency === 'THB' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255,255,255,0.03)'}; color: ${selectedCurrency === 'THB' ? '#fff' : 'var(--text-muted)'}; font-weight: 600; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s ease;">
+                                    <span style="font-size: 1rem;">🇹🇭</span>
+                                    <span>Thai Baht (฿)</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="${CSS_CLASSES.FORM_GROUP} stacked">
+                            <label for="${IDS.ASSET_BALANCE}" id="asset-balance-label" class="${CSS_CLASSES.INPUT_LABEL}">${selectedCurrency === 'THB' ? 'Balance (฿ / Baht)' : 'Balance ($ AUD)'}</label>
                             <input type="number" id="${IDS.ASSET_BALANCE}" class="${CSS_CLASSES.STANDARD_INPUT}" value="${asset ? asset.balance : ''}" placeholder="0.00" step="0.01">
+                            <div id="asset-currency-hint" style="margin-top: 6px; font-size: 0.82rem; color: var(--color-accent, #10b981); font-weight: 600; display: ${selectedCurrency === 'THB' ? 'flex' : 'none'}; align-items: center; gap: 6px;"></div>
                         </div>
                         <div class="${CSS_CLASSES.FORM_GROUP} stacked">
                              <label class="${CSS_CLASSES.INPUT_LABEL} mb-2">Comments</label>
@@ -406,6 +426,55 @@ export class CashAssetUI {
             }
         });
 
+        // Currency Selector & Live Conversion Listeners
+        const balanceInput = modal.querySelector(`#${IDS.ASSET_BALANCE}`);
+        const balanceLabel = modal.querySelector('#asset-balance-label');
+        const currencyHint = modal.querySelector('#asset-currency-hint');
+        const currencyPills = modal.querySelectorAll('.cash-currency-pill');
+
+        const updateCurrencyHint = () => {
+            const cur = modal.dataset.selectedCurrency || 'AUD';
+            if (cur === 'THB') {
+                const rate = getAudThbRate();
+                const val = parseFloat(balanceInput?.value);
+                if (!isNaN(val) && val > 0 && rate > 0) {
+                    const audVal = val / rate;
+                    currencyHint.innerHTML = `<i class="fas fa-exchange-alt"></i> ≈ ${formatCurrency(audVal)} AUD <span style="opacity: 0.75; font-size: 0.75rem; font-weight: 500;">(Rate: 1 AUD = ${rate.toFixed(4)} ฿)</span>`;
+                    currencyHint.style.display = 'flex';
+                } else {
+                    currencyHint.innerHTML = `<i class="fas fa-info-circle"></i> Active Rate: 1 AUD = ${rate.toFixed(4)} THB`;
+                    currencyHint.style.display = 'flex';
+                }
+                if (balanceLabel) balanceLabel.textContent = 'Balance (฿ / Baht)';
+            } else {
+                currencyHint.style.display = 'none';
+                if (balanceLabel) balanceLabel.textContent = 'Balance ($ AUD)';
+            }
+        };
+
+        currencyPills.forEach(pill => {
+            pill.addEventListener('click', () => {
+                const chosen = pill.dataset.currency;
+                modal.dataset.selectedCurrency = chosen;
+                currencyPills.forEach(p => {
+                    const isMatch = p.dataset.currency === chosen;
+                    p.classList.toggle('active', isMatch);
+                    p.style.borderColor = isMatch ? 'var(--color-accent, #10b981)' : 'rgba(255,255,255,0.1)';
+                    p.style.background = isMatch ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255,255,255,0.03)';
+                    p.style.color = isMatch ? '#fff' : 'var(--text-muted)';
+                    const icon = p.querySelector('i');
+                    if (icon) icon.style.color = isMatch ? 'var(--color-accent)' : 'inherit';
+                });
+                updateCurrencyHint();
+            });
+        });
+
+        if (balanceInput) {
+            balanceInput.addEventListener('input', updateCurrencyHint);
+        }
+
+        updateCurrencyHint();
+
         const commentsContainer = modal.querySelector(`#${IDS.COMMENTS_LIST_CONTAINER}`);
         const addComment = (commentObj = { text: '', height: null }) => {
             // Support both legacy string-only and new object format (Handles both 'text' and 'body' for compatibility)
@@ -536,7 +605,8 @@ export class CashAssetUI {
             date: new Date().toISOString() 
         })).filter(c => c.body);
 
-        return { name, balance, category, color, comments };
+        const currency = modal.dataset.selectedCurrency || 'AUD';
+        return { name, balance, currency, category, color, comments };
     }
 
     _updateModalHeaderColor(modal) {

@@ -341,7 +341,7 @@ export class MarketIndexController {
                             <button class="code-pill" data-code="${extractedCode}" style="border: 1px solid rgba(var(--color-accent-rgb, 100, 150, 255), 0.4); border-radius: 4px; background: rgba(30, 30, 30, 0.9); color: var(--color-accent, #6496ff); padding: 0 10px; height: 26px; font-size: 0.75rem; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 4px; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.2); box-sizing: border-box; margin-right: 8px; line-height: 1;" title="View ${extractedCode} Details">
                                 <i class="fas fa-search-dollar" style="vertical-align: middle;"></i> View ${extractedCode}
                             </button>
-                            <button class="analysis-pill" data-url="${href}" style="border: 1px solid rgba(var(--color-accent-rgb, 100, 150, 255), 0.4); border-radius: 4px; background: rgba(30, 30, 30, 0.9); color: var(--color-accent, #6496ff); padding: 0 10px; height: 26px; font-size: 0.75rem; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 4px; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.2); box-sizing: border-box; line-height: 1;" title="Analyze Announcement">
+                            <button class="analysis-pill" data-url="${href}" data-code="${extractedCode}" data-headline="${(alert.title || alert.headline || '').replace(/"/g, '&quot;')}" style="border: 1px solid rgba(var(--color-accent-rgb, 100, 150, 255), 0.4); border-radius: 4px; background: rgba(30, 30, 30, 0.9); color: var(--color-accent, #6496ff); padding: 0 10px; height: 26px; font-size: 0.75rem; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 4px; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.2); box-sizing: border-box; line-height: 1;" title="Analyze Announcement">
                                 <i class="fas fa-robot" style="vertical-align: middle;"></i> Analyze
                             </button>
                             ` : ''}
@@ -454,8 +454,30 @@ export class MarketIndexController {
                     // Mark as read (Ghosting effect)
                     this.markAsRead(alertId, wrapper);
 
-                    const url = analysisPill.dataset.url;
-                    const textPayload = `Summarize this in a couple of sentences and tell me the likely effect on the share price making sure you highlight any key points: ${url}`;
+                    let url = analysisPill.dataset.url || '';
+                    const code = analysisPill.dataset.code || '';
+                    const rawHeadline = analysisPill.dataset.headline || '';
+
+                    // Fallback normalization: resolve any residual tracking redirect URLs
+                    if (url.includes('click.mail.marketindex') || url.includes('mandrillapp.com') || url.includes('/track/click')) {
+                        if (code && code !== 'UNKNOWN' && code !== 'MARKET' && code !== 'ASX') {
+                            url = `https://www.marketindex.com.au/asx/${code.toLowerCase()}/announcements`;
+                        }
+                    }
+
+                    // Build rich, self-contained prompt context for Gemini
+                    let promptContext = '';
+                    if (rawHeadline && code) {
+                        promptContext = `the recent announcement "${rawHeadline}" for ${code} (ASX: ${code})`;
+                    } else if (code) {
+                        promptContext = `the latest announcement for ${code} (ASX: ${code})`;
+                    } else if (rawHeadline) {
+                        promptContext = `this announcement: "${rawHeadline}"`;
+                    } else {
+                        promptContext = 'this announcement';
+                    }
+
+                    const textPayload = `Summarize ${promptContext} in a couple of sentences and tell me the likely effect on the share price making sure you highlight any key points: ${url}`;
                     
                     if (navigator.share) {
                         navigator.share({

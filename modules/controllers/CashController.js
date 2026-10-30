@@ -7,6 +7,7 @@ import { CashViewRenderer } from '../ui/CashViewRenderer.js';
 import { CASH_WATCHLIST_ID, SORT_OPTIONS, IDS, EVENTS, CASH_CATEGORIES } from '../utils/AppConstants.js';
 import { AppState } from '../state/AppState.js';
 import { ToastManager } from '../ui/ToastManager.js';
+import { convertAssetToAud } from '../utils/CurrencyHelper.js';
 
 export class CashController {
     constructor(modalController) {
@@ -74,7 +75,7 @@ export class CashController {
         // Calculate Total (Exclude Hidden)
         const totalValue = processedAssets
             .filter(asset => !asset.isHidden)
-            .reduce((sum, asset) => sum + (parseFloat(asset.balance) || 0), 0);
+            .reduce((sum, asset) => sum + convertAssetToAud(asset), 0);
 
         // Sort
         const sortedAssets = this.sortCashCategories(processedAssets);
@@ -121,8 +122,8 @@ export class CashController {
 
             // Handle numeric values
             if (field === 'balance') {
-                valA = parseFloat(valA) || 0;
-                valB = parseFloat(valB) || 0;
+                valA = convertAssetToAud(a);
+                valB = convertAssetToAud(b);
             }
 
             if (valA < valB) return direction === 'asc' ? -1 : 1;
