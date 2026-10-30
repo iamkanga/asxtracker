@@ -16,6 +16,11 @@ firebase.json
 .firebaserc
 global-alerts.gs
 market-index-integration.gs
+dividend_sync.gs
+
+# Backups & Archives
+backups/
+*.zip
 
 # Data Dumps & Workbooks
 *.xlsx
