@@ -20,6 +20,7 @@ import {
     EVENTS
 } from '../utils/AppConstants.js';
 import { ToastManager } from '../ui/ToastManager.js';
+import { convertAssetToAud } from '../utils/CurrencyHelper.js';
 
 
 
@@ -54,7 +55,9 @@ export class ModalController {
                 // Add new point (assuming current balance is the new value)
                 // Filter out any points within the same minute to avoid spam
                 const cleanPoints = points.filter(p => Math.abs(p.time - now) > 60);
-                cleanPoints.push({ time: now, val: formData.balance });
+                const otherCategoryAssets = (AppState.data.cash || []).filter(c => c.category === formData.category && (!assetId || String(c.id) !== String(assetId)) && c.name !== formData.name);
+                const categoryAudTotal = otherCategoryAssets.reduce((sum, c) => sum + convertAssetToAud(c), 0) + convertAssetToAud(formData);
+                cleanPoints.push({ time: now, val: categoryAudTotal });
 
                 // Keep only last 1000 points to avoid bloating localStorage
                 const cappedPoints = cleanPoints.sort((a, b) => a.time - b.time).slice(-1000);

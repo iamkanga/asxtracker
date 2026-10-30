@@ -170,8 +170,10 @@ export class CashAssetUI {
         const startColor = userCatTheme?.color || (asset ? asset.color : null) || this._pickInitialColor(asset?.name || '', asset?.id, this.selectedCategory);
         modal.dataset.selectedColor = startColor;
         modal.dataset.selectedCategory = this.selectedCategory;
-        const selectedCurrency = (asset && asset.currency) ? String(asset.currency).toUpperCase() : 'AUD';
+        const isLinked = !!(asset?.isPortfolioLinked || this.selectedCategory === 'shares');
+        const selectedCurrency = (!isLinked && asset && asset.currency) ? String(asset.currency).toUpperCase() : 'AUD';
         modal.dataset.selectedCurrency = selectedCurrency;
+        if (asset?.isPortfolioLinked) modal.dataset.isPortfolioLinked = 'true';
         if (isEdit) modal.dataset.editingAssetId = asset.id;
 
         const dropdownHtml = `
@@ -232,9 +234,7 @@ export class CashAssetUI {
                             <label for="${IDS.ASSET_NAME}" class="${CSS_CLASSES.INPUT_LABEL}">Asset Name</label>
                             <input type="text" id="${IDS.ASSET_NAME}" class="${CSS_CLASSES.STANDARD_INPUT}" value="${asset ? asset.name : ''}" placeholder="e.g. High Interest Savings">
                         </div>
-                        <div class="${CSS_CLASSES.FORM_GROUP} stacked">
-                        </div>
-                        <div class="${CSS_CLASSES.FORM_GROUP} stacked">
+                        <div class="${CSS_CLASSES.FORM_GROUP} stacked" id="cash-currency-group" style="display: ${(asset?.isPortfolioLinked || this.selectedCategory === 'shares') ? 'none' : 'flex'};">
                             <label class="${CSS_CLASSES.INPUT_LABEL}">Currency</label>
                             <div class="cash-currency-selector" style="display: flex; gap: 8px; margin-bottom: 4px;">
                                 <button type="button" class="cash-currency-pill ${selectedCurrency === 'AUD' ? 'active' : ''}" data-currency="AUD" style="flex: 1; padding: 9px 12px; border-radius: 8px; border: 1px solid ${selectedCurrency === 'AUD' ? 'var(--color-accent, #10b981)' : 'rgba(255,255,255,0.1)'}; background: ${selectedCurrency === 'AUD' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255,255,255,0.03)'}; color: ${selectedCurrency === 'AUD' ? '#fff' : 'var(--text-muted)'}; font-weight: 600; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s ease;">
@@ -361,6 +361,12 @@ export class CashAssetUI {
                     modal.querySelector(`#${IDS.CATEGORY_OPTIONS}`).classList.add(CSS_CLASSES.HIDDEN);
 
                     modal.querySelector('#custom-category-group').classList.toggle(CSS_CLASSES.HIDDEN, val !== 'other');
+                    const currencyGroup = modal.querySelector('#cash-currency-group');
+                    if (currencyGroup) currencyGroup.style.display = (val === 'shares' || modal.dataset.isPortfolioLinked === 'true') ? 'none' : 'flex';
+                    if (val === 'shares') {
+                        modal.dataset.selectedCurrency = 'AUD';
+                        if (typeof updateCurrencyHint === 'function') updateCurrencyHint();
+                    }
                     if (val === 'other') {
                         modal.querySelector('#custom-category-name').focus();
                         pickerContainer.classList.remove(CSS_CLASSES.HIDDEN);
@@ -605,7 +611,9 @@ export class CashAssetUI {
             date: new Date().toISOString() 
         })).filter(c => c.body);
 
-        const currency = modal.dataset.selectedCurrency || 'AUD';
+        const currency = (category === 'shares' || modal.dataset.isPortfolioLinked === 'true')
+            ? 'AUD'
+            : (modal.dataset.selectedCurrency || 'AUD');
         return { name, balance, currency, category, color, comments };
     }
 

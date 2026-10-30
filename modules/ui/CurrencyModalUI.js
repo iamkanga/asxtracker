@@ -55,24 +55,39 @@ export default class CurrencyModalUI {
         });
 
         // Navigation stack hook
+        modal._navActive = true;
         navManager.pushState(() => {
-            if (modal.parentElement) modal.remove();
+            modal._navActive = false;
+            if (modal.parentElement) {
+                modal._isClosing = true;
+                window.removeEventListener('keydown', onEsc);
+                modal.remove();
+            }
         });
 
         // Close logic
         const close = () => {
             if (modal._isClosing) return;
             modal._isClosing = true;
+            window.removeEventListener('keydown', onEsc);
 
             modal.classList.remove(CSS_CLASSES.SHOW);
             modal.style.pointerEvents = 'none';
 
             setTimeout(() => {
                 modal.classList.add(CSS_CLASSES.HIDDEN);
-                modal.remove();
-                navManager.popStateSilently();
+                if (modal.parentElement) modal.remove();
+                if (modal._navActive) {
+                    modal._navActive = false;
+                    navManager.popStateSilently();
+                }
             }, 300);
         };
+
+        const onEsc = (e) => {
+            if (e.key === 'Escape') close();
+        };
+        window.addEventListener('keydown', onEsc);
 
         const closeBtn = modal.querySelector(`.${CSS_CLASSES.MODAL_CLOSE_BTN}`);
         if (closeBtn) closeBtn.addEventListener('click', close);

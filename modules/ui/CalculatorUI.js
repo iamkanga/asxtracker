@@ -2,6 +2,7 @@ import { IDS, CSS_CLASSES, UI_ICONS, STORAGE_KEYS } from '../utils/AppConstants.
 import { formatCurrency } from '../utils/formatters.js';
 import { navManager } from '../utils/NavigationManager.js';
 import { AppState } from '../state/AppState.js';
+import { getAudThbRate } from '../utils/CurrencyHelper.js';
 
 export default class CalculatorUI {
     constructor() {
@@ -534,6 +535,8 @@ export default class CalculatorUI {
         let rate = 0;
         if (liveData && liveData.live && liveData.live > 0) {
             rate = liveData.live;
+        } else if (this.selectedCurrencyPair === 'AUDTHB=X') {
+            rate = getAudThbRate();
         } else {
             rateDisplay.textContent = 'Exchange rate unavailable';
             targetIp.value = '';
