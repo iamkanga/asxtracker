@@ -234,21 +234,21 @@ export class CashAssetUI {
                             <label for="${IDS.ASSET_NAME}" class="${CSS_CLASSES.INPUT_LABEL}">Asset Name</label>
                             <input type="text" id="${IDS.ASSET_NAME}" class="${CSS_CLASSES.STANDARD_INPUT}" value="${asset ? asset.name : ''}" placeholder="e.g. High Interest Savings">
                         </div>
-                        <div class="${CSS_CLASSES.FORM_GROUP} stacked" id="cash-currency-group" style="display: ${(asset?.isPortfolioLinked || this.selectedCategory === 'shares') ? 'none' : 'flex'};">
+                        <div class="${CSS_CLASSES.FORM_GROUP} cash-currency-row" id="cash-currency-group" style="display: ${(asset?.isPortfolioLinked || this.selectedCategory === 'shares') ? 'none' : 'flex'};">
                             <label class="${CSS_CLASSES.INPUT_LABEL}">Currency</label>
-                            <div class="cash-currency-selector" style="display: flex; gap: 8px; margin-bottom: 4px;">
-                                <button type="button" class="cash-currency-pill ${selectedCurrency === 'AUD' ? 'active' : ''}" data-currency="AUD" style="flex: 1; padding: 9px 12px; border-radius: 8px; border: 1px solid ${selectedCurrency === 'AUD' ? 'var(--color-accent, #10b981)' : 'rgba(255,255,255,0.1)'}; background: ${selectedCurrency === 'AUD' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255,255,255,0.03)'}; color: ${selectedCurrency === 'AUD' ? '#fff' : 'var(--text-muted)'}; font-weight: 600; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s ease;">
-                                    <i class="fas fa-dollar-sign" style="font-size: 0.85rem; color: ${selectedCurrency === 'AUD' ? 'var(--color-accent)' : 'inherit'};"></i>
-                                    <span>AUD ($)</span>
+                            <div class="cash-currency-selector">
+                                <button type="button" class="cash-currency-pill ${selectedCurrency === 'AUD' ? 'active' : ''}" data-currency="AUD" title="Australian Dollar ($)">
+                                    <span class="cash-currency-flag">🇦🇺</span>
+                                    <span class="cash-currency-symbol">$</span>
                                 </button>
-                                <button type="button" class="cash-currency-pill ${selectedCurrency === 'THB' ? 'active' : ''}" data-currency="THB" style="flex: 1; padding: 9px 12px; border-radius: 8px; border: 1px solid ${selectedCurrency === 'THB' ? 'var(--color-accent, #10b981)' : 'rgba(255,255,255,0.1)'}; background: ${selectedCurrency === 'THB' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255,255,255,0.03)'}; color: ${selectedCurrency === 'THB' ? '#fff' : 'var(--text-muted)'}; font-weight: 600; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s ease;">
-                                    <span style="font-size: 1rem;">🇹🇭</span>
-                                    <span>Thai Baht (฿)</span>
+                                <button type="button" class="cash-currency-pill ${selectedCurrency === 'THB' ? 'active' : ''}" data-currency="THB" title="Thai Baht (฿)">
+                                    <span class="cash-currency-flag">🇹🇭</span>
+                                    <span class="cash-currency-symbol">฿</span>
                                 </button>
                             </div>
                         </div>
                         <div class="${CSS_CLASSES.FORM_GROUP} stacked">
-                            <label for="${IDS.ASSET_BALANCE}" id="asset-balance-label" class="${CSS_CLASSES.INPUT_LABEL}">${selectedCurrency === 'THB' ? 'Balance (฿ / Baht)' : 'Balance ($ AUD)'}</label>
+                            <label for="${IDS.ASSET_BALANCE}" id="asset-balance-label" class="${CSS_CLASSES.INPUT_LABEL}">${selectedCurrency === 'THB' ? 'Balance ฿' : 'Balance $'}</label>
                             <input type="number" id="${IDS.ASSET_BALANCE}" class="${CSS_CLASSES.STANDARD_INPUT}" value="${asset ? asset.balance : ''}" placeholder="0.00" step="0.01">
                             <div id="asset-currency-hint" style="margin-top: 6px; font-size: 0.82rem; color: var(--color-accent, #10b981); font-weight: 600; display: ${selectedCurrency === 'THB' ? 'flex' : 'none'}; align-items: center; gap: 6px;"></div>
                         </div>
@@ -365,6 +365,7 @@ export class CashAssetUI {
                     if (currencyGroup) currencyGroup.style.display = (val === 'shares' || modal.dataset.isPortfolioLinked === 'true') ? 'none' : 'flex';
                     if (val === 'shares') {
                         modal.dataset.selectedCurrency = 'AUD';
+                        currencyPills.forEach(p => p.classList.toggle('active', p.dataset.currency === 'AUD'));
                         if (typeof updateCurrencyHint === 'function') updateCurrencyHint();
                     }
                     if (val === 'other') {
@@ -451,10 +452,10 @@ export class CashAssetUI {
                     currencyHint.innerHTML = `<i class="fas fa-info-circle"></i> Active Rate: 1 AUD = ${rate.toFixed(4)} THB`;
                     currencyHint.style.display = 'flex';
                 }
-                if (balanceLabel) balanceLabel.textContent = 'Balance (฿ / Baht)';
+                if (balanceLabel) balanceLabel.textContent = 'Balance ฿';
             } else {
                 currencyHint.style.display = 'none';
-                if (balanceLabel) balanceLabel.textContent = 'Balance ($ AUD)';
+                if (balanceLabel) balanceLabel.textContent = 'Balance $';
             }
         };
 
@@ -463,13 +464,7 @@ export class CashAssetUI {
                 const chosen = pill.dataset.currency;
                 modal.dataset.selectedCurrency = chosen;
                 currencyPills.forEach(p => {
-                    const isMatch = p.dataset.currency === chosen;
-                    p.classList.toggle('active', isMatch);
-                    p.style.borderColor = isMatch ? 'var(--color-accent, #10b981)' : 'rgba(255,255,255,0.1)';
-                    p.style.background = isMatch ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255,255,255,0.03)';
-                    p.style.color = isMatch ? '#fff' : 'var(--text-muted)';
-                    const icon = p.querySelector('i');
-                    if (icon) icon.style.color = isMatch ? 'var(--color-accent)' : 'inherit';
+                    p.classList.toggle('active', p.dataset.currency === chosen);
                 });
                 updateCurrencyHint();
             });
