@@ -238,11 +238,11 @@ export class CashAssetUI {
                             <label class="${CSS_CLASSES.INPUT_LABEL}">Currency</label>
                             <div class="cash-currency-selector">
                                 <button type="button" class="cash-currency-pill ${selectedCurrency === 'AUD' ? 'active' : ''}" data-currency="AUD" title="Australian Dollar ($)">
-                                    <span class="cash-currency-flag">🇦🇺</span>
+                                    <img src="https://flagcdn.com/w40/au.png" alt="Australia" class="cash-currency-flag-img">
                                     <span class="cash-currency-symbol">$</span>
                                 </button>
                                 <button type="button" class="cash-currency-pill ${selectedCurrency === 'THB' ? 'active' : ''}" data-currency="THB" title="Thai Baht (฿)">
-                                    <span class="cash-currency-flag">🇹🇭</span>
+                                    <img src="https://flagcdn.com/w40/th.png" alt="Thailand" class="cash-currency-flag-img">
                                     <span class="cash-currency-symbol">฿</span>
                                 </button>
                             </div>

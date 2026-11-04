@@ -535,10 +535,15 @@ input[type="number"] {
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
-.cash-currency-flag {
-    font-size: 1.05rem;
-    line-height: 1;
+.cash-currency-flag-img {
+    width: 20px;
+    height: 14px;
+    border-radius: 2px;
+    object-fit: cover;
     display: inline-block;
+    vertical-align: middle;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+    flex-shrink: 0;
 }
 
 .cash-currency-symbol {
