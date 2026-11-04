@@ -1957,5 +1957,14 @@ export const AI_DEFAULT_TEMPLATES = [
         icon: 'fa-question-circle',
         text: '${code}.AX',
         internal: true
+    },
+    {
+        id: 'announcements_analyze',
+        label: 'Announcements Analyze',
+        section: 'Announcements',
+        icon: 'fa-bullhorn',
+        text: 'Summarize ${context} in a couple of sentences and tell me the likely effect on the share price making sure you highlight any key points: ${url}',
+        scope: 'announcements',
+        internal: false
     }
 ];

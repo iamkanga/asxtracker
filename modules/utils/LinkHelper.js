@@ -108,7 +108,7 @@ export class LinkHelper {
         // Use Passed Prompts if they are rich templates, else fallback to Standard AI Templates
         const baseTemplates = (customPrompts && customPrompts.length > 0 && customPrompts[0].label)
             ? customPrompts
-            : AI_DEFAULT_TEMPLATES;
+            : AI_DEFAULT_TEMPLATES.filter(t => t.scope !== 'announcements');
 
         const intelligencePrompts = baseTemplates.map(t => ({
             label: t.label,

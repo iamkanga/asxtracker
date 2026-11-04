@@ -1,9 +1,10 @@
 import { notificationStore } from '../state/NotificationStore.js';
-import { EVENTS } from '../utils/AppConstants.js';
+import { EVENTS, AI_DEFAULT_TEMPLATES } from '../utils/AppConstants.js';
 import { navManager } from '../utils/NavigationManager.js';
 import { LinkHelper } from '../utils/LinkHelper.js';
 import { ToastManager } from './ToastManager.js';
 import { SwipeGestureHelper } from '../utils/SwipeGestureHelper.js';
+import { AppState } from '../state/AppState.js';
 
 export class MarketIndexController {
     constructor() {
@@ -477,7 +478,19 @@ export class MarketIndexController {
                         promptContext = 'this announcement';
                     }
 
-                    const textPayload = `Summarize ${promptContext} in a couple of sentences and tell me the likely effect on the share price making sure you highlight any key points: ${url}`;
+                    const rawTemplate = (AppState.preferences?.aiPromptTemplates?.announcements_analyze)
+                        || AI_DEFAULT_TEMPLATES.find(t => t.id === 'announcements_analyze')?.text
+                        || 'Summarize ${context} in a couple of sentences and tell me the likely effect on the share price making sure you highlight any key points: ${url}';
+
+                    let textPayload = rawTemplate
+                        .replace(/\${context}/gi, promptContext)
+                        .replace(/\${code}/gi, code)
+                        .replace(/\${headline}/gi, rawHeadline)
+                        .replace(/\${url}/gi, url);
+
+                    if (!rawTemplate.includes('${url}') && url) {
+                        textPayload = `${textPayload.trim()} ${url}`;
+                    }
                     
                     if (navigator.share) {
                         navigator.share({

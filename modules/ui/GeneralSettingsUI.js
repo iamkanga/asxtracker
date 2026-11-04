@@ -301,13 +301,20 @@ export class GeneralSettingsUI {
      */
     static _renderAiPromptTemplates() {
         const userTemplates = AppState.preferences?.aiPromptTemplates || {};
-        return AI_DEFAULT_TEMPLATES.map(t => {
+        const stockTemplates = AI_DEFAULT_TEMPLATES.filter(t => t.scope !== 'announcements');
+        const announcementTemplates = AI_DEFAULT_TEMPLATES.filter(t => t.scope === 'announcements');
+
+        const renderItem = (t, showHint = false) => {
             const currentText = userTemplates[t.id] || t.text;
             return `
                 <div class="settings-acc-template-group">
                     <div class="settings-acc-template-label">
                         <i class="fas ${t.icon}"></i> ${t.label}
                     </div>
+                    ${showHint ? `
+                    <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: -4px; margin-bottom: 4px; opacity: 0.75;">
+                        Placeholders: <code>\${context}</code>, <code>\${code}</code>, <code>\${headline}</code>, <code>\${url}</code>
+                    </div>` : ''}
                     <textarea
                         class="settings-acc-textarea"
                         data-template-id="${t.id}"
@@ -315,7 +322,19 @@ export class GeneralSettingsUI {
                     >${currentText}</textarea>
                 </div>
             `;
-        }).join('');
+        };
+
+        return `
+            <div style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; color: var(--color-accent); margin-bottom: 12px; margin-top: 4px; opacity: 0.9;">
+                Stock Research Prompts
+            </div>
+            ${stockTemplates.map(t => renderItem(t)).join('')}
+
+            <div style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; color: var(--color-accent); margin-bottom: 12px; margin-top: 20px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.06); opacity: 0.9;">
+                Announcements
+            </div>
+            ${announcementTemplates.map(t => renderItem(t, true)).join('')}
+        `;
     }
 
     /**
