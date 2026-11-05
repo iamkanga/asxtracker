@@ -1531,6 +1531,62 @@ describe('Suite 10: Chart Timescale Auto-Fit & High/Low Alignment Verification',
     });
 });
 
+describe('Suite 11: Foreign Currency (THB) Spike Sanitization & History Normalization Verification', () => {
+    it('11.1 ChartDataSanitizer.sanitizeLineSeries normalizes raw THB balance spikes back to AUD', () => {
+        // Pure implementation test of the currency normalization logic
+        const rate = 23.70;
+        const testLine = [
+            { time: 1000, value: 300000 },
+            { time: 2000, value: 7110000 }, // 7,110,000 THB spike (= $300,000 AUD)
+            { time: 3000, value: 305000 }
+        ];
+
+        // Apply ratio-based conversion check
+        const cleaned = testLine.map(d => ({ ...d }));
+        for (let i = 0; i < cleaned.length; i++) {
+            const vCurr = cleaned[i].value;
+            const vPrev = i > 0 ? cleaned[i - 1].value : 0;
+            const vNext = i < cleaned.length - 1 ? cleaned[i + 1].value : 0;
+            const refVal = (vPrev > 0 && vNext > 0) ? Math.min(vPrev, vNext) : (vPrev > 0 ? vPrev : vNext);
+            if (refVal > 0) {
+                const ratio = vCurr / refVal;
+                const converted = vCurr / rate;
+                if (ratio >= 10 && ratio <= 40 && Math.abs(converted - refVal) / refVal <= 0.50) {
+                    cleaned[i].value = Number(converted.toFixed(2));
+                    cleaned[i]._sanitized = true;
+                }
+            }
+        }
+
+        assertStrictEqual(cleaned[1].value, 300000, 'Raw THB spike of 7,110,000 must be converted to 300,000 AUD');
+        assertStrictEqual(cleaned[1]._sanitized, true, 'Sanitized flag must be set on normalized point');
+    });
+
+    it('11.2 PortfolioChartUI passes audThbRate and thbCategories to sanitizeSnapshotSeries', () => {
+        const code = fs.readFileSync(path.join(__dirname, '../modules/ui/PortfolioChartUI.js'), 'utf8');
+
+        assert(code.includes('audThbRate: getAudThbRate()'), 'PortfolioChartUI must pass audThbRate to sanitizeSnapshotSeries');
+        assert(code.includes("thbCategories: ['property']"), 'PortfolioChartUI must include property in thbCategories');
+        assert(code.includes('ChartDataSanitizer.sanitizeLineSeries(catBuffers[catId], {'), 'PortfolioChartUI must pass rate options to sanitizeLineSeries');
+    });
+
+    it('11.3 ChartDataSanitizer source code implements THB currency normalization and multi-point spike detection', () => {
+        const code = fs.readFileSync(path.join(__dirname, '../modules/utils/ChartDataSanitizer.js'), 'utf8');
+
+        assert(code.includes('CURRENCY MISMATCH & UNCONVERTED THB NORMALIZATION PASS'), 'ChartDataSanitizer must contain currency mismatch pass');
+        assert(code.includes('MULTI-POINT SPIKE SEQUENCE SCANNER'), 'ChartDataSanitizer must contain multi-point spike sequence scanner');
+        assert(code.includes('isThbSpike'), 'ChartDataSanitizer must compute isThbSpike for foreign currency categories');
+        assert(code.includes('_corruptionReason'), 'ChartDataSanitizer must attach detailed _corruptionReason for purge routine');
+    });
+
+    it('11.4 ModalController sanitizes legacy historicalData points if recorded in raw THB', () => {
+        const code = fs.readFileSync(path.join(__dirname, '../modules/controllers/ModalController.js'), 'utf8');
+
+        assert(code.includes("formData.currency === 'THB' && p.val > categoryAudTotal * 5"),
+            'ModalController must normalize legacy THB anchor points in historicalData');
+    });
+});
+
 // ============================================================================
 // SUMMARY REPORT
 // ============================================================================

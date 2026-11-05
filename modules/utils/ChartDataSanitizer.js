@@ -6,7 +6,8 @@
 
 import { MarketSchedule } from './MarketSchedule.js';
 import { resolveStockPrice } from '../data/DataProcessor.js';
-import { convertAssetToAud } from './CurrencyHelper.js';
+import { convertAssetToAud, getAudThbRate } from './CurrencyHelper.js';
+import { AppState } from '../state/AppState.js';
 
 /**
  * Ensures on-chart milestone marker callouts (e.g., Shares High: 17 Aug, Super High: 18 Aug, Super Low: 28 July)
@@ -145,6 +146,87 @@ export class ChartDataSanitizer {
             }
         };
 
+        // 1.5. CURRENCY MISMATCH & UNCONVERTED THB NORMALIZATION PASS
+        // Resolves cases where category balances (such as 'property') were captured in raw Thai Baht instead of AUD.
+        const activeRate = options.audThbRate && options.audThbRate > 0 ? options.audThbRate : getAudThbRate();
+        const liveCats = liveSnapshot?.categories || {};
+
+        const thbCategories = new Set(options.thbCategories || []);
+        if (typeof AppState !== 'undefined' && AppState?.data?.cash && Array.isArray(AppState.data.cash)) {
+            AppState.data.cash.forEach(c => {
+                if (!c.isPortfolioLinked && String(c.currency || 'AUD').toUpperCase() === 'THB') {
+                    thbCategories.add(c.category || 'other');
+                }
+            });
+        }
+        thbCategories.add('property'); // Ensure property category is checked for currency parity
+
+        result.forEach((snap, idx) => {
+            if (!snap.categories) return;
+
+            Object.keys(snap.categories).forEach(cid => {
+                const rawVal = snap.categories[cid];
+                if (!Number.isFinite(rawVal) || rawVal <= 0) return;
+
+                const liveBase = liveCats[cid] || 0;
+                let prevBase = 0;
+                for (let p = idx - 1; p >= 0; p--) {
+                    const v = result[p]?.categories?.[cid];
+                    if (Number.isFinite(v) && v > 0) {
+                        prevBase = v;
+                        break;
+                    }
+                }
+                let nextBase = 0;
+                for (let nIdx = idx + 1; nIdx < n; nIdx++) {
+                    const v = result[nIdx]?.categories?.[cid];
+                    if (Number.isFinite(v) && v > 0) {
+                        nextBase = v;
+                        break;
+                    }
+                }
+
+                const baselineVal = (prevBase > 0 && nextBase > 0)
+                    ? Math.min(prevBase, nextBase)
+                    : (liveBase > 0 ? liveBase : (prevBase > 0 ? prevBase : nextBase));
+
+                const isThbCandidate = thbCategories.has(cid);
+                const ratioToBaseline = baselineVal > 0 ? rawVal / baselineVal : 0;
+                const convertedAud = rawVal / activeRate;
+
+                // Thresholds:
+                // 1. Ratio to baseline is between 12x and 38x (typical THB exchange rate ~23.7x)
+                // 2. Or is a known THB candidate category and matches converted AUD tightly (< 45% variance) while raw ratio >= 5
+                // 3. Or raw value matches raw THB asset balance while baseline is in AUD
+                const isThbSpike = (
+                    (ratioToBaseline >= 12 && ratioToBaseline <= 38 && baselineVal > 5000) ||
+                    (isThbCandidate && ratioToBaseline >= 5 && Math.abs(convertedAud - baselineVal) / (baselineVal || 1) <= 0.45) ||
+                    (isThbCandidate && ratioToBaseline >= 10)
+                );
+
+                if (isThbSpike) {
+                    const diff = rawVal - convertedAud;
+                    snap.categories[cid] = Number(convertedAud.toFixed(2));
+                    if (Number.isFinite(snap.total)) snap.total = Number((snap.total - diff).toFixed(2));
+                    if (Number.isFinite(snap.cash)) snap.cash = Number((snap.cash - diff).toFixed(2));
+                    if (Number.isFinite(snap.assets)) snap.assets = Number((snap.assets - diff).toFixed(2));
+
+                    if (snap.assetBreakdown) {
+                        Object.keys(snap.assetBreakdown).forEach(name => {
+                            const bVal = snap.assetBreakdown[name];
+                            if (Number.isFinite(bVal) && bVal > convertedAud * 4) {
+                                snap.assetBreakdown[name] = Number((bVal / activeRate).toFixed(2));
+                            }
+                        });
+                    }
+
+                    snap._sanitized = true;
+                    snap._corrupted = true;
+                    snap._corruptionReason = `Unconverted THB balance in '${cid}' ($${Math.round(rawVal).toLocaleString()} THB vs $${Math.round(convertedAud).toLocaleString()} AUD)`;
+                }
+            });
+        });
+
         // Helper to evaluate if a metric shows an outlier V-dip or V-spike
         const isOutlierBlip = (vPrev, vCurr, vNext, isOutOfHours = false) => {
             if (!Number.isFinite(vPrev) || !Number.isFinite(vCurr) || !Number.isFinite(vNext)) return false;
@@ -261,7 +343,69 @@ export class ChartDataSanitizer {
             i++;
         }
 
-        // 3. SCAN FOR SINGLE-POINT V-DIPS & V-SPIKES ON TOTAL, SHARES, AND SUPER
+        // 2B. MULTI-POINT SPIKE SEQUENCE SCANNER
+        // Scans for sequences of points j...k that spiked sharply above baseline and recovered
+        let sIdx = 0;
+        while (sIdx < n - 1) {
+            const baseline = result[sIdx];
+            const pBase = Number.isFinite(baseline.total) ? baseline.total : 0;
+            if (pBase <= 0) {
+                sIdx++;
+                continue;
+            }
+
+            let j = sIdx + 1;
+            let isSpikeSequence = false;
+            let spikeEnd = -1;
+            let recoveryIdx = -1;
+
+            while (j < n) {
+                const curr = result[j];
+                const pCurr = Number.isFinite(curr.total) ? curr.total : 0;
+                const spikePctTotal = (pCurr - pBase) / pBase;
+                const absoluteSpike = pCurr - pBase;
+
+                const isSpikedPoint = (
+                    (spikePctTotal >= spikeThreshold && (spikePctTotal >= 0.15 || absoluteSpike >= 50000)) ||
+                    (pCurr >= 1.4 * pBase && pBase > 0)
+                );
+
+                if (isSpikedPoint) {
+                    isSpikeSequence = true;
+                    spikeEnd = j;
+                    j++;
+                } else {
+                    if (isSpikeSequence) {
+                        const recDeltaTotal = Math.abs(pCurr - pBase) / pBase;
+                        const isHealthyRecovery = (
+                            (recDeltaTotal <= recoveryTolerance || recDeltaTotal <= 0.15) ||
+                            (pCurr <= 1.20 * pBase && pCurr >= 0.80 * pBase)
+                        );
+                        if (isHealthyRecovery) {
+                            recoveryIdx = j;
+                        }
+                    }
+                    break;
+                }
+            }
+
+            if (isSpikeSequence && spikeEnd >= sIdx + 1 && recoveryIdx > spikeEnd) {
+                interpolateSnapshotRange(sIdx + 1, spikeEnd, sIdx, recoveryIdx);
+                sIdx = recoveryIdx;
+                continue;
+            } else if (isSpikeSequence && spikeEnd === n - 1 && hasTempLive) {
+                const livePoint = result[n - 1];
+                const pLive = Number.isFinite(livePoint.total) ? livePoint.total : 0;
+                if (Math.abs(pLive - pBase) / pBase <= Math.max(recoveryTolerance, 0.15)) {
+                    interpolateSnapshotRange(sIdx + 1, spikeEnd - 1, sIdx, n - 1);
+                }
+                break;
+            }
+
+            sIdx++;
+        }
+
+        // 3. SCAN FOR SINGLE-POINT V-DIPS & V-SPIKES ON TOTAL, SHARES, SUPER, AND CATEGORIES
         for (let k = 1; k < n - 1; k++) {
             if (result[k]._sanitized) continue;
 
@@ -275,7 +419,20 @@ export class ChartDataSanitizer {
             const sharesBlip = isOutlierBlip(prev.shares, curr.shares, next.shares, isOutOfHours);
             const superBlip = isOutlierBlip(prev.super, curr.super, next.super, isOutOfHours);
 
-            if (totalBlip || sharesBlip || superBlip) {
+            let catBlip = false;
+            if (curr.categories && prev.categories && next.categories) {
+                for (const cid of Object.keys(curr.categories)) {
+                    const cP = prev.categories[cid] || 0;
+                    const cC = curr.categories[cid] || 0;
+                    const cN = next.categories[cid] || 0;
+                    if (cP > 0 && cN > 0 && isOutlierBlip(cP, cC, cN, isOutOfHours)) {
+                        catBlip = true;
+                        break;
+                    }
+                }
+            }
+
+            if (totalBlip || sharesBlip || superBlip || catBlip) {
                 interpolateSnapshotRange(k, k, k - 1, k + 1);
             }
         }
@@ -296,8 +453,12 @@ export class ChartDataSanitizer {
                 if (!vPrev || !vNext || vPrev <= 0 || vNext <= 0) return false;
                 const d1 = (vPrev - vC1) / vPrev;
                 const d2 = (vPrev - vC2) / vPrev;
+                const s1 = (vC1 - vPrev) / vPrev;
+                const s2 = (vC2 - vPrev) / vPrev;
                 const rec = Math.abs(vNext - vPrev) / vPrev;
-                return (d1 >= 0.02 && d2 >= 0.02 && rec <= recoveryTolerance && (d1 >= 1.8 * rec || isOOH1 || isOOH2));
+                const is2Dip = (d1 >= 0.02 && d2 >= 0.02 && rec <= recoveryTolerance && (d1 >= 1.8 * rec || isOOH1 || isOOH2));
+                const is2Spike = (s1 >= 0.03 && s2 >= 0.03 && rec <= recoveryTolerance && (s1 >= 1.8 * rec || isOOH1 || isOOH2));
+                return is2Dip || is2Spike;
             };
 
             if (check2Point(prev.total, curr1.total, curr2.total, next.total) ||
@@ -364,15 +525,19 @@ export class ChartDataSanitizer {
 
             if (clean && clean._corrupted) {
                 const isMarketOpen = MarketSchedule.isASXTrading(new Date(orig._cleanTs * 1000));
-                let reason = 'Out-of-hours artificial plunge';
-                if (orig.shares === 0 && (clean.shares || 0) > 0) {
-                    reason = 'Zeroed shares valuation out-of-hours';
-                } else if (!isMarketOpen) {
-                    reason = `Unconfirmed out-of-hours dip ($${Math.round(orig.total)} vs baseline $${Math.round(clean.total)})`;
-                } else if (orig.total < clean.total) {
-                    reason = `Temporary asset omission / crater dip ($${Math.round(orig.total)} vs baseline $${Math.round(clean.total)})`;
-                } else {
-                    reason = 'Transient single-point pricing glitch';
+                let reason = clean._corruptionReason || 'Out-of-hours artificial plunge';
+                if (!clean._corruptionReason) {
+                    if (orig.shares === 0 && (clean.shares || 0) > 0) {
+                        reason = 'Zeroed shares valuation out-of-hours';
+                    } else if (orig.total > clean.total) {
+                        reason = `Artificial currency/valuation spike ($${Math.round(orig.total)} vs clean $${Math.round(clean.total)})`;
+                    } else if (!isMarketOpen) {
+                        reason = `Unconfirmed out-of-hours dip ($${Math.round(orig.total)} vs baseline $${Math.round(clean.total)})`;
+                    } else if (orig.total < clean.total) {
+                        reason = `Temporary asset omission / crater dip ($${Math.round(orig.total)} vs baseline $${Math.round(clean.total)})`;
+                    } else {
+                        reason = 'Transient single-point pricing glitch';
+                    }
                 }
 
                 corrupted.push({
@@ -403,14 +568,81 @@ export class ChartDataSanitizer {
         const dropThreshold = options.dropThreshold ?? 0.025;
         const spikeThreshold = options.spikeThreshold ?? 0.03;
         const recoveryTolerance = options.recoveryTolerance ?? 0.035;
+        const rate = options.rate && options.rate > 0 ? options.rate : getAudThbRate();
 
         const cleaned = lineData.map(d => ({ ...d }));
         const n = cleaned.length;
 
-        for (let i = 1; i < n - 1; i++) {
-            const vPrev = cleaned[i - 1].value;
+        // 1. Currency ratio spike pass (e.g. 12x-38x jump from raw THB balance)
+        for (let i = 0; i < n; i++) {
             const vCurr = cleaned[i].value;
-            const vNext = cleaned[i + 1].value;
+            if (!Number.isFinite(vCurr) || vCurr <= 0) continue;
+
+            const vPrev = i > 0 ? cleaned[i - 1].value : 0;
+            const vNext = i < n - 1 ? cleaned[i + 1].value : 0;
+            const refVal = (vPrev > 0 && vNext > 0) ? Math.min(vPrev, vNext) : (vPrev > 0 ? vPrev : vNext);
+
+            if (refVal > 0) {
+                const ratio = vCurr / refVal;
+                const converted = vCurr / rate;
+                // If value is ~12x to ~38x higher and converted value matches reference within 50%:
+                if (ratio >= 10 && ratio <= 40 && Math.abs(converted - refVal) / refVal <= 0.50) {
+                    cleaned[i].value = Number(converted.toFixed(2));
+                    cleaned[i]._sanitized = true;
+                }
+            }
+        }
+
+        // 2. Multi-point spike sequence scanner
+        let i = 0;
+        while (i < n - 1) {
+            const vBase = cleaned[i].value;
+            if (vBase <= 0) { i++; continue; }
+
+            let j = i + 1;
+            let isSpike = false;
+            let spikeEnd = -1;
+            let recIdx = -1;
+
+            while (j < n) {
+                const vCurr = cleaned[j].value;
+                const spikeRatio = (vCurr - vBase) / vBase;
+                if (spikeRatio >= 0.25 || (vCurr - vBase >= 30000 && spikeRatio >= 0.15)) {
+                    isSpike = true;
+                    spikeEnd = j;
+                    j++;
+                } else {
+                    if (isSpike) {
+                        const recDelta = Math.abs(vCurr - vBase) / vBase;
+                        if (recDelta <= Math.max(recoveryTolerance, 0.15) || (vCurr <= 1.25 * vBase && vCurr >= 0.75 * vBase)) {
+                            recIdx = j;
+                        }
+                    }
+                    break;
+                }
+            }
+
+            if (isSpike && spikeEnd >= i + 1 && recIdx > spikeEnd) {
+                const tPrev = cleaned[i].time;
+                const tNext = cleaned[recIdx].time;
+                for (let k = i + 1; k <= spikeEnd; k++) {
+                    const tCurr = cleaned[k].time;
+                    let alpha = (tNext > tPrev) ? (tCurr - tPrev) / (tNext - tPrev) : 0.5;
+                    cleaned[k].value = vBase + alpha * (cleaned[recIdx].value - vBase);
+                    cleaned[k]._sanitized = true;
+                }
+                i = recIdx;
+                continue;
+            }
+            i++;
+        }
+
+        // 3. Single-point blip scanner
+        for (let k = 1; k < n - 1; k++) {
+            if (cleaned[k]._sanitized) continue;
+            const vPrev = cleaned[k - 1].value;
+            const vCurr = cleaned[k].value;
+            const vNext = cleaned[k + 1].value;
 
             if (vPrev <= 0 || vNext <= 0) continue;
 
@@ -421,26 +653,26 @@ export class ChartDataSanitizer {
 
             const isVDip = (
                 (dropPct >= dropThreshold || (absoluteDelta >= 15000 && dropPct >= 0.015)) &&
-                recoveryDelta <= recoveryTolerance &&
+                recoveryDelta <= Math.max(recoveryTolerance, 0.10) &&
                 dropPct >= 1.8 * recoveryDelta
             );
 
             const isVSpike = (
-                (spikePct >= spikeThreshold || (absoluteDelta >= 20000 && spikePct >= 0.02)) &&
-                recoveryDelta <= recoveryTolerance &&
-                spikePct >= 1.8 * recoveryDelta
+                (spikePct >= spikeThreshold || (absoluteDelta >= 20000 && spikePct >= 0.02) || spikePct >= 1.0) &&
+                recoveryDelta <= Math.max(recoveryTolerance, 0.15) &&
+                (spikePct >= 1.8 * recoveryDelta || spikePct >= 1.0)
             );
 
             const isZero = (vCurr <= 0 || vCurr < 0.25 * vPrev) && (vNext >= 0.50 * vPrev);
 
             if (isVDip || isVSpike || isZero) {
-                const tPrev = cleaned[i - 1].time;
-                const tCurr = cleaned[i].time;
-                const tNext = cleaned[i + 1].time;
+                const tPrev = cleaned[k - 1].time;
+                const tCurr = cleaned[k].time;
+                const tNext = cleaned[k + 1].time;
                 let alpha = (tNext > tPrev) ? (tCurr - tPrev) / (tNext - tPrev) : 0.5;
                 if (isNaN(alpha) || alpha < 0 || alpha > 1) alpha = 0.5;
-                cleaned[i].value = vPrev + alpha * (vNext - vPrev);
-                cleaned[i]._sanitized = true;
+                cleaned[k].value = vPrev + alpha * (vNext - vPrev);
+                cleaned[k]._sanitized = true;
             }
         }
 

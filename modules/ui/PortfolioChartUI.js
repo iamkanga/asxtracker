@@ -6,7 +6,7 @@ import { DataService, userStore } from '../data/DataService.js';
 import { resolveStockPrice } from '../data/DataProcessor.js';
 import { ChartDataSanitizer, ensureChartMilestoneFormatting } from '../utils/ChartDataSanitizer.js';
 import { ToastManager } from './ToastManager.js';
-import { convertAssetToAud } from '../utils/CurrencyHelper.js';
+import { convertAssetToAud, getAudThbRate } from '../utils/CurrencyHelper.js';
 
 /**
  * PortfolioChartUI
@@ -791,13 +791,33 @@ export class PortfolioChartUI {
                 .sort((a, b) => getSnapTs(a) - getSnapTs(b));
 
             // --- MULTI-POINT RETROSPECTIVE SANITIZATION & OUTLIER PREVENTION ---
-            // Automatically cleans multi-point out-of-hours plateaus, V-spikes, transient plunges, and zeroed points
+            // Automatically cleans multi-point out-of-hours plateaus, V-spikes, transient plunges, zeroed points,
+            // and currency mismatches (e.g. Thai Baht property recorded in raw THB).
             const cleanedSnapshots = ChartDataSanitizer.sanitizeSnapshotSeries(sortedSnapshots, {
                 dropThreshold: 0.15,
                 spikeThreshold: 0.20,
                 recoveryTolerance: 0.10,
-                liveSnapshot
+                liveSnapshot,
+                audThbRate: getAudThbRate(),
+                thbCategories: ['property']
             });
+
+            // Auto-heal cloud database if currency-corrupted or anomalous snapshots were detected
+            const hasCorrupted = cleanedSnapshots.some(s => s._corrupted);
+            if (hasCorrupted && AppState.user?.uid && !PortfolioChartUI._hasAutoScrubbed) {
+                PortfolioChartUI._hasAutoScrubbed = true;
+                setTimeout(async () => {
+                    try {
+                        const result = await userStore.cleanCorruptedHistorySnapshots(AppState.user.uid);
+                        if (result && result.deleted > 0) {
+                            console.log(`[PortfolioChartUI] Auto-scrubbed ${result.deleted} corrupted history snapshots from cloud.`);
+                            PortfolioChartUI._cachedSnapshots = null;
+                        }
+                    } catch (err) {
+                        console.warn('[PortfolioChartUI] Background scrub check:', err);
+                    }
+                }, 1500);
+            }
 
             // 4. Prepare Series Buffers
             const totalData = [];
@@ -858,7 +878,9 @@ export class PortfolioChartUI {
 
             // Breakdown Series
             Object.keys(catBuffers).forEach((catId, idx) => {
-                const cleanCatData = ChartDataSanitizer.sanitizeLineSeries(catBuffers[catId]);
+                const cleanCatData = ChartDataSanitizer.sanitizeLineSeries(catBuffers[catId], {
+                    rate: getAudThbRate()
+                });
                 if (!this.categorySeries[catId]) {
                     this.categorySeries[catId] = this.chart.addLineSeries({
                         color: this._getCategoryColor(catId, idx),

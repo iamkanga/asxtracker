@@ -20,7 +20,7 @@ import {
     EVENTS
 } from '../utils/AppConstants.js';
 import { ToastManager } from '../ui/ToastManager.js';
-import { convertAssetToAud } from '../utils/CurrencyHelper.js';
+import { convertAssetToAud, getAudThbRate } from '../utils/CurrencyHelper.js';
 
 
 
@@ -57,10 +57,17 @@ export class ModalController {
                 const cleanPoints = points.filter(p => Math.abs(p.time - now) > 60);
                 const otherCategoryAssets = (AppState.data.cash || []).filter(c => c.category === formData.category && (!assetId || String(c.id) !== String(assetId)) && c.name !== formData.name);
                 const categoryAudTotal = otherCategoryAssets.reduce((sum, c) => sum + convertAssetToAud(c), 0) + convertAssetToAud(formData);
-                cleanPoints.push({ time: now, val: categoryAudTotal });
+                const rate = getAudThbRate();
+                const sanitizedPoints = cleanPoints.map(p => {
+                    if (formData.currency === 'THB' && p.val > categoryAudTotal * 5 && rate > 0) {
+                        return { ...p, val: Number((p.val / rate).toFixed(2)) };
+                    }
+                    return p;
+                });
+                sanitizedPoints.push({ time: now, val: categoryAudTotal });
 
                 // Keep only last 1000 points to avoid bloating localStorage
-                const cappedPoints = cleanPoints.sort((a, b) => a.time - b.time).slice(-1000);
+                const cappedPoints = sanitizedPoints.sort((a, b) => a.time - b.time).slice(-1000);
                 AppState.saveHistoricalData(formData.category, cappedPoints);
             }
 
