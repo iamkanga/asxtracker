@@ -21,6 +21,7 @@ export class ChartComponent {
         this.cachedData = null; // Store data to allow instant style switching
         this.resizeObserver = null;
         this.rangeBadges = null;
+        this.scrubBadge = null;
         this.lastRangeData = null;
 
         this.init();
@@ -202,6 +203,9 @@ export class ChartComponent {
                 .${CSS_CLASSES.CHART_RANGE_BADGE_LOW} {
                     background: #FF5252;
                     color: #ffffff;
+                }
+                .chart-range-badge-scrub {
+                    z-index: 7;
                 }
                 /* Fullscreen Zoom Mode - uses inset anchoring, no viewport units */
                 .chart-fullscreen {
@@ -406,12 +410,18 @@ export class ChartComponent {
         };
         window.addEventListener('orientationchange', this._orientationHandler);
 
+        div.addEventListener('mouseleave', () => {
+            if (this.scrubPriceLine) this.scrubPriceLine.applyOptions({ visible: false });
+            this._hideScrubBadge();
+        });
+
         // Dynamic "Scrub" Highlight Line
         this.chart.subscribeCrosshairMove(param => {
             if (!this.chart || !this.series) return;
 
             if (!param.time || !param.point || param.point.x < 0) {
                 if (this.scrubPriceLine) this.scrubPriceLine.applyOptions({ visible: false });
+                this._hideScrubBadge();
                 return;
             }
 
@@ -420,26 +430,46 @@ export class ChartComponent {
                 const price = data.value !== undefined ? data.value : data.close;
                 const isAtLastPrice = (this.lastPriceLine && Math.abs(price - this.lastPriceLine.options().price) < 0.001);
                 
+                const currentVal = this.lastRangeData?.currentVal ?? (this.lastPriceLine ? this.lastPriceLine.options().price : null);
+                let pctStr = '';
+                let pctVal = 0;
+                if (currentVal && currentVal > 0) {
+                    const pctDiff = ((price - currentVal) / currentVal) * 100;
+                    pctVal = Math.abs(pctDiff) < 0.05 ? 0 : pctDiff;
+                    pctStr = (pctVal > 0 ? '+' : '') + pctVal.toFixed(1) + '%';
+                }
+
+                const lineColor = pctVal > 0 ? 'rgba(6, 255, 79, 0.4)' : (pctVal < 0 ? 'rgba(255, 82, 82, 0.4)' : 'rgba(164, 147, 147, 0.4)');
+                const labelColor = pctVal > 0 ? '#00E676' : (pctVal < 0 ? '#FF5252' : '#a49393');
+                const textColor = pctVal > 0 ? '#000000' : '#ffffff';
+
                 if (!this.scrubPriceLine) {
                     this.scrubPriceLine = this.series.createPriceLine({
                         price: price,
-                        color: 'rgba(6, 255, 79, 0.4)',
+                        color: lineColor,
                         lineWidth: 1,
                         lineStyle: 0,
                         axisLabelVisible: !isAtLastPrice,
-                        title: '',
-                        axisLabelColor: '#00E676',
-                        axisLabelTextColor: '#000000',
+                        title: pctStr,
+                        axisLabelColor: labelColor,
+                        axisLabelTextColor: textColor,
                     });
                 } else {
                     this.scrubPriceLine.applyOptions({
                         price: price,
                         visible: true,
-                        axisLabelVisible: !isAtLastPrice
+                        axisLabelVisible: !isAtLastPrice,
+                        title: pctStr,
+                        color: lineColor,
+                        axisLabelColor: labelColor,
+                        axisLabelTextColor: textColor,
                     });
                 }
+
+                this._updateScrubBadge(price, pctStr, pctVal);
             } else {
                 if (this.scrubPriceLine) this.scrubPriceLine.applyOptions({ visible: false });
+                this._hideScrubBadge();
             }
         });
     }
@@ -456,6 +486,7 @@ export class ChartComponent {
             this.chart.removeSeries(this.series);
             this.lastPriceLine = null;
             this.scrubPriceLine = null;
+            this._hideScrubBadge();
         }
 
         // Theme Colors
@@ -940,10 +971,81 @@ export class ChartComponent {
         });
     }
 
+    _updateScrubBadge(price, pctStr, pctVal) {
+        if (!pctStr || !this.series || !this.container) {
+            this._hideScrubBadge();
+            return;
+        }
+
+        const canvasContainer = this.container.querySelector(`.${CSS_CLASSES.CHART_CANVAS_CONTAINER}`);
+        if (!canvasContainer) return;
+
+        if (!this.scrubBadge) {
+            this.scrubBadge = document.createElement('div');
+            this.scrubBadge.className = `${CSS_CLASSES.CHART_RANGE_BADGE} chart-range-badge-scrub`;
+            canvasContainer.appendChild(this.scrubBadge);
+        }
+
+        const scrubY = this.series.priceToCoordinate(price);
+        const containerHeight = canvasContainer.clientHeight;
+        if (scrubY === null || scrubY < 0 || scrubY > containerHeight) {
+            this._hideScrubBadge();
+            return;
+        }
+
+        if (pctVal > 0) {
+            this.scrubBadge.style.background = '#00E676';
+            this.scrubBadge.style.color = '#000000';
+        } else if (pctVal < 0) {
+            this.scrubBadge.style.background = '#FF5252';
+            this.scrubBadge.style.color = '#ffffff';
+        } else {
+            this.scrubBadge.style.background = '#a49393';
+            this.scrubBadge.style.color = '#ffffff';
+        }
+
+        this.scrubBadge.textContent = pctStr;
+
+        const overlay = canvasContainer.querySelector('.chart-period-overlay');
+        let overlayBottom = 0;
+        let overlayRight = 0;
+        if (overlay && overlay.offsetParent !== null) {
+            overlayBottom = overlay.offsetTop + overlay.offsetHeight;
+            overlayRight = overlay.offsetLeft + overlay.offsetWidth;
+        }
+
+        const hitsOverlay = (scrubY - 12 < overlayBottom && scrubY + 12 > 0);
+        let leftPos = hitsOverlay ? (overlayRight + 8) : 8;
+
+        if (this.rangeBadges) {
+            const highVisible = this.rangeBadges.high && this.rangeBadges.high.style.display !== 'none';
+            const lowVisible = this.rangeBadges.low && this.rangeBadges.low.style.display !== 'none';
+            const highY = highVisible ? parseFloat(this.rangeBadges.high.style.top) : NaN;
+            const lowY = lowVisible ? parseFloat(this.rangeBadges.low.style.top) : NaN;
+
+            if ((!isNaN(highY) && Math.abs(scrubY - highY) < 22) || (!isNaN(lowY) && Math.abs(scrubY - lowY) < 22)) {
+                leftPos += 80;
+            }
+        }
+
+        this.scrubBadge.style.top = `${scrubY}px`;
+        this.scrubBadge.style.left = `${leftPos}px`;
+        this.scrubBadge.style.transform = 'translateY(-50%)';
+        this.scrubBadge.style.display = 'block';
+    }
+
+    _hideScrubBadge() {
+        if (this.scrubBadge) {
+            this.scrubBadge.style.display = 'none';
+        }
+    }
+
     _hideRangeBadges() {
-        if (!this.rangeBadges) return;
-        if (this.rangeBadges.high) this.rangeBadges.high.style.display = 'none';
-        if (this.rangeBadges.low) this.rangeBadges.low.style.display = 'none';
+        if (this.rangeBadges) {
+            if (this.rangeBadges.high) this.rangeBadges.high.style.display = 'none';
+            if (this.rangeBadges.low) this.rangeBadges.low.style.display = 'none';
+        }
+        this._hideScrubBadge();
     }
 
     destroy() {
@@ -957,6 +1059,10 @@ export class ChartComponent {
             this.chart = null;
         }
         this._hideRangeBadges();
+        if (this.scrubBadge) {
+            this.scrubBadge.remove();
+            this.scrubBadge = null;
+        }
         this.rangeBadges = null;
         this.lastRangeData = null;
         this.container.innerHTML = '';

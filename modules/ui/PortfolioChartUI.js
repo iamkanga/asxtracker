@@ -54,6 +54,7 @@ export class PortfolioChartUI {
 
         // Mirrored Left-Side Range Badges
         this.rangeBadges = {};
+        this.scrubBadge = null;
         this.lastRangeItems = [];
 
         // Visibility State (Sources instead of Metric Types)
@@ -294,6 +295,10 @@ export class PortfolioChartUI {
                     this.scrubPriceLine._parentSeries.removePriceLine(this.scrubPriceLine);
                 } catch (_) {}
                 this.scrubPriceLine = null;
+            }
+            if (this.scrubBadge) {
+                this.scrubBadge.remove();
+                this.scrubBadge = null;
             }
 
             if (this.resizeObserver) { this.resizeObserver.disconnect(); this.resizeObserver = null; }
@@ -568,6 +573,7 @@ export class PortfolioChartUI {
 
         container.addEventListener('mouseleave', () => {
             if (this.scrubPriceLine) this.scrubPriceLine.applyOptions({ visible: false });
+            this._hideScrubBadge();
         });
 
         // CROSSHAIR MOVE LISTENER (Mobile Scrubbing Support)
@@ -576,22 +582,47 @@ export class PortfolioChartUI {
 
             if (!param.time || !param.point || param.point.x < 0 || param.point.x > container.clientWidth || param.point.y < 0 || param.point.y > container.clientHeight) {
                 if (this.scrubPriceLine) this.scrubPriceLine.applyOptions({ visible: false });
+                this._hideScrubBadge();
                 return;
             }
 
-            // Identify which series to track for the highlight (Total first, then Shares, then Super)
-            let seriesToTrack = null;
-            if (this.visibleLayers.total) seriesToTrack = this.series.total;
-            else if (this.visibleLayers.shares) seriesToTrack = this.series.shares;
-            else if (this.visibleLayers.super) seriesToTrack = this.series.super;
-            else if (Object.keys(this.categorySeries).length > 0) {
-                const firstCatId = Object.keys(this.categorySeries).find(cid => this.visibleLayers[`cat_${cid}`]);
-                if (firstCatId) seriesToTrack = this.categorySeries[firstCatId];
-            }
+            // Identify which series to track for the highlight
+            const candidateSeries = [];
+            if (this.visibleLayers.total && this.series.total) candidateSeries.push({ series: this.series.total, label: 'Total' });
+            if (this.visibleLayers.shares && this.series.shares) candidateSeries.push({ series: this.series.shares, label: 'Shares' });
+            if (this.visibleLayers.super && this.series.super) candidateSeries.push({ series: this.series.super, label: 'Super' });
+            Object.keys(this.categorySeries).forEach(cid => {
+                if (this.visibleLayers[`cat_${cid}`] && this.categorySeries[cid]) {
+                    candidateSeries.push({ series: this.categorySeries[cid], label: this.categoryLabels?.[cid] || cid });
+                }
+            });
 
-            if (!seriesToTrack) {
+            if (candidateSeries.length === 0) {
                 if (this.scrubPriceLine) this.scrubPriceLine.applyOptions({ visible: false });
+                this._hideScrubBadge();
                 return;
+            }
+
+            let seriesToTrack = candidateSeries[0].series;
+            let currentTrackLabel = candidateSeries[0].label;
+
+            if (candidateSeries.length > 1 && param.point && param.point.y !== undefined) {
+                let minDistance = Infinity;
+                candidateSeries.forEach(cand => {
+                    const d = param.seriesData.get(cand.series);
+                    if (d && (d.value !== undefined || d.close !== undefined)) {
+                        const val = d.value !== undefined ? d.value : d.close;
+                        const yCoord = cand.series.priceToCoordinate(val);
+                        if (yCoord !== null) {
+                            const dist = Math.abs(param.point.y - yCoord);
+                            if (dist < minDistance) {
+                                minDistance = dist;
+                                seriesToTrack = cand.series;
+                                currentTrackLabel = cand.label;
+                            }
+                        }
+                    }
+                });
             }
 
             // Get the value for the tracked series at this point
@@ -602,48 +633,64 @@ export class PortfolioChartUI {
                 // Suppress scrubPriceLine axis label if cursor is at the identical coordinate as the native series last-value tag
                 const isAtLastValue = lastVal != null && Math.round(price) === Math.round(lastVal);
                 
-                // Update and show the scrub line
-                // Note: We re-attach/re-create if series changes, but simple update is usually enough
-                // if we attach it to the tracked series.
-                if (this.scrubPriceLine) {
-                    // Identify color based on series
-                    let trackColor = '#06FF4F';
-                    if (seriesToTrack === this.series.shares) trackColor = '#a49393';
-                    else if (seriesToTrack === this.series.super) trackColor = '#9C27B0';
-                    else if (seriesToTrack !== this.series.total) {
-                        const catId = Object.keys(this.categorySeries).find(cid => this.categorySeries[cid] === seriesToTrack);
-                        if (catId) trackColor = this._getCategoryColor(catId, 0);
-                    }
+                // Calculate percentage relative to current/last value matching range badges
+                const rangeItem = (this.lastRangeItems || []).find(r => r.series === seriesToTrack);
+                const currentVal = rangeItem?.currentVal ?? lastVal;
+                let pctStr = '';
+                let pctVal = 0;
+                if (currentVal && currentVal > 0) {
+                    const pctDiff = ((price - currentVal) / currentVal) * 100;
+                    pctVal = Math.abs(pctDiff) < 0.05 ? 0 : pctDiff;
+                    pctStr = (pctVal > 0 ? '+' : '') + pctVal.toFixed(1) + '%';
+                }
 
-                    // Re-create if parent series changed OR if color needs updating
-                    if (this.scrubPriceLine._parentSeries !== seriesToTrack || this.scrubPriceLine._lastColor !== trackColor) {
-                        if (this.scrubPriceLine._parentSeries) {
-                            try {
-                                this.scrubPriceLine._parentSeries.removePriceLine(this.scrubPriceLine);
-                            } catch (_) {}
-                        }
-                        this.scrubPriceLine = seriesToTrack.createPriceLine({
-                            price: price,
-                            color: trackColor + '4D',
-                            lineWidth: 1,
-                            lineStyle: 0,
-                            axisLabelVisible: !isAtLastValue,
-                            title: '',
-                            axisLabelColor: trackColor,
-                            axisLabelTextColor: (trackColor === '#06FF4F' || trackColor === '#00E676' || trackColor === '#00D2FF') ? '#000000' : '#ffffff',
-                        });
-                        this.scrubPriceLine._parentSeries = seriesToTrack;
-                        this.scrubPriceLine._lastColor = trackColor;
-                    }
+                // Identify color based on series
+                let trackColor = '#06FF4F';
+                if (seriesToTrack === this.series.shares) trackColor = '#00D2FF';
+                else if (seriesToTrack === this.series.super) trackColor = '#9C27B0';
+                else if (seriesToTrack !== this.series.total) {
+                    const catId = Object.keys(this.categorySeries).find(cid => this.categorySeries[cid] === seriesToTrack);
+                    if (catId) trackColor = this._getCategoryColor(catId, 0);
+                }
 
+                const priceLineTitle = pctStr ? `${currentTrackLabel ? currentTrackLabel + ' ' : ''}${pctStr}` : '';
+                const scrubColor = pctVal > 0 ? '#00E676' : (pctVal < 0 ? '#FF5252' : trackColor);
+                const scrubTextColor = (scrubColor === '#00E676' || scrubColor === '#06FF4F' || scrubColor === '#00D2FF') ? '#000000' : '#ffffff';
+
+                // Re-create if parent series changed OR if color needs updating
+                if (this.scrubPriceLine._parentSeries !== seriesToTrack || this.scrubPriceLine._lastColor !== trackColor) {
+                    if (this.scrubPriceLine._parentSeries) {
+                        try {
+                            this.scrubPriceLine._parentSeries.removePriceLine(this.scrubPriceLine);
+                        } catch (_) {}
+                    }
+                    this.scrubPriceLine = seriesToTrack.createPriceLine({
+                        price: price,
+                        color: trackColor + '4D',
+                        lineWidth: 1,
+                        lineStyle: 0,
+                        axisLabelVisible: !isAtLastValue,
+                        title: priceLineTitle,
+                        axisLabelColor: scrubColor,
+                        axisLabelTextColor: scrubTextColor,
+                    });
+                    this.scrubPriceLine._parentSeries = seriesToTrack;
+                    this.scrubPriceLine._lastColor = trackColor;
+                } else {
                     this.scrubPriceLine.applyOptions({
                         price: price,
                         visible: true,
-                        axisLabelVisible: !isAtLastValue
+                        axisLabelVisible: !isAtLastValue,
+                        title: priceLineTitle,
+                        axisLabelColor: scrubColor,
+                        axisLabelTextColor: scrubTextColor,
                     });
                 }
+
+                this._updateScrubBadge(container, seriesToTrack, price, currentTrackLabel, pctStr, pctVal, trackColor);
             } else {
                 if (this.scrubPriceLine) this.scrubPriceLine.applyOptions({ visible: false });
+                this._hideScrubBadge();
             }
         });
 
@@ -653,6 +700,7 @@ export class PortfolioChartUI {
     _updateSeriesVisibility() {
         if (!this.chart) return;
         if (this.scrubPriceLine) this.scrubPriceLine.applyOptions({ visible: false });
+        this._hideScrubBadge();
         Object.keys(this.series).forEach(key => {
             if (this.series[key]) this.series[key].applyOptions({ visible: !!this.visibleLayers[key] });
         });
@@ -1367,11 +1415,67 @@ export class PortfolioChartUI {
         });
     }
 
+    _updateScrubBadge(container, series, price, label, pctStr, pctVal, trackColor) {
+        if (!pctStr || !series || !container) {
+            this._hideScrubBadge();
+            return;
+        }
+
+        if (!this.scrubBadge) {
+            this.scrubBadge = document.createElement('div');
+            this.scrubBadge.className = `${CSS_CLASSES.CHART_RANGE_BADGE || 'chart-range-badge'} chart-range-badge-scrub`;
+            this.scrubBadge.style.cssText = `position:absolute; left:8px; z-index:7; pointer-events:none; user-select:none; font-size:0.68rem; font-weight:800; padding:2px 6px; border-radius:3px; box-shadow:0 1px 4px rgba(0,0,0,0.5); line-height:1.2; white-space:nowrap; display:none;`;
+            container.appendChild(this.scrubBadge);
+        }
+
+        const scrubY = series.priceToCoordinate(price);
+        const containerHeight = container.clientHeight;
+        if (scrubY === null || scrubY < 0 || scrubY > containerHeight) {
+            this._hideScrubBadge();
+            return;
+        }
+
+        const bg = pctVal > 0 ? '#00E676' : (pctVal < 0 ? '#FF5252' : '#a49393');
+        const color = pctVal > 0 ? '#000000' : '#ffffff';
+        this.scrubBadge.style.background = bg;
+        this.scrubBadge.style.color = color;
+        this.scrubBadge.style.borderLeft = `3px solid ${trackColor}`;
+        this.scrubBadge.textContent = `${label ? label + ' ' : ''}${pctStr}`;
+        this.scrubBadge.style.top = `${scrubY}px`;
+
+        // Anti-collision with visible range badges in container
+        let currentLeft = 8;
+        if (this.rangeBadges) {
+            Object.values(this.rangeBadges).forEach(pair => {
+                [pair?.high, pair?.low].forEach(b => {
+                    if (b && b.style.display !== 'none') {
+                        const bY = parseFloat(b.style.top);
+                        if (!isNaN(bY) && Math.abs(scrubY - bY) < 22) {
+                            currentLeft += 96;
+                        }
+                    }
+                });
+            });
+        }
+
+        this.scrubBadge.style.left = `${currentLeft}px`;
+        this.scrubBadge.style.transform = 'translateY(-50%)';
+        this.scrubBadge.style.display = 'block';
+    }
+
+    _hideScrubBadge() {
+        if (this.scrubBadge) {
+            this.scrubBadge.style.display = 'none';
+        }
+    }
+
     _hideRangeBadges() {
-        if (!this.rangeBadges) return;
-        Object.values(this.rangeBadges).forEach(pair => {
-            if (pair?.high) pair.high.style.display = 'none';
-            if (pair?.low) pair.low.style.display = 'none';
-        });
+        if (this.rangeBadges) {
+            Object.values(this.rangeBadges).forEach(pair => {
+                if (pair?.high) pair.high.style.display = 'none';
+                if (pair?.low) pair.low.style.display = 'none';
+            });
+        }
+        this._hideScrubBadge();
     }
 }
