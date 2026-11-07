@@ -224,12 +224,6 @@ export class SecurityController {
                 const isUserVerified = (flags & 4) !== 0; // Check 3rd bit (value 4)
 
                 if (isUserVerified) {
-                    // DIAGNOSTIC TOAST: Remove after debugging
-                    // Shows strictly what the authenticator returned.
-                    // Bit 0 = UP (1), Bit 2 = UV (4). Expected: 5 or 7.
-                    import('../ui/ToastManager.js').then(({ ToastManager }) => {
-                        ToastManager.info(`Bio Auth Success. Flags: ${flags} (UV=Yes)`, "Security Debug");
-                    });
                     return true;
                 } else {
                     console.warn("SecurityController: Biometric rejected - User Verification (UV) flag missing. (Presence only detected)");

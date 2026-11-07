@@ -137,12 +137,16 @@ export class AppController {
         AiSummaryUI.init();
         ScrollManager.init();
 
-        // Initialize Pull to Refresh (PWA support) - REBOOT MODE
+        // Initialize Pull to Refresh (PWA support) - In-Place Refresh
         const ptr = new PullToRefresh({
             onRefresh: async () => {
-                // Short delay to allow the "refreshing" animation to be seen
-                await new Promise(resolve => setTimeout(resolve, 800));
-                window.location.reload();
+                try {
+                    ToastManager.show('Refreshing Live Prices...', 'refresh');
+                    await this._refreshAllPrices(AppState.data?.shares || [], true, false);
+                    this.updateDataAndRender(false);
+                } catch (err) {
+                    console.warn('[AppController] Pull-to-refresh failed:', err);
+                }
             }
         });
         ptr.init();

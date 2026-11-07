@@ -28,7 +28,7 @@ export class SplashScreen {
 
         // --- TIMING ---
         this._bootTime = Date.now();
-        this._minDuration = 2000; // Minimum splash display time in ms (V1188: Extended for paws)
+        this._minDuration = 0; // Dismiss once data is loaded and entry anim complete
 
         // --- BINDINGS ---
         // Listen for Animation End to transition States
